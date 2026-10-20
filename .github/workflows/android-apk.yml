@@ -66,11 +66,25 @@ jobs:
         run: |
           set -e
           echo "Project root: $PWD"
+          echo "Preparing Capacitor web assets."
+          mkdir -p www
+          find . -maxdepth 1 -type f ! -path './package-lock.json' -exec cp -f -t www {} +
+          for dir in assets css js img images icons fonts public; do
+            if [ -d "$dir" ]; then
+              cp -a "$dir" www/
+            fi
+          done
+          if [ ! -f www/index.html ]; then
+            echo "::error::index.html was not found; cannot package the app."
+            find . -maxdepth 2 -type f -name index.html -print
+            exit 1
+          fi
+          echo "Web assets prepared:"
+          find www -maxdepth 2 -type f -print | head -80
           echo "Capacitor packages:"
           npm ls @capacitor/core @capacitor/cli @capacitor/android --depth=0 || true
           if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.js ]; then
             echo "::error::Capacitor config not found in project root."
-            find . -maxdepth 4 -type f \( -name 'capacitor.config.*' -o -name 'settings.gradle' -o -name 'gradlew' \) -print
             exit 1
           fi
           if [ ! -d android ]; then
