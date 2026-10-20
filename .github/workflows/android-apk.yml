@@ -61,15 +61,24 @@ jobs:
             npm install
           fi
 
-      - name: Verify Android project
+      - name: Prepare Android project
         working-directory: ${{ steps.project.outputs.root }}
         run: |
-          if [ ! -d android ]; then
-            echo "::error::Android project directory not found after dependency installation."
+          echo "Project root: $PWD"
+          echo "Capacitor packages:"
+          npm ls @capacitor/core @capacitor/cli @capacitor/android --depth=0 || true
+          if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.js ]; then
+            echo "::error::Capacitor config not found in project root."
+            find . -maxdepth 3 -type f \( -name 'capacitor.config.*' -o -name 'settings.gradle' -o -name 'gradlew' \) -print
             exit 1
           fi
           if [ ! -f android/gradlew ]; then
-            echo "::error::android/gradlew is missing."
+            echo "Android Gradle wrapper missing; regenerating the Capacitor Android platform."
+            rm -rf android
+            npx cap add android
+          fi
+          if [ ! -f android/gradlew ]; then
+            echo "::error::Android Gradle wrapper is still missing after npx cap add android."
             exit 1
           fi
           chmod +x android/gradlew
