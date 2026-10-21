@@ -53,6 +53,11 @@ jobs:
       - name: Instalar dependências Node
         run: npm install --ignore-scripts --legacy-peer-deps
 
+      - name: Diagnosticar requisitos do validador
+        run: |
+          echo "=== Requisitos de workflow no validador ==="
+          grep -n -B 8 -A 12 -E 'Workflow não inclui os recursos nativos/artefato atual|workflow|artefato|Jarvis.*\.java' tests/validate_project.py || true
+
       - name: Testes estáticos e regressão
         run: npm run test:all
 
