@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#060a12">
+<meta name="application-name" content="J.A.R.V.I.S. Nova">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src https://api.groq.com https://api.cerebras.ai https://api.mistral.ai https://generativelanguage.googleapis.com https://api.open-meteo.com https://geocoding-api.open-meteo.com https://pt.wikipedia.org">
+<title>J.A.R.V.I.S. Nova</title>
+<link rel="preconnect" href="https://api.groq.com">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-state="idle">
+<header>
+  <div class="marca"><span class="ponto"></span><b>J.A.R.V.I.S. Nova</b><span id="estado-txt">em espera</span></div>
+  <div class="acoes-topo">
+    <button id="btn-parar" class="parar" title="Parar tudo (Esc)" aria-label="Parar tudo">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3"/></svg><span>Parar</span>
+    </button>
+    <button id="btn-wake-toggle" class="wake-toggle" type="button" title="Pausar ativação por voz" aria-label="Pausar ativação por voz" aria-pressed="false" hidden><span class="wake-dot"></span><span id="wake-toggle-text">Escuta ativa</span></button>
+    <button id="btn-chat-ampliado" class="icone" type="button" title="Ampliar a conversa" aria-label="Ampliar a conversa" aria-pressed="false">
+      <svg class="ic-expandir" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/><path d="M3 3l6 6M21 3l-6 6M3 21l6-6M21 21l-6-6"/></svg>
+      <svg class="ic-reduzir" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v5H3M16 3v5h5M3 16h5v5M21 16h-5v5"/><path d="M8 8 3 3M16 8l5-5M8 16l-5 5M16 16l5 5"/></svg>
+    </button>
+    <button id="btn-log" class="icone" title="Registro de ações" aria-label="Registro de ações">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+    </button>
+    <button id="btn-tarefas" class="icone" type="button" title="Lista de tarefas" aria-label="Lista de tarefas">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg>
+    </button>
+    <button id="btn-config" class="icone" title="Configurações" aria-label="Configurações">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <section class="topo">
+    <div class="hud" id="hud" role="button" tabindex="0" aria-label="Falar com o Jarvis. Toque para falar ou parar.">
+      <div class="halo"></div>
+      <svg class="cam" viewBox="0 0 400 400" aria-hidden="true"><circle class="r-fixo" cx="200" cy="200" r="190"/></svg>
+      <svg class="cam anel a1" viewBox="0 0 400 400" aria-hidden="true"><circle cx="200" cy="200" r="172" pathLength="360" stroke-dasharray="100 20 40 20"/></svg>
+      <svg class="cam anel a2" viewBox="0 0 400 400" aria-hidden="true"><circle cx="200" cy="200" r="146" pathLength="360" stroke-dasharray="1 4"/></svg>
+      <svg class="cam anel a3" viewBox="0 0 400 400" aria-hidden="true"><circle cx="200" cy="200" r="120" pathLength="360" stroke-dasharray="80 40"/></svg>
+      <svg class="cam nucleo" viewBox="0 0 400 400" aria-hidden="true">
+        <defs><radialGradient id="g-orb"><stop offset="0" class="g0"/><stop offset=".6" class="g1"/><stop offset="1" class="g2"/></radialGradient></defs>
+        <circle class="n-aro" cx="200" cy="200" r="86"/>
+        <circle class="n-miolo" cx="200" cy="200" r="72"/>
+        <circle class="n-ponto" cx="200" cy="200" r="14"/>
+      </svg>
+    </div>
+    <div class="relogio"><span id="hora">--:--</span><span id="data"></span></div>
+    <div class="chip estado" id="chip-estado" role="status" aria-live="polite">em espera</div>
+    <div class="chips">
+      <span class="chip" id="chip-ia">IA: --</span>
+      <span class="chip" id="chip-temp">-- °C</span>
+      <span class="chip" id="chip-chuva">chuva --%</span>
+      <span class="chip seguro" id="chip-seg">proteção ativa</span>
+    </div>
+    <button id="btn-status-celular" class="atalho-status-celular" type="button" aria-label="Abrir status do celular" title="Bateria, armazenamento, RAM e conexões"><span class="atalho-status-icone" aria-hidden="true">▯</span><span><b>Status do celular</b><small>Bateria · RAM · Wi-Fi · dados móveis</small></span><span class="atalho-status-seta" aria-hidden="true">›</span></button>
+  </section>
+
+  <div class="chat-area"><div class="fade"></div><section id="chat" aria-live="polite"></section></div>
+  <div class="context-tools" aria-label="Controles de contexto da conversa">
+    <label title="Quando desativado, o Jarvis só recebe a mensagem atual."><input id="ctx-historico" type="checkbox" checked><span>Contexto da conversa</span></label>
+    <label title="Permite incluir a memória pessoal editada nos ajustes nesta conversa."><input id="ctx-memoria" type="checkbox" checked><span>Memória pessoal</span></label>
+    <button id="ctx-limpar" type="button" title="Limpar o contexto e a conversa atual">Limpar contexto</button>
+  </div>
+</main>
+
+<footer>
+  <div class="campo">
+    <input id="entrada" type="text" placeholder="Digite um comando" autocomplete="off" aria-label="Digite um comando">
+    <button id="btn-enviar" aria-label="Enviar">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+  </div>
+  <button id="btn-mic" class="mic" aria-label="Falar com o Jarvis">
+    <svg class="ic-mic" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+    <svg class="ic-stop" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3"/></svg>
+  </button>
+</footer>
+
+<div id="scrim" hidden></div>
+<div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
+
+<aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.4.3</span></div>
+  <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
+    <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
+    <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
+    <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="privacidade">Privacidade</button>
+    <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="memoria">Memória</button>
+    <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="rotinas">Rotinas</button>
+    <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="seguranca">Segurança</button>
+    <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="celular">Celular</button>
+    <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="diagnostico">Diagnóstico</button>
+  </nav>
+
+  <section class="grupo" data-category="ia" role="tabpanel">
+    <div class="config-intro"><div><span class="eyebrow">CONFIGURAÇÃO RÁPIDA</span><h3>Personalize seu J.A.R.V.I.S.</h3><p>Chaves, estilo de conversa e humor ficam aqui. Microfone e palavra de ativação ficam em Voz.</p></div><button type="button" class="secundario" data-abrir-voz>Configurar voz e Picovoice</button></div>
+    <h3>Provedores de inteligência artificial</h3>
+    <p class="dica">As chaves são usadas diretamente pelo aparelho para conectar aos provedores. No Android, são cifradas com Android Keystore; no aplicativo desktop Electron, usamos o cofre criptográfico do sistema. No navegador comum, não há cofre nativo integrado: evite salvar chaves nesse modo.</p>
+    <div class="chave"><label>1. Groq — principal<input id="c-key" type="password" autocomplete="off" placeholder="cole sua chave aqui"></label><button type="button" class="mini" id="c-apagar-groq">apagar</button></div><p class="dica links-chaves"><a href="https://console.groq.com/keys" target="_blank" rel="noreferrer">Criar chave Groq</a> · opção com cota gratuita sujeita aos limites do provedor.</p>
+    <div class="chave"><label>2. Cerebras<input id="c-key-cerebras" type="password" autocomplete="off" placeholder="opcional"></label><button type="button" class="mini" id="c-apagar-cerebras">apagar</button></div><p class="dica links-chaves"><a href="https://cloud.cerebras.ai/" target="_blank" rel="noreferrer">Criar conta / chave Cerebras</a></p>
+    <div class="chave"><label>3. Mistral<input id="c-key-mistral" type="password" autocomplete="off" placeholder="opcional"></label><button type="button" class="mini" id="c-apagar-mistral">apagar</button></div><p class="dica links-chaves"><a href="https://console.mistral.ai/" target="_blank" rel="noreferrer">Criar conta / chave Mistral</a></p>
+    <div class="chave"><label>4. Gemini<input id="c-key-gemini" type="password" autocomplete="off" placeholder="opcional"></label><button type="button" class="mini" id="c-apagar-gemini">apagar</button></div><p class="dica links-chaves"><a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">Criar chave Gemini</a></p><p class="dica">Os planos e limites mudam. Verifique a cota gratuita na página oficial antes de usar. Não compartilhe suas chaves; o app não oferece garantia de cota ilimitada.</p>
+    <label>Modelo preferido da Groq<input id="c-modelo" type="text" autocomplete="off"></label>
+    <div class="info-card local-ai-card"><span class="info-icon">◈</span><div><b>IA local no aparelho · experimental</b><p>Importe um modelo <code>.task</code> compatível com MediaPipe. Depois de importado, a inferência pode funcionar sem internet e sem chave de API. O modelo não vem dentro do APK; o tamanho depende do arquivo escolhido.</p><p id="c-local-ai-status" role="status" aria-live="polite">Verificando suporte à IA local…</p><div class="botoes"><button id="c-local-ai-import" type="button" class="secundario">Importar modelo .task</button><button id="c-local-ai-test" type="button" class="secundario">Testar modelo</button><button id="c-local-ai-delete" type="button" class="secundario perigo">Apagar modelo</button></div><p class="dica">Use apenas modelos convertidos/empacotados para a API MediaPipe LLM Inference. Um arquivo GGUF comum não é compatível. O primeiro teste pode falhar em aparelhos sem memória ou aceleração suficientes.</p></div></div>
+    <div class="info-card"><span class="info-icon">◎</span><div><b>Seleção automática</b><p>Provedores com chave configurada podem ser usados em sequência quando um falhar ou atingir limite.</p></div></div>
+    <h3>Perfil do usuário</h3>
+    <label>Seu nome<input id="c-nome" type="text" maxlength="60" autocomplete="name" placeholder="Ex.: Eros"></label>
+    <label>Como o JARVIS deve te chamar<input id="c-trat" type="text" maxlength="40" placeholder="senhor"></label>
+    <p class="dica">O nome identifica seu perfil nas respostas; o tratamento é independente e pode continuar como “senhor”, ou ser alterado quando quiser.</p>
+    <label>Humor do JARVIS <output id="c-humor-valor">40%</output><input id="c-humor" type="range" min="0" max="100" step="10" value="40"></label>
+    <p class="dica">0% = profissional e sério; 100% = humor seco mais frequente. O humor é reduzido em assuntos sensíveis.</p>
+    <div id="c-personalidade-preview" class="personalidade-preview" aria-live="polite"><b>Prévia da personalidade</b><p>Altere o humor ou o estilo para ver como o J.A.R.V.I.S. deve responder.</p></div>
+    <label>Estilo de resposta<select id="c-estilo"><option value="equilibrado">Equilibrado</option><option value="formal">Formal e objetivo</option><option value="amigavel">Amigável e descontraído</option><option value="tecnico">Técnico e detalhado</option></select></label>
+    <label>Cidade usada para o clima<input id="c-cidade" type="text" placeholder="São Paulo"></label>
+  </section>
+
+  <section class="grupo" data-category="voz" role="tabpanel" hidden>
+    <h3>Voz e microfone</h3>
+    <label>Voz de resposta<select id="c-voz"></select></label>
+    <button id="c-voz-masculina" type="button" class="secundario">Usar voz masculina preferencial</button>
+    <p id="c-voz-status" class="dica" role="status" aria-live="polite">O JARVIS tentará priorizar uma voz masculina em português; se o motor do aparelho não oferecer uma, usará a melhor voz pt-BR disponível e um tom mais grave.</p>
+    <label>Tom da voz (grave ↔ agudo) <output id="c-pitch-valor">0,80</output><input id="c-pitch" type="range" min="0.5" max="1.5" step="0.05" value="0.8"></label>
+    <label>Velocidade da fala <output id="c-rate-valor">1,00×</output><input id="c-rate" type="range" min="0.7" max="1.4" step="0.05" value="1"></label>
+    <div class="botoes"><button id="c-voz-grave" type="button" class="secundario">Mais grave</button><button id="c-voz-rapida" type="button" class="secundario">Mais rápida</button></div>
+    <button id="c-testar" type="button" class="secundario">Testar voz</button>
+    <p class="dica">O tom e a velocidade dependem da voz instalada no Android ou no sistema do computador. Algumas vozes podem ignorar parte dos ajustes.</p>
+    <label>Sensibilidade do microfone <output id="c-sensibilidade-valor">100%</output><input id="c-sensibilidade" type="range" min="0.7" max="1.6" step="0.1" value="1"></label>
+    <div class="audio-panel" aria-live="polite"><div class="audio-head"><b>Nível de áudio</b><output id="c-audio-value">0%</output></div><div class="audio-track" role="meter" aria-label="Nível de áudio do microfone" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="c-audio-meter-fill"></span></div><p class="dica">A barra se atualiza durante o teste de 3 segundos e enquanto o gravador está ativo.</p></div>
+    <button id="c-testar-mic" type="button" class="secundario">Testar microfone e ruído (3 s)</button>
+    <p id="c-mic-status" class="dica" role="status" aria-live="polite">O teste verifica o sinal do microfone e estima o ruído de fundo.</p>
+    <div class="divider-small"></div>
+    <h3>Perfil acústico experimental</h3>
+    <p class="dica">Este recurso captura características acústicas simples no aparelho e compara com o perfil salvo; não é biometria profissional nem prova de identidade. Cadastre três amostras em ambiente silencioso e depois teste. O áudio bruto não é guardado; apenas um vetor numérico fica no armazenamento local. Não use para autorizar pagamentos, abrir dados privados ou outras ações sensíveis.</p>
+    <div class="botoes"><button id="c-voz-cadastrar" type="button" class="secundario">Cadastrar amostra de voz</button><button id="c-voz-verificar" type="button" class="secundario">Comparar minha voz</button><button id="c-voz-apagar-perfil" type="button" class="secundario perigo">Apagar perfil de voz</button></div>
+    <p id="c-voz-perfil-status" class="dica" role="status" aria-live="polite">Nenhuma amostra cadastrada. Use três gravações para montar um perfil experimental.</p>
+    <h3>Modo offline</h3>
+    <label class="linha"><input id="c-offline" type="checkbox"><span>Modo offline (sem chamadas à IA/API pelo Jarvis)<small>Comandos locais, hora/data, abrir apps, mídia compatível e alarmes continuam disponíveis. IA generativa, pesquisa na internet e clima atual precisam de conexão. A voz offline depende do reconhecimento local instalado no Android.</small></span></label>
+    <label class="linha"><input id="c-offline-auto" type="checkbox" checked><span>Alternar automaticamente quando a rede cair<small>Usa o estado de conexão informado pelo sistema. Uma falha de internet mantendo o Wi-Fi conectado pode não ser detectada automaticamente.</small></span></label>
+    <p id="c-offline-status" class="dica" role="status" aria-live="polite">Modo online: a IA pode usar a API selecionada.</p>
+    <div class="divider-small"></div>
+    <h3>Ativação por voz</h3>
+    <p class="dica">A detecção ocorre no aparelho com Porcupine quando uma AccessKey Picovoice válida está configurada; a primeira validação pode exigir internet. Sem chave, use o botão de microfone para iniciar conversas manualmente. Precisão, música, ruído e consumo de bateria precisam ser testados no aparelho. A escuta fica desligada por padrão.</p>
+    <label class="linha" id="c-wake-row"><input id="c-wake" type="checkbox"><span>Ativar palavra de ativação<small>Exige AccessKey Picovoice configurada. O detector roda no aparelho e a transcrição completa só começa após a ativação. Sem chave, a ativação contínua não estará disponível.</small></span></label>
+    <div class="picovoice-card"><div class="picovoice-heading"><div><span class="eyebrow">PALAVRA DE ATIVAÇÃO</span><h3>Picovoice Porcupine</h3></div><span class="status-pill">Porcupine integrado</span></div><p class="dica">Cole sua AccessKey para usar o detector Porcupine no aparelho. Com uma chave salva, a ativação usa a palavra integrada “Jarvis”. A validação inicial pode exigir internet; depois a detecção ocorre localmente. Sem AccessKey, a conversa por microfone continua disponível pelo botão, mas a palavra de ativação não inicia.</p><label>AccessKey Picovoice<input id="c-key-picovoice" type="password" autocomplete="off" placeholder="cole sua AccessKey aqui"></label><div class="botoes"><button id="c-apagar-picovoice" type="button" class="secundario">Apagar chave</button><a class="secundario link-botao" href="https://console.picovoice.ai/" target="_blank" rel="noreferrer">Criar AccessKey</a></div><p id="c-picovoice-status" class="dica" role="status" aria-live="polite">Sem AccessKey: a ativação contínua fica indisponível; use o botão de microfone.</p><p class="dica">Como colocar: abra o link oficial, crie uma conta, copie a AccessKey completa e cole no campo acima. A chave é salva quando você sai do campo; o botão “Salvar ajustes” não é necessário para ela. Não envie a chave em mensagens ou prints.</p></div>
+    <label class="linha" id="c-wake-musica-row"><input id="c-wake-pausa-musica" type="checkbox" checked><span>Pausar detector durante música e vídeos<small>Reduz conflito de áudio, mas você precisará pausar a mídia ou usar o botão de microfone para chamar o Jarvis durante a reprodução.</small></span></label>
+    <label class="linha" id="c-pararvoz-row"><input id="c-pararvoz" type="checkbox"><span>Permitir “Jarvis, para”<small>Experimental, no Android.</small></span></label>
+    <label class="linha" id="c-anunciar-chamadas-row"><input id="c-anunciar-chamadas" type="checkbox"><span>Anunciar chamadas recebidas<small>Opcional. Exige acesso às notificações e só anuncia quando o Android identifica uma notificação de chamada.</small></span></label>
+    <button id="c-wake-toggle" type="button" class="secundario">Pausar escuta de ativação</button>
+    <label class="linha"><input id="c-continuo" type="checkbox"><span>Modo conversa<small>Continua ouvindo depois de responder. Diga “obrigado” para encerrar.</small></span></label>
+    <label class="linha"><input id="c-curtas" type="checkbox"><span>Respostas curtas<small>Respostas mais rápidas de ouvir.</small></span></label>
+    <label class="linha"><input id="c-precisa" type="checkbox"><span>Transcrição de máxima precisão<small>Pode levar um pouco mais de tempo.</small></span></label>
+    <label class="linha" id="c-segplano-row"><input id="c-segplano" type="checkbox"><span>Serviço em segundo plano<small>O serviço com notificação é iniciado apenas quando a ativação por voz está ligada. Alarmes e lembretes usam o agendador do Android e não exigem serviço permanente. O Android pode restringir a escuta com tela bloqueada.</small></span></label>
+  </section>
+
+  <section class="grupo" data-category="privacidade" role="tabpanel" hidden>
+    <h3>Central de privacidade</h3>
+    <div class="info-card"><span class="info-icon">▣</span><div><b>Fica no aparelho</b><p>Preferências, memória pessoal, histórico opcional, rotinas e registros locais. Se você cadastrar chaves, o Android tenta usar o cofre nativo; no modo navegador elas podem ficar no armazenamento local.</p></div></div>
+    <div class="info-card"><span class="info-icon">↗</span><div><b>Pode ser enviado a provedores</b><p>Mensagens e contexto habilitado vão ao provedor de IA; transcrição pode enviar áudio à Groq se o reconhecimento nativo falhar. Consultas de pesquisa podem ser enviadas à Groq. Clima usa Open-Meteo. Nomes de contatos só entram no contexto se você autorizar abaixo.</p></div></div>
+    <label class="linha"><input id="c-salvar-historico" type="checkbox"><span>Salvar histórico neste aparelho<small>Desativado por padrão. Se desligado, o histórico persistido será removido ao salvar.</small></span></label>
+    <label class="linha"><input id="c-compartilhar-contatos" type="checkbox"><span>Permitir nomes dos contatos no contexto da IA<small>Desativado por padrão; números de telefone não devem ser adicionados ao contexto.</small></span></label>
+    <label>Contatos locais (nome=+5511999999999, um por linha)<textarea id="c-contatos" rows="4" autocomplete="off"></textarea></label>
+    <button id="c-importar-contatos" type="button" class="secundario">Importar contatos do Android</button>
+    <p class="dica">A importação só acontece após tocar no botão e conceder permissão. Os contatos selecionados são copiados para a lista local do J.A.R.V.I.S.; números não são enviados automaticamente à IA.</p>
+    <p class="dica">O app não consegue garantir que os provedores externos não retenham dados enviados. Evite inserir dados sensíveis no chat, na memória ou nas rotinas.</p>
+    <button id="c-notificacoes-acesso" type="button" class="secundario">Configurar acesso às notificações (ler mensagens)</button>
+    <p class="dica">Para ler notificações e anunciar chamadas, o Android exige que você habilite manualmente o acesso especial às notificações. O Jarvis não lê conversas completas dentro de outros apps: lê apenas o conteúdo presente nas notificações.</p>
+    <button id="c-parar-apagar" type="button" class="secundario perigo">Desligar escuta e apagar dados locais</button>
+    <p class="dica">Desativa a escuta por voz e o serviço em segundo plano e apaga histórico, memória, registros e resumos de notificações. As chaves API, contatos e outras configurações não serão apagadas.</p>
+    <button id="c-apagar-historico" type="button" class="secundario perigo">Apagar histórico, memória e registros locais</button>
+    <div id="c-priv-status" class="dica" role="status" aria-live="polite">A exclusão de chaves de API é separada, pelos botões “apagar” na categoria IA.</div>
+  </section>
+
+  <section class="grupo" data-category="memoria" role="tabpanel" hidden>
+    <h3>Memória pessoal controlada</h3>
+    <p class="dica">Nada é aprendido ou salvo automaticamente nesta tela. Escreva apenas as preferências que deseja guardar. A memória só é enviada quando a memória global e o controle “Memória pessoal” da conversa estiverem ligados.</p>
+    <label class="linha"><input id="c-memoria-ativa" type="checkbox"><span>Permitir memória pessoal<small>Controle global. Desligar impede seu uso pelo modelo, mesmo que esteja preenchida.</small></span></label>
+    <label>O que o Jarvis pode lembrar<textarea id="c-memoria" rows="6" maxlength="1200" placeholder="Ex.: prefiro respostas em português e explicações passo a passo."></textarea></label>
+    <label>Adicionar um item à memória<textarea id="c-memoria-nova" rows="2" maxlength="400" placeholder="Digite uma preferência para acrescentar sem substituir as atuais"></textarea></label>
+    <button id="c-memoria-adicionar" type="button" class="secundario">Adicionar à memória</button>
+    <p class="dica" id="c-memoria-status" role="status" aria-live="polite">Limite de 1.200 caracteres. Revise e remova dados que não quer mais guardar.</p>
+    <button id="c-memoria-limpar" type="button" class="secundario perigo">Apagar memória pessoal</button>
+  </section>
+
+  <section class="grupo" data-category="rotinas" role="tabpanel" hidden>
+    <h3>Editor visual de rotinas</h3>
+    <p class="dica">Monte sequências com ações permitidas sem digitar JSON. As ações sensíveis continuam sujeitas às confirmações de segurança, e ações indisponíveis nesta plataforma são filtradas.</p>
+    <label>Nome da rotina<input id="rt-nome" type="text" maxlength="50" placeholder="Ex.: bom dia"></label>
+    <div class="routine-builder">
+      <label>Ação<select id="rt-acao"></select></label>
+      <div id="rt-args-wrap" class="rt-args"></div>
+      <button id="rt-adicionar-passo" type="button" class="secundario">Adicionar ação à lista</button>
+    </div>
+    <div class="routine-list-wrap"><div class="audio-head"><b>Ações desta rotina</b><output id="rt-contador">0/8</output></div><ol id="rt-passos" class="rt-passos"><li class="vazio">Nenhuma ação adicionada.</li></ol></div>
+    <div class="botoes"><button id="rt-nova" type="button">Nova rotina</button><button id="rt-salvar" type="button" class="primario">Salvar rotina</button></div>
+    <div id="rt-status" class="dica" role="status" aria-live="polite">Até 20 rotinas, com no máximo 8 ações cada.</div>
+    <h3>Rotinas salvas</h3>
+    <div id="rt-lista" class="rt-saved-list"></div>
+    <textarea id="c-rotinas" rows="1" maxlength="4000" hidden aria-hidden="true" tabindex="-1">[]</textarea>
+  </section>
+
+  <section class="grupo" data-category="seguranca" role="tabpanel" hidden>
+    <h3>Proteção e permissões</h3>
+    <label class="linha"><input id="c-seguro" type="checkbox"><span>Modo seguro<small>Quando ligado, bloqueia ligações e mensagens. Desligue para permitir essas ações; a confirmação continua obrigatória.</small></span></label>
+    <label>Novo PIN de segurança (4 a 8 dígitos)<input id="c-pin" type="password" inputmode="numeric" placeholder="deixe vazio para manter" autocomplete="new-password"></label>
+    <div class="info-card"><span class="info-icon">⌁</span><div><b>Permissões do aparelho</b><p>O app solicita microfone quando necessário. Notificações, reconhecimento de voz, economia de bateria e permissões em segundo plano variam por Android e fabricante.</p></div></div>
+  </section>
+
+  <section class="grupo" data-category="celular" role="tabpanel" hidden>
+    <h3>Estado do celular</h3>
+    <p class="dica">Dados lidos localmente no aparelho. Temperatura é a temperatura reportada pela bateria, não a temperatura de todos os componentes.</p>
+    <div class="status-atualizacao"><button id="c-atualizar-celular" type="button" class="primario">Atualizar agora</button><span class="dica" id="cel-auto-atualiza">Atualização automática a cada 5 segundos enquanto esta tela estiver aberta.</span></div>
+    <div class="status-grid">
+      <div class="info-card"><span class="info-icon">▰</span><div><b>Bateria</b><p id="cel-bateria">Ainda não consultada</p></div></div>
+      <div class="info-card"><span class="info-icon">⌁</span><div><b>Temperatura da bateria</b><p id="cel-temperatura">Ainda não consultada</p></div></div>
+      <div class="info-card"><span class="info-icon">◉</span><div><b>Armazenamento</b><p id="cel-armazenamento">Ainda não consultado</p></div></div>
+      <div class="info-card"><span class="info-icon">▦</span><div><b>Memória RAM</b><p id="cel-ram">Ainda não consultada</p></div></div>
+      <div class="info-card"><span class="info-icon">⌘</span><div><b>Conexão ativa</b><p id="cel-conexao">Ainda não consultada</p></div></div>
+      <div class="info-card"><span class="info-icon">⌁</span><div><b>Wi-Fi</b><p id="cel-wifi">Ainda não consultado</p></div></div>
+      <div class="info-card"><span class="info-icon">⇅</span><div><b>Dados móveis</b><p id="cel-dados">Ainda não consultados</p></div></div>
+      <div class="info-card"><span class="info-icon">↗</span><div><b>Último app aberto pelo JARVIS</b><p id="cel-ultimo-app">Nenhum registro ainda</p></div></div>
+      <div class="info-card"><span class="info-icon">▣</span><div><b>Aparelho</b><p id="cel-aparelho">Ainda não consultado</p></div></div>
+    </div>
+    <p id="cel-alerta" class="dica" role="status" aria-live="polite">Toque em “Atualizar informações” para consultar.</p>
+    <h3>Atalhos do sistema</h3>
+    <div class="botoes"><button id="cel-abrir-config" type="button" class="secundario">Configurações Android</button><button id="cel-abrir-bateria" type="button" class="secundario">Uso de bateria</button><button id="cel-abrir-armazenamento" type="button" class="secundario">Armazenamento</button></div>
+    <p class="dica">Por privacidade, o JARVIS não lê automaticamente qual foi o último app aberto fora dele. Isso exigiria a permissão especial de acesso ao uso de apps, que não é ativada sem sua autorização.</p>
+  </section>
+
+  <section class="grupo" data-category="diagnostico" role="tabpanel" hidden>
+    <h3>Diagnóstico integrado</h3>
+    <p class="dica">Os testes de rede usam solicitações reais. O teste de pesquisa pode consultar o provedor configurado; não envia seu histórico, apenas a consulta de diagnóstico.</p>
+    <button id="c-diagnostico" type="button" class="primario">Executar diagnóstico</button>
+    <div id="c-diagnostico-result" class="diag-lista" aria-live="polite"><p class="dica">Ainda não executado.</p></div>
+    <p class="dica">Este diagnóstico não substitui o teste em um aparelho físico. O funcionamento de wake word, tela bloqueada, serviço em segundo plano e permissões precisa ser validado no Android alvo.</p>
+  </section>
+
+  <div class="botoes barra"><button id="c-fechar" type="button">Fechar</button><button id="c-salvar" type="button" class="primario">Salvar alterações</button></div>
+</aside>
+
+<aside id="painel-tarefas" class="painel" hidden aria-label="Lista de tarefas do J.A.R.V.I.S. Nova">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · ORGANIZAÇÃO</p><h2>Minhas tarefas</h2></div><span class="versao-chip">Salvas neste aparelho</span></div>
+  <section class="grupo">
+    <p class="dica">As tarefas ficam armazenadas localmente e podem ser consultadas sem internet. Os prazos aqui são registros; notificações de tarefa em segundo plano ainda não são agendadas automaticamente.</p>
+    <label>Nova tarefa<input id="tarefa-titulo" type="text" maxlength="180" placeholder="Ex.: estudar eletrônica" autocomplete="off"></label>
+    <label>Prazo (opcional)<input id="tarefa-prazo" type="date"></label>
+    <label>Prioridade<select id="tarefa-prioridade"><option value="normal">Normal</option><option value="alta">Alta</option><option value="baixa">Baixa</option></select></label>
+    <button id="tarefa-adicionar" type="button" class="primario">Adicionar tarefa</button>
+  </section>
+  <section class="grupo">
+    <div class="botoes"><button id="tarefas-filtro-todas" type="button" class="secundario">Todas</button><button id="tarefas-filtro-pendentes" type="button" class="secundario">Pendentes</button><button id="tarefas-filtro-feitas" type="button" class="secundario">Concluídas</button></div>
+    <p id="tarefas-resumo" class="dica" role="status" aria-live="polite">Nenhuma tarefa cadastrada.</p>
+    <div id="tarefas-lista" class="tarefas-lista"></div>
+    <button id="tarefas-limpar-feitas" type="button" class="secundario">Remover concluídas</button>
+  </section>
+  <div class="botoes barra"><button id="tarefas-fechar" type="button" class="primario">Fechar</button></div>
+</aside>
+
+<aside id="painel-log" class="painel" hidden>
+  <div class="painel-topo"><h2>Registro de ações</h2></div>
+  <div id="log-lista"></div>
+  <div class="botoes barra"><button id="l-limpar" type="button">Limpar</button><button id="l-fechar" type="button" class="primario">Fechar</button></div>
+</aside>
+
+<div id="modal" hidden>
+  <div class="caixa" role="alertdialog" aria-labelledby="m-titulo">
+    <h3 id="m-titulo">Confirmação necessária</h3>
+    <p id="m-desc"></p>
+    <input id="m-pin" type="password" inputmode="numeric" placeholder="PIN" hidden>
+    <p id="m-erro" class="erro"></p>
+    <div class="botoes"><button id="m-nao" type="button">Cancelar</button><button id="m-ok" type="button" class="primario">Confirmar</button></div>
+    <small id="m-voz">Você também pode dizer "confirmo" ou "cancela".</small>
+  </div>
+</div>
+
+<script src="apps.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

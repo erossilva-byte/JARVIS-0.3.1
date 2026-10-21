@@ -1,0 +1,41 @@
+{
+  "name": "jarvis-nova",
+  "version": "1.4.5",
+  "description": "J.A.R.V.I.S. Nova 1.4.5 — interface HUD refinada e auditoria de execução em segundo plano",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "android:add": "cap add android",
+    "android:sync": "cap sync android",
+    "android:open": "cap open android",
+    "test:syntax": "node --check app.js && node --check main.js && node --check apps.js && node tests/test_voice_routes.js",
+    "test:all": "node --check app.js && node --check main.js && node --check apps.js && node tests/test_voice_routes.js && python3 tests/validate_project.py && python3 tests/test_patch_gradle.py && python3 tests/test_release_readiness.py && python3 tests/test_porcupine_personality.py && python3 -m py_compile patch_manifest.py patch_visual.py patch_android_version.py patch_gradle.py && python3 tests/test_secure_keys.py && python3 tests/test_local_ai.py && python3 tests/test_voice_profile.py && python3 tests/test_ui_responsive.py && python3 tests/test_panel_navigation.py"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.0",
+    "@capacitor/app-launcher": "^6.0.0",
+    "@capacitor/core": "^6.1.0",
+    "@capacitor-community/text-to-speech": "^5.1.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.jarvis.nova",
+    "productName": "J.A.R.V.I.S. Nova",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "style.css",
+      "app.js",
+      "apps.js"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
