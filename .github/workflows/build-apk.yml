@@ -71,7 +71,12 @@ jobs:
         run: |
           D=android/app/src/main/java/com/jarvis/nova
           mkdir -p "$D"
-          cp MainActivity.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java "$D/"
+          # Copia todos os recursos Java nativos presentes no ZIP, incluindo plugins adicionados em versões futuras.
+          find . -maxdepth 1 -type f -name '*.java' -print -exec cp -f {} "$D/" \;
+          # Falha cedo se os componentes nativos essenciais não estiverem no código-fonte.
+          for f in MainActivity.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java; do
+            test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
+          done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
           python3 patch_gradle.py android/app/build.gradle
           python3 patch_android_version.py android/app/build.gradle VERSAO.json
