@@ -67,6 +67,24 @@ jobs:
           set -e
           echo "Project root: $PWD"
           echo "Preparing Capacitor web assets."
+          echo "Applying panel layering fix (keep panels above scrim)."
+          python3 - <<'PYFIX'
+          from pathlib import Path
+          p = Path("style.css")
+          if not p.exists():
+              raise SystemExit("style.css not found; refusing to build an unpatched UI")
+          s = p.read_text()
+          bad = "header,main,footer,.painel,.modal{position:relative;z-index:1}"
+          good = "header,main,footer,.modal{position:relative;z-index:1}\n/* Panels must remain above the scrim so their controls receive taps. */\n.painel{position:fixed;z-index:5}"
+          if bad in s:
+              s = s.replace(bad, good, 1)
+              p.write_text(s)
+              print("Panel layering bug patched.")
+          elif good in s:
+              print("Panel layering fix already present.")
+          else:
+              raise SystemExit("Expected panel layering rule not found; refusing to build")
+          PYFIX
           mkdir -p www
           find . -maxdepth 1 -type f ! -path './package-lock.json' -exec cp -f -t www {} +
           for dir in assets css js img images icons fonts public; do
