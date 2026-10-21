@@ -70,32 +70,27 @@ jobs:
           echo "Applying panel layering fix (keep panels above scrim)."
           python3 - <<'PYFIX'
           from pathlib import Path
+          import re
           p = Path("style.css")
           if not p.exists():
               raise SystemExit("style.css not found; refusing to build an unpatched UI")
           s = p.read_text()
           bad = "header,main,footer,.painel,.modal{position:relative;z-index:1}"
-          good = "header,main,footer,.modal{position:relative;z-index:1}\\n/* Panels stay above the scrim; the panel viewport itself must scroll. */\\n.painel{position:fixed;z-index:5;top:8px;right:8px;bottom:8px;left:8px;height:auto;max-height:none;overflow-x:hidden;overflow-y:scroll;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;box-sizing:border-box}\\nhtml,body{min-height:100%;overflow-y:auto;overscroll-behavior-y:contain}\\nbody{touch-action:pan-y}"
+          panel = ".painel{position:fixed;z-index:5;top:8px;right:8px;bottom:8px;left:8px;height:auto;max-height:none;overflow-x:hidden;overflow-y:scroll;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;box-sizing:border-box}"
+          good = "header,main,footer,.modal{position:relative;z-index:1}\\n/* Keep every panel above the scrim and scrollable on touch screens. */\\n" + panel + "\\nhtml,body{min-height:100%;overflow-y:auto;overscroll-behavior-y:contain}\\nbody{touch-action:pan-y}"
           if bad in s:
               s = s.replace(bad, good, 1)
               p.write_text(s)
               print("Panel layering and full-height vertical scrolling patch applied.")
-          elif good in s:
-              print("Panel layering and full-height vertical scrolling fixes already present.")
           else:
-              import re
-              s2, n = re.subn(r"(?s)header,main,footer,\\.modal\\{position:relative;z-index:1\\}.*?\\.painel\\{position:fixed;z-index:5;[^}]*\\}", good, s, count=1)
-              if not n: raise SystemExit("Expected panel layering rule not found; refusing to build")
+              s2, n = re.subn(r"\\.painel\\{position:fixed;z-index:5;[^}]*\\}", panel, s, count=1)
+              if not n:
+                  raise SystemExit("Expected panel selector not found; refusing to build")
+              s2 = re.sub(r"header,main,footer,\\.painel,\\.modal\\{position:relative;z-index:1\\}", "header,main,footer,.modal{position:relative;z-index:1}", s2, count=1)
+              if "html,body{min-height:100%;overflow-y:auto;overscroll-behavior-y:contain}" not in s2:
+                  s2 += "\\nhtml,body{min-height:100%;overflow-y:auto;overscroll-behavior-y:contain}\\nbody{touch-action:pan-y}"
               p.write_text(s2)
-              print("Previous panel patch replaced with full-height vertical scrolling.")
-          if bad in s:
-              s = s.replace(bad, good, 1)
-              p.write_text(s)
-              print("Panel layering bug patched.")
-          elif good in s:
-              print("Panel layering and vertical scrolling fixes already present.")
-          else:
-              raise SystemExit("Expected panel layering rule not found; refusing to build")
+              print("Existing panel rules replaced with full-height vertical scrolling.")
           PYFIX
           mkdir -p www
           find . -maxdepth 1 -type f ! -path './package-lock.json' -exec cp -f -t www {} +
