@@ -77,18 +77,18 @@ jobs:
           s = p.read_text()
           bad = "header,main,footer,.painel,.modal{position:relative;z-index:1}"
           panel = ".painel{position:fixed;z-index:5;top:8px;right:8px;bottom:8px;left:8px;height:auto;max-height:none;overflow-x:hidden;overflow-y:scroll;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;box-sizing:border-box}"
-          good = "header,main,footer,.modal{position:relative;z-index:1}\\n/* Keep every panel above the scrim and scrollable on touch screens. */\\n" + panel + "\\nhtml,body{min-height:100%;overflow-y:auto;overscroll-behavior-y:contain}\\nbody{touch-action:pan-y}"
+          good = "header,main,footer,.modal{position:relative;z-index:1}\n/* Keep every panel above the scrim and scrollable on touch screens. */\n" + panel + "\nhtml,body{min-height:100%;overflow-y:auto;overscroll-behavior-y:contain}\nbody{touch-action:pan-y}"
           if bad in s:
               s = s.replace(bad, good, 1)
               p.write_text(s)
               print("Panel layering and full-height vertical scrolling patch applied.")
           else:
-              s2, n = re.subn(r"\\.painel\\{position:fixed;z-index:5;[^}]*\\}", panel, s, count=1)
+              s2, n = re.subn(r"\.painel\{position:fixed;z-index:5;[^}]*\}", panel, s, count=1)
               if not n:
                   raise SystemExit("Expected panel selector not found; refusing to build")
-              s2 = re.sub(r"header,main,footer,\\.painel,\\.modal\\{position:relative;z-index:1\\}", "header,main,footer,.modal{position:relative;z-index:1}", s2, count=1)
+              s2 = re.sub(r"header,main,footer,\.painel,\.modal\{position:relative;z-index:1\}", "header,main,footer,.modal{position:relative;z-index:1}", s2, count=1)
               if "html,body{min-height:100%;overflow-y:auto;overscroll-behavior-y:contain}" not in s2:
-                  s2 += "\\nhtml,body{min-height:100%;overflow-y:auto;overscroll-behavior-y:contain}\\nbody{touch-action:pan-y}"
+                  s2 += "\nhtml,body{min-height:100%;overflow-y:auto;overscroll-behavior-y:contain}\nbody{touch-action:pan-y}"
               p.write_text(s2)
               print("Existing panel rules replaced with full-height vertical scrolling.")
           PYFIX
