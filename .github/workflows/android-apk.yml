@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'JARVIS-NOVA-1.4.5-fonte.zip'
+      - 'JARVIS-NOVA-1.4.5-fonte-corrigido.zip'
       - '.github/workflows/android-apk.yml'
   workflow_dispatch:
 
@@ -34,7 +34,7 @@ jobs:
       - name: Extract source archive
         run: |
           mkdir -p source
-          unzip -q JARVIS-NOVA-1.4.5-fonte.zip -d source
+          unzip -q JARVIS-NOVA-1.4.5-fonte-corrigido.zip -d source
           echo "Extracted source tree:"
           find source -maxdepth 4 -type f \( -name package.json -o -name settings.gradle -o -name settings.gradle.kts -o -name gradlew -o -name capacitor.config.ts -o -name capacitor.config.json \) -print
 
