@@ -1,0 +1,111 @@
+name: Publicar release do J.A.R.V.I.S. Nova
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jarvis-nova-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Compilar APK e publicar release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configurar Java para o Android
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Verificar código-fonte na raiz
+        run: |
+          test -f package.json || { echo 'Código-fonte ausente: mantenha package.json na raiz do repositório.'; exit 1; }
+
+      - name: Instalar dependências Node
+        run: npm install --ignore-scripts --legacy-peer-deps
+
+      - name: Fixar assinatura de debug do CI (obrigatória para o auto-update)
+        run: |
+          test -s ci/debug.keystore || { echo 'ci/debug.keystore ausente.'; exit 1; }
+          mkdir -p "$HOME/.android"
+          cp ci/debug.keystore "$HOME/.android/debug.keystore"
+
+      - name: Testes estáticos e regressão
+        run: npm run test:all
+
+      - name: Preparar os recursos web do aplicativo
+        run: |
+          mkdir -p www
+          cp index.html style.css app.js apps.js www/
+
+      - name: Gerar estrutura nativa do Android
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Aplicar identidade, permissões e versão
+        run: |
+          D=android/app/src/main/java/com/jarvis/nova
+          mkdir -p "$D"
+          find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
+          for f in MainActivity.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisUpdatePlugin.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java; do
+            test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
+          done
+          python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
+          python3 patch_gradle.py android/app/build.gradle
+          python3 patch_android_version.py android/app/build.gradle VERSAO.json
+          python3 patch_visual.py android
+
+      - name: Compilar APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          test -s app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Conferir tag e nomear o APK da release
+        id: versao
+        run: |
+          V=$(python3 -c "import json;print(json.load(open('VERSAO.json'))['version'])")
+          C=$(python3 -c "import json;print(json.load(open('VERSAO.json'))['versionCode'])")
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME#v}"
+            if [ "$TAG" != "$V" ]; then
+              echo "Tag $GITHUB_REF_NAME não bate com VERSAO.json ($V). Corrija antes de publicar." >&2
+              exit 1
+            fi
+          fi
+          APK="jarvis-nova-${V}-${C}.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$APK"
+          sha256sum "$APK" > "${APK%.apk}.sha256"
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+          echo "sha=${APK%.apk}.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar release com o APK
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ steps.versao.outputs.apk }}
+            ${{ steps.versao.outputs.sha }}
+          generate_release_notes: true
+          body: |
+            APK do J.A.R.V.I.S. Nova assinado com a assinatura fixa de CI (ci/debug.keystore),
+            que é a assinatura esperada pelo atualizador embutido no app.
+            Instale a partir deste release para que as próximas atualizações funcionem.
+            Confira o checksum em `${{ steps.versao.outputs.sha }}`.

@@ -1,9 +1,25 @@
-name: Build e testes do J.A.R.V.I.S. Nova 1.4.6
+name: Build e testes do J.A.R.V.I.S. Nova 1.6.0
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
+    paths:
+      - 'JARVIS-NOVA-*-fonte.zip'
+      - '.github/workflows/build-apk.yml'
+      - 'app.js'
+      - 'apps.js'
+      - 'main.js'
+      - 'index.html'
+      - 'style.css'
+      - 'patch_*.py'
+      - 'Jarvis*.java'
+      - 'MainActivity.java'
+      - 'package.json'
+      - 'VERSAO.json'
+      - 'tests/**'
+      - 'ci/**'
+      - 'capacitor.config.json'
 
 permissions:
   contents: read
@@ -14,7 +30,7 @@ concurrency:
 
 jobs:
   build:
-    name: Testar e compilar APK debug 1.4.6
+    name: Testar e compilar APK debug 1.6.0
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -34,7 +50,7 @@ jobs:
 
       - name: Extrair código-fonte enviado ao repositório
         run: |
-          ZIP="$(find . -maxdepth 1 -type f -name 'JARVIS-NOVA-*.zip' -print | sort | tail -n 1)"
+          ZIP="$(find . -maxdepth 1 -type f -name 'JARVIS-NOVA-*-fonte.zip' -print | sort | tail -n 1)"
           if [ -n "$ZIP" ]; then
             mkdir -p /tmp/jarvis-source
             unzip -q "$ZIP" -d /tmp/jarvis-source
@@ -53,10 +69,11 @@ jobs:
       - name: Instalar dependências Node
         run: npm install --ignore-scripts --legacy-peer-deps
 
-      - name: Diagnosticar requisitos do validador
+      - name: Fixar assinatura de debug do CI (releases atualizáveis entre si)
         run: |
-          echo "=== Requisitos de workflow no validador ==="
-          grep -n -B 8 -A 12 -E 'Workflow não inclui os recursos nativos/artefato atual|workflow|artefato|Jarvis.*\.java' tests/validate_project.py || true
+          test -s ci/debug.keystore || { echo 'ci/debug.keystore ausente: builds diferentes teriam assinaturas diferentes.'; exit 1; }
+          mkdir -p "$HOME/.android"
+          cp ci/debug.keystore "$HOME/.android/debug.keystore"
 
       - name: Testes estáticos e regressão
         run: npm run test:all
@@ -76,10 +93,10 @@ jobs:
         run: |
           D=android/app/src/main/java/com/jarvis/nova
           mkdir -p "$D"
-          # Copia todos os recursos Java nativos presentes no ZIP, incluindo plugins adicionados em versões futuras.
-          find . -maxdepth 1 -type f -name '*.java' -print -exec cp -f {} "$D/" \;
-          # Falha cedo se os componentes nativos essenciais não estiverem no código-fonte.
-          for f in MainActivity.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java; do
+          # Copia todos os recursos Java nativos da raiz, incluindo plugins adicionados em versões futuras.
+          find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
+          # Falha cedo se algum componente nativo essencial não estiver no código-fonte.
+          for f in MainActivity.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisUpdatePlugin.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java; do
             test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
           done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
@@ -105,7 +122,7 @@ jobs:
       - name: Publicar APK e checksum
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-Nova-1.4.5-APK
+          name: JARVIS-Nova-1.6.0-APK
           if-no-files-found: error
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk
