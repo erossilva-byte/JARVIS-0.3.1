@@ -1,8 +1,16 @@
-# J.A.R.V.I.S. Nova 1.7.1
+# J.A.R.V.I.S. Nova 1.7.2
 
 Assistente pessoal para Android (Capacitor + WebView), com versão desktop Electron opcional.
 Aplicativo independente com `com.jarvis.nova`. O código-fonte fica **na raiz do repositório**
 (o workflow ainda aceita `JARVIS-NOVA-*-fonte.zip` por compatibilidade).
+
+## Correção da 1.7.2 — atualizador instalando de novo
+
+O “Baixar e instalar” falhava com `Failed to find configured root that contains
+/data/data/com.jarvis.nova/files/updates/jarvis-update.apk` porque existiam **dois** `FileProvider`
+com a mesma authority — o do template do Capacitor (`@xml/file_paths`, sem `files/`) e o nosso.
+Agora o patch remove os existentes e deixa um único apontando para `@xml/jarvis_paths`
+(`files-path updates/`). Instale a 1.7.2 uma vez pelo release; depois o botão volta a funcionar.
 
 ## Correção da 1.7.1 — assinatura fixa
 
@@ -84,9 +92,9 @@ desinstale uma vez (perde os ajustes salvos) e, a partir da 1.7.1, as próximas 
 
 Faça push na `main` com os fontes na raiz (ou envie `JARVIS-NOVA-*-fonte.zip` na raiz). O workflow
 `.github/workflows/build-apk.yml` fixa a assinatura de CI, executa `npm run test:all`, configura a
-API mínima 26, aplica permissões/versão e compila o APK debug (artefato `JARVIS-Nova-1.7.1-APK`).
+API mínima 26, aplica permissões/versão e compila o APK debug (artefato `JARVIS-Nova-1.7.2-APK`).
 
-Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.7.1`: o workflow
+Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.7.2`: o workflow
 `.github/workflows/release-apk.yml` compila, testa e publica o APK com checksum. Também é possível
 executar o workflow manualmente pelo painel de Actions.
 

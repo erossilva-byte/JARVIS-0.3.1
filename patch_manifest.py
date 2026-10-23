@@ -66,15 +66,23 @@ if '.JarvisNotificationListener' not in m:
     j = m.rindex('</application>')
     m = m[:j] + notification_listener + m[j:]
 # FileProvider do atualizador: entrega o APK baixado ao instalador do Android.
+#
+# O template do Capacitor já declara um FileProvider com authority ".fileprovider"
+# apontando para @xml/file_paths (external-path/cache-path, sem files/). Com duais
+# declarações da mesma authority o Android fica com a do template e o instalador
+# falha com "Failed to find configured root that contains
+# /data/data/com.jarvis.nova/files/updates/jarvis-update.apk". Por isso removemos
+# todo FileProvider existente e deixamos exatamente um, apontando para os nossos
+# caminhos (files/updates/).
+m = re.sub(r'(?s)\n?\s*<provider\b[^>]*androidx\.core\.content\.FileProvider.*?</provider>', '', m)
 provider = ('    <provider android:name="androidx.core.content.FileProvider"\n'
            '        android:authorities="com.jarvis.nova.fileprovider"\n'
            '        android:exported="false" android:grantUriPermissions="true">\n'
            '        <meta-data android:name="android.support.FILE_PROVIDER_PATHS"\n'
            '            android:resource="@xml/jarvis_paths" />\n'
            '    </provider>\n')
-if 'com.jarvis.nova.fileprovider' not in m:
-    j = m.rindex('</application>')
-    m = m[:j] + provider + m[j:]
+j = m.rindex('</application>')
+m = m[:j] + provider + m[j:]
 # Visibilidade de pacote para abrir o instalador de APK (Android 11+).
 if 'application/vnd.android.package-archive' not in m:
     q_start = m.find('<queries')

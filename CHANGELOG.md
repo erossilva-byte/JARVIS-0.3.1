@@ -1,3 +1,8 @@
+## 1.7.2 — 2026-10-23
+- **“Baixar e instalar” consertado.** O erro `Failed to find configured root that contains /data/data/com.jarvis.nova/files/updates/jarvis-update.apk` vinha de **dois** `FileProvider` com a mesma authority: o template do Capacitor já declara um apontando para `@xml/file_paths` (sem `files/`), e o patch adicionava outro. O Android ficava com o do template e recusava o APK baixado. `patch_manifest.py` agora remove qualquer `FileProvider` existente e deixa **um só**, apontando para `@xml/jarvis_paths` (`files-path updates/`), com teste de regressão em `tests/test_fileprovider.py`.
+- Quem está na 1.5.1 precisa instalar esta versão uma vez pelo release (o botão interno ainda está quebrado nessa versão); da 1.7.2 em diante a atualização pelo app funciona.
+- Versão 1.7.2 (versionCode 1702).
+
 ## 1.7.1 — 2026-10-23
 - **Assinatura de release agora é fixa de verdade.** O workflow copiava `ci/debug.keystore` para `~/.android/debug.keystore`, mas o Gradle não usava esse arquivo em todos os casos: cada build de CI gerava uma chave de debug nova e as releases 1.6.0 (`40f8280e…`) e 1.7.0 (`b45d3f43…`) saíram com assinaturas diferentes entre si — o Android recusaria a atualização por cima. `patch_gradle.py` passou a declarar `signingConfigs.debug` apontando para `ci/debug.keystore` com as credenciais do keystore, e um teste garante que isso não se perca. Verificado com `HOME` limpo, sem `~/.android/debug.keystore`: o APK sai com o certificado `04e04712…`, o mesmo do app já instalado.
 - Versão 1.7.1 (versionCode 1701). Nada de comportamento mudou em relação à 1.7.0.

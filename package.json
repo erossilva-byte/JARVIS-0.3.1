@@ -1,7 +1,7 @@
 {
   "name": "jarvis-nova",
-  "version": "1.7.1",
-  "description": "J.A.R.V.I.S. Nova 1.7.1 — motor de ativação escolhível, voz estilo filme, controle real de Spotify/mídia e o segundo plano confiável da 1.6.0",
+  "version": "1.7.2",
+  "description": "J.A.R.V.I.S. Nova 1.7.2 — motor de ativação escolhível, voz estilo filme, controle real de Spotify/mídia e o segundo plano confiável da 1.6.0",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -10,7 +10,7 @@
     "android:sync": "cap sync android",
     "android:open": "cap open android",
     "test:syntax": "node --check app.js && node --check main.js && node --check apps.js && node tests/test_voice_routes.js",
-    "test:all": "node --check app.js && node --check main.js && node --check apps.js && node tests/test_voice_routes.js && node tests/test_diag_dom.js && node tests/test_midia_voz.js && python3 tests/validate_project.py && python3 tests/test_patch_gradle.py && python3 tests/test_release_readiness.py && python3 tests/test_porcupine_personality.py && python3 -m py_compile patch_manifest.py patch_visual.py patch_android_version.py patch_gradle.py && python3 tests/test_secure_keys.py && python3 tests/test_local_ai.py && python3 tests/test_voice_profile.py && python3 tests/test_ui_responsive.py && python3 tests/test_panel_navigation.py && python3 tests/test_novos_recursos.py && python3 tests/test_segundo_plano.py"
+    "test:all": "node --check app.js && node --check main.js && node --check apps.js && node tests/test_voice_routes.js && node tests/test_diag_dom.js && node tests/test_midia_voz.js && python3 tests/validate_project.py && python3 tests/test_patch_gradle.py && python3 tests/test_fileprovider.py && python3 tests/test_release_readiness.py && python3 tests/test_porcupine_personality.py && python3 -m py_compile patch_manifest.py patch_visual.py patch_android_version.py patch_gradle.py && python3 tests/test_secure_keys.py && python3 tests/test_local_ai.py && python3 tests/test_voice_profile.py && python3 tests/test_ui_responsive.py && python3 tests/test_panel_navigation.py && python3 tests/test_novos_recursos.py && python3 tests/test_segundo_plano.py"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.0",
