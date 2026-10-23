@@ -1,19 +1,19 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.6.0",
-  "versionCode": 1600,
+  "version": "1.7.0",
+  "versionCode": 1700,
   "androidAppId": "com.jarvis.nova",
   "base": "código-fonte na raiz do repositório",
-  "gerado": "2026-10-22",
-  "status": "1.6.0: escuta em segundo plano persistente (estado desejado em JarvisPrefs com AccessKey cifrada no Keystore, serviço START_STICKY, vigia de recuperação por alarme, retomada no boot e auto-rearme quando a tela não abre), notificação com “Ouvir agora” e “Parar”, diagnóstico real do segundo plano na aba Voz, teste de 20 s da palavra de ativação, atalho de início automático por fabricante e lembretes de tarefas no dia do prazo.",
+  "gerado": "2026-10-23",
+  "status": "1.7.0: motor da palavra de ativação escolhível (Automático/Android/Porcupine) persistido em JarvisPrefs, perfis de voz estilo filme com sinal do HUD, controle de mídia pela sessão do Android (Spotify/YouTube Music) com resposta do que está tocando e busca no Spotify, mantendo o segundo plano persistente da 1.6.0.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.6.0 (2026-10-22). Segundo plano: o estado “escuta ligada” deixou de depender do WebView. JarvisPrefs grava deseja/musica no armazenamento privado e a AccessKey do Porcupine cifrada com AES/GCM no Android Keystore (se o Keystore falhar, a chave é descartada em vez de ficar em claro). O JarvisService retorna START_STICKY quando ouve e, ao ser reiniciado sem intent, lê o estado salvo e retoma com o mesmo detector. JarvisWatchdog agenda um alarme inexato (setAndAllowWhileIdle) a cada 15 minutos e reinicia o serviço se ele tiver sido encerrado; é usado após onTaskRemoved, depois de uma falha do serviço e ~20 s após o BOOT_COMPLETED (o Android 14+ não permite serviço de microfone direto do boot). Quando a tela não responde à ativação, o serviço volta a ouvir em 9 s, a menos que a interface tenha pausado de propósito. JarvisOuvirReceiver atende o botão “Ouvir agora” da notificação e marca o pedido para a interface consumir ao ficar visível. Diagnóstico: novo método diagnosticoEscuta consulta permissão de microfone, notificações, isenção de bateria, sobreposição, acesso às notificações, serviço/detector, última ativação, último erro, fabricante e restrição OEM; a aba Voz desenha cada item com o botão que resolve (incluindo abrirAutostart por fabricante com fallback). Teste de 20 s: iniciarTesteEscuta/statusTesteEscuta contam ativações no serviço sem abrir o app. O checkbox “Serviço em segundo plano” foi removido porque podia parar o serviço com a escuta ligada. Lembretes de tarefas: tarefa com prazo agenda aviso às 09:00 do dia usando o JarvisAlarmScheduler; concluir/excluir cancela. Mantidos da 1.5.x: atualizador que distingue “sem release” de falha de rede, reconhecimento Android com fallback local↔rede, perfil acústico recalculado e desligado por padrão. O APK é assinado com ci/debug.keystore; instalação e comportamento em dispositivo físico seguem por conta do usuário.",
+  "notas": "Revisão 1.7.0 (2026-10-23). Motor de ativação: JarvisPrefs.motor guarda auto/porcupine/android; JarvisService escolhe o detector conforme a preferência, avisa quando o Porcupine está selecionado sem AccessKey em vez de cair calado no detector livre, e reinicia o detector quando a preferência muda. Sherpa-ONNX e openWakeWord foram avaliados com medição e não entraram: o modelo KWS oficial reconhece “Jarvis” em inglês mas erra a pronúncia em português (1 acerto em 4 frases com limiar 0,10; nenhum em 0,25), e o hey_jarvis do openWakeWord é treinado em inglês e licenciado CC BY-NC-SA. Voz: perfis Padrão / JARVIS do filme (tom 0,60, velocidade 0,90) / Ultra grave (0,50/0,85) em Ajustes ▸ Voz, lista de nomes masculinos ampliada e sinal do HUD opcional gerado por WebAudio antes de cada resposta. Mídia: controleMidia passa a usar MediaSessionManager.getActiveSessions (acesso às notificações) com fallback para teclas; midiaAtual devolve app, faixa e artista; tocarNoSpotify abre spotify:search:, spotify:collection ou o player, com fallback para o player web. Comandos novos: pausar/continuar/próxima/anterior/“o que está tocando”/“toca <música>”/“abre minhas curtidas”. Mantidos: segundo plano persistente, vigia, diagnóstico, teste de 20 s, lembretes de tarefas e atualizador. O APK é assinado com ci/debug.keystore (mesma assinatura da 1.6.0). O comportamento em aparelho físico — em especial a captura de mídia do Spotify e o timbre da voz — ainda depende de teste do usuário.",
   "build": {
     "resultado": "success",
-    "sha256": "83ddb2817a41ee3e6a7aa4f46a50e64d001be37beb95299af609da951e97ab17",
-    "bytes": 17620870,
-    "data": "2026-10-22",
-    "observacao": "assembleDebug executado com JDK 17 + Android SDK 34 e ci/debug.keystore (mesma assinatura 04e04712… da 1.5.0/1.5.1, então instala por cima). minSdk 26. O comportamento do serviço em segundo plano, a recuperação pelo vigia, o teste de ativação e o botão \"Ouvir agora\" ainda precisam de teste em aparelho físico."
+    "sha256": "1eac7ec2f410ccb9dfe3b1be147a7c8fb6a92573cbd800212f32552df34b376d",
+    "bytes": 17571127,
+    "data": "2026-10-23",
+    "observacao": "assembleDebug executado com JDK 17 + Android SDK 34 e ci/debug.keystore (mesma assinatura 04e04712… da 1.6.0, então instala por cima). minSdk 26. Testado estaticamente: 34 verificações de mídia/Spotify/voz + 30 da 1.6.0. Captura de mídia do Spotify, timbre da voz e o detector escolhido ainda precisam de teste em aparelho físico."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"

@@ -127,9 +127,11 @@ public class JarvisBackgroundPlugin extends Plugin {
         try {
             String accessKey = call.getString("accessKey", "");
             boolean pausar = !Boolean.FALSE.equals(call.getBoolean("pausarDuranteMusica", true));
-            JarvisService.iniciarEscuta(getContext(), accessKey, pausar);
+            String motor = call.getString("motor", JarvisPrefs.motor(getContext()));
+            JarvisService.iniciarEscuta(getContext(), accessKey, pausar, motor);
             JSObject o = new JSObject();
             o.put("servico", "JarvisService");
+            o.put("motor", JarvisPrefs.motor(getContext()));
             call.resolve(o);
         } catch (Exception e) {
             call.reject("Não consegui iniciar a escuta em segundo plano: "
@@ -233,6 +235,7 @@ public class JarvisBackgroundPlugin extends Plugin {
         o.put("detector", JarvisService.detectorAtual());
         o.put("desejada", JarvisPrefs.desejaOuvir(c));
         o.put("chaveSalva", JarvisPrefs.temChave(c));
+        o.put("motor", JarvisPrefs.motor(c));
         o.put("ultimoErro", JarvisPrefs.ultimoErro(c));
         o.put("ultimoEvento", JarvisPrefs.ultimoEvento(c));
         o.put("fabricante", Build.MANUFACTURER == null ? "" : Build.MANUFACTURER);
@@ -315,6 +318,7 @@ public class JarvisBackgroundPlugin extends Plugin {
         o.put("detector", JarvisService.detectorAtual());
         o.put("servico", JarvisService.ativo());
         o.put("desejada", JarvisPrefs.desejaOuvir(getContext()));
+        o.put("motor", JarvisPrefs.motor(getContext()));
         o.put("testeAtivo", JarvisService.testeAtivo());
         call.resolve(o);
     }

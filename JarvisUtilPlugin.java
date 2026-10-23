@@ -282,23 +282,183 @@ public class JarvisUtilPlugin extends Plugin {
         } catch (Exception e) { call.reject("Não consegui abrir o SMS: " + e.getMessage()); }
     }
 
+    /* ---------- Mídia em reprodução ---------- */
+
+    /** Nome amigável do app que está tocando (usado nas respostas por voz). */
+    private String nomeDoPacote(String pkg) {
+        if (pkg == null) return "";
+        switch (pkg) {
+            case "com.spotify.music": return "Spotify";
+            case "com.google.android.youtube": return "YouTube";
+            case "com.google.android.apps.youtube.music": return "YouTube Music";
+            case "com.google.android.music": case "com.google.android.apps.youtube.music.playback": return "Google Play Música";
+            case "com.amazon.mp3": return "Amazon Music";
+            case "com.deezer.android.app": return "Deezer";
+            case "com.soundcloud.android": return "SoundCloud";
+            case "tv.danmaku.bili": return "Bilibili";
+            default: return pkg;
+        }
+    }
+
+    /**
+     * Sessão de mídia ativa (Spotify, YouTube Music, etc.). Lemos pelo acesso às
+     * notificações, que o app já usa para anunciar chamadas: sem essa permissão o
+     * Android barra a consulta e caímos no envio de teclas de mídia.
+     */
+    private MediaController controladorAtivo() {
+        try {
+            MediaSessionManager msm =
+                (MediaSessionManager) getContext().getSystemService(Context.MEDIA_SESSION_SERVICE);
+            if (msm == null) return null;
+            ComponentName ouvinte = new ComponentName(getContext(), JarvisNotificationListener.class);
+            MediaController primeiro = null;
+            for (MediaController c : msm.getActiveSessions(ouvinte)) {
+                if (c == null || c.getPlaybackState() == null) continue;
+                if (primeiro == null) primeiro = c;
+                if (c.getPlaybackState().getState() == android.media.session.PlaybackState.STATE_PLAYING) return c;
+            }
+            return primeiro;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private boolean tocandoAgora(MediaController c) {
+        try {
+            return c.getPlaybackState() != null
+                && c.getPlaybackState().getState() == android.media.session.PlaybackState.STATE_PLAYING;
+        } catch (Exception e) { return false; }
+    }
+
+    /** Fallback antigo (teclas de mídia): funciona em aparelhos sem acesso às notificações. */
+    private void enviarTeclaMidia(int key) throws Exception {
+        AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        if (am == null) throw new Exception("Controle de áudio indisponível.");
+        long now = System.currentTimeMillis();
+        am.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, key, 0));
+        am.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP, key, 0));
+    }
+
     @PluginMethod
     public void controleMidia(PluginCall call) {
         try {
-            String comando = call.getString("comando", "pausar").toLowerCase(Locale.ROOT);
+            String comando = call.getString("comando", "pausar").toLowerCase(Locale.ROOT).trim();
+            MediaController c = controladorAtivo();
+            JSObject o = new JSObject();
+            if (c != null) {
+                MediaController.TransportControls t = c.getTransportControls();
+                boolean tocando = tocandoAgora(c);
+                switch (comando) {
+                    case "continuar": case "play": case "retomar": case "tocar":
+                        t.play(); break;
+                    case "proxima": case "próxima": case "avancar": case "avançar": case "pular":
+                        t.skipToNext(); break;
+                    case "anterior": case "voltar": case "volta":
+                        t.skipToPrevious(); break;
+                    case "alternar": case "playpause": case "pausar_continuar":
+                        if (tocando) t.pause(); else t.play(); break;
+                    case "parar": case "stop":
+                        t.stop(); break;
+                    default:
+                        t.pause(); break;
+                }
+                o.put("app", nomeDoPacote(c.getPackageName()));
+                o.put("pacote", c.getPackageName());
+                o.put("metodo", "sessao");
+                o.put("tocava", tocando);
+                o.put("tocando", tocandoAgora(c));
+                call.resolve(o);
+                return;
+            }
             int key;
             if (comando.equals("continuar") || comando.equals("play") || comando.equals("retomar")) key = KeyEvent.KEYCODE_MEDIA_PLAY;
             else if (comando.equals("proxima") || comando.equals("próxima")) key = KeyEvent.KEYCODE_MEDIA_NEXT;
             else if (comando.equals("anterior")) key = KeyEvent.KEYCODE_MEDIA_PREVIOUS;
             else if (comando.equals("alternar")) key = KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE;
             else key = KeyEvent.KEYCODE_MEDIA_PAUSE;
-            AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
-            if (am == null) throw new Exception("Controle de áudio indisponível.");
-            long now = System.currentTimeMillis();
-            am.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, key, 0));
-            am.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP, key, 0));
-            call.resolve();
+            enviarTeclaMidia(key);
+            o.put("app", "");
+            o.put("metodo", "teclas");
+            call.resolve(o);
         } catch (Exception e) { call.reject("O controle de mídia falhou: " + e.getMessage()); }
+    }
+
+    /** O que está tocando agora (app, título e artista), para responder por voz. */
+    @PluginMethod
+    public void midiaAtual(PluginCall call) {
+        JSObject o = new JSObject();
+        MediaController c = controladorAtivo();
+        if (c == null) {
+            AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+            o.put("ativo", am != null && am.isMusicActive());
+            o.put("app", "");
+            o.put("titulo", "");
+            o.put("artista", "");
+            o.put("tocando", am != null && am.isMusicActive());
+            o.put("permitido", false);
+            call.resolve(o);
+            return;
+        }
+        String titulo = "", artista = "";
+        try {
+            android.media.MediaMetadata md = c.getMetadata();
+            if (md != null) {
+                CharSequence t = md.getText(android.media.MediaMetadata.METADATA_KEY_TITLE);
+                CharSequence a = md.getText(android.media.MediaMetadata.METADATA_KEY_ARTIST);
+                titulo = t == null ? "" : t.toString();
+                artista = a == null ? "" : a.toString();
+            }
+        } catch (Exception ignored) { }
+        o.put("ativo", true);
+        o.put("app", nomeDoPacote(c.getPackageName()));
+        o.put("pacote", c.getPackageName());
+        o.put("titulo", titulo);
+        o.put("artista", artista);
+        o.put("tocando", tocandoAgora(c));
+        o.put("permitido", true);
+        call.resolve(o);
+    }
+
+    /**
+     * Abre o Spotify já na busca (ou numa seção fixa). O app do Spotify não aceita
+     * "toque esta faixa" vindo de fora: a busca mostra os resultados e o usuário toca
+     * no primeiro. Sem Spotify instalado, cai para o player web.
+     */
+    @PluginMethod
+    public void tocarNoSpotify(PluginCall call) {
+        try {
+            String busca = call.getString("busca", "");
+            String tipo = call.getString("tipo", "");
+            String uri;
+            String t = tipo == null ? "" : tipo.toLowerCase(Locale.ROOT);
+            if (busca != null && !busca.trim().isEmpty()) uri = "spotify:search:" + Uri.encode(busca.trim());
+            else if ("curtidas".equals(t) || "favoritas".equals(t) || "biblioteca".equals(t)) uri = "spotify:collection";
+            else if ("tocando".equals(t) || "tocando_agora".equals(t)) uri = "spotify:playing";
+            else if ("radio".equals(t)) uri = "spotify:radio";
+            else throw new Exception("Diga o que quer ouvir: “toca <música> no Spotify” ou “abre minhas curtidas”");
+
+            JSObject o = new JSObject();
+            try {
+                Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                i.setPackage("com.spotify.music");
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+                o.put("aberto", true);
+                o.put("app", "Spotify");
+            } catch (Exception semSpotify) {
+                String web = busca != null && !busca.trim().isEmpty()
+                    ? "https://open.spotify.com/search/" + Uri.encode(busca.trim())
+                    : "https://open.spotify.com";
+                Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(web));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+                o.put("aberto", true);
+                o.put("app", "Navegador");
+                o.put("aviso", "O Spotify não está instalado; abri a busca no navegador.");
+            }
+            o.put("uri", uri);
+            call.resolve(o);
+        } catch (Exception e) { call.reject("Não consegui abrir o Spotify: " + (e.getMessage() == null ? "erro desconhecido" : e.getMessage())); }
     }
 
     @PluginMethod

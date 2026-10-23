@@ -448,8 +448,28 @@ const ACOES = {
     run: async () => { await nativo('irInicio', {}); return { info: 'Voltando à tela inicial. O Android não permite forçar o encerramento de qualquer aplicativo.' }; } },
   retornar_app: { risco: 0, disp: ['android'], ajuda: 'args {"app":"nome da lista de apps"}. Reabre ou traz o app para primeiro plano.',
     run: async (a) => { const k = acharApp(String(a.app || '')); if (!k) return { info: 'Não reconheci esse aplicativo na lista disponível.' }; await nativo('abrirAplicativo', { app: k }); return { info: 'Solicitei a abertura de ' + k.replace(/_/g, ' ') + '.' }; } },
-  controle_midia: { risco: 0, disp: ['android'], ajuda: 'args {"comando":"pausar|continuar|proxima|anterior"}. Envia controles de mídia Android; compatibilidade varia por app.',
-    run: async (a) => { const c = String(a.comando || 'pausar'); await nativo('controleMidia', { comando: c }); return { info: 'Enviei o comando de mídia: ' + c + '. O aplicativo de reprodução precisa aceitar controles externos.' }; } },
+  controle_midia: { risco: 0, disp: ['android'], ajuda: 'args {"comando":"pausar|continuar|proxima|anterior|alternar|parar"}. Controla o app que está tocando (Spotify, YouTube Music e outros) pela sessão de mídia do Android; sem acesso às notificações, envia teclas de mídia.',
+    run: async (a) => {
+      const c = String(a.comando || 'pausar');
+      const r = await nativo('controleMidia', { comando: c });
+      const app = (r && r.app) || '';
+      const verbo = { pausar: 'Pausei', continuar: 'Retomei', proxima: 'Pulei para a próxima', anterior: 'Voltei para a anterior', alternar: 'Alternei a reprodução de', parar: 'Parei' }[c] || 'Enviei o comando para';
+      if (r && r.metodo === 'sessao' && app) return { info: verbo + ' ' + app + '.' };
+      if (r && r.metodo === 'teclas') return { info: 'Enviei o comando de mídia (teclas do Android). Se nada mudar, autorize o acesso às notificações em Ajustes ▸ Voz para eu controlar o player diretamente.' };
+      return { info: 'Enviei o comando de mídia: ' + c + '.' };
+    } },
+  musica_tocando: { risco: 0, disp: ['android'], ajuda: 'sem args. Diz qual app está tocando e qual música/faixa está no player.',
+    run: async () => { const r = await nativo('midiaAtual', {}); return { info: descreverMidia(r) }; } },
+  spotify: { risco: 0, disp: ['android'], ajuda: 'args {"busca":"nome da música, artista ou playlist"} ou {"tipo":"curtidas|tocando|radio"}. Abre o Spotify já na busca (o app do Spotify não aceita iniciar faixa sozinho: toque no resultado) ou numa seção fixa.',
+    run: async (a) => {
+      const busca = String((a && a.busca) || '').trim().slice(0, 120);
+      const tipo = String((a && a.tipo) || '').trim();
+      const r = await nativo('tocarNoSpotify', { busca, tipo });
+      const onde = (r && r.app) || 'Spotify';
+      if (r && r.aviso) return { info: r.aviso };
+      if (busca) return { info: 'Abri o ' + onde + ' na busca por “' + busca + '”. Toque no resultado para começar a ouvir; o Spotify não deixa eu iniciar a faixa sozinho.' };
+      return { info: 'Abri o ' + onde + (tipo === 'curtidas' ? ' nas suas músicas curtidas.' : '.') };
+    } },
   volume: { risco: 0, disp: ['android'], ajuda: 'args {"direcao":"aumentar|diminuir|silenciar"} OU {"percentual":0-100}, com "tipo" opcional: musica|chamada|notificacao|alarme|toque|sistema (padrão musica). Ajusta o volume em um passo.',
     run: async (a) => {
       const r = await nativo('ajustarVolume', { direcao: (a && a.direcao) || (a && a.percentual != null ? 'definir' : 'aumentar'), tipo: a && a.tipo, percentual: a && a.percentual });
@@ -1126,10 +1146,31 @@ async function comandoRapido(texto) {
     return true;
   }
   if (/^(?:sair|fechar|minimizar|ir para a tela inicial)(?: do app| do aplicativo)?(?: atual)?$/.test(n) || /^(?:saia|feche) (?:do )?(?:app|aplicativo) atual$/.test(n)) { await nativo('irInicio', {}); await falar('Voltando à tela inicial. O Android não permite forçar o encerramento de qualquer aplicativo.'); return true; }
-  if (/^(?:pausar|pause|pare) (?:a |o )?(?:musica|video|reproducao)$/.test(n)) { await ACOES.controle_midia.run({ comando: 'pausar' }); await falar('Enviei o comando de pausa.'); return true; }
-  if (/^(?:continuar|retomar|reproduzir|tocar) (?:a |o )?(?:musica|video|reproducao)$/.test(n)) { await ACOES.controle_midia.run({ comando: 'continuar' }); await falar('Enviei o comando para continuar.'); return true; }
-  if (/^(?:proxima|proximo|avancar) (?:musica|faixa|video)$/.test(n)) { await ACOES.controle_midia.run({ comando: 'proxima' }); await falar('Enviei o comando de próxima faixa.'); return true; }
-  if (/^(?:musica|faixa|video) anterior$/.test(n)) { await ACOES.controle_midia.run({ comando: 'anterior' }); await falar('Enviei o comando de faixa anterior.'); return true; }
+  if (/^(?:pausar|pausa|pause|pare|para|parar) (?:a |o )?(?:musica|video|reproducao|som|player)$/.test(n)) { const r = await ACOES.controle_midia.run({ comando: 'pausar' }); await falar(r.info); return true; }
+  if (/^(?:continuar|continua|continue|retomar|retoma|reproduzir|tocar|voltar a tocar) (?:a |o )?(?:musica|video|reproducao|som|player)$/.test(n)) { const r = await ACOES.controle_midia.run({ comando: 'continuar' }); await falar(r.info); return true; }
+  if (/^(?:proxima|proximo|avancar|pular|pula) (?:a |o )?(?:musica|faixa|video|som)$/.test(n)) { const r = await ACOES.controle_midia.run({ comando: 'proxima' }); await falar(r.info); return true; }
+  if (/^(?:voltar|volta|retornar|retorna) (?:a |o )?(?:musica|faixa|video|som)$/.test(n) || /^(?:musica|faixa|video) anterior$/.test(n)) { const r = await ACOES.controle_midia.run({ comando: 'anterior' }); await falar(r.info); return true; }
+  // Mídia: quem está tocando e controle pelo player (Spotify/YouTube Music).
+  if (/^(?:o que (?:esta|ta) tocando|qual (?:a )?(?:musica|faixa) (?:esta|ta) tocando|que musica (?:esta|ta) tocando|que (?:musica|faixa) e essa)$/.test(n)) { const r = await ACOES.musica_tocando.run(); await falar(r.info); return true; }
+  if (/^(?:(?:abrir|abre|mostrar|mostra|colocar|coloca) (?:as )?(?:minhas )?(?:musicas )?(?:curtidas|favoritas)|minhas curtidas|musicas curtidas)(?: no spotify)?$/.test(n)) { rapido('spotify'); const r = await ACOES.spotify.run({ tipo: 'curtidas' }); await falar(r.info); return true; }
+  // "toca <algo> (no Spotify)": abre o Spotify na busca. O app do Spotify não aceita
+  // iniciar a faixa sozinho, então o usuário toca no resultado — e eu digo isso.
+  // "uma música da Anitta" vira busca por "Anitta", não por "da anitta".
+  const termoBusca = (t) => String(t || '').replace(/^(?:de|da|do|das|dos|pelo|pela)\s+/i, '').trim();
+  const pedidoSpotify = /^(?:toca|toque|tocar|reproduz|reproduza|coloca|coloque|bota|poe|poem|abre|abrir)\s+(?:(?:a|o|uma|um)\s+)?(?:musica|faixa|playlist|album|artista)?\s*["“]?(.+?)["”]?\s*(?:no|na|pelo|pela)\s+spotify$/.exec(n);
+  if (pedidoSpotify) { rapido('spotify'); const r = await ACOES.spotify.run({ busca: termoBusca(pedidoSpotify[1]) }); await falar(r.info); return true; }
+  const pedidoMusica = /^(?:toca|toque|tocar|reproduz|reproduza|coloca|coloque|bota|poe|poem)\s+["“]?(.+?)["”]?$/.exec(n);
+  if (pedidoMusica) {
+    const alvo = pedidoMusica[1].trim();
+    const generico = /^(?:(?:a|o|as|os)\s+)?(?:musica|faixa|video|reproducao|nada|isso|aquilo|qualquer coisa)$/.test(alvo);
+    if (!generico) { rapido('spotify'); const r = await ACOES.spotify.run({ busca: termoBusca(alvo) }); await falar(r.info); return true; }
+  }
+  // Perfis de voz (timbre do filme) e sinal do HUD.
+  if (/^(?:(?:usar|use|colocar|coloque|ativar|ative|aplicar|aplique|mudar para|mude para)\s+)?(?:a\s+)?voz (?:do )?(?:filme|jarvis do filme)$/.test(n) || /^voz do jarvis$/.test(n)) { const c = aplicarPerfilVoz('filme'); await falar('Perfil ' + c.nome + ' aplicado: tom mais grave e fala cadenciada. Teste em Ajustes, na aba Voz.'); return true; }
+  if (/^(?:(?:usar|use|colocar|coloque|ativar|ative|aplicar|aplique|mudar para|mude para)\s+)?(?:a\s+)?voz (?:ultra )?grave$/.test(n)) { const c = aplicarPerfilVoz('ultra'); await falar('Perfil ' + c.nome + ' aplicado. Se ficar difícil de entender, volte para a voz do filme.'); return true; }
+  if (/^(?:(?:usar|use|colocar|coloque|ativar|ative|voltar para|volte para|mudar para|mude para)\s+)?(?:a\s+)?voz (?:normal|padrao|de sempre)$/.test(n)) { const c = aplicarPerfilVoz('padrao'); await falar('Perfil ' + c.nome + ' restaurado.'); return true; }
+  if (/^(?:(?:ligar|ligue|ativar|ative|liga|ativa)\s+(?:o\s+)?(?:sinal|som|bipe)(?:\s+do\s+hud)?)$/.test(n)) { store.set('voz_chime', '1'); $('#c-voz-chime') && ($('#c-voz-chime').checked = true); await falar('Sinal do HUD ligado. Toco duas notas antes de cada resposta.'); return true; }
+  if (/^(?:(?:desligar|desligue|desativar|desative|desliga|desativa)\s+(?:o\s+)?(?:sinal|som|bipe)(?:\s+do\s+hud)?)$/.test(n)) { store.set('voz_chime', '0'); $('#c-voz-chime') && ($('#c-voz-chime').checked = false); await falar('Sinal do HUD desligado.'); return true; }
   // Volume: direção, stream (música/chamada/notificação/alarme/toque/sistema) e percentual.
   const volRx = /^(?:(aumentar|aumente|subir|suba|diminuir|diminua|baixar|baixe|silenciar|silencie|mutar|mute) )?(?:o |as )?volume(?: (?:da|do|das|dos) (musica|alarme|notifica[cç][aã]o|notificacoes|chamada|toque|sistema))?(?: em (\d{1,3}) ?%?)?$/.exec(n);
   const volDef = /^(?:colocar|coloque|definir|defina|ajustar|ajuste|por|pone) (?:o )?volume (?:da|do|das|dos) ([a-z]+) (?:em|para) (\d{1,3}) ?%?$/.exec(n);
@@ -1882,7 +1923,7 @@ async function listarVozesNativas() {
   return vozesNativas;
 }
 const idVoz = (v) => v.voiceURI || v.name;
-const vozPareceMasculina = (v) => /\b(male|mascul|homem|ricardo|daniel|jorge|antonio|ant[oô]nio|carlos|lucas|bruno|felipe|paulo)\b/i.test(String(v && (v.name || v.nome) || ''));
+const vozPareceMasculina = (v) => /\b(male|mascul|homem|ricardo|daniel|jorge|antonio|ant[oô]nio|carlos|lucas|bruno|felipe|paulo|joaquim|duarte|arthur|george|james|oliver|thomas|aaron|gordon|graham|senhor)\b/i.test(String(v && (v.name || v.nome) || ''));
 function indiceVozPreferida(vs) {
   const iMasculinaPt = vs.findIndex((v) => vozPareceMasculina(v) && /^pt[-_]br/i.test(v.lang || ''));
   if (iMasculinaPt >= 0) return iMasculinaPt;
@@ -1899,6 +1940,51 @@ function opcoesVoz(o) {
     pitch: +(o.pitch !== undefined ? o.pitch : store.get('pitch', '0.75')),
     rate: +(o.rate !== undefined ? o.rate : store.get('rate', '1'))
   };
+}
+// Perfis de timbre. O JARVIS do filme é grave, cadenciado e cheio de pausas:
+// no Android o que dá esse efeito é tom baixo + fala um pouco mais lenta.
+const PERFIS_VOZ = {
+  padrao: { nome: 'Padrão', pitch: '0.8', rate: '1' },
+  filme: { nome: 'JARVIS do filme', pitch: '0.6', rate: '0.9' },
+  ultra: { nome: 'Ultra grave', pitch: '0.5', rate: '0.85' }
+};
+function perfilVozAtual() {
+  const p = store.get('voz_perfil', 'padrao');
+  return PERFIS_VOZ[p] ? p : 'padrao';
+}
+function aplicarPerfilVoz(nome, salvar) {
+  const p = PERFIS_VOZ[nome] ? nome : 'padrao';
+  const cfg = PERFIS_VOZ[p];
+  const sp = $('#c-pitch'), sr = $('#c-rate'), sel = $('#c-voz-perfil');
+  if (sp) sp.value = cfg.pitch;
+  if (sr) sr.value = cfg.rate;
+  if (sel) sel.value = p;
+  if (typeof atualizarValoresVoz === 'function') atualizarValoresVoz();
+  if (salvar !== false) { store.set('voz_perfil', p); store.set('pitch', cfg.pitch); store.set('rate', cfg.rate); }
+  return cfg;
+}
+// Sinal curto do HUD antes da resposta (duas notas, como no filme). Puro enfeite:
+// qualquer falha no áudio é ignorada e nunca impede a fala.
+let chimeCtx = null;
+function sinalHud() {
+  if (store.get('voz_chime', '0') !== '1') return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    chimeCtx = chimeCtx || new AC();
+    if (chimeCtx.state === 'suspended') chimeCtx.resume();
+    const t0 = chimeCtx.currentTime;
+    [[1180, 0], [1660, 0.085]].forEach((par) => {
+      const osc = chimeCtx.createOscillator(), g = chimeCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = par[0];
+      g.gain.setValueAtTime(0.0001, t0 + par[1]);
+      g.gain.exponentialRampToValueAtTime(0.06, t0 + par[1] + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + par[1] + 0.14);
+      osc.connect(g); g.connect(chimeCtx.destination);
+      osc.start(t0 + par[1]); osc.stop(t0 + par[1] + 0.16);
+    });
+  } catch (e) { /* sem áudio para o enfeite: segue a fala normal */ }
 }
 // Espera uma fala terminar, mas nunca para sempre: encerra se o usuário mandar parar ou se o tempo estourar.
 function comLimite(promessa, ms) {
@@ -1948,6 +2034,15 @@ function falarWebUm(texto, o) {
     return r;
   });
 }
+// Descreve o player para as respostas por voz ("o que está tocando").
+function descreverMidia(r) {
+  if (!r) return 'Não consegui consultar o player agora.';
+  if (!r.permitido && !r.tocando) return 'Nada está tocando. Para eu saber o app e a faixa, autorize o acesso às notificações em Ajustes ▸ Voz.';
+  const app = r.app || 'o player';
+  const faixa = [r.titulo, r.artista].filter(Boolean).join(' — ');
+  if (!r.tocando) return faixa ? 'O ' + app + ' está pausado em ' + faixa + '.' : 'Nada tocando no ' + app + ' agora.';
+  return faixa ? 'Tocando ' + faixa + ' no ' + app + '.' : 'O ' + app + ' está tocando.';
+}
 function animarFala() {
   setEstado('speaking');
   return setInterval(() => setNivel(0.3 + 0.7 * Math.abs(Math.sin(Date.now() / 120))), 80);
@@ -1980,6 +2075,7 @@ async function falar(texto, semMsg, opcoes, links) {
   if (!semMsg) msg('jv', texto, links);
   const partes = dividirFala(limparParaFala(texto));
   if (!partes.length) return;
+  sinalHud();
   let i = 0;
   await armarParada();
   try {
@@ -2000,7 +2096,7 @@ async function armarParada() {
   const p = plug('JarvisBackground');
   if (!p || paradaAtiva || !wakeLigado() || store.get('pararvoz', '0') !== '1') return;
   paradaAtiva = true;
-  try { await p.startWake({ parar: true, pausarDuranteMusica: store.get('wake_pausa_musica', '1') === '1', accessKey: CHAVE_PICOVOICE }); } catch (e) { paradaAtiva = false; }
+  try { await p.startWake({ parar: true, pausarDuranteMusica: store.get('wake_pausa_musica', '1') === '1', accessKey: CHAVE_PICOVOICE, motor: store.get('wake_motor', 'auto') }); } catch (e) { paradaAtiva = false; }
 }
 async function desarmarParada() {
   const p = plug('JarvisBackground');
@@ -2255,7 +2351,7 @@ async function iniciarWake() {
     // iniciados quando o app já está em segundo plano. Sem serviço, o modo só é garantido em primeiro plano.
     await p.start();
     segPlanoOk = true;
-    await p.startWake({ pausarDuranteMusica: store.get('wake_pausa_musica', '1') === '1', accessKey: CHAVE_PICOVOICE });
+    await p.startWake({ pausarDuranteMusica: store.get('wake_pausa_musica', '1') === '1', accessKey: CHAVE_PICOVOICE, motor: store.get('wake_motor', 'auto') });
     if (!ocupado) { wakeAtivo = true; setEstado('idle'); atualizarWakeControles(); }
     else await p.stopWake();
   } catch (e) {
@@ -3100,8 +3196,13 @@ function abrirConfig() {
   $('#c-humor-valor').textContent = $('#c-humor').value + '%';
   atualizarPreviaPersonalidade();
   $('#c-contatos').value = store.get('contatos');
-  $('#c-pitch').value = store.get('pitch', '0.75');
-  $('#c-rate').value = store.get('rate', '1');
+  const perfilSalvo = perfilVozAtual();
+  if ($('#c-voz-perfil')) $('#c-voz-perfil').value = perfilSalvo;
+  if ($('#c-voz-chime')) $('#c-voz-chime').checked = store.get('voz_chime', '0') === '1';
+  if ($('#c-wake-motor')) $('#c-wake-motor').value = store.get('wake_motor', 'auto');
+  const cfgVoz = PERFIS_VOZ[perfilSalvo] || PERFIS_VOZ.padrao;
+  $('#c-pitch').value = store.get('pitch', cfgVoz.pitch);
+  $('#c-rate').value = store.get('rate', cfgVoz.rate);
   atualizarValoresVoz();
   $('#c-seguro').checked = store.get('seguro', '1') === '1';
   $('#c-offline').checked = store.get('offline', '0') === '1';
@@ -3506,6 +3607,23 @@ document.querySelectorAll('[data-abrir-voz]').forEach((b) => b.addEventListener(
 $('#c-pitch').addEventListener('input', atualizarValoresVoz);
 $('#c-rate').addEventListener('input', atualizarValoresVoz);
 $('#c-voz-grave').onclick = () => { $('#c-pitch').value = '0.6'; atualizarValoresVoz(); store.set('pitch', '0.6'); };
+const selPerfilVoz = $('#c-voz-perfil');
+if (selPerfilVoz) selPerfilVoz.onchange = () => {
+  const cfg = aplicarPerfilVoz(selPerfilVoz.value);
+  const st = $('#c-voz-status');
+  if (st) st.textContent = 'Perfil ' + cfg.nome + ' aplicado: tom ' + cfg.pitch.replace('.', ',') + ' e velocidade ' + cfg.rate.replace('.', ',') + '×. Use “Testar voz” para ouvir.';
+};
+const chkVozChime = $('#c-voz-chime');
+if (chkVozChime) { chkVozChime.checked = store.get('voz_chime', '0') === '1'; chkVozChime.onchange = () => store.set('voz_chime', chkVozChime.checked ? '1' : '0'); }
+const selMotorWake = $('#c-wake-motor');
+if (selMotorWake) selMotorWake.onchange = async () => {
+  store.set('wake_motor', selMotorWake.value);
+  const st = $('#c-wake-motor-status');
+  const rotulo = { auto: 'Automático', android: 'Android (grátis)', porcupine: 'Porcupine' }[selMotorWake.value] || selMotorWake.value;
+  if (st) st.textContent = 'Motor salvo: ' + rotulo + '.';
+  // Vale na próxima vez que a escuta subir; se já estiver ouvindo, reinicia com o novo motor.
+  if (wakeLigado()) { try { await pararWake(); await iniciarWake(); if (st) st.textContent = 'Motor salvo e escuta reiniciada com: ' + rotulo + '.'; } catch (e) { if (st) st.textContent = 'Motor salvo, mas reiniciar a escuta falhou: ' + (e && e.message ? e.message : e); } }
+};
 // Perfil acústico experimental: extrai apenas estatísticas do sinal, nunca salva o áudio.
 // Isto é uma comparação rudimentar de timbre, não reconhecimento biométrico seguro.
 const VOZ_PERFIL_KEY = 'perfil_acustico_v2';

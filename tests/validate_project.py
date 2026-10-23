@@ -45,7 +45,7 @@ version = json.loads((ROOT / 'VERSAO.json').read_text(encoding='utf-8'))
 if cfg.get('appId') != 'com.jarvis.nova': issues.append('appId deve permanecer com.jarvis.nova')
 if cfg.get('appId') in {'com.jarvis.app','com.jarvis.assistente'}: issues.append('appId conflita com versões legadas conhecidas')
 if pkg.get('version') != version.get('version'): issues.append('package.json e VERSAO.json divergem na versão')
-if version.get('version') != '1.6.0' or version.get('versionCode') != 1600: issues.append('VERSAO.json deve ser 1.6.0/versionCode 1600')
+if version.get('version') != '1.7.0' or version.get('versionCode') != 1700: issues.append('VERSAO.json deve ser 1.7.0/versionCode 1700')
 if not (ROOT / 'JarvisBootReceiver.java').exists(): issues.append('Receiver de reinicialização não encontrado')
 if not (ROOT / 'JarvisNotificationListener.java').exists(): issues.append('Listener de notificações não encontrado')
 if not (ROOT / 'JarvisAlarmScheduler.java').exists(): issues.append('Agendador persistente de alarmes não encontrado')
@@ -92,7 +92,7 @@ if 'iniciarSessaoLivre' not in (ROOT / 'JarvisService.java').read_text(encoding=
 if 'patch_gradle.py android/app/build.gradle' not in workflow: issues.append('Workflow não adiciona a dependência do detector local')
 if 'listarContatos' not in (ROOT / 'JarvisUtilPlugin.java').read_text(encoding='utf-8'): issues.append('Método nativo listarContatos ausente')
 if 'c-importar-contatos' not in (ROOT / 'index.html').read_text(encoding='utf-8') or 'c-importar-contatos' not in (ROOT / 'app.js').read_text(encoding='utf-8'): issues.append('Interface de importação de contatos ausente')
-if 'JarvisBootReceiver.java' not in workflow or 'JarvisAlarmScheduler.java' not in workflow or 'JarvisNotificationListener.java' not in workflow or not any(x in workflow for x in ['JARVIS-Nova-1.4.5-APK', 'JARVIS-Nova-1.5.0-APK', 'JARVIS-Nova-1.5.1-APK', 'JARVIS-Nova-1.6.0-APK']): issues.append('Workflow não inclui os recursos nativos/artefato atual')
+if 'JarvisBootReceiver.java' not in workflow or 'JarvisAlarmScheduler.java' not in workflow or 'JarvisNotificationListener.java' not in workflow or not re.search(r'JARVIS-Nova-\d+\.\d+\.\d+-APK', workflow): issues.append('Workflow não inclui os recursos nativos/artefato atual')
 if './gradlew assembleDebug' not in workflow or 'test -s app/build/outputs/apk/debug/app-debug.apk' not in workflow:
     issues.append('Workflow não valida a existência do APK após o Gradle')
 if 'cache: gradle' in workflow:

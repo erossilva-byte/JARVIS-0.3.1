@@ -49,6 +49,7 @@ public class JarvisService extends Service {
     static final String ACAO_TESTE_ON = "com.jarvis.nova.TESTE_ON";
     static final String ACAO_TESTE_OFF = "com.jarvis.nova.TESTE_OFF";
     static final String EXTRA_CHAVE = "accessKey";
+    static final String EXTRA_MOTOR = "motor";
     static final String EXTRA_MUSICA = "pausarMusica";
     static final String EXTRA_SEGUNDOS = "segundos";
 
@@ -59,6 +60,8 @@ public class JarvisService extends Service {
     private final Handler main = new Handler(Looper.getMainLooper());
     private PorcupineManager porcupine;
     private String chave = "";
+    /** Motor pedido nesta execução ("" = usar o salvo em JarvisPrefs). */
+    private String motorPedido = "";
     private boolean pausarDuranteMusica = true;
     private boolean querEscuta = false;
     private String estadoNotificacao = "Escuta em espera";
@@ -159,15 +162,17 @@ public class JarvisService extends Service {
     }
 
     /** Liga o serviço, persiste o estado desejado e começa a escutar. */
-    static void iniciarEscuta(Context ctx, String accessKey, boolean pausarMusica) {
+    static void iniciarEscuta(Context ctx, String accessKey, boolean pausarMusica, String motor) {
         JarvisPrefs.desejaOuvir(ctx, true);
         JarvisPrefs.pausarMusica(ctx, pausarMusica);
+        JarvisPrefs.motor(ctx, motor);
         boolean temChave = accessKey != null && !accessKey.trim().isEmpty();
         if (temChave) JarvisPrefs.guardarChave(ctx, accessKey);
         JarvisWatchdog.agendar(ctx, 15L * 60L * 1000L);
         Intent i = new Intent(ctx, JarvisService.class)
             .setAction(ACAO_ESCUTA_ON)
             .putExtra(EXTRA_CHAVE, temChave ? accessKey.trim() : JarvisPrefs.lerChave(ctx))
+            .putExtra(EXTRA_MOTOR, JarvisPrefs.motor(ctx))
             .putExtra(EXTRA_MUSICA, pausarMusica);
         ContextCompat.startForegroundService(ctx, i);
     }
@@ -211,6 +216,7 @@ public class JarvisService extends Service {
             .setAction(ACAO_TESTE_ON)
             .putExtra(EXTRA_SEGUNDOS, dur)
             .putExtra(EXTRA_CHAVE, JarvisPrefs.lerChave(ctx))
+            .putExtra(EXTRA_MOTOR, JarvisPrefs.motor(ctx))
             .putExtra(EXTRA_MUSICA, false); // no teste, música não deve mascarar o resultado
         ContextCompat.startForegroundService(ctx, i);
     }
@@ -295,13 +301,15 @@ public class JarvisService extends Service {
         if (ACAO_TESTE_ON.equals(acao)) {
             int segundos = intent == null ? 20 : intent.getIntExtra(EXTRA_SEGUNDOS, 20);
             String k = intent == null ? "" : intent.getStringExtra(EXTRA_CHAVE);
+            motorPedido = intent == null || intent.getStringExtra(EXTRA_MOTOR) == null
+                ? "" : intent.getStringExtra(EXTRA_MOTOR).trim();
             chave = k == null ? JarvisPrefs.lerChave(this) : k.trim();
             if (chave.isEmpty()) chave = JarvisPrefs.lerChave(this);
             pausarDuranteMusica = false;
             main.removeCallbacks(testeFim);
             testeDeteccoes = 0;
             testeAte = System.currentTimeMillis() + Math.max(10, Math.min(60, segundos)) * 1000L;
-            testeDetector = chave.isEmpty() ? "android-sem-chave" : "picovoice-porcupine";
+            testeDetector = chave.isEmpty() || "android".equals(motorEscolhido()) ? "android-sem-chave" : "picovoice-porcupine";
             main.postDelayed(testeFim, Math.max(10, Math.min(60, segundos)) * 1000L + 300);
             iniciarEscutaInterna();
             estadoNotificacao = "Teste da palavra de ativação — diga “Jarvis”";
@@ -339,6 +347,9 @@ public class JarvisService extends Service {
         }
         String extraChave = intent == null ? null : intent.getStringExtra(EXTRA_CHAVE);
         if (extraChave != null) chave = extraChave.trim();
+        if (intent != null && intent.getStringExtra(EXTRA_MOTOR) != null) {
+            motorPedido = intent.getStringExtra(EXTRA_MOTOR).trim();
+        }
         if (chave.isEmpty()) chave = JarvisPrefs.lerChave(this);
         if (intent != null && intent.hasExtra(EXTRA_MUSICA)) {
             pausarDuranteMusica = intent.getBooleanExtra(EXTRA_MUSICA, JarvisPrefs.pausarMusica(this));
@@ -379,10 +390,24 @@ public class JarvisService extends Service {
 
     /* ---------- Motor de escuta ---------- */
 
+    /** Motor efetivo: o pedido nesta execução, senão o salvo pelo usuário. */
+    private String motorEscolhido() {
+        String m = motorPedido == null ? "" : motorPedido;
+        if (m.isEmpty()) m = JarvisPrefs.motor(this);
+        return m;
+    }
+
     private void iniciarMotor() throws Exception {
         if (!querEscuta) return;
         if (chamadaAtiva() || (pausarDuranteMusica && musicaAtiva())) return;
-        if (!chave.isEmpty()) {
+        String motor = motorEscolhido();
+        if ("porcupine".equals(motor) && chave.isEmpty()) {
+            // Escolha explícita sem chave: avisar em vez de cair calado no detector livre.
+            pararPorFalha("o detector Porcupine está selecionado, mas não há AccessKey Picovoice salva. Cole a chave ou mude o detector para “Android (grátis)” em Ajustes ▸ Voz");
+            return;
+        }
+        boolean usarPorcupine = !chave.isEmpty() && !"android".equals(motor);
+        if (usarPorcupine) {
             if (porcupine == null) {
                 porcupine = new PorcupineManager.Builder()
                     .setAccessKey(chave)

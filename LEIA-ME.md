@@ -1,10 +1,29 @@
-# J.A.R.V.I.S. Nova 1.6.0
+# J.A.R.V.I.S. Nova 1.7.0
 
 Assistente pessoal para Android (Capacitor + WebView), com versão desktop Electron opcional.
 Aplicativo independente com `com.jarvis.nova`. O código-fonte fica **na raiz do repositório**
 (o workflow ainda aceita `JARVIS-NOVA-*-fonte.zip` por compatibilidade).
 
-## Destaques da 1.6.0 — segundo plano confiável
+## Destaques da 1.7.0 — voz de cinema, Spotify e detector escolhido à mão
+
+- **Motor da palavra de ativação escolhível** em Ajustes ▸ Voz: `Automático`, `Android (grátis)`
+  ou `Porcupine`. A escolha é gravada em `JarvisPrefs`, sobrevive ao reinício e o serviço a
+  respeita — inclusive reiniciando o detector na hora se você trocar com a escuta ligada.
+- **Por que o Sherpa-ONNX/openWakeWord não entraram:** o modelo oficial de KWS do sherpa-onnx foi
+  testado aqui e reconhece “Jarvis” em inglês, mas erra a pronúncia em português (1 acerto em 4
+  frases com limiar 0,10; nenhum no limiar padrão). O `hey_jarvis` do openWakeWord é treinado em
+  inglês e tem licença **CC BY-NC-SA**, que não serve para distribuição comercial. Embutir 50 MB de
+  engine que erra a sua fala seria piorar a ativação, então o motor gratuito segue sendo o
+  reconhecedor do Android — que entende português e, no Android 12+, roda no dispositivo.
+- **Voz estilo filme:** perfis `JARVIS do filme` (tom 0,60, velocidade 0,90) e `Ultra grave`
+  (0,50/0,85), além do `Padrão`, no mesmo lugar em que ficam os sliders de ajuste fino.
+- **Sinal do HUD:** duas notas curtas antes de cada resposta, opcionais (desligado por padrão).
+- **Spotify e mídia:** pausar, continuar, próxima, anterior e volume agora vão pela sessão de
+  mídia do Android (funciona com Spotify e YouTube Music); “o que está tocando” responde app,
+  faixa e artista; “toca <música>” abre o Spotify na busca, e “abre minhas curtidas” vai direto
+  para a biblioteca. Iniciar a faixa sozinho o Spotify não permite — o toque no resultado é seu.
+
+## O que veio da 1.6.0 — segundo plano confiável
 
 - **A escuta sobrevive ao app fechado, ao reinício do serviço e ao reinício do aparelho.**
   O estado desejado (“quero a palavra de ativação ligada”) saiu do `localStorage` e passou a
@@ -56,9 +75,9 @@ Aplicativo independente com `com.jarvis.nova`. O código-fonte fica **na raiz do
 
 Faça push na `main` com os fontes na raiz (ou envie `JARVIS-NOVA-*-fonte.zip` na raiz). O workflow
 `.github/workflows/build-apk.yml` fixa a assinatura de CI, executa `npm run test:all`, configura a
-API mínima 26, aplica permissões/versão e compila o APK debug (artefato `JARVIS-Nova-1.6.0-APK`).
+API mínima 26, aplica permissões/versão e compila o APK debug (artefato `JARVIS-Nova-1.7.0-APK`).
 
-Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.6.0`: o workflow
+Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.7.0`: o workflow
 `.github/workflows/release-apk.yml` compila, testa e publica o APK com checksum. Também é possível
 executar o workflow manualmente pelo painel de Actions.
 

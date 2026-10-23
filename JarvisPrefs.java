@@ -54,6 +54,23 @@ final class JarvisPrefs {
         sp(c).edit().putBoolean("musica", v).apply();
     }
 
+    /**
+     * Motor da palavra de ativação escolhido pelo usuário: "auto" (Porcupine quando há
+     * AccessKey, senão o reconhecedor do Android), "porcupine" ou "android".
+     * Persistido aqui porque o serviço precisa saber disso ao ser reiniciado pelo sistema.
+     */
+    static String motor(Context c) {
+        String m = sp(c).getString("motor", "auto");
+        if (!"porcupine".equals(m) && !"android".equals(m)) m = "auto";
+        return m;
+    }
+
+    static void motor(Context c, String v) {
+        String m = v == null ? "auto" : v.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!"porcupine".equals(m) && !"android".equals(m)) m = "auto";
+        sp(c).edit().putString("motor", m).apply();
+    }
+
     /** Última falha do detector, mostrada no diagnóstico (sem áudio nem conteúdo de comandos). */
     static String ultimoErro(Context c) {
         return sp(c).getString("erro", "");
