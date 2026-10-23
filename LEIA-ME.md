@@ -1,8 +1,17 @@
-# J.A.R.V.I.S. Nova 1.7.0
+# J.A.R.V.I.S. Nova 1.7.1
 
 Assistente pessoal para Android (Capacitor + WebView), com versão desktop Electron opcional.
 Aplicativo independente com `com.jarvis.nova`. O código-fonte fica **na raiz do repositório**
 (o workflow ainda aceita `JARVIS-NOVA-*-fonte.zip` por compatibilidade).
+
+## Correção da 1.7.1 — assinatura fixa
+
+Release 1.6.0 e 1.7.0 saíram com assinaturas de debug diferentes entre si, porque o Gradle
+do CI não usava o keystore copiado para `~/.android`. A 1.7.1 declara a assinatura em
+`patch_gradle.py` (`signingConfigs.debug` → `ci/debug.keystore`), com teste de regressão, e foi
+verificada com `HOME` limpo: certificado `04e04712…`, o mesmo do APK instalado. Se a instalação
+da 1.7.1 for recusada, é porque a versão instalada veio de um daqueles releases antigos —
+desinstale uma vez (perde os ajustes salvos) e, a partir da 1.7.1, as próximas instalam por cima.
 
 ## Destaques da 1.7.0 — voz de cinema, Spotify e detector escolhido à mão
 
@@ -75,9 +84,9 @@ Aplicativo independente com `com.jarvis.nova`. O código-fonte fica **na raiz do
 
 Faça push na `main` com os fontes na raiz (ou envie `JARVIS-NOVA-*-fonte.zip` na raiz). O workflow
 `.github/workflows/build-apk.yml` fixa a assinatura de CI, executa `npm run test:all`, configura a
-API mínima 26, aplica permissões/versão e compila o APK debug (artefato `JARVIS-Nova-1.7.0-APK`).
+API mínima 26, aplica permissões/versão e compila o APK debug (artefato `JARVIS-Nova-1.7.1-APK`).
 
-Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.7.0`: o workflow
+Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.7.1`: o workflow
 `.github/workflows/release-apk.yml` compila, testa e publica o APK com checksum. Também é possível
 executar o workflow manualmente pelo painel de Actions.
 

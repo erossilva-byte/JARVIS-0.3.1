@@ -69,6 +69,31 @@ if local_ai_coordinate not in app_text:
 else:
     print(f"Dependência IA local já presente: {app_gradle}")
 
+# Fixa a assinatura de debug no keystore do repositório.
+# Sem isso o CI gerava um keystore novo a cada build (o cp para ~/.android não era o
+# que o Gradle usava em todos os casos) e cada release saía com uma assinatura
+# diferente — o Android recusava a atualização por cima do app instalado.
+signing_block = """    signingConfigs {
+        debug {
+            def ciKey = file('../../ci/debug.keystore')
+            if (ciKey.exists()) {
+                storeFile ciKey
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }
+    }
+"""
+if "ci/debug.keystore" not in app_text:
+    android_block = re.search(r"(?m)^android\s*\{", app_text)
+    if not android_block:
+        raise SystemExit(f"Bloco android {{ não encontrado em {app_gradle}")
+    app_text = app_text[:android_block.end()] + "\n" + signing_block + app_text[android_block.end():]
+    print(f"Assinatura de debug fixada em ci/debug.keystore: {app_gradle}")
+else:
+    print(f"Assinatura de debug já fixada: {app_gradle}")
+
 # Persist both the SDK-floor adjustment and dependency changes on every run.
 app_gradle.write_text(app_text, encoding="utf-8")
 

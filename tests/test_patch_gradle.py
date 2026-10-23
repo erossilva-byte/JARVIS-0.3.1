@@ -25,6 +25,10 @@ with tempfile.TemporaryDirectory(prefix="jarvis-gradle-patch-") as tmp:
     assert result.count("ai.picovoice:porcupine-android:4.0.2") == 1, "Dependência Porcupine duplicada ou ausente"
     assert result.count("com.google.mediapipe:tasks-genai:0.10.14") == 1, "Dependência IA local duplicada ou ausente"
     assert "https://jitpack.io" not in repos, "JitPack desnecessário continua sendo adicionado"
+    # A assinatura de debug precisa estar fixada no keystore do repo: sem isso o CI
+    # gerava um keystore novo a cada build e cada release saía com assinatura diferente.
+    assert result.count("ci/debug.keystore") == 1, "Assinatura de debug não está fixada (ou está duplicada)"
+    assert "keyAlias 'androiddebugkey'" in result and "storePassword 'android'" in result, "Credenciais do keystore de CI ausentes"
 
 with tempfile.TemporaryDirectory(prefix="jarvis-gradle-kts-") as tmp:
     android = Path(tmp) / "android"
