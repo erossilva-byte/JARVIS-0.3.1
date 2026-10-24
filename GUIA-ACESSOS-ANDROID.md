@@ -20,7 +20,7 @@ Os nomes dos menus variam por fabricante e versão do Android.
 
 ## 3. Ativação por “Jarvis”
 
-A versão 1.3.3 removeu o pacote Android openWakeWord que falhava na resolução do build. A ativação contínua usa Porcupine e requer uma AccessKey Picovoice válida; a primeira validação pode exigir internet. Sem a chave, o microfone manual continua disponível, mas a palavra de ativação contínua não está disponível nesta revisão.
+Desde a 1.5.0 a ativação contínua funciona sem AccessKey: sem chave, o detector livre usa o reconhecimento de voz do Android (com preferência pelo modo offline). Com AccessKey, o Porcupine é usado e gasta menos bateria. A partir da 1.8.0 o detector livre confere as 5 hipóteses do Android e aceita as formas que o transcritor realmente devolve em português.
 
 Para segundo plano, habilite a opção correspondente no app e mantenha a notificação persistente do serviço visível. O Android pode bloquear o uso do microfone se o serviço for iniciado em segundo plano sem as condições exigidas; o app deve ser aberto antes de ativar a escuta.
 
@@ -39,3 +39,15 @@ Para segundo plano, habilite a opção correspondente no app e mantenha a notifi
 6. Verificar logs e repetir os testes em cada versão Android-alvo.
 
 A aprovação de testes estáticos não substitui a compilação Android real nem os testes em dispositivo físico.
+
+## 6. Voz neural offline (1.9.0)
+
+Não pede permissão nova. O motor (sherpa-onnx) já vem no APK; **cada voz é um download opcional**
+feito pelo próprio app para `files/voz-neural/<id>/`, dentro do armazenamento privado.
+
+- Baixe em **Ajustes ▸ Voz ▸ Vozes no próprio aparelho** (Cadu 67 MB, Faber 67 MB ou Kokoro 132 MB).
+- A voz funciona sem internet e sem chave. "Apagar do aparelho" remove os arquivos; "Liberar
+  memória" só descarta o modelo da RAM.
+- O download é grande: use Wi-Fi e mantenha o app aberto até a barra terminar.
+- Se a síntese falhar, o app volta sozinho para o TTS do Android e registra o motivo.
+

@@ -64,15 +64,15 @@ jobs:
           path: android/app/libs
           key: sherpa-onnx-1.13.8-aar-v1
 
-      - name: Baixar o runtime de voz neural (sherpa-onnx, opcional no app)
-        run: python3 ci/baixar_sherpa.py
+      - name: Baixar bibliotecas nativas de voz (sherpa-onnx)
+        run: python3 baixar_sherpa.py android/app
 
       - name: Aplicar identidade, permissões e versão
         run: |
           D=android/app/src/main/java/com/jarvis/nova
           mkdir -p "$D"
           find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
-          for f in MainActivity.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisUpdatePlugin.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java; do
+          for f in MainActivity.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java; do
             test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
           done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
@@ -119,6 +119,6 @@ jobs:
             Instale a partir deste release para que as próximas atualizações funcionem.
             Confira o checksum em `${{ steps.versao.outputs.sha }}`.
 
-            **Vozes neurais (opcional):** a partir da 2.2.0 o app pode falar com Piper (pt-BR)
+            **Vozes neurais (opcional):** a partir da 1.9.0 o app pode falar com Piper (pt-BR)
             ou Kokoro (vozes britânicas) rodando no próprio aparelho. Os modelos são baixados
             dentro do app (67 MB e 132 MB) em Ajustes ▸ Voz; nada disso vai no APK.

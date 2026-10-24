@@ -1,4 +1,44 @@
-# J.A.R.V.I.S. Nova 1.7.2
+# J.A.R.V.I.S. Nova 1.9.0
+
+## Destaques da 1.9.0 — voz neural no próprio aparelho
+
+O APK agora embarca o **sherpa-onnx 1.13.8** (Apache-2.0) com ONNX Runtime e espeak-ng. Os
+modelos de voz **não** vão no pacote: você baixa a voz que quiser uma única vez, ela fica no
+armazenamento privado do app e depois fala **sem internet e sem chave de API**.
+
+| Voz | Tamanho | Timbre medido | Velocidade medida | Licença |
+| --- | --- | --- | --- | --- |
+| **Cadu** (Piper, pt-BR) | 67 MB | 127 Hz — masculina grave | RTF 0,06 (~17× tempo real) | CC0 |
+| **Faber** (Piper, pt-BR) | 67 MB | 155 Hz — masculina clara | RTF 0,06 | CC0 |
+| **Kokoro** (inglês) | 132 MB | bm_fable 129 Hz · bm_george 145 Hz | RTF 1,2–1,5 (mais lenta) | Apache-2.0 |
+
+- **Slider “Profundidade da voz neural”** (0,70–1,10; padrão 0,90): abaixo de 1,00 a fala fica
+  mais grave **e** mais lenta — a cadência do filme.
+- **Sempre opcional:** o seletor começa em “Desligada”. Se o motor faltar, a voz não estiver
+  baixada ou a síntese falhar, a resposta sai pela voz normal do Android.
+- **Kokoro fala inglês.** `en-gb` não existe no espeak-ng empacotado (síntese volta vazia), então
+  o app usa `en`: o timbre britânico vem do falante, o sotaque é americano.
+- **Detector de palavra-chave do sherpa-onnx continua fora:** o único modelo público é em inglês
+  (medido na 1.7.0: 1 de 4 acertos em português). A aba Voz explica isso na tela.
+- **APK maior:** as bibliotecas nativas ARM somam ~53 MB (total ~72 MB). Nada além do APK é
+  baixado até você escolher uma voz.
+
+## Destaques da 1.8.0 — detector que entende o que o Android transcreve
+
+Medi o problema em vez de adivinhar: com voz masculina brasileira, o transcritor de português
+escreve “Jarvis” como **“já vi”**, **“aviso”**, **“javis”** ou **“charvis”** — o nome não existe no
+vocabulário dele. O detector grátis agora pede 5 hipóteses, confere todas, aceita essas variantes e
+usa sessões de até 15 s, o que também acaba com o microfone abrindo e fechando toda hora.
+
+- **Botão “Desligar escuta em segundo plano”** em Ajustes ▸ Voz: encerra serviço, microfone e vigia.
+- **A voz salva não muda sozinha** ao fechar e reabrir o app; só troca se a voz sair do aparelho.
+- **Perfil “Jarvis completo”** (tom 0,55 / velocidade 0,88) e guia para instalar uma voz masculina
+  brasileira offline (Piper/SherpaTTS, `pt_BR-faber` ou `pt_BR-cadu`).
+- **IA mais conversadora e bem-humorada:** fio da conversa, pergunta de esclarecimento, pesquisa com
+  fontes primárias e humor seco a partir de 40%.
+- **Nenhum motor novo do Picovoice foi embarcado:** sherpa-onnx não tem modelo de português,
+  openWakeWord tem pesos CC BY-NC-SA e DaVoice depende de modelo licenciado.
+
 
 Assistente pessoal para Android (Capacitor + WebView), com versão desktop Electron opcional.
 Aplicativo independente com `com.jarvis.nova`. O código-fonte fica **na raiz do repositório**
@@ -92,9 +132,10 @@ desinstale uma vez (perde os ajustes salvos) e, a partir da 1.7.1, as próximas 
 
 Faça push na `main` com os fontes na raiz (ou envie `JARVIS-NOVA-*-fonte.zip` na raiz). O workflow
 `.github/workflows/build-apk.yml` fixa a assinatura de CI, executa `npm run test:all`, configura a
-API mínima 26, aplica permissões/versão e compila o APK debug (artefato `JARVIS-Nova-1.7.2-APK`).
+API mínima 26, baixa o AAR do sherpa-onnx (`baixar_sherpa.py`), aplica permissões/versão e compila o
+APK debug (artefato `JARVIS-Nova-1.9.0-APK`).
 
-Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.7.2`: o workflow
+Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.9.0`: o workflow
 `.github/workflows/release-apk.yml` compila, testa e publica o APK com checksum. Também é possível
 executar o workflow manualmente pelo painel de Actions.
 
@@ -124,8 +165,13 @@ o Android permitir a atualização por cima. Builds locais (`./gradlew assembleD
 ## Estado real
 
 - `npm run test:all`: sintaxe, validador do projeto, roteamento de voz, IA local, perfil de voz,
-  cofre de chaves, responsividade, navegação por painéis, os 34 testes de recursos da 1.5.0 e o
-  novo `tests/test_segundo_plano.py`.
+  cofre de chaves, responsividade, navegação por painéis, os 34 testes de recursos da 1.5.0, os 15
+  da 1.8.0 e os **25 da 1.9.0** (`tests/test_v1_9_0.py`), que conferem o plugin nativo, o catálogo
+  de vozes, as dependências de build, a extração segura do .tar.bz2 e o caminho de fala.
+- **Build local da 1.9.0 verificado:** `assembleDebug` com JDK 17 + SDK 34 gerou 72.623.658 bytes
+  (`sha256 56b48ff9…`), versão 1.9.0/1900, ABIs `arm64-v8a` e `armeabi-v7a`, com
+  `JarvisVozPlugin`, `OfflineTts` e `BZip2CompressorInputStream` presentes no DEX. O APK do
+  release é recompilado pelo CI com a chave de `ci/debug.keystore`.
 - **Compilação Android real desta revisão concluída**: JDK 17 + Android SDK 34, `assembleDebug`
   gerou `app-debug.apk` (~18 MB) com `com.jarvis.nova`, minSdk 26, assinado com `ci/debug.keystore`.
 - O release no GitHub ainda precisa ser criado (tag `v1.6.0`) para o atualizador encontrar o APK.

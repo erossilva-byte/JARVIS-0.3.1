@@ -1,4 +1,4 @@
-name: Build e testes do J.A.R.V.I.S. Nova 1.7.2
+name: Build e testes do J.A.R.V.I.S. Nova 1.9.0
 
 on:
   workflow_dispatch:
@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   build:
-    name: Testar e compilar APK debug 1.7.2
+    name: Testar e compilar APK debug 1.9.0
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -88,6 +88,9 @@ jobs:
           npx cap add android
           npx cap sync android
 
+      - name: Baixar bibliotecas nativas de voz (sherpa-onnx)
+        run: python3 baixar_sherpa.py android/app
+
       - name: Aplicar identidade, permissões, versão e detector local
         id: native-patches
         run: |
@@ -96,7 +99,7 @@ jobs:
           # Copia todos os recursos Java nativos da raiz, incluindo plugins adicionados em versões futuras.
           find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
           # Falha cedo se algum componente nativo essencial não estiver no código-fonte.
-          for f in MainActivity.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisUpdatePlugin.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java; do
+          for f in MainActivity.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java; do
             test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
           done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
@@ -122,7 +125,7 @@ jobs:
       - name: Publicar APK e checksum
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-Nova-1.7.2-APK
+          name: JARVIS-Nova-1.9.0-APK
           if-no-files-found: error
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk

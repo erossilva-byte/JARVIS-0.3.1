@@ -69,6 +69,72 @@ if local_ai_coordinate not in app_text:
 else:
     print(f"Dependência IA local já presente: {app_gradle}")
 
+sherpa_aar_dep = "implementation files('libs/sherpa-onnx-1.13.8.aar')"
+commons_dep = "implementation 'org.apache.commons:commons-compress:1.26.2'"
+
+
+def injetar_dependencia(texto, linha):
+    """Acrescenta uma dependência no fim do bloco dependencies."""
+    if linha in texto:
+        return texto, False
+    achado = re.search(r"\bdependencies\s*\{", texto)
+    if not achado:
+        raise SystemExit("Bloco dependencies não encontrado no build.gradle")
+    nivel = 0
+    fim = None
+    for i in range(achado.end() - 1, len(texto)):
+        if texto[i] == "{":
+            nivel += 1
+        elif texto[i] == "}":
+            nivel -= 1
+            if nivel == 0:
+                fim = i
+                break
+    if fim is None:
+        raise SystemExit("Bloco dependencies incompleto no build.gradle")
+    return texto[:fim] + "    " + linha + "\n" + texto[fim:], True
+
+
+# Voz neural offline: o AAR traz o sherpa-onnx e o ONNX Runtime já compilados
+# (baixado por baixar_sherpa.py); o commons-compress lê os pacotes .tar.bz2 das vozes.
+app_text, mudou = injetar_dependencia(app_text, sherpa_aar_dep)
+if mudou:
+    print(f"Dependência de voz neural adicionada: {app_gradle}")
+else:
+    print(f"Dependência de voz neural já presente: {app_gradle}")
+app_text, mudou = injetar_dependencia(app_text, commons_dep)
+if mudou:
+    print(f"Dependência commons-compress adicionada: {app_gradle}")
+else:
+    print(f"Dependência commons-compress já presente: {app_gradle}")
+
+# Só ARM: as bibliotecas nativas somam ~53 MB e nenhum aparelho x86 roda este APK.
+# Sem o filtro, o pacote carregaria também as ABIs de emulador sem uso.
+if "abiFilters" not in app_text:
+    achado = re.search(r"\bdefaultConfig\s*\{", app_text)
+    if not achado:
+        raise SystemExit("Bloco defaultConfig não encontrado no build.gradle")
+    nivel = 0
+    fim = None
+    for i in range(achado.end() - 1, len(app_text)):
+        if app_text[i] == "{":
+            nivel += 1
+        elif app_text[i] == "}":
+            nivel -= 1
+            if nivel == 0:
+                fim = i
+                break
+    if fim is None:
+        raise SystemExit("Bloco defaultConfig incompleto no build.gradle")
+    ndk = """        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
+"""
+    app_text = app_text[:fim] + ndk + app_text[fim:]
+    print(f"ABIs ARM fixadas (arm64-v8a, armeabi-v7a): {app_gradle}")
+else:
+    print(f"ABIs já fixadas: {app_gradle}")
+
 # Fixa a assinatura de debug no keystore do repositório.
 # Sem isso o CI gerava um keystore novo a cada build (o cp para ~/.android não era o
 # que o Gradle usava em todos os casos) e cada release saía com uma assinatura

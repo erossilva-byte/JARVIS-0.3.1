@@ -1,19 +1,19 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.7.2",
-  "versionCode": 1702,
+  "version": "1.9.0",
+  "versionCode": 1900,
   "androidAppId": "com.jarvis.nova",
   "base": "código-fonte na raiz do repositório",
-  "gerado": "2026-10-23",
-  "status": "1.7.2: atualizador interno consertado (FileProvider único apontando para files/updates, que fazia o “Baixar e instalar” falhar), além do motor de ativação escolhível, perfis de voz estilo filme e controle de Spotify/mídia pela sessão do Android da 1.7.x.",
+  "gerado": "2026-10-24",
+  "status": "1.9.0: voz neural offline no próprio aparelho via sherpa-onnx (Kokoro bm_fable/bm_george em inglês britânico e Piper Cadu/Faber em português do Brasil), com download opcional de cada voz, barras de progresso, profundidade de tom e queda automática para o TTS do Android. O detector de palavra-chave do sherpa-onnx segue opcional e desligado: só existe modelo em inglês.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.7.2 (2026-10-23). Correção do atualizador: o patch do manifesto adicionava um FileProvider com a authority com.jarvis.nova.fileprovider além do provider que o template do Capacitor já declara (este apontando para @xml/file_paths, sem files/). Com duas declarações da mesma authority o Android usava a do template e o instalador falhava com “Failed to find configured root that contains /data/data/com.jarvis.nova/files/updates/jarvis-update.apk”. patch_manifest.py agora remove qualquer FileProvider existente e deixa um único apontando para @xml/jarvis_paths (files-path updates/), com teste de regressão (tests/test_fileprovider.py). Também vai nesta versão o que a 1.7.x trouxe: assinatura de release fixa em ci/debug.keystore (releases 1.6.0 e 1.7.0 saíram com chaves diferentes), motor da palavra de ativação escolhível (Automático/Android/Porcupine) em JarvisPrefs, perfis de voz JARVIS do filme e Ultra grave com sinal do HUD opcional, e controle de mídia pela sessão do Android (MediaSessionManager) com midiaAtual e tocarNoSpotify. Sherpa-ONNX e openWakeWord seguem fora: medidos, o KWS oficial erra a pronúncia em português e o hey_jarvis é CC BY-NC-SA. O APK é assinado com ci/debug.keystore (certificado 04e04712…, o mesmo das versões 1.5.x/1.6.0 locais). Quem está em 1.5.1 e recebeu o erro do FileProvider precisa instalar esta versão uma vez pelo release; depois o botão “Baixar e instalar” passa a funcionar.",
+  "notas": "Revisão 1.9.0 (2026-10-24). O APK passa a embarcar o sherpa-onnx 1.13.8 (AAR Apache-2.0, baixado no build e conferido por SHA-256) com ONNX Runtime e espeak-ng; os modelos de voz NÃO vão no pacote — cada voz é baixada uma única vez, extraída com commons-compress para o armazenamento privado e usada sem internet. Vozes medidas aqui com o mesmo sherpa-onnx: Piper pt_BR-Cadu (67 MB, 22,05 kHz, CC0, F0 mediano 127 Hz, RTF 0,06) e pt_BR-Faber (67 MB, F0 155 Hz), Kokoro int8 multilíngue (132 MB, 24 kHz, Apache-2.0; bm_fable 129 Hz, bm_george 145 Hz, bm_lewis 86 Hz, RTF ~1,2-1,5 nesta máquina — por isso o app avisa que a voz inglesa é mais lenta). 'en-gb' não existe no espeak-ng empacotado, então a fonetização usa 'en' e o timbre britânico vem do falante. O detector KWS do sherpa-onnx continua fora: o único modelo público é em inglês e não há modelo pt-BR (medido na 1.7.0: 1 de 4 acertos em português).",
   "build": {
     "resultado": "success",
-    "sha256": "6bea0d112d5ee8b79c20c2aedf5b61b6a316d2905d7d6681e0db3ec37c8a5198",
-    "bytes": 17571099,
-    "data": "2026-10-23",
-    "observacao": "assembleDebug com JDK 17 + SDK 34 e HOME limpo. Verificado no APK compilado: versão 1.7.2/1702, um único FileProvider (com.jarvis.nova.fileprovider) com meta-data apontando para xml/jarvis_paths (files-path updates/), e certificado 04e04712… (o mesmo da 1.5.1 instalada). Testes: 34 de mídia/Spotify/voz, 30 da 1.6.0 e o novo teste do FileProvider."
+    "sha256": "56b48ff9d92e7b45d7b39d1d22ccd9a75674d7a75f90c8fd5266d9e734e996c7",
+    "bytes": 72623658,
+    "data": "2026-10-24",
+    "observacao": "assembleDebug local com JDK 17 + SDK 34. AAR sherpa-onnx 1.13.8 baixado por baixar_sherpa.py (sha256 633c2432…) e conferido; ABIs arm64-v8a e armeabi-v7a; JarvisVozPlugin, OfflineTts e BZip2CompressorInputStream presentes no DEX; versão 1.9.0/1900. Os modelos de voz não entram no APK: são baixados pelo usuário. O APK do release é recompilado pelo CI com ci/debug.keystore."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"

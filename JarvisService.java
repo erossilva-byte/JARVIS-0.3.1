@@ -461,6 +461,11 @@ public class JarvisService extends Service {
     private void pararPorFalha(String motivo) {
         boolean avisar = querEscuta;
         JarvisPrefs.ultimoErro(this, motivo == null ? "falha desconhecida" : motivo);
+        // Falha fatal: desliga o desejo de ouvir e cancela o vigia. Sem isso, o vigia
+        // reabria a escuta a cada 15 minutos para falhar de novo — o microfone ficava
+        // ligando e desligando sem nunca reconhecer a palavra. Só o usuário religa.
+        JarvisPrefs.desejaOuvir(this, false);
+        JarvisWatchdog.cancelar(this);
         encerrarEscuta();
         estadoNotificacao = "Escuta parada — toque para abrir";
         notificar();
@@ -546,17 +551,20 @@ public class JarvisService extends Service {
 
     /* ---------- Detector livre (sem AccessKey) ---------- */
 
+    // O transcritor do Android não conhece "Jarvis": medido com voz brasileira, ele escreve
+    // "já vi", "javis", "jarvi", "charvis" e variações. Além de tolerar essas formas, a sessão
+    // agora devolve 5 hipóteses e todas são conferidas — a palavra costuma aparecer em uma delas.
     private static final String RX_WAKE_NATIVO =
-        "(?i)\\b(jarvis|jarvi|jarves|jervis|gervis|garvis|charvis|jarbis|jarvez|jarvs)\\b";
+        "(?i)\\b(jarvis|jarvi|jarvys|jarvs|jarves|jarvez|jarvy|jarvi|javis|javy|jervis|jervys|gervis|garvis|garvys|charvis|charves|jarbis|jorfis|sharvis|jar\\s+vis)\\b";
 
     private static String simplificarTexto(String s) {
         if (s == null) return "";
         return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
     }
 
-    private String primeiroTextoLivre(Bundle results) {
+    private ArrayList<String> todosTextosLivre(Bundle results) {
         ArrayList<String> lista = results == null ? null : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-        return (lista != null && !lista.isEmpty()) ? lista.get(0) : null;
+        return lista == null ? new ArrayList<>() : lista;
     }
 
     private void agendarSessaoLivre(long atrasoMs) {
@@ -607,17 +615,16 @@ public class JarvisService extends Service {
             @Override public void onEvent(int eventType, Bundle params) { }
 
             @Override public void onPartialResults(Bundle results) {
-                conferirWakeLivre(primeiroTextoLivre(results), false);
+                conferirWakeLivreEmLote(results, false);
             }
 
             @Override public void onResults(Bundle results) {
-                String texto = primeiroTextoLivre(results);
-                if (texto == null || texto.trim().isEmpty()) texto = livreParcial;
-                if (conferirWakeLivre(texto, true)) return;
+                if (conferirWakeLivreEmLote(results, true)) return;
+                if (conferirWakeLivre(livreParcial, true)) return;
                 encerrarSessaoLivre(false);
                 if (querEscuta) {
                     livreFalhas = 0;
-                    agendarSessaoLivre(200);
+                    agendarSessaoLivre(600);
                 }
             }
 
@@ -657,7 +664,9 @@ public class JarvisService extends Service {
                     case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
                     case SpeechRecognizer.ERROR_NO_MATCH:
                         livreFalhas = 0;
-                        agendarSessaoLivre(parcial != null && !parcial.trim().isEmpty() ? 250 : 400);
+                        // Pausa um pouco maior entre sessões: o microfone não fica abrindo e
+                        // fechando a cada 200 ms (o "pisca-pisca" do ícone de microfone).
+                        agendarSessaoLivre(parcial != null && !parcial.trim().isEmpty() ? 500 : 900);
                         return;
                     default:
                         livreFalhas++;
@@ -674,21 +683,41 @@ public class JarvisService extends Service {
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "pt-BR")
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "pt-BR")
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+            // Sessões mais longas, com mais silêncio tolerado: o microfone abre menos vezes
+            // e a palavra dita no meio de uma frase tem mais chance de ser transcrita.
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 5000L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1600L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
+            .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
         if (usouLocal) intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
         livreTimeout = () -> {
             if (!livreSessao) return;
             if (conferirWakeLivre(livreParcial, true)) return;
             encerrarSessaoLivre(false);
-            if (querEscuta) agendarSessaoLivre(250);
+            if (querEscuta) agendarSessaoLivre(500);
         };
-        main.postDelayed(livreTimeout, 9000);
+        main.postDelayed(livreTimeout, 15000);
         try {
             rec.startListening(intent);
         } catch (Exception e) {
             encerrarSessaoLivre(false);
             pararPorFalha(e.getMessage());
         }
+    }
+
+    /** Confere todas as hipóteses devolvidas pelo Android, não só a primeira. */
+    private boolean conferirWakeLivreEmLote(Bundle results, boolean definitivo) {
+        if (!querEscuta) return true;
+        ArrayList<String> lista = todosTextosLivre(results);
+        if (lista.isEmpty()) return conferirWakeLivre(null, definitivo);
+        String primeiro = lista.get(0) == null ? "" : lista.get(0).trim();
+        if (primeiro.length() > livreParcial.length()) livreParcial = primeiro;
+        if (!definitivo && primeiro.length() < 6) return false;
+        for (String hip : lista) {
+            if (conferirWakeLivre(hip, definitivo)) return true;
+        }
+        return false;
     }
 
     /** true quando a palavra foi encontrada (ou quando a ativação já foi encerrada). */
@@ -753,7 +782,7 @@ public class JarvisService extends Service {
             .setOnlyAlertOnce(true)
             .setContentIntent(abrirPi)
             .addAction(android.R.drawable.ic_btn_speak_now, "Ouvir agora", ouvirPi)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Parar", pararPi);
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Desligar escuta", pararPi);
         return b.build();
     }
 

@@ -28,8 +28,8 @@ checks = {
     "Saída dos recentes agenda reinício": "onTaskRemoved" in servico and "JarvisWatchdog.agendar(this, 8000L)" in servico,
     "Rearme quando a tela não responde": "agendarRearmeSeTelaNaoResponder" in servico and "9000" in servico,
     "Modo teste sem abrir o app": "testeAtivoInterno" in servico and "testeDeteccoes" in servico,
-    "Notificação com Ouvir agora e Parar": (
-        '"Ouvir agora"' in servico and '"Parar"' in servico and "JarvisOuvirReceiver" in servico),
+    "Notificação com Ouvir agora e Desligar escuta": (
+        '"Ouvir agora"' in servico and '"Desligar escuta"' in servico and "JarvisOuvirReceiver" in servico),
     "Pausa da interface não desliga o estado desejado": (
         "pausadoPelaInterface" in servico and "static void pausarEscuta()" in servico),
     "Desligar cancela o vigia": "static void desligar(Context ctx)" in servico and "JarvisWatchdog.cancelar(ctx)" in servico,

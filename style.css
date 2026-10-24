@@ -751,3 +751,19 @@ body[data-state=thinking] .hud-meta{color:rgba(var(--rgb),.8)}
 .audio-head output.ok{color:#6dffc2}
 .audio-head output.alerta{color:#ffc15e}
 @media(max-width:360px){.diag-row{padding:8px}.diag-row small{font-size:10.5px}}
+
+/* ---- Voz neural offline (sherpa-onnx) ---- */
+.neural-card{display:block}
+.neural-card .neural-cabecalho{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px}
+.neural-card .eyebrow{display:block;font-size:9px;letter-spacing:.22em;color:var(--suave);margin-bottom:3px}
+.neural-lista{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.neural-item{border:1px solid var(--linha);border-radius:12px;padding:10px 11px;background:rgba(10,18,31,.6)}
+.neural-item.neural-instalado{border-color:rgba(var(--rgb),.45);background:rgba(var(--rgb),.06)}
+.neural-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.neural-topo b{font-size:11.5px;line-height:1.35;color:var(--texto)}
+.neural-tag{flex:none;border:1px solid var(--linha);border-radius:999px;padding:2px 8px;font-size:10px;color:var(--suave);white-space:nowrap}
+.neural-item .dica{margin:4px 0 0;font-size:11px;line-height:1.4;color:var(--suave)}
+.neural-item .botoes{margin-top:8px}
+.neural-barra{height:6px;border-radius:999px;background:rgba(var(--rgb),.14);overflow:hidden;margin-top:8px}
+.neural-barra span{display:block;height:100%;border-radius:999px;background:var(--cor);transition:width .25s ease}
+.dica.erro{color:var(--alerta)}
