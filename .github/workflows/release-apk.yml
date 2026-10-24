@@ -58,6 +58,15 @@ jobs:
           npx cap add android
           npx cap sync android
 
+      - name: Guardar o runtime de voz neural em cache
+        uses: actions/cache@v4
+        with:
+          path: android/app/libs
+          key: sherpa-onnx-1.13.8-aar-v1
+
+      - name: Baixar o runtime de voz neural (sherpa-onnx, opcional no app)
+        run: python3 ci/baixar_sherpa.py
+
       - name: Aplicar identidade, permissões e versão
         run: |
           D=android/app/src/main/java/com/jarvis/nova
@@ -109,3 +118,7 @@ jobs:
             que é a assinatura esperada pelo atualizador embutido no app.
             Instale a partir deste release para que as próximas atualizações funcionem.
             Confira o checksum em `${{ steps.versao.outputs.sha }}`.
+
+            **Vozes neurais (opcional):** a partir da 2.2.0 o app pode falar com Piper (pt-BR)
+            ou Kokoro (vozes britânicas) rodando no próprio aparelho. Os modelos são baixados
+            dentro do app (67 MB e 132 MB) em Ajustes ▸ Voz; nada disso vai no APK.
