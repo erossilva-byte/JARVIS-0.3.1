@@ -9,11 +9,11 @@
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
   "notas": "Revisão 1.10.0 (2026-10-25). Requisito por requisito: (1) a personalidade passou a viver em um único ponto, o objeto PERSONALIDADE em app.js (formal, espirituoso e leal; lealdade, tratamento, humor e limites separados) e o prompt de sistema é montado a partir dele; (2) a inteligência de conversa continua no mesmo prompt, agora com as regras de conversa somadas à personalidade; (3) a palavra de ativação não mudou de motor (Porcupine ou Android), porque a personalidade não interfere nela; (4) na ativação o app agora FALA “Analisando sua voz” em voz alta e só então grava os 4 segundos para comparar com o perfil; a conferência é exigida uma vez por sessão (primeiro acesso e depois de ligar o celular) e, se o usuário quiser, em toda ativação — (8) em segundo plano o reconhecimento do WebView é encerrado e só o serviço nativo espera a palavra de ativação; (5) “coloque a música X” passou a procurar o arquivo na biblioteca do aparelho (MediaStore, ignorando acentos e ordem das palavras) e iniciar a reprodução num serviço em primeiro plano com notificação e MediaSession; sem arquivo correspondente, cai na busca de um app de streaming com o aviso de que ele não inicia a faixa sozinho; “ligue para X” passou a usar ACTION_CALL com a permissão Telefone (antes só abria o discador com tel:) e cai no discador com aviso se o Android negar; (6)(7) exceções da interface viram aviso em vez de fechar o app e o carregamento do modelo local confere memória antes de carregar, transformando um OutOfMemoryError nativo em mensagem.",
   "build": {
-    "resultado": "pendente",
-    "sha256": "",
-    "bytes": 0,
+    "resultado": "success",
+    "sha256": "261f78f250e935bff410743af97442242e34ff73b0dfd1d50d39780c1821877b",
+    "bytes": 72647038,
     "data": "2026-10-25",
-    "observacao": "O APK do release é recompilado pelo workflow com a assinatura de ci/debug.keystore."
+    "observacao": "APK do release v1.10.0 compilado pelo workflow com ci/debug.keystore. Verificado: versão 1.10.0/10100, minSdk 26, certificado 04e04712… (o mesmo das releases anteriores, então instala por cima), JarvisMusicaPlugin/Service no DEX, permissões CALL_PHONE, READ_MEDIA_AUDIO e FOREGROUND_SERVICE_MEDIA_PLAYBACK e o serviço declarado com foregroundServiceType=mediaPlayback. Build local reproduz o mesmo APK (sha256 da68f586…) fora do release."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"
