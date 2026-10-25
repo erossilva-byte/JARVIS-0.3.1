@@ -134,8 +134,8 @@ checagens = {
         and "if (recAtual && recAtual.state !== 'inactive') { recAtual.stop();" in app),
 
     # 9. Versão e documentação
-    "Versão da linha 1.10 com versionCode >= 10100": (
-        str(versao.get("version", "")).startswith("1.10.")
+    "Versão da linha 1.1x com versionCode >= 10100": (
+        str(versao.get("version", "")).startswith(("1.10.", "1.11."))
         and versao.get("versionCode", 0) >= 10100
         and pacote.get("version") == versao.get("version")
         and "const VERSAO_APP = '" + str(versao.get("version")) + "';" in app

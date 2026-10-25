@@ -221,19 +221,6 @@ public class JarvisService extends Service {
         ContextCompat.startForegroundService(ctx, i);
     }
 
-    static void pararTeste(Context ctx) {
-        JarvisService s = instancia;
-        if (s != null) s.main.post(() -> {
-            s.testeAte = 0;
-            s.main.removeCallbacks(s.testeFim);
-            s.pausarMotor();
-            s.querEscuta = false;
-            s.estadoNotificacao = "Escuta em espera";
-            s.notificar();
-        });
-        else ctx.stopService(new Intent(ctx, JarvisService.class));
-    }
-
     @Override
     public IBinder onBind(Intent intent) {
         return null;

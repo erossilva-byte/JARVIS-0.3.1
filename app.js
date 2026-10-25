@@ -12,7 +12,7 @@ const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.10.1';
+const VERSAO_APP = '1.11.0';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -52,7 +52,12 @@ if (store.get('salvar_historico', '0') === '1') {
     if (Array.isArray(salvo)) salvo.slice(-40).forEach((x) => { if (x && (x.role === 'user' || x.role === 'assistant') && typeof x.content === 'string') hist.push({role:x.role, content:x.content.slice(0,12000)}); });
   } catch (e) { try { localStorage.removeItem('jv_historico_conversa'); } catch (x) {} }
 }
-function adicionarHist(item) { hist.push(item); persistirHistorico(); }
+function adicionarHist(item) {
+  hist.push(item);
+  // Sessão longa não pode crescer sem fim: o prompt usa só as últimas 8 mensagens.
+  while (hist.length > 120) hist.shift();
+  persistirHistorico();
+}
 function removerUltimoHist() { hist.pop(); persistirHistorico(); }
 function restaurarHistoricoUI() {
   if (!hist.length) return;
@@ -663,7 +668,7 @@ async function executarSeguro(acao) {
     return { info: 'Esse recurso precisa de internet. O modo offline está ativo.' };
   }
   const def = ACOES[nome];
-  if (!def || !disponiveis().includes(nome)) { registrar('bloqueado', 'ação inexistente: ' + nome); return { info: 'Ação indisponível.' }; }
+  if (!def || !disponiveis().includes(nome)) { registrar('bloqueado', 'ação inexistente: ' + nome); return { info: fraseApp('acaoIndisponivel') }; }
   let args = acao.args && typeof acao.args === 'object' ? acao.args : {};
   let desc = nome;
   if (def.prep) {
@@ -926,6 +931,8 @@ const PIADAS = [
 ];
 function contarPiada() {
   const humor = Math.max(0, Math.min(100, Number(store.get('humor', '40'))));
+  // Assunto sensível na conversa: o humor fica de fora, mesmo com o humor no máximo.
+  if (tomDoTurno(perguntaAtual).serio) return 'Agora não é o melhor momento para piadas, ' + trat() + '. Estou à disposição para o que você precisar.';
   if (humor < 20) return 'Estou no modo sério, ' + trat() + '. Configure o humor em Ajustes > IA se quiser minha companhia mais descontraída.';
   const ultimo = Number(store.get('piada_ultima', '-1')) || -1;
   let i = Math.floor(Math.random() * PIADAS.length);
@@ -1773,6 +1780,42 @@ async function atualizarStatusIALocal() {
 }
 
 /* ---------- IA de chat: Groq + reservas automáticas ---------- */
+/* ---------- Tom do turno: humor que reage ao contexto ---------- */
+// Detecta, a cada pergunta, se o usuário está com pressa ou numa situação sensível.
+// O resultado entra no prompt (a IA ajusta o tom) e nas frases próprias do aplicativo.
+// Nunca é motivo para recusar ajuda: só muda a intensidade do humor e a extensão.
+const RX_SENSIVEL = /\b(urgente|urgencia|emergencia|socorro|acidente|incendio|infarto|choque|ambulancia|hospital|medico|medica|remedio|doente|dor |febre|depress|suicid|ameaca|assalt|roubaram|me roubaram|medo de|crise|luto|morte|morreu|grave|graves|polici|delegacia|advogad|perdido no)\b/i;
+const RX_PRESSA = /\b(rapido|rapida|pressa|agora ja|depressa|resuma|resumido|resumidamente|breve|curto|sem rodeios|to com pressa|correndo|em um minuto|na lata)\b/i;
+let perguntaAtual = '';
+function tomDoTurno(texto) {
+  const n = norm(texto);
+  return { serio: RX_SENSIVEL.test(n), pressa: RX_PRESSA.test(n) };
+}
+/* ---------- Frases próprias do app: variação e humor controlado ---------- */
+// Um único ponto para o texto fixo do aplicativo. A variante com humor só entra com o
+// slider de humor >= 40 e sem pressa nem assunto sensível; a rotação evita repetir a
+// mesma frase em chamadas seguidas.
+const FRASES = {
+  acaoIndisponivel: {
+    seco: ['Essa ação não está disponível nesta versão, {t}.'],
+    comHumor: [
+      'Essa função não consta no meu repertório, {t}. Posso fingir que executei, mas a sua confiança vale mais.',
+      'Não tenho essa ferramenta instalada, {t}. Improviso é bonito até a primeira tentativa de desligar o celular.'
+    ]
+  }
+};
+const rotacaoFrases = {};
+function fraseApp(chave, vars) {
+  const bloco = FRASES[chave];
+  if (!bloco) return '';
+  const humor = Math.max(0, Math.min(100, Number(store.get('humor', '40'))));
+  const tom = tomDoTurno(perguntaAtual);
+  const seco = Array.isArray(bloco.seco) ? bloco.seco : [bloco.seco];
+  const comHumor = Array.isArray(bloco.comHumor) && bloco.comHumor.length ? bloco.comHumor : seco;
+  const opcoes = (humor >= 40 && !tom.serio && !tom.pressa) ? comHumor.concat(seco) : seco;
+  const i = (rotacaoFrases[chave] = ((rotacaoFrases[chave] || 0) + 1) % opcoes.length);
+  return opcoes[i].replace('{t}', trat()).replace(/\{(\w+)\}/g, (mm, k) => (vars && vars[k] != null ? String(vars[k]) : mm));
+}
 function promptSistema() {
   const t = trat();
   const curtas = store.get('curtas', '0') === '1';
@@ -1780,12 +1823,18 @@ function promptSistema() {
   const estilo = store.get('estilo_resposta', 'equilibrado');
   const estiloTexto = ({ formal: 'formal, direto e objetivo', amigavel: 'amigável e descontraído, sem perder o respeito', tecnico: 'técnico, explicando os detalhes necessários', equilibrado: 'equilibrado, claro e natural' })[estilo] || 'equilibrado, claro e natural';
   const humorTexto = humor < 20 ? 'Mantenha humor praticamente zero: sem piadas, ironia ou comentários espirituosos, salvo se o usuário pedir.' : humor < 40 ? 'Use humor seco e breve de vez em quando; a resposta útil vem primeiro.' : humor < 70 ? 'Use humor seco, ironia leve e comparações espirituosas com frequência natural. Seu jeito é comentar a situação com elegância, não fazer stand-up.' : 'Use humor espirituoso com frequência alta: ironia fina, trocadilhos ocasionais e comentários afiados, sempre elegantes e nunca em situações sensíveis.';
+  const tom = tomDoTurno(perguntaAtual);
+  const tomTurno = tom.serio
+    ? ' CONTEXTO DO TURNO: o pedido toca um assunto sensível ou urgente. Zere o humor, seja direto, respeitoso e objetivo, entregue a informação antes de qualquer comentário e, se o assunto for de risco real, oriente a buscar ajuda profissional.'
+    : tom.pressa
+      ? ' CONTEXTO DO TURNO: o usuário está com pressa. Responda em uma frase curta, sem preâmbulo e sem humor, indo direto ao ponto.'
+      : '';
   const apps = Object.keys(LISTA_APPS).join(', ');
   const cts = store.get('compartilhar_contatos', '0') === '1' ? (Object.keys(contatos()).join(', ') || '(nenhum cadastrado)') : '(nomes omitidos por privacidade)';
   const memoria = store.get('memoria_ativa', '0') === '1' && usarMemoriaNestaConversa ? String(store.get('memoria', '')).slice(0, 1200).trim() : '';
   const ferr = disponiveis().map((k) => `- ${k}: ${ACOES[k].ajuda || ''}`).join('\n');
   const nomePerfil = nomeUsuario();
-  return `Você é ${PERSONALIDADE.identidade}${nomePerfil ? ' de ' + nomePerfil : ' do usuário'} e trabalha como ${PERSONALIDADE.papel}. ${nomePerfil ? 'O nome cadastrado do usuário é ' + nomePerfil + '. ' : ''}${PERSONALIDADE.personalidade} ${PERSONALIDADE.lealdade} ${PERSONALIDADE.tratamento.replace('{tratamento}', t)} ${PERSONALIDADE.conversa} Você conversa com opinião própria, curioso pelo assunto do usuário, capaz de discordar com respeito e de explicar o porquê das coisas, nunca um formulário que devolve perguntas. ${PERSONALIDADE.humor} ${PERSONALIDADE.limites} Aplique de forma perceptível e consistente o estilo selecionado (${estiloTexto}) em toda a resposta, não apenas mencionando-o. Intensidade de humor configurada: ${humor}%. ${humorTexto} A configuração de humor é uma preferência de tom, não uma obrigação de inserir piadas. Seja espirituoso sem ser debochado, arrogante ou repetitivo. Mantenha a calma diante de problemas e antecipe o próximo passo útil. Inspire-se apenas no arquétipo geral do assistente de ficção científica: não copie falas, bordões ou diálogos dos filmes. Demonstre competência explicando limites com honestidade, propondo o próximo passo útil e distinguindo fatos confirmados de suposições. Não finja ter executado ações nem alegue acesso ao aparelho que as ferramentas disponíveis não oferecem. Inteligência de conversa: acompanhe o fio da conversa e retome o que já foi dito quando fizer sentido, em vez de tratar cada mensagem como se fosse a primeira. Se o pedido estiver ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar; se estiver claro, responda direto. Ao explicar um assunto, mostre a causa e o efeito em linguagem simples e, quando ajudar, uma analogia de uma frase. Ao resolver um problema, entregue o próximo passo concreto. Em pesquisa, diga o que confirmou, o que continua incerto e de onde veio, sem inventar datas, números ou links. Em conversa fiada, seja presente e interessado, com opinião própria e humor leve — não devolva a pergunta de forma vazia. Responda em português do Brasil, em ${curtas ? '1 ou 2 frases bem curtas (até 30 palavras)' : '2 a 4 frases naturais (até 70 palavras), podendo passar disso quando o assunto exigir explicação'}, pois suas respostas são faladas em voz alta: sem markdown, sem emojis, sem listas.
+  return `Você é ${PERSONALIDADE.identidade}${nomePerfil ? ' de ' + nomePerfil : ' do usuário'} e trabalha como ${PERSONALIDADE.papel}. ${nomePerfil ? 'O nome cadastrado do usuário é ' + nomePerfil + '. ' : ''}${PERSONALIDADE.personalidade} ${PERSONALIDADE.lealdade} ${PERSONALIDADE.tratamento.replace('{tratamento}', t)} ${PERSONALIDADE.conversa} Você conversa com opinião própria, curioso pelo assunto do usuário, capaz de discordar com respeito e de explicar o porquê das coisas, nunca um formulário que devolve perguntas. ${PERSONALIDADE.humor} ${PERSONALIDADE.limites} Aplique de forma perceptível e consistente o estilo selecionado (${estiloTexto}) em toda a resposta, não apenas mencionando-o. Intensidade de humor configurada: ${humor}%. ${humorTexto}${tomTurno} A configuração de humor é uma preferência de tom, não uma obrigação de inserir piadas. Seja espirituoso sem ser debochado, arrogante ou repetitivo. Mantenha a calma diante de problemas e antecipe o próximo passo útil. Inspire-se apenas no arquétipo geral do assistente de ficção científica: não copie falas, bordões ou diálogos dos filmes. Demonstre competência explicando limites com honestidade, propondo o próximo passo útil e distinguindo fatos confirmados de suposições. Não finja ter executado ações nem alegue acesso ao aparelho que as ferramentas disponíveis não oferecem. Inteligência de conversa: acompanhe o fio da conversa e retome o que já foi dito quando fizer sentido, em vez de tratar cada mensagem como se fosse a primeira. Se o pedido estiver ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar; se estiver claro, responda direto. Ao explicar um assunto, mostre a causa e o efeito em linguagem simples e, quando ajudar, uma analogia de uma frase. Ao resolver um problema, entregue o próximo passo concreto. Em pesquisa, diga o que confirmou, o que continua incerto e de onde veio, sem inventar datas, números ou links. Em conversa fiada, seja presente e interessado, com opinião própria e humor leve — não devolva a pergunta de forma vazia. Responda em português do Brasil, em ${curtas ? '1 ou 2 frases bem curtas (até 30 palavras)' : '2 a 4 frases naturais (até 70 palavras), podendo passar disso quando o assunto exigir explicação'}, pois suas respostas são faladas em voz alta: sem markdown, sem emojis, sem listas.
 Agora: ${new Date().toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' })}. Plataforma: ${plataforma}.
 Ações disponíveis (nomes válidos para o campo "acao" do JSON; NÃO são funções: nunca use function calling nem chame ferramentas, responda apenas com o JSON):
 ${ferr}
@@ -1797,7 +1846,7 @@ Regras: no máximo uma ação por resposta. Em "fala", descreva a ação no ger�
 }
 // Degraus de compatibilidade: se o provedor rejeitar (400), tenta de novo com menos exigências.
 const ESTRATEGIAS = [{ json: true, rz: true }, { json: false, rz: true }, { json: false, rz: false }];
-function corpoChat(modelo, e) {
+function corpoChat(modelo, e, stream) {
   const b = {
     model: modelo, temperature: 0.6, max_tokens: 1500,
     messages: [{ role: 'system', content: promptSistema() }, ...(usarContextoNestaConversa ? hist.slice(-8) : hist.slice(-1))]
@@ -1805,6 +1854,8 @@ function corpoChat(modelo, e) {
   if (e.json) b.response_format = { type: 'json_object' };
   // Modelos gpt-oss "pensam" antes de responder; esforço baixo = mais rápido.
   if (e.rz && /gpt-oss/i.test(modelo)) b.reasoning_effort = 'low';
+  // Streaming: a resposta chega em pedaços e a fala pode começar antes do fim da geração.
+  if (stream) b.stream = true;
   return b;
 }
 async function postChat(p, key, modelo, e) {
@@ -1821,6 +1872,96 @@ async function postChat(p, key, modelo, e) {
       body: JSON.stringify(corpoChat(modelo, e))
     });
   } finally { clearTimeout(lim); sinal.removeEventListener('abort', corta); }
+}
+/* ---------- Resposta em streaming (menos latência até a primeira sílaba) ---------- */
+// O corpo chega em pedaços (SSE). Assim que o campo "fala" fecha no JSON parcial, o app
+// começa a falar enquanto a IA ainda gera o resto. Qualquer problema aqui — provedor sem
+// streaming, corpo sem leitor, rede caindo — devolve null e o caminho normal (postChat)
+// assume, com todos os tratamentos de erro de sempre.
+const usaStream = () => store.get('resposta_stream', '1') === '1';
+// Provedor que recusou o streaming por formato (400/415/422) não é tentado de novo a cada
+// pergunta: a primeira recusa já custou um pedido, repetir seria só perder tempo e cota.
+const semStream = {};
+// Extrai o valor de "fala" de um JSON ainda incompleto, respeitando os escapes.
+function extrairFalaParcial(t) {
+  const m = /"fala"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(String(t || ''));
+  if (!m) return null;
+  try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return null; }
+}
+async function lerStreamIA(p, key, modelo, e, aoParcial) {
+  const ac = new AbortController();
+  let ultimoPacote = Date.now();
+  // Sem o corpo inteiro a esperar, o risco de travar é maior: corta se os pedaços pararem.
+  const vigia = setInterval(() => { if (Date.now() - ultimoPacote > 20000) ac.abort(); }, 1000);
+  const sinal = ctrlRede.signal;               // o botão Parar cancela o pedido em andamento
+  const corta = () => ac.abort();
+  sinal.addEventListener('abort', corta);
+  try {
+    const res = await fetch(p.url + '/chat/completions', {
+      method: 'POST', signal: ac.signal,
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+      body: JSON.stringify(corpoChat(modelo, e, true))
+    });
+    if (!res.ok) return { ok: false, status: res.status, txt: await res.text().catch(() => '') };
+    const leitor = res.body && typeof res.body.getReader === 'function' ? res.body.getReader() : null;
+    if (!leitor) return { ok: false, status: 0, txt: 'o provedor não devolveu um corpo legível' };
+    const dec = new TextDecoder();
+    let buf = '', raw = '';
+    for (;;) {
+      const { value, done } = await leitor.read();
+      if (done) break;
+      ultimoPacote = Date.now();
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const linha = buf.slice(0, i).trim();
+        buf = buf.slice(i + 1);
+        if (linha.indexOf('data:') !== 0) continue;
+        const dados = linha.slice(5).trim();
+        if (!dados || dados === '[DONE]') continue;
+        let j = null;
+        try { j = JSON.parse(dados); } catch (x) { continue; }
+        const c = j.choices && j.choices[0];
+        const parte = c && ((c.delta && c.delta.content) || (c.message && c.message.content));
+        if (parte) {
+          raw += parte;
+          if (aoParcial) { try { aoParcial(raw); } catch (x) { /* a fala antecipada é enfeite */ } }
+        }
+      }
+    }
+    return raw ? { ok: true, raw } : { ok: false, status: 200, txt: 'resposta vazia' };
+  } catch (err) {
+    return { ok: false, status: 0, rede: true, txt: err && err.name === 'AbortError' ? 'tempo esgotado' : (err && err.message ? err.message : 'sem conexão') };
+  } finally {
+    clearInterval(vigia);
+    sinal.removeEventListener('abort', corta);
+  }
+}
+// Tenta o streaming de UM provedor. Devolve o resultado ou null quando não deu (aí o
+// caminho normal assume, sem pausar o provedor por engano nem dobrar a cota sem motivo).
+async function tentarStream(p, conteudo, aoFalar) {
+  if (!usaStream() || store.get('offline', '0') === '1' || !p || !CHAVES[p.id]) return null;
+  if (semStream[p.id]) return null;
+  let jaFalou = null, falado = false;
+  const aoParcial = (acumulado) => {
+    if (falado || abortar || typeof aoFalar !== 'function') return;
+    const fala = extrairFalaParcial(acumulado);
+    if (!fala || !String(fala).trim()) return;
+    falado = true;
+    jaFalou = Promise.resolve(falar(String(fala), false))
+      .catch((e) => registrar('erro', 'fala antecipada: ' + (e && e.message ? e.message : e)));
+  };
+  for (const m of modelosDe(p)) {
+    let s = null;
+    try { s = await lerStreamIA(p, CHAVES[p.id], m, ESTRATEGIAS[0], aoParcial); }
+    catch (e) { return null; }
+    if (s && s.ok) return { ok: true, modelo: m, raw: s.raw, jaFalou };
+    // Recusa de formato: anota o provedor e passa a usar só o pedido completo.
+    if (s && (s.status === 400 || s.status === 415 || s.status === 422)) semStream[p.id] = true;
+    const aposentado = s && (s.status === 404 || /model_not_found|does not exist/i.test(String(s.txt || '')));
+    if (!aposentado) return null;
+  }
+  return null;
 }
 async function tentarModelo(p, key, m) {
   let r = null, txt = '';
@@ -1891,8 +2032,10 @@ function atualizarChipIA() {
   const p = PROVEDORES.find((x) => x.id === provAtivo) || provedoresComChave()[0];
   $('#chip-ia').textContent = p ? 'IA: ' + p.nome : 'IA: sem chave';
 }
-async function chamar(conteudo, ocultarNoHistorico) {
+async function chamar(conteudo, ocultarNoHistorico, aoFalar) {
   await chavesProntas;
+  // Tom do turno (pressa, assunto sensível) vale para o prompt e para as frases próprias.
+  perguntaAtual = String(conteudo || '');
   const lista = provedoresComChave();
   if (!lista.length) {
     adicionarHist({ role: 'user', content: conteudo });
@@ -1918,6 +2061,13 @@ async function chamar(conteudo, ocultarNoHistorico) {
   for (const p of fila) {
     if (store.get('offline', '0') === '1') { removerUltimoHist(); throw new Error('A conexão caiu; o modo offline está ativo. Posso executar comandos locais compatíveis.'); }
     if (abortar) { removerUltimoHist(); throw new Error('Cancelado.'); }
+    // 1ª tentativa em streaming: se não rolar, o caminho normal resolve igual.
+    // Com um aviso de troca de provedor na fila, a fala antecipada fica desligada para
+    // não falar fora de ordem.
+    if (usaStream() && !abortar) {
+      const s = await tentarStream(p, conteudo, avisoIA ? null : aoFalar);
+      if (s && s.ok) { ok = { p, r: { ok: true, modelo: s.modelo }, raw: s.raw, jaFalou: s.jaFalou }; break; }
+    }
     let r = await tentarProvedor(p);
     if (store.get('offline', '0') === '1') { removerUltimoHist(); throw new Error('A conexão caiu; nenhuma nova chamada à IA será tentada.'); }
     if (abortar) { removerUltimoHist(); throw new Error('Cancelado.'); }
@@ -2010,10 +2160,12 @@ async function turno(texto, contaminado = false, profundidade = 0) {
     }
     return;
   }
-  const r = await chamar(texto, contaminado);
+  const r = await chamar(texto, contaminado, (f) => falar(f, false));
   if (abortar) return;
   if (avisoIA) { const av = avisoIA; avisoIA = ''; await falar(av, true); }
-  if (r.fala) await falar(r.fala);
+  // Se a resposta já foi dita no streaming, só espera terminar (ordem das falas preservada).
+  if (r.jaFalou) await r.jaFalou;
+  else if (r.fala) await falar(r.fala);
   // Turno com conteúdo externo: nenhuma ação é permitida (anti prompt injection).
   if (!r.acao || contaminado || abortar) return;
   const res = await executarSeguro(r.acao);
@@ -2031,12 +2183,16 @@ async function turno(texto, contaminado = false, profundidade = 0) {
 
 /* ---------- Voz ---------- */
 const TTSN = () => plug('TextToSpeech');
-let vozesNativas = null;
+let vozesNativas = null, vozesVaziasAte = 0;
 async function listarVozesNativas() {
   const t = TTSN();
   if (!t) return [];
   if (vozesNativas && vozesNativas.length) return vozesNativas;
+  // Lista vazia (motor ainda subindo) não vale uma chamada nativa por pedaço falado:
+  // só tenta de novo depois da janela de espera.
+  if (Date.now() < vozesVaziasAte) return vozesNativas || [];
   try { vozesNativas = (await t.getSupportedVoices()).voices || []; } catch (e) { vozesNativas = []; }
+  vozesVaziasAte = (vozesNativas && vozesNativas.length) ? 0 : Date.now() + 30000;
   return vozesNativas;
 }
 const idVoz = (v) => v.voiceURI || v.name;
@@ -2302,24 +2458,39 @@ function criarDetector() {
   };
 }
 function gravar() {
-  return new Promise(async (resolve, reject) => {
-    let stream;
+  // O executor NÃO é async: se o AudioContext ou o MediaRecorder falhar depois do
+  // microfone abrir, o erro vira reject e o app segue (antes a promessa ficava pendurada
+  // para sempre em "ouvindo" e nada mais respondia).
+  return new Promise((resolve, reject) => {
+    let stream = null, ctx = null, timer = null, rec = null, encerrado = false;
+    const falhar = (e) => {
+      if (encerrado) return;
+      encerrado = true;
+      if (timer) clearInterval(timer);
+      try { if (rec && rec.state !== 'inactive') rec.stop(); } catch (x) { /* sem gravação */ }
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      if (ctx) { try { ctx.close(); } catch (x) { /* já fechado */ } }
+      recAtual = null;
+      reject(e instanceof Error ? e : new Error('O microfone não pôde ser aberto.'));
+    };
+    (async () => {
+    try {
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } }); }
     catch (e) { return reject(new Error('Sem acesso ao microfone. Permita nas configurações do aparelho.')); }
     if (!segPlanoOk) atualizarSegundoPlano();
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
     const an = ctx.createAnalyser();
     an.fftSize = 512;
     ctx.createMediaStreamSource(stream).connect(an);
     const dados = new Uint8Array(an.fftSize);
-    const rec = new MediaRecorder(stream, { audioBitsPerSecond: 64000 });
+    rec = new MediaRecorder(stream, { audioBitsPerSecond: 64000 });
     const det = criarDetector();
     const pedacos = [];
     recAtual = rec;
     let ouviu = false, ultimo = Date.now();
     const t0 = ultimo;
     rec.ondataavailable = (e) => e.data.size && pedacos.push(e.data);
-    const timer = setInterval(() => {
+    timer = setInterval(() => {
       an.getByteTimeDomainData(dados);
       let s = 0;
       for (const v of dados) { const x = (v - 128) / 128; s += x * x; }
@@ -2331,13 +2502,17 @@ function gravar() {
       if (q.fim || abortar) rec.stop();
     }, 50);
     rec.onstop = () => {
+      if (encerrado) return;
+      encerrado = true;
       clearInterval(timer);
       stream.getTracks().forEach((t) => t.stop());
-      ctx.close();
+      try { ctx.close(); } catch (x) { /* já fechado */ }
       recAtual = null;
       resolve(ouviu && !abortar ? new Blob(pedacos, { type: rec.mimeType }) : null);
     };
     rec.start();
+    } catch (e) { falhar(e); }
+    })();
   });
 }
 // Dica para o Whisper: nomes de apps, contatos e comandos usuais ajudam a acertar palavras difíceis.
@@ -2440,6 +2615,10 @@ async function ouvirUmaVez() {
   }
   const b = await gravar();
   if (!b) return '';
+  // Microfone liberado: aquece em paralelo a conexão da IA e o motor de voz do Android,
+  // para a primeira resposta não pagar a inicialização dos dois.
+  aquecer();
+  if (!neuralAtiva()) aquecerVoz(true);
   setEstado('thinking');
   return transcrever(b);
 }
@@ -2466,9 +2645,10 @@ function aquecer() {
   if (store.get('offline', '0') !== '1') { try { fetch(GROQ + '/models', { method: 'GET', mode: 'no-cors', cache: 'no-store' }).catch(() => {}); } catch (e) { /* sem rede */ } }
 }
 // Acorda o motor de voz do Android (mudo) para a primeira fala não demorar.
-async function aquecerVoz() {
+async function aquecerVoz(forcar) {
   const t = TTSN();
-  if (!t || ocupado) return;
+  // 'forcar' aquece mesmo com o app ocupado: é o caso do aquecimento paralelo à transcrição.
+  if (!t || (ocupado && !forcar)) return;
   try { await comLimite(t.speak({ text: '.', lang: 'pt-BR', rate: 2, pitch: 1, volume: 0, queueStrategy: 1 }), 4000); } catch (e) { /* tudo bem */ }
 }
 function bipe() {
@@ -2556,6 +2736,7 @@ async function aoAcordar(texto) {
   wakeAtivo = false; // o lado nativo já parou de ouvir
   atualizarWakeControles();
   if (ocupado) return;
+  aquecer(); // abre a conexão com a IA enquanto o microfone é preparado
   const resto = extrairComando(texto);
   const direto = resto.length >= 3 ? resto : '';
   registrar('acordou', 'Jarvis chamado' + (direto ? ': ' + direto : ''));
@@ -2629,6 +2810,7 @@ function enviarComando(t) {
   t = String(t || '').trim();
   if (!t || ocupado) return;
   msg('eu', t);
+  aquecer();
   executar(async () => { setEstado('thinking'); await turno(t); });
 }
 function enviarTexto() {
@@ -4210,6 +4392,12 @@ if (window.addEventListener && window.screen) {
 }
 document.addEventListener('contextmenu', (e) => { if (!(e.target && e.target.closest && e.target.closest('.msg, input, textarea'))) e.preventDefault(); });
 document.addEventListener('visibilitychange', () => document.body.classList.toggle('oculto', document.hidden));
+// Voltou ao primeiro plano: se a ativação deveria estar ligada e não está (o Android
+// encerrou o detector no fundo), religa na hora em vez de esperar o próximo alarme do vigia.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !ehAndroid || ocupado) return;
+  if (wakeLigado() && !wakeAtivo && !iniciandoWake) iniciarWake();
+});
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || !ehAndroid) return;
   const cfg = document.getElementById('painel-config');

@@ -1,4 +1,12 @@
-# J.A.R.V.I.S. Nova 1.10.1
+# J.A.R.V.I.S. Nova 1.11.0
+
+## Novidades da 1.11.0 — mais rápido e com humor de contexto
+- **Resposta em streaming**: a fala começa assim que o texto falado está pronto, sem esperar a IA terminar de gerar o resto. Se o provedor não cooperar, o app volta ao pedido completo sozinho.
+- **Menos espera**: a conexão com a IA e o motor de voz são aquecidos enquanto você ainda está falando.
+- **Tom do turno**: com pressa ele responde curto e seco; em assunto sensível o humor desaparece.
+- **Travamentos corrigidos**: falha ao abrir o microfone não deixa mais o app preso em "ouvindo", e voltar ao primeiro plano religa a ativação na hora.
+
+Versões anteriores: 1.10.0 e 1.10.1 (correções do segundo plano).
 
 ## Correções da 1.10.1 — segundo plano estável
 
@@ -165,9 +173,9 @@ desinstale uma vez (perde os ajustes salvos) e, a partir da 1.7.1, as próximas 
 Faça push na `main` com os fontes na raiz (ou envie `JARVIS-NOVA-*-fonte.zip` na raiz). O workflow
 `.github/workflows/build-apk.yml` fixa a assinatura de CI, executa `npm run test:all`, configura a
 API mínima 26, baixa o AAR do sherpa-onnx (`baixar_sherpa.py`), aplica permissões/versão e compila o
-APK debug (artefato `JARVIS-Nova-1.10.0-APK`).
+APK debug (artefato `JARVIS-Nova-1.11.0-APK`).
 
-Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.10.0`: o workflow
+Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.11.0`: o workflow
 `.github/workflows/release-apk.yml` compila, testa e publica o APK com checksum. Também é possível
 executar o workflow manualmente pelo painel de Actions.
 
@@ -175,8 +183,8 @@ Passo a passo do build também em `TESTES.md` e `GUIA-ACESSOS-ANDROID.md` (permi
 
 ## Instalar e atualizar pelo próprio aparelho
 
-1. Abra o release **v1.10.0** no GitHub pelo navegador do celular e baixe
-   `jarvis-nova-1.10.1-10101.apk` (e, se quiser conferir, o `.sha256` ao lado).
+1. Abra o release **v1.11.0** no GitHub pelo navegador do celular e baixe
+   `jarvis-nova-1.11.0-10110.apk` (e, se quiser conferir, o `.sha256` ao lado).
 2. Toque no arquivo baixado. O Android pede para permitir “instalar apps desconhecidos” para o
    navegador — autorize só para ele, instale e depois pode revogar.
 3. Na primeira instalação ele pede microfone, notificações e contatos; a permissão **Telefone**

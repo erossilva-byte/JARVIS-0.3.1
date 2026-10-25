@@ -46,7 +46,10 @@ checks = {
     "Plugin abre autostart por fabricante": (
         "abrirAutostart" in plugin and "AutoStartManagementActivity" in plugin and "ACTION_APPLICATION_DETAILS_SETTINGS" in plugin),
     "Plugin expõe teste e desligamento": all(t in plugin for t in (
-        "iniciarTesteEscuta", "statusTesteEscuta", "pararTesteEscuta", "desligarEscuta", "consumirPedidoOuvir")),
+        "iniciarTesteEscuta", "statusTesteEscuta", "desligarEscuta", "consumirPedidoOuvir"))
+        # pausarEscuta/pararTesteEscuta/statusEscuta não tinham nenhum chamador (1.11.0)
+        and "public void pararTesteEscuta" not in plugin
+        and "public void statusEscuta" not in plugin,
     "Receptor do botão Ouvir agora": "JarvisOuvirReceiver" in manifesto and "pedidoOuvir" in ouvir,
     "Manifesto registra vigia e receptor": (".JarvisWatchdog" in manifesto and "VERIFICAR_ESCUTA" in manifesto
                                             and ".JarvisOuvirReceiver" in manifesto),

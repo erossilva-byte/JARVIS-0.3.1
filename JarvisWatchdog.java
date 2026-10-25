@@ -76,12 +76,6 @@ public class JarvisWatchdog extends BroadcastReceiver {
         } catch (Exception ignored) { }
     }
 
-    /** Mantém o vigia ativo enquanto o usuário quiser a escuta ligada. */
-    static void garantir(Context c) {
-        if (JarvisPrefs.desejaOuvir(c)) agendar(c, INTERVALO);
-        else cancelar(c);
-    }
-
     private static int flags() {
         return PendingIntent.FLAG_UPDATE_CURRENT
             | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0);

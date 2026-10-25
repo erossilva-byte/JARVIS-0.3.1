@@ -152,12 +152,6 @@ public class JarvisBackgroundPlugin extends Plugin {
         call.resolve();
     }
 
-    @PluginMethod
-    public void pausarEscuta(PluginCall call) {
-        JarvisService.pausarEscuta();
-        call.resolve();
-    }
-
     /** Teste de 20 s da palavra de ativação: conta acertos sem abrir o app. */
     @PluginMethod
     public void iniciarTesteEscuta(PluginCall call) {
@@ -184,12 +178,6 @@ public class JarvisBackgroundPlugin extends Plugin {
     @PluginMethod
     public void statusTesteEscuta(PluginCall call) {
         call.resolve(JarvisService.statusTeste());
-    }
-
-    @PluginMethod
-    public void pararTesteEscuta(PluginCall call) {
-        JarvisService.pararTeste(getContext());
-        call.resolve();
     }
 
     /** Pedido feito pelo botão "Ouvir agora" da notificação. */
@@ -314,19 +302,6 @@ public class JarvisBackgroundPlugin extends Plugin {
     public void consumirEventoPendente(PluginCall call) {
         JSObject pendente = JarvisWakeBus.consumirPendente();
         call.resolve(pendente == null ? new JSObject() : pendente);
-    }
-
-    /** Informa à interface qual detector está ativo agora. */
-    @PluginMethod
-    public void statusEscuta(PluginCall call) {
-        JSObject o = new JSObject();
-        o.put("escutando", JarvisService.escutando());
-        o.put("detector", JarvisService.detectorAtual());
-        o.put("servico", JarvisService.ativo());
-        o.put("desejada", JarvisPrefs.desejaOuvir(getContext()));
-        o.put("motor", JarvisPrefs.motor(getContext()));
-        o.put("testeAtivo", JarvisService.testeAtivo());
-        call.resolve(o);
     }
 
     /* ---------- Transcrição alternativa do Android ---------- */

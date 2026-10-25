@@ -65,11 +65,11 @@ checagens = {
         "if (chkWakeEv) chkWakeEv.checked = false;" in app
         and "store.set('wake', '0');\n          const chkWakeEv" in app),
 
-    "Versão 1.10.1 e versionCode 10101": (
-        versao.get("version") == "1.10.1"
-        and versao.get("versionCode") == 10101
-        and pacote.get("version") == "1.10.1"
-        and "const VERSAO_APP = '1.10.1';" in app),
+    "Versão atual mantém a linha da 1.10.1 ou superior": (
+        tuple(int(x) for x in str(versao.get("version", "0")).split(".")) >= (1, 10, 1)
+        and versao.get("versionCode", 0) >= 10101
+        and pacote.get("version") == versao.get("version")
+        and "const VERSAO_APP = '" + str(versao.get("version")) + "';" in app),
     "Correções registradas no CHANGELOG": "## 1.10.1" in historico,
 }
 
