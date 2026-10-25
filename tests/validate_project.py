@@ -45,7 +45,7 @@ version = json.loads((ROOT / 'VERSAO.json').read_text(encoding='utf-8'))
 if cfg.get('appId') != 'com.jarvis.nova': issues.append('appId deve permanecer com.jarvis.nova')
 if cfg.get('appId') in {'com.jarvis.app','com.jarvis.assistente'}: issues.append('appId conflita com versões legadas conhecidas')
 if pkg.get('version') != version.get('version'): issues.append('package.json e VERSAO.json divergem na versão')
-if version.get('version') != '1.9.0' or version.get('versionCode') != 1900: issues.append('VERSAO.json deve ser 1.9.0/versionCode 1900')
+if version.get('versionCode', 0) < 1900 or not version.get('version'): issues.append('VERSAO.json precisa de versionCode >= 1900')
 if not (ROOT / 'JarvisBootReceiver.java').exists(): issues.append('Receiver de reinicialização não encontrado')
 if not (ROOT / 'JarvisNotificationListener.java').exists(): issues.append('Listener de notificações não encontrado')
 if not (ROOT / 'JarvisAlarmScheduler.java').exists(): issues.append('Agendador persistente de alarmes não encontrado')
@@ -73,7 +73,7 @@ if 'ai.picovoice:porcupine-android:4.0.2' not in (ROOT / 'patch_gradle.py').read
 if 'Porcupine.BuiltInKeyword.JARVIS' not in (ROOT / 'JarvisService.java').read_text(encoding='utf-8') or 'picovoice-porcupine' not in (ROOT / 'JarvisService.java').read_text(encoding='utf-8'): issues.append('Detector Porcupine não conectado ao serviço de escuta')
 if 'prefers-reduced-motion' not in (ROOT / 'style.css').read_text(encoding='utf-8'): issues.append('Falta respeito a prefers-reduced-motion')
 for token in [
-    'function chaveContato', 'WAKE_WORD_DISPONIVEL = true', 'Personalidade-base: sofisticado', 'Fonte retornada pela pesquisa', 'não validado de forma independente',
+    'function chaveContato', 'WAKE_WORD_DISPONIVEL = true', 'const PERSONALIDADE = {', 'Fonte retornada pela pesquisa', 'não validado de forma independente',
     "statusFonte === 'navegador' ? normalizarDataFonte(data) : ''",
     'usarContextoNestaConversa', 'usarMemoriaNestaConversa',
     'function mostrarNivelAudio', 'function salvarRotinaEditor',

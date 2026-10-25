@@ -22,6 +22,8 @@ public class JarvisBootReceiver extends BroadcastReceiver {
                 || Intent.ACTION_TIME_CHANGED.equals(action)
                 || Intent.ACTION_TIMEZONE_CHANGED.equals(action)) {
             Context ctx = context.getApplicationContext();
+            // Depois de desligar o celular a voz é conferida de novo na primeira ativação.
+            if (Intent.ACTION_BOOT_COMPLETED.equals(action)) JarvisPrefs.novaSessao(ctx);
             JarvisAlarmScheduler.restaurar(ctx);
             if (JarvisPrefs.desejaOuvir(ctx)) JarvisWatchdog.agendar(ctx, 20000L);
             else JarvisWatchdog.cancelar(ctx);

@@ -12,7 +12,29 @@ const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.9.0'; // espelho da VERSAO.json; no Android a versão instalada é lida do PackageManager.
+const VERSAO_APP = '1.10.0';
+/* ---------- PERSONALIDADE: ponto único de ajuste ----------
+ * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
+ * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
+ * nem nos comandos. Para mudar o jeito dele, edite os textos abaixo.
+ */
+const PERSONALIDADE = {
+  identidade: 'J.A.R.V.I.S., assistente pessoal de IA',
+  papel: 'mordomo digital e engenheiro de confiança do usuário',
+  // Traços que devem aparecer em TODA resposta.
+  personalidade: 'Sua personalidade é formal, espirituosa e leal, no espírito do mordomo-engenheiro de ficção científica (sem copiar falas do cinema): educado, sereno, preciso, observador, proativo e com senso de humor sutil.',
+  // Lealdade: o que ele protege e como trata o usuário.
+  lealdade: 'Sua lealdade é ao usuário: antecipe o próximo passo útil, proteja os interesses dele, nunca o exponha nem o constranja e diga a verdade mesmo quando a resposta não for a que ele esperava.',
+  // Tratamento respeitoso. {tratamento} é substituído pela preferência salva (padrão "senhor").
+  tratamento: 'Chame o usuário de "{tratamento}" com respeito formal e natural, sem servilismo, sem bajulação e sem repetir o tratamento em cada frase.',
+  // Inteligência de conversa: como ele pensa e responde.
+  conversa: 'Converse como uma pessoa muito competente e bem-humorada: acompanhe o fio da conversa, retome o que já foi dito, explique causa e efeito e entregue o próximo passo concreto. Se o pedido for ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar.',
+  // Humor: a intensidade vem do controle de humor; aqui fica o caráter do humor.
+  humor: 'O humor é sutil e seco, de quem comenta a situação com elegância: ironia fina, nunca deboche, nunca piada em série. Em saúde, segurança, sofrimento, conflitos ou assuntos urgentes, suspenda o humor e seja direto e respeitoso.',
+  // O que ele nunca faz.
+  limites: 'Nunca finja ter executado algo, nem alegue acesso ao aparelho que as ferramentas não oferecem. Ao errar, reconheça em uma frase e ofereça a correção.'
+};
+ // espelho da VERSAO.json; no Android a versão instalada é lida do PackageManager.
 const MODELOS_RESERVA = ['openai/gpt-oss-20b', 'openai/gpt-oss-120b'];
 // Plugins nativos do Capacitor (voz e serviço em segundo plano). Só existem no Android.
 const plug = (n) => !ehAndroid ? null : ((Cap.Plugins && Cap.Plugins[n]) || (typeof Cap.registerPlugin === 'function' ? Cap.registerPlugin(n) : null));
@@ -356,6 +378,25 @@ function confirmar(desc, exigePin) {
   });
 }
 
+/* ---------- Rede de segurança: uma exceção não pode derrubar o app ---------- */
+let errosJS = 0;
+function registrarFalhaJS(origem, detalhe) {
+  errosJS++;
+  const texto = String(detalhe || 'erro desconhecido').slice(0, 160);
+  try { registrar('erro', origem + ': ' + texto); } catch (e) { /* registro indisponível */ }
+  try {
+    if (errosJS <= 3) msg('sis', 'Encontrei um erro interno (' + texto + ') e continuei funcionando. Se repetir, veja o diagnóstico em Ajustes.');
+  } catch (e) { /* interface indisponível */ }
+}
+window.addEventListener('error', (ev) => {
+  registrarFalhaJS('javascript', ev && ev.message ? ev.message : 'erro desconhecido');
+});
+window.addEventListener('unhandledrejection', (ev) => {
+  const motivo = ev && ev.reason ? (ev.reason.message || ev.reason) : 'promessa rejeitada';
+  registrarFalhaJS('promise', motivo);
+  if (ev && typeof ev.preventDefault === 'function') ev.preventDefault();
+});
+
 /* ---------- Ações ---------- */
 const nomeUsuario = () => String(store.get('nome_usuario', '') || '').trim().slice(0, 60);
 const trat = () => store.get('trat', 'senhor') || 'senhor';
@@ -369,6 +410,8 @@ async function nativo(nome, args) {
     if (nome === 'abrir_url') { if (!L) throw new Error('Plugin AppLauncher ausente'); return L.openUrl({ url: args.url }); }
     if (U && typeof U[nome] === 'function') return U[nome](args || {});
     if (B && typeof B[nome] === 'function') return B[nome](args || {});
+    const Mus = plug('JarvisMusica');
+    if (Mus && typeof Mus[nome] === 'function') return Mus[nome](args || {});
     if (At && typeof At[nome] === 'function') return At[nome](args || {});
   }
   throw new Error('Indisponível nesta plataforma');
@@ -423,10 +466,15 @@ const ACOES = {
       } catch (e) { return { info: 'Não consegui acessar a área de transferência.' }; }
     } },
   ligar: { risco: 2, disp: T, ajuda: 'args {"contato":"<nome cadastrado>"}',
-    prep: (a) => { const r = resolverNumero(a.contato); return r ? { args: { numero: r.numero }, desc: `Ligar para ${r.nome} (${r.numero}).` } : { erro: 'Não encontrei esse contato. Cadastre-o em Ajustes.' }; },
+    prep: (a) => { const r = resolverNumero(a.contato); return r ? { args: { numero: r.numero, contato: r.nome }, desc: `Ligar para ${r.nome} (${r.numero}).` } : { erro: 'Não encontrei esse contato. Cadastre-o em Ajustes.' }; },
     run: async (a) => {
-      if (plataforma === 'android') await nativo('abrir_url', { url: 'tel:' + a.numero });
-      else await nativo('ligar', a);
+      if (plataforma !== 'android') return nativo('ligar', a);
+      // Antes isto abria o discador com "tel:" e parava aí. Agora o plugin liga de
+      // verdade (ACTION_CALL + permissão Telefone) e só cai no discador se o Android
+      // negar — dizendo com franqueza que a chamada não foi completada.
+      const r = await nativo('ligar', { numero: a.numero });
+      if (r && r.chamando) return { info: 'Chamando ' + (a.contato || a.numero) + ' agora, ' + trat() + '.' };
+      return { info: (r && r.aviso) || 'Abri o discador com o número pronto. Toque em chamar para completar a ligação.' };
     } },
   abrir_conversa_whatsapp: { risco: 1, disp: ['android'], ajuda: 'args {"contato":"<nome cadastrado>"}. Abre a conversa no WhatsApp; chamadas, áudio e envio são concluídos pelo usuário no app.',
     prep: (a) => { const r = resolverNumero(a.contato); return r ? { args: { numero: r.numero, contato: r.nome }, desc: `Abrir a conversa do WhatsApp com ${r.nome}.` } : { erro: 'Não encontrei esse contato. Cadastre o nome e o número em Ajustes.' }; },
@@ -451,6 +499,23 @@ const ACOES = {
   controle_midia: { risco: 0, disp: ['android'], ajuda: 'args {"comando":"pausar|continuar|proxima|anterior|alternar|parar"}. Controla o app que está tocando (Spotify, YouTube Music e outros) pela sessão de mídia do Android; sem acesso às notificações, envia teclas de mídia.',
     run: async (a) => {
       const c = String(a.comando || 'pausar');
+      // Player do próprio app: se é ele que está tocando, obedece direto (não depende
+      // do acesso às notificações nem da sessão de outro aplicativo).
+      const M = plug('JarvisMusica');
+      if (M) {
+        try {
+          const st = await M.estado();
+          if (st && st.ativo) {
+            const mapa = { pausar: 'pausar', continuar: 'continuar', proxima: 'proxima', anterior: 'anterior', parar: 'parar', alternar: st.tocando ? 'pausar' : 'continuar' };
+            const metodo = mapa[c] || 'pausar';
+            if (typeof M[metodo] === 'function') {
+              await M[metodo]();
+              const verboLocal = { pausar: 'Pausei', continuar: 'Retomei', proxima: 'Pulei para a próxima', anterior: 'Voltei para a anterior', parar: 'Parei' }[metodo] || 'Controlei';
+              return { info: verboLocal + ' “' + (st.titulo || 'a música') + '”.' };
+            }
+          }
+        } catch (e) { /* sem player local: segue para o controle do Android */ }
+      }
       const r = await nativo('controleMidia', { comando: c });
       const app = (r && r.app) || '';
       const verbo = { pausar: 'Pausei', continuar: 'Retomei', proxima: 'Pulei para a próxima', anterior: 'Voltei para a anterior', alternar: 'Alternei a reprodução de', parar: 'Parei' }[c] || 'Enviei o comando para';
@@ -460,6 +525,21 @@ const ACOES = {
     } },
   musica_tocando: { risco: 0, disp: ['android'], ajuda: 'sem args. Diz qual app está tocando e qual música/faixa está no player.',
     run: async () => { const r = await nativo('midiaAtual', {}); return { info: descreverMidia(r) }; } },
+  tocar_musica: { risco: 0, disp: ['android'], ajuda: 'args {"busca":"nome da música, do artista ou do álbum"}. Procura o arquivo na biblioteca do aparelho e começa a tocar; se não houver, abre a busca de um app de streaming e avisa.',
+    run: async (a) => {
+      const busca = String((a && a.busca) || '').trim().slice(0, 120);
+      if (!busca) throw new Error('Diga qual música ou artista.');
+      const M = plug('JarvisMusica');
+      let r = null;
+      if (M) { try { r = await M.tocar({ busca }); } catch (e) { registrar('erro', 'player local: ' + (e && e.message ? e.message : e)); } }
+      if (r && r.achou) {
+        const quem = r.artista && !/^(<unknown>|unknown)$/i.test(String(r.artista)) ? ', de ' + r.artista : '';
+        return { info: 'Tocando “' + r.titulo + '”' + quem + '.' + (r.total > 1 ? ' Encontrei ' + r.total + ' versões; peça a próxima quando quiser.' : '') };
+      }
+      const sp = await ACOES.spotify.run({ busca });
+      const semPermissao = r && r.precisaPermissao ? 'Não tenho permissão para ler a música do aparelho. Autorize “Música e áudio” no app. ' : '';
+      return { info: semPermissao + 'Não encontrei “' + busca + '” na biblioteca deste aparelho. ' + sp.info };
+    } },
   spotify: { risco: 0, disp: ['android'], ajuda: 'args {"busca":"nome da música, artista ou playlist"} ou {"tipo":"curtidas|tocando|radio"}. Abre o Spotify já na busca (o app do Spotify não aceita iniciar faixa sozinho: toque no resultado) ou numa seção fixa.',
     run: async (a) => {
       const busca = String((a && a.busca) || '').trim().slice(0, 120);
@@ -989,16 +1069,41 @@ async function atualizarJarvis() {
 }
 
 /* ---------- Perfil de voz na ativação: ele obedece só se reconhecer quem falou ---------- */
+// A conferência da voz vale uma vez por sessão: no primeiro acesso e depois de ligar
+// o celular. Em "sempre" (Ajustes ▸ Voz) ela volta a ser pedida a cada ativação.
+let sessaoVozCache = '';
+async function tokenSessaoVoz() {
+  if (sessaoVozCache) return sessaoVozCache;
+  try {
+    const r = await nativo('sessaoVoz', {});
+    sessaoVozCache = String((r && r.token) || '1');
+  } catch (e) { sessaoVozCache = '1'; }
+  return sessaoVozCache;
+}
 async function confirmarVozDoUsuario() {
   const p = lerPerfilAcustico();
-  if (store.get('wake_perfil', '0') !== '1' || !p || p.samples < 3) return true;
+  // Existe perfil cadastrado? Então a conferência vem ligada por padrão — é o
+  // comportamento pedido: gravar a voz na ativação e só liberar se reconhecer.
+  // Sem perfil (ou com o usuário desligando a chave) ele não bloqueia ninguém.
+  if (!p || p.samples < 3 || store.get('wake_perfil', '1') !== '1') return true;
+  const token = await tokenSessaoVoz();
+  if (store.get('wake_perfil_modo', 'sessao') !== 'sempre' && store.get('wake_perfil_sessao', '') === token) {
+    registrar('voz', 'perfil já confirmado nesta sessão');
+    return true;
+  }
   try {
-    mostrarWakeMini('Verificando sua voz, ' + (nomeUsuario() || trat()) + '…');
+    const nomeV = nomeUsuario() || trat();
+    mostrarWakeMini('Analisando sua voz, ' + nomeV + '…');
+    // Fala em voz alta que está analisando — e só grava depois que a própria voz termina,
+    // para o microfone não captar a resposta dele mesmo.
+    await falar('Analisando sua voz, ' + nomeV + '. Um instante.', false);
+    mostrarWakeMini('Gravando sua voz para comparar com o perfil…');
     const v = await capturarVetorVoz();
     const score = Math.max(0, similaridadeVoz(p.v, v));
     const limiar = Math.max(0.45, Math.min(0.9, Number(store.get('wake_perfil_limiar', '0.6')) || 0.6));
     registrar('voz', 'verificação na ativação: ' + Math.round(score * 100) + '% (limiar ' + Math.round(limiar * 100) + '%)');
     if (score >= limiar) {
+      store.set('wake_perfil_sessao', token);
       mostrarWakeMini('Perfil confirmado, ' + (nomeUsuario() || trat()) + ' · ' + Math.round(score * 100) + '%');
       return true;
     }
@@ -1159,11 +1264,23 @@ async function comandoRapido(texto) {
   const termoBusca = (t) => String(t || '').replace(/^(?:de|da|do|das|dos|pelo|pela)\s+/i, '').trim();
   const pedidoSpotify = /^(?:toca|toque|tocar|reproduz|reproduza|coloca|coloque|bota|poe|poem|abre|abrir)\s+(?:(?:a|o|uma|um)\s+)?(?:musica|faixa|playlist|album|artista)?\s*["“]?(.+?)["”]?\s*(?:no|na|pelo|pela)\s+spotify$/.exec(n);
   if (pedidoSpotify) { rapido('spotify'); const r = await ACOES.spotify.run({ busca: termoBusca(pedidoSpotify[1]) }); await falar(r.info); return true; }
+  // "Coloca a música This I Love": tira o "a música" do pedido, procura o arquivo no
+  // aparelho e começa a tocar de fato. Sem arquivo, cai na busca do streaming avisando.
+  const alvoMusica = (t) => String(t || '')
+    .replace(/^["“]?\s*(?:a|o|as|os|uma|um)\s+(?:m[úu]sica|faixa|can[cç][aã]o|playlist|[aá]lbum|artista)\s+/i, '')
+    .replace(/^(?:de|da|do|das|dos)\s+/i, '')
+    .replace(/["”]+$/g, '')
+    .trim();
   const pedidoMusica = /^(?:toca|toque|tocar|reproduz|reproduza|coloca|coloque|bota|poe|poem)\s+["“]?(.+?)["”]?$/.exec(n);
   if (pedidoMusica) {
-    const alvo = pedidoMusica[1].trim();
+    const alvo = alvoMusica(pedidoMusica[1]);
     const generico = /^(?:(?:a|o|as|os)\s+)?(?:musica|faixa|video|reproducao|nada|isso|aquilo|qualquer coisa)$/.test(alvo);
-    if (!generico) { rapido('spotify'); const r = await ACOES.spotify.run({ busca: termoBusca(alvo) }); await falar(r.info); return true; }
+    if (alvo && !generico) {
+      rapido('tocando');
+      const r = await ACOES.tocar_musica.run({ busca: alvo });
+      await falar(r.info);
+      return true;
+    }
   }
   // Perfis de voz (timbre do filme) e sinal do HUD.
   if (/^(?:(?:usar|use|colocar|coloque|ativar|ative|aplicar|aplique|mudar para|mude para)\s+)?(?:a\s+)?voz (?:do )?(?:filme|jarvis do filme)$/.test(n) || /^voz do jarvis$/.test(n)) { const c = aplicarPerfilVoz('filme'); await falar('Perfil ' + c.nome + ' aplicado: tom mais grave e fala cadenciada. Teste em Ajustes, na aba Voz.'); return true; }
@@ -1668,7 +1785,7 @@ function promptSistema() {
   const memoria = store.get('memoria_ativa', '0') === '1' && usarMemoriaNestaConversa ? String(store.get('memoria', '')).slice(0, 1200).trim() : '';
   const ferr = disponiveis().map((k) => `- ${k}: ${ACOES[k].ajuda || ''}`).join('\n');
   const nomePerfil = nomeUsuario();
-  return `Você é J.A.R.V.I.S., o assistente pessoal de IA${nomePerfil ? ' de ' + nomePerfil : ' do usuário'}. ${nomePerfil ? 'O nome cadastrado do usuário é ' + nomePerfil + '. ' : ''}Personalidade-base: sofisticado, educado, sereno, preciso, observador, proativo e com opinião própria. Você conversa como uma pessoa muito competente e bem-humorada: curioso pelo assunto do usuário, capaz de discordar com respeito e de explicar o porquê das coisas, nunca um formulário que devolve perguntas. Aplique de forma perceptível e consistente o estilo selecionado (${estiloTexto}) em toda a resposta, não apenas mencionando-o. Intensidade de humor configurada: ${humor}%. ${humorTexto} A configuração de humor é uma preferência de tom, não uma obrigação de inserir piadas. Em saúde, segurança, sofrimento, conflitos ou assuntos urgentes, priorize empatia e clareza e suspenda humor. Seja espirituoso sem ser debochado, arrogante ou repetitivo. Mantenha a calma diante de problemas, antecipe o próximo passo útil e trate o usuário com respeito formal e natural. Inspire-se apenas no arquétipo geral do assistente de ficção científica: não copie falas, bordões ou diálogos dos filmes. Use humor apenas quando combinar com o contexto; em emergências, saúde, segurança, sofrimento ou ações sensíveis, seja direto e respeitoso. Demonstre competência explicando limites com honestidade, propondo o próximo passo útil e distinguindo fatos confirmados de suposições. Não finja ter executado ações nem alegue acesso ao aparelho que as ferramentas disponíveis não oferecem. Inteligência de conversa: acompanhe o fio da conversa e retome o que já foi dito quando fizer sentido, em vez de tratar cada mensagem como se fosse a primeira. Se o pedido estiver ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar; se estiver claro, responda direto. Ao explicar um assunto, mostre a causa e o efeito em linguagem simples e, quando ajudar, uma analogia de uma frase. Ao resolver um problema, entregue o próximo passo concreto. Em pesquisa, diga o que confirmou, o que continua incerto e de onde veio, sem inventar datas, números ou links. Em conversa fiada, seja presente e interessado, com opinião própria e humor leve — não devolva a pergunta de forma vazia. Chame o usuário de "${t}". Responda em português do Brasil, em ${curtas ? '1 ou 2 frases bem curtas (até 30 palavras)' : '2 a 4 frases naturais (até 70 palavras), podendo passar disso quando o assunto exigir explicação'}, pois suas respostas são faladas em voz alta: sem markdown, sem emojis, sem listas.
+  return `Você é ${PERSONALIDADE.identidade}${nomePerfil ? ' de ' + nomePerfil : ' do usuário'} e trabalha como ${PERSONALIDADE.papel}. ${nomePerfil ? 'O nome cadastrado do usuário é ' + nomePerfil + '. ' : ''}${PERSONALIDADE.personalidade} ${PERSONALIDADE.lealdade} ${PERSONALIDADE.tratamento.replace('{tratamento}', t)} ${PERSONALIDADE.conversa} Você conversa com opinião própria, curioso pelo assunto do usuário, capaz de discordar com respeito e de explicar o porquê das coisas, nunca um formulário que devolve perguntas. ${PERSONALIDADE.humor} ${PERSONALIDADE.limites} Aplique de forma perceptível e consistente o estilo selecionado (${estiloTexto}) em toda a resposta, não apenas mencionando-o. Intensidade de humor configurada: ${humor}%. ${humorTexto} A configuração de humor é uma preferência de tom, não uma obrigação de inserir piadas. Seja espirituoso sem ser debochado, arrogante ou repetitivo. Mantenha a calma diante de problemas e antecipe o próximo passo útil. Inspire-se apenas no arquétipo geral do assistente de ficção científica: não copie falas, bordões ou diálogos dos filmes. Demonstre competência explicando limites com honestidade, propondo o próximo passo útil e distinguindo fatos confirmados de suposições. Não finja ter executado ações nem alegue acesso ao aparelho que as ferramentas disponíveis não oferecem. Inteligência de conversa: acompanhe o fio da conversa e retome o que já foi dito quando fizer sentido, em vez de tratar cada mensagem como se fosse a primeira. Se o pedido estiver ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar; se estiver claro, responda direto. Ao explicar um assunto, mostre a causa e o efeito em linguagem simples e, quando ajudar, uma analogia de uma frase. Ao resolver um problema, entregue o próximo passo concreto. Em pesquisa, diga o que confirmou, o que continua incerto e de onde veio, sem inventar datas, números ou links. Em conversa fiada, seja presente e interessado, com opinião própria e humor leve — não devolva a pergunta de forma vazia. Responda em português do Brasil, em ${curtas ? '1 ou 2 frases bem curtas (até 30 palavras)' : '2 a 4 frases naturais (até 70 palavras), podendo passar disso quando o assunto exigir explicação'}, pois suas respostas são faladas em voz alta: sem markdown, sem emojis, sem listas.
 Agora: ${new Date().toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' })}. Plataforma: ${plataforma}.
 Ações disponíveis (nomes válidos para o campo "acao" do JSON; NÃO são funções: nunca use function calling nem chame ferramentas, responda apenas com o JSON):
 ${ferr}
@@ -3258,7 +3375,8 @@ function abrirConfig() {
   if (ehAndroid) setTimeout(() => diagnosticoSegundoPlano(true), 500);
   $('#c-wake').checked = store.get('wake', '0') === '1';
   $('#c-wake-pausa-musica').checked = store.get('wake_pausa_musica', '1') === '1';
-  $('#c-wake-perfil').checked = store.get('wake_perfil', '0') === '1';
+  $('#c-wake-perfil').checked = store.get('wake_perfil', lerPerfilAcustico() ? '1' : '0') === '1';
+  if ($('#c-wake-perfil-modo')) $('#c-wake-perfil-modo').value = store.get('wake_perfil_modo', 'sessao');
   preencherPainelAtualizacao();
   $('#c-wake-musica-row').hidden = !ehAndroid;
   $('#c-wake-row').hidden = !ehAndroid;
@@ -3295,6 +3413,10 @@ async function salvarConfig() {
   store.set('pararvoz', $('#c-pararvoz').checked ? '1' : '0');
   store.set('anunciar_chamadas', $('#c-anunciar-chamadas').checked ? '1' : '0');
   store.set('wake_perfil', $('#c-wake-perfil').checked ? '1' : '0');
+  const modoAnterior = store.get('wake_perfil_modo', 'sessao');
+  const modoNovo = $('#c-wake-perfil-modo') && $('#c-wake-perfil-modo').value === 'sempre' ? 'sempre' : 'sessao';
+  store.set('wake_perfil_modo', modoNovo);
+  if (modoAnterior !== modoNovo) store.set('wake_perfil_sessao', '');
   if (ehAndroid) { try { await nativo('definirAnuncioChamadas', { ativo: $('#c-anunciar-chamadas').checked }); } catch (e) { registrar('erro', 'anúncio de chamadas: ' + e.message); } }
   store.set('sensibilidade', String($('#c-sensibilidade').value || '1'));
   store.set('salvar_historico', $('#c-salvar-historico').checked ? '1' : '0');
@@ -3752,7 +3874,7 @@ const btnVozCadastrar=document.getElementById('c-voz-cadastrar'), btnVozVerifica
 function atualizarStatusPerfilVoz(){const p=lerPerfilAcustico();statusPerfilAcustico(p?`Perfil experimental salvo com ${p.samples} amostra(s). Comparação indicativa, não autenticação.`:'Nenhuma amostra cadastrada. Cadastre três amostras em ambiente silencioso.');}
 if(btnVozCadastrar) btnVozCadastrar.onclick=async()=>{btnVozCadastrar.disabled=true;try{const v=await capturarVetorVoz();const p=lerPerfilAcustico();const samples=p&&p.samples<3?p.samples+1:1;let vec=v;if(p&&p.samples<3)vec=v.map((x,i)=>(p.v[i]*p.samples+x)/(p.samples+1));store.set(VOZ_PERFIL_KEY,JSON.stringify({v:vec,samples,updated:new Date().toISOString()}));atualizarStatusPerfilVoz();registrar('voz','amostra acústica local cadastrada');}catch(e){statusPerfilAcustico(e.message||'Não foi possível capturar a amostra.');}finally{btnVozCadastrar.disabled=false;}};
 if(btnVozVerificar) btnVozVerificar.onclick=async()=>{btnVozVerificar.disabled=true;try{const p=lerPerfilAcustico();if(!p||p.samples<3)throw new Error('Cadastre três amostras antes de comparar.');const v=await capturarVetorVoz();const score=similaridadeVoz(p.v,v);statusPerfilAcustico(`Similaridade acústica indicativa: ${Math.round(Math.max(0,score)*100)}% (limiar ${Math.round(Number(store.get('wake_perfil_limiar','0.6'))*100)}%). Comparação grosseira de timbre: não confirma identidade e pode aceitar outra pessoa ou rejeitar a sua voz.`);registrar('voz','comparação acústica experimental executada');}catch(e){statusPerfilAcustico(e.message||'Não foi possível comparar a voz.');}finally{btnVozVerificar.disabled=false;}};
-if(btnVozApagar) btnVozApagar.onclick=()=>{if(!confirm('Apagar o perfil acústico salvo neste aparelho?'))return;store.set(VOZ_PERFIL_KEY,'');atualizarStatusPerfilVoz();};
+if(btnVozApagar) btnVozApagar.onclick=()=>{if(!confirm('Apagar o perfil acústico salvo neste aparelho?'))return;store.set(VOZ_PERFIL_KEY,'');store.set('wake_perfil_sessao','');atualizarStatusPerfilVoz();};
 if(document.getElementById('c-voz-perfil-status')) atualizarStatusPerfilVoz();
 
 /* ---------- Voz neural no aparelho (sherpa-onnx) ---------- */
@@ -4081,6 +4203,15 @@ document.addEventListener('visibilitychange', () => {
   const cfg = document.getElementById('painel-config');
   const voz = document.querySelector('#painel-config [data-category="voz"]');
   if (cfg && !cfg.hidden && voz && !voz.hidden) diagnosticoSegundoPlano(true);
+});
+// Em segundo plano o reconhecimento do WebView é encerrado: quem continua esperando a
+// palavra de ativação é só o serviço nativo. Também para a fala em andamento (bateria).
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) return;
+  try {
+    if (recAtual && recAtual.state !== 'inactive') { recAtual.stop(); registrar('voz', 'reconhecimento pausado: app em segundo plano'); }
+  } catch (e) { /* já parado */ }
+  try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) { /* ok */ }
 });
 atualizarSeguranca(); atualizarChips(); setInterval(atualizarChips, 600000);
 atualizarLatEstado();

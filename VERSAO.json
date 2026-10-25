@@ -1,19 +1,19 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.9.0",
-  "versionCode": 1900,
+  "version": "1.10.0",
+  "versionCode": 10100,
   "androidAppId": "com.jarvis.nova",
   "base": "código-fonte na raiz do repositório",
-  "gerado": "2026-10-24",
-  "status": "1.9.0: voz neural offline no próprio aparelho via sherpa-onnx (Kokoro bm_fable/bm_george em inglês britânico e Piper Cadu/Faber em português do Brasil), com download opcional de cada voz, barras de progresso, profundidade de tom e queda automática para o TTS do Android. O detector de palavra-chave do sherpa-onnx segue opcional e desligado: só existe modelo em inglês.",
+  "gerado": "2026-10-25",
+  "status": "1.10.0: ligação completada de verdade (ACTION_CALL com permissão de telefone), player de música local que toca o arquivo do aparelho, personalidade do J.A.R.V.I.S. centralizada em PERSONALIDADE, verificação de voz falada em voz alta e exigida uma vez por sessão, e rede de segurança contra exceções na interface e na IA local.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.9.0 (2026-10-24). O APK passa a embarcar o sherpa-onnx 1.13.8 (AAR Apache-2.0, baixado no build e conferido por SHA-256) com ONNX Runtime e espeak-ng; os modelos de voz NÃO vão no pacote — cada voz é baixada uma única vez, extraída com commons-compress para o armazenamento privado e usada sem internet. Vozes medidas aqui com o mesmo sherpa-onnx: Piper pt_BR-Cadu (67 MB, 22,05 kHz, CC0, F0 mediano 127 Hz, RTF 0,06) e pt_BR-Faber (67 MB, F0 155 Hz), Kokoro int8 multilíngue (132 MB, 24 kHz, Apache-2.0; bm_fable 129 Hz, bm_george 145 Hz, bm_lewis 86 Hz, RTF ~1,2-1,5 nesta máquina — por isso o app avisa que a voz inglesa é mais lenta). 'en-gb' não existe no espeak-ng empacotado, então a fonetização usa 'en' e o timbre britânico vem do falante. O detector KWS do sherpa-onnx continua fora: o único modelo público é em inglês e não há modelo pt-BR (medido na 1.7.0: 1 de 4 acertos em português).",
+  "notas": "Revisão 1.10.0 (2026-10-25). Requisito por requisito: (1) a personalidade passou a viver em um único ponto, o objeto PERSONALIDADE em app.js (formal, espirituoso e leal; lealdade, tratamento, humor e limites separados) e o prompt de sistema é montado a partir dele; (2) a inteligência de conversa continua no mesmo prompt, agora com as regras de conversa somadas à personalidade; (3) a palavra de ativação não mudou de motor (Porcupine ou Android), porque a personalidade não interfere nela; (4) na ativação o app agora FALA “Analisando sua voz” em voz alta e só então grava os 4 segundos para comparar com o perfil; a conferência é exigida uma vez por sessão (primeiro acesso e depois de ligar o celular) e, se o usuário quiser, em toda ativação — (8) em segundo plano o reconhecimento do WebView é encerrado e só o serviço nativo espera a palavra de ativação; (5) “coloque a música X” passou a procurar o arquivo na biblioteca do aparelho (MediaStore, ignorando acentos e ordem das palavras) e iniciar a reprodução num serviço em primeiro plano com notificação e MediaSession; sem arquivo correspondente, cai na busca de um app de streaming com o aviso de que ele não inicia a faixa sozinho; “ligue para X” passou a usar ACTION_CALL com a permissão Telefone (antes só abria o discador com tel:) e cai no discador com aviso se o Android negar; (6)(7) exceções da interface viram aviso em vez de fechar o app e o carregamento do modelo local confere memória antes de carregar, transformando um OutOfMemoryError nativo em mensagem.",
   "build": {
-    "resultado": "success",
-    "sha256": "56b48ff9d92e7b45d7b39d1d22ccd9a75674d7a75f90c8fd5266d9e734e996c7",
-    "bytes": 72623658,
-    "data": "2026-10-24",
-    "observacao": "assembleDebug local com JDK 17 + SDK 34. AAR sherpa-onnx 1.13.8 baixado por baixar_sherpa.py (sha256 633c2432…) e conferido; ABIs arm64-v8a e armeabi-v7a; JarvisVozPlugin, OfflineTts e BZip2CompressorInputStream presentes no DEX; versão 1.9.0/1900. Os modelos de voz não entram no APK: são baixados pelo usuário. O APK do release é recompilado pelo CI com ci/debug.keystore."
+    "resultado": "pendente",
+    "sha256": "",
+    "bytes": 0,
+    "data": "2026-10-25",
+    "observacao": "O APK do release é recompilado pelo workflow com a assinatura de ci/debug.keystore."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"

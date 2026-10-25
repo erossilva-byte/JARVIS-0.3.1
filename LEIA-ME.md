@@ -1,4 +1,26 @@
-# J.A.R.V.I.S. Nova 1.9.0
+# J.A.R.V.I.S. Nova 1.10.0
+
+## Destaques da 1.10.0 — obedece de verdade e com personalidade própria
+
+- **Personalidade num só lugar.** `PERSONALIDADE`, no topo do `app.js`, guarda identidade, papel,
+  traços, lealdade, tratamento, conversa, humor e limites. O prompt de sistema (nuvem e modelo
+  local) é montado a partir dele: mudar o jeito do J.A.R.V.I.S. é editar um bloco. A palavra de
+  ativação não depende disso e continua funcionando igual.
+- **A voz é analisada em voz alta.** Na ativação ele **fala** “Analisando sua voz, senhor. Um
+  instante.”, grava 4 s depois da própria fala e compara com o perfil salvo — já vem ligada para quem tem perfil cadastrado. A conferência é
+  exigida **uma vez por sessão** (primeiro acesso e depois de ligar o celular); há um seletor
+  “Quando conferir a voz” para quem preferir em toda ativação.
+- **“Ligue para X” completa a chamada.** `ACTION_CALL` com a permissão Telefone, pedida na hora.
+  Sem permissão (ou em tablet sem telefonia), abre o discador e **diz** que não completou.
+- **“Coloque a música This I Love” começa a tocar.** O app procura o arquivo na biblioteca do
+  aparelho (MediaStore, sem acento e sem depender da ordem das palavras) e toca num serviço em
+  primeiro plano, com notificação, controles de tela bloqueada e `MediaSession`. Não existindo o
+  arquivo, abre a busca do streaming e avisa que ali o toque no resultado é seu — nenhum app de
+  streaming inicia faixa sem conta autenticada, e fingir isso seria mentira.
+- **Economia em segundo plano.** Fora da tela, o reconhecimento do WebView e a fala param; só o
+  serviço nativo fica esperando “Jarvis”.
+- **Exceção não fecha mais o app.** Erros de JavaScript viram aviso e registro; a IA local confere
+  memória antes de carregar o modelo, transformando `OutOfMemoryError` em mensagem.
 
 ## Destaques da 1.9.0 — voz neural no próprio aparelho
 
@@ -133,19 +155,44 @@ desinstale uma vez (perde os ajustes salvos) e, a partir da 1.7.1, as próximas 
 Faça push na `main` com os fontes na raiz (ou envie `JARVIS-NOVA-*-fonte.zip` na raiz). O workflow
 `.github/workflows/build-apk.yml` fixa a assinatura de CI, executa `npm run test:all`, configura a
 API mínima 26, baixa o AAR do sherpa-onnx (`baixar_sherpa.py`), aplica permissões/versão e compila o
-APK debug (artefato `JARVIS-Nova-1.9.0-APK`).
+APK debug (artefato `JARVIS-Nova-1.10.0-APK`).
 
-Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.9.0`: o workflow
+Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.10.0`: o workflow
 `.github/workflows/release-apk.yml` compila, testa e publica o APK com checksum. Também é possível
 executar o workflow manualmente pelo painel de Actions.
 
 Passo a passo do build também em `TESTES.md` e `GUIA-ACESSOS-ANDROID.md` (permissões).
 
-## Atualização a partir do app
+## Instalar e atualizar pelo próprio aparelho
 
-Instale sempre a partir do release publicado: o APK precisa ter a mesma assinatura do release para
-o Android permitir a atualização por cima. Builds locais (`./gradlew assembleDebug` sem copiar
-`ci/debug.keystore` para `~/.android/debug.keystore`) têm assinatura diferente.
+1. Abra o release **v1.10.0** no GitHub pelo navegador do celular e baixe
+   `jarvis-nova-1.10.0-10100.apk` (e, se quiser conferir, o `.sha256` ao lado).
+2. Toque no arquivo baixado. O Android pede para permitir “instalar apps desconhecidos” para o
+   navegador — autorize só para ele, instale e depois pode revogar.
+3. Na primeira instalação ele pede microfone, notificações e contatos; a permissão **Telefone**
+   (para completar a ligação) e **Música e áudio** (para achar as faixas) são pedidas na primeira
+   vez que você usa cada comando, não na abertura.
+4. Nas próximas versões, nem é preciso baixar à mão: diga **“Jarvis, verificar atualização”** e
+   depois **“atualizar Jarvis”**. O app baixa do release, confere o SHA-256 e entrega o APK ao
+   instalador do Android (é só confirmar a instalação).
+
+> O APK **só instala por cima** se tiver a mesma assinatura. O CI usa sempre `ci/debug.keystore`,
+> então todas as releases deste repositório compartilham o certificado `04e04712…` e atualizam
+> sem apagar ajustes. Um build feito por você sem esse keystore tem outra assinatura e o Android
+> vai recusar a atualização (é preciso desinstalar antes, perdendo os dados do app).
+
+### Gerar a chave de assinatura (só se ainda não existir)
+
+```bash
+keytool -genkeypair -v -keystore ci/debug.keystore -storepass android \
+  -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+  -dname "CN=JARVIS Nova, O=Jarvis, C=BR"
+```
+
+O `patch_gradle.py` já aponta a assinatura de debug para `ci/debug.keystore`; o workflow copia esse
+arquivo para `~/.android/debug.keystore` antes de compilar. **Guarde o keystore** (e a senha) junto
+do projeto: perder o arquivo significa não conseguir mais atualizar o app instalado. Para conferir a
+assinatura de um APK: `keytool -printcert -jarfile app-debug.apk | grep SHA256`.
 
 ## Limites e privacidade
 

@@ -46,8 +46,8 @@ if pkg.get('version') != version.get('version'):
     issues.append('package.json e VERSAO.json têm versões diferentes')
 if cap.get('appId') != version.get('androidAppId'):
     issues.append('capacitor.config.json e VERSAO.json têm appId diferente')
-if version.get('version') != '1.9.0' or version.get('versionCode') != 1900:
-    issues.append('Versão de auditoria esperada: 1.9.0 / 1900')
+if version.get('versionCode', 0) < 1900 or not version.get('version'):
+    issues.append('VERSAO.json precisa de versionCode >= 1900')
 if not isinstance(version.get('build'), dict) or version.get('build', {}).get('resultado') not in {'pendente', 'success'}:
     issues.append('Resultado de build deve ser pendente ou success')
 if version.get('build', {}).get('resultado') == 'success' and not version.get('build', {}).get('sha256'):

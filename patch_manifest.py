@@ -14,8 +14,17 @@ permissoes = [
     "android.permission.SCHEDULE_EXACT_ALARM", "android.permission.READ_CONTACTS",
     "android.permission.CAMERA", "android.permission.REQUEST_INSTALL_PACKAGES",
     "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+    # Chamada completada de verdade: sem CALL_PHONE o app só abre o discador.
+    "android.permission.CALL_PHONE",
+    # Biblioteca de música do aparelho (o player toca o arquivo, não só busca).
+    "android.permission.READ_MEDIA_AUDIO",
+    # Serviço de música em primeiro plano (obrigatório a partir do Android 14).
+    "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
 ]
 linhas = "".join(f'    <uses-permission android:name="{p}" />\n' for p in permissoes if f'name="{p}"' not in m)
+# Armazenamento antigo: só vale até o Android 12; do 13 em diante a permissão é READ_MEDIA_AUDIO.
+if 'android:name="android.permission.READ_EXTERNAL_STORAGE"' not in m:
+    linhas += '    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n'
 # Permissions should precede <queries> and <application>.
 idx = m.find("<queries")
 app_idx = m.find("<application")
@@ -54,6 +63,13 @@ if '.JarvisService' in m:
 if '.JarvisService' not in m:
     j = m.rindex('</application>')
     m = m[:j] + service + m[j:]
+# Player de música local: serviço em primeiro plano do tipo mediaPlayback.
+musica = ('    <service android:name=".JarvisMusicaService" android:exported="false"\n'
+          '        android:foregroundServiceType="mediaPlayback"\n'
+          '        android:stopWithTask="false" />\n')
+if '.JarvisMusicaService' not in m:
+    j = m.rindex('</application>')
+    m = m[:j] + musica + m[j:]
 receiver = '    <receiver android:name=".JarvisAlarmReceiver" android:exported="false" />\n'
 if '.JarvisAlarmReceiver' not in m:
     j = m.rindex('</application>')

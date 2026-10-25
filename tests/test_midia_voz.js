@@ -27,7 +27,8 @@ const falado = [];
 const ACOES = {
   controle_midia: { run: async (a) => { chamadas.push(['midia', a.comando]); return { info: 'Pausei Spotify.' }; } },
   spotify: { run: async (a) => { chamadas.push(['spotify', a.busca || a.tipo]); return { info: 'Abri o Spotify.' }; } },
-  musica_tocando: { run: async () => { chamadas.push(['tocando']); return { info: 'Tocando X no Spotify.' }; } }
+  musica_tocando: { run: async () => { chamadas.push(['tocando']); return { info: 'Tocando X no Spotify.' }; } },
+  tocar_musica: { run: async (a) => { chamadas.push(['musica', a.busca]); return { info: 'Tocando “' + a.busca + '”.' }; } }
 };
 const store = { dados: {}, get(k, d) { return k in this.dados ? this.dados[k] : d; }, set(k, v) { this.dados[k] = v; } };
 const $ = () => null;
@@ -52,7 +53,13 @@ async function comando(texto) {
   chk('“toque uma música de X no Spotify” tira o artigo', r.tratado && r.chamadas[0][1] === 'anitta');
 
   r = await comando('toca evidências');
-  chk('“toca <música>” sem “no Spotify” também busca', r.tratado && r.chamadas[0][0] === 'spotify' && r.chamadas[0][1] === 'evidencias');
+  chk('“toca <música>” sem “no Spotify” manda tocar no aparelho', r.tratado && r.chamadas[0][0] === 'musica' && r.chamadas[0][1] === 'evidencias');
+
+  r = await comando('coloca a música This I Love');
+  chk('“coloca a música X” tira “a música” e toca X', r.tratado && r.chamadas[0][0] === 'musica' && r.chamadas[0][1] === 'this i love');
+
+  r = await comando('toque a faixa bohemian rhapsody');
+  chk('“toque a faixa X” também chega ao player', r.tratado && r.chamadas[0][1] === 'bohemian rhapsody');
 
   r = await comando('toca a música');
   chk('“toca a música” não vira busca (é retomar)', !r.tratado);

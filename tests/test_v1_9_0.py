@@ -86,9 +86,9 @@ checagens = {
         and 'value="0.9"' in html),
     "Estilos da lista de vozes existem": (
         ".neural-item" in estilo and ".neural-barra" in estilo),
-    "Versão 1.9.0 e versionCode 1900": (
-        versao.get("version") == "1.9.0" and versao.get("versionCode") == 1900
-        and pacote.get("version") == "1.9.0"),
+    "Versão consistente e versionCode >= 1900": (
+        versao.get("versionCode", 0) >= 1900
+        and pacote.get("version") == versao.get("version")),
     "Mudança registrada no CHANGELOG": "## 1.9.0" in historico,
 }
 

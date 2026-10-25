@@ -72,7 +72,7 @@ jobs:
           D=android/app/src/main/java/com/jarvis/nova
           mkdir -p "$D"
           find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
-          for f in MainActivity.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java; do
+          for f in MainActivity.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java; do
             test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
           done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
@@ -122,3 +122,8 @@ jobs:
             **Vozes neurais (opcional):** a partir da 1.9.0 o app pode falar com Piper (pt-BR)
             ou Kokoro (vozes britânicas) rodando no próprio aparelho. Os modelos são baixados
             dentro do app (67 MB e 132 MB) em Ajustes ▸ Voz; nada disso vai no APK.
+
+            **Novidades da 1.10.0:** personalidade centralizada (`PERSONALIDADE`), aviso falado
+            “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
+            completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
+            contra exceções que antes fechavam o app.

@@ -15,6 +15,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(JarvisLocalAIPlugin.class);
         registerPlugin(JarvisUpdatePlugin.class);
         registerPlugin(JarvisVozPlugin.class);
+        registerPlugin(JarvisMusicaPlugin.class);
         super.onCreate(savedInstanceState);
         aparenciaNativa();
     }

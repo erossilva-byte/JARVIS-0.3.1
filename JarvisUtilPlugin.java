@@ -58,7 +58,8 @@ import javax.crypto.spec.GCMParameterSpec;
  */
 @CapacitorPlugin(name = "JarvisUtil", permissions = {
     @Permission(strings = { Manifest.permission.READ_CONTACTS }, alias = "contacts"),
-    @Permission(strings = { Manifest.permission.CAMERA }, alias = "camera")
+    @Permission(strings = { Manifest.permission.CAMERA }, alias = "camera"),
+    @Permission(strings = { Manifest.permission.CALL_PHONE }, alias = "ligacoes")
 })
 public class JarvisUtilPlugin extends Plugin {
 
@@ -280,6 +281,82 @@ public class JarvisUtilPlugin extends Plugin {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             getContext().startActivity(i); call.resolve();
         } catch (Exception e) { call.reject("Não consegui abrir o SMS: " + e.getMessage()); }
+    }
+
+    /* ---------- Chamadas telefônicas ---------- */
+
+    /** Deixa só o “+” inicial e os dígitos: o discador não aceita máscara nem espaços. */
+    private static String normalizarNumero(String bruto) {
+        String s = bruto == null ? "" : bruto.trim();
+        boolean internacional = s.startsWith("+");
+        String digitos = s.replaceAll("[^0-9]", "");
+        if (digitos.isEmpty()) return "";
+        return internacional ? "+" + digitos : digitos;
+    }
+
+    /**
+     * Liga de verdade. ACTION_DIAL só abre o discador com o número escrito — era o que
+     * acontecia antes. Com a permissão CALL_PHONE o Android disca e completa a chamada;
+     * sem ela o app avisa e abre o discador, em vez de fingir que ligou.
+     */
+    @PluginMethod
+    public void ligar(PluginCall call) {
+        String numero = normalizarNumero(call.getString("numero", ""));
+        if (numero.isEmpty()) { call.reject("Número inválido para ligar."); return; }
+        if (getPermissionState("ligacoes") != PermissionState.GRANTED) {
+            requestPermissionForAlias("ligacoes", call, "aposPermissaoLigacao");
+            return;
+        }
+        discar(call, numero);
+    }
+
+    @PermissionCallback
+    private void aposPermissaoLigacao(PluginCall call) {
+        if (call == null) return;
+        String numero = normalizarNumero(call.getString("numero", ""));
+        if (numero.isEmpty()) { call.reject("Número inválido para ligar."); return; }
+        discar(call, numero);
+    }
+
+    private void discar(PluginCall call, String numero) {
+        JSObject o = new JSObject();
+        if (getPermissionState("ligacoes") == PermissionState.GRANTED) {
+            try {
+                Intent i = new Intent(Intent.ACTION_CALL, Uri.fromParts("tel", numero, null));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+                o.put("chamando", true);
+                o.put("numero", numero);
+                call.resolve(o);
+                return;
+            } catch (Throwable e) {
+                // Aparelho sem telefonia (tablet) ou operadora bloqueando: cai no discador.
+            }
+        }
+        try {
+            Intent d = new Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", numero, null));
+            d.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(d);
+            o.put("chamando", false);
+            o.put("discador", true);
+            o.put("numero", numero);
+            o.put("aviso", "O Android não autorizou a chamada direta, então abri o discador com o número pronto. Autorize a permissão “Telefone” nas configurações do app para eu ligar sozinho.");
+            call.resolve(o);
+        } catch (Exception e) {
+            call.reject("Não consegui iniciar a chamada: " + (e.getMessage() == null ? "erro desconhecido" : e.getMessage()));
+        }
+    }
+
+    /**
+     * Token da sessão atual de voz: muda quando o aparelho reinicia. A interface usa
+     * esse número para exigir a verificação da voz uma vez por sessão, em vez de a
+     * cada ativação.
+     */
+    @PluginMethod
+    public void sessaoVoz(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("token", JarvisPrefs.sessao(getContext()));
+        call.resolve(o);
     }
 
     /* ---------- Mídia em reprodução ---------- */

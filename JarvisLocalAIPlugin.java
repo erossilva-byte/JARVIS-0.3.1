@@ -1,5 +1,6 @@
 package com.jarvis.nova;
 
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
@@ -136,6 +137,7 @@ public class JarvisLocalAIPlugin extends Plugin {
                     File f = modelFile();
                     if (!f.isFile() || f.length() == 0) throw new Exception("Nenhum modelo local foi importado.");
                     if (engine == null) {
+                        checarMemoria(f);
                         LlmInference.LlmInferenceOptions options = LlmInference.LlmInferenceOptions.builder()
                             .setModelPath(f.getAbsolutePath())
                             .setMaxTokens(512)
@@ -165,6 +167,24 @@ public class JarvisLocalAIPlugin extends Plugin {
                 call.resolve();
             } catch (Exception e) { call.reject(e.getMessage() == null ? "Falha ao apagar modelo." : e.getMessage()); }
         });
+    }
+
+    /**
+     * O carregamento de um modelo .task pode pedir mais memória do que o arquivo ocupa.
+     * Sem esta checagem o processo morria com OutOfMemoryError nativo — e o app fechava
+     * sem explicação. Agora a falha vira mensagem na tela.
+     */
+    private void checarMemoria(File modelo) throws Exception {
+        android.app.ActivityManager am = (android.app.ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
+        if (am == null) return;
+        android.app.ActivityManager.MemoryInfo info = new android.app.ActivityManager.MemoryInfo();
+        am.getMemoryInfo(info);
+        long precisa = modelo.length() + 256L * 1024L * 1024L;
+        if (info.availMem < precisa) {
+            throw new Exception("Memória livre insuficiente para carregar o modelo: "
+                + (info.availMem / (1024 * 1024)) + " MB livres, cerca de "
+                + (precisa / (1024 * 1024)) + " MB necessários. Feche outros apps e tente de novo.");
+        }
     }
 
     private void closeEngineLocked() {
