@@ -60,10 +60,10 @@ public final class JarvisAlarmScheduler {
 
     public static void restaurar(Context ctx) {
         SharedPreferences sp = preferencias(ctx);
-        if (Build.VERSION.SDK_INT >= 31) {
-            AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
-            if (am == null || !am.canScheduleExactAlarms()) return; // preserva registros até o usuário conceder acesso
-        }
+        // setAlarmClock() NÃO exige SCHEDULE_EXACT_ALARM (o Android o trata como alarme do
+        // usuário, igual ao despertador). A checagem de canScheduleExactAlarms() aqui
+        // abortava a restauração no Android 12+ e os lembretes simplesmente não voltavam
+        // depois de reiniciar o aparelho — mesmo com o agendamento funcionando.
         long agora = System.currentTimeMillis();
         for (Map.Entry<String, ?> entry : sp.getAll().entrySet()) {
             if (!entry.getKey().startsWith(PREFIXO) || !(entry.getValue() instanceof String)) continue;

@@ -124,11 +124,14 @@ public class JarvisMusicaService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         try {
             if (intent == null) {
-                if (player == null) { pararTudo(); return START_NOT_STICKY; }
+                // Reinício sem comando (não deveria acontecer: o serviço não é STICKY).
+                // Encerra em vez de ficar sem notificação nem áudio.
+                pararTudo();
                 return START_NOT_STICKY;
             }
             String acao = intent.getAction() == null ? "" : intent.getAction();
             if (ACAO_TOCAR.equals(acao)) {
+                iniciarPrimeiroPlano();
                 ArrayList<String> u = intent.getStringArrayListExtra(EXTRA_URIS);
                 ArrayList<String> t = intent.getStringArrayListExtra(EXTRA_TITULOS);
                 ArrayList<String> a = intent.getStringArrayListExtra(EXTRA_ARTISTAS);
@@ -139,11 +142,20 @@ public class JarvisMusicaService extends Service {
                 totalAtual = uris.size();
                 erroAtual = "";
                 if (uris.isEmpty()) { pararTudo(); return START_NOT_STICKY; }
-                iniciarPrimeiroPlano();
                 tocarIndice(0);
             } else if (ACAO_CONTROLE.equals(acao)) {
+                // Este serviço é criado com startForegroundService(). Se ele não chamar
+                // startForeground() em poucos segundos, o Android encerra o processo com
+                // ForegroundServiceDidNotStartInTimeException — era o que acontecia ao
+                // pedir "pausar"/"próxima" com o player já parado.
+                iniciarPrimeiroPlano();
                 String c = intent.getStringExtra(EXTRA_COMANDO);
                 c = c == null ? "" : c.trim().toLowerCase(java.util.Locale.ROOT);
+                if (player == null) {
+                    // Nada para controlar: sai do primeiro plano na hora, sem áudio pendente.
+                    pararTudo();
+                    return START_NOT_STICKY;
+                }
                 switch (c) {
                     case "pausar": pausar(); break;
                     case "continuar":

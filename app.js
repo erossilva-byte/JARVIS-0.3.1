@@ -12,7 +12,7 @@ const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.10.0';
+const VERSAO_APP = '1.10.1';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -2487,15 +2487,27 @@ async function iniciarWake() {
   const p = plug('JarvisBackground');
   if (!p || !wakeLigado() || ocupado || wakeAtivo || iniciandoWake) return;
   iniciandoWake = true;
+  let servicoPronto = false;
   try {
     // Inicie o serviço enquanto o app está visível; o Android restringe FGS de microfone
     // iniciados quando o app já está em segundo plano. Sem serviço, o modo só é garantido em primeiro plano.
     await p.start();
+    servicoPronto = true;
     segPlanoOk = true;
     await p.startWake({ pausarDuranteMusica: store.get('wake_pausa_musica', '1') === '1', accessKey: CHAVE_PICOVOICE, motor: store.get('wake_motor', 'auto') });
     if (!ocupado) { wakeAtivo = true; setEstado('idle'); atualizarWakeControles(); }
     else await p.stopWake();
   } catch (e) {
+    if (!servicoPronto) {
+      // Só o serviço em primeiro plano falhou (Android restringindo FGS em segundo plano).
+      // Isso é temporário: não desliga a ativação nem derruba o serviço. Tenta de novo
+      // quando o app voltar a ficar visível.
+      segPlanoOk = false;
+      registrar('erro', 'serviço em segundo plano: ' + (e && e.message ? e.message : e));
+      msg('sis', 'Não consegui manter o serviço em segundo plano agora (' + (e && e.message ? e.message : 'restrição do Android') + '). A ativação continua ligada e eu tento de novo quando você voltar ao app.');
+      setTimeout(() => { if (!ocupado && !wakeAtivo && wakeLigado()) iniciarWake(); }, 20000);
+      return;
+    }
     store.set('wake', '0'); wakeAtivo = false; atualizarWakeControles();
     try { await p.stopWake(); await p.stop(); } catch (x) { /* serviço já parado */ }
     segPlanoOk = false;
@@ -4261,6 +4273,10 @@ if (ehAndroid) {
         if (!ev || !ev.tipo) return;
         if (ev.tipo === 'wake') { mostrarWakeMini('Ativação detectada · iniciando o comando…'); aoAcordar(ev.texto); }
         else if (ev.tipo === 'parou') {
+          store.set('wake', '0');
+          const chkWakeEv = document.getElementById('c-wake');
+          if (chkWakeEv) chkWakeEv.checked = false;
+          atualizarWakeControles();
           registrar('erro', 'escuta parou: ' + (ev.motivo || 'motivo desconhecido'));
           msg('sis', 'A escuta em segundo plano parou: ' + (ev.motivo || 'motivo desconhecido') + ' Toque no botão de ativação do topo para tentar de novo.');
         }

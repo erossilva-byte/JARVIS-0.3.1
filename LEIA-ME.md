@@ -1,4 +1,14 @@
-# J.A.R.V.I.S. Nova 1.10.0
+# J.A.R.V.I.S. Nova 1.10.1
+
+## Correções da 1.10.1 — segundo plano estável
+
+Revisão sem funcionalidade nova, só os defeitos que derrubavam ou travavam o serviço:
+o player de música não promovia o serviço a primeiro plano (o Android matava o processo
+ao pedir "pausar" sem faixa tocando); o alarme rápido do vigia era sobrescrito pelo
+periódico; a escuta ficava em "espera" para sempre se o app fosse fechado no meio de um
+comando; falha fatal mantinha notificação e primeiro plano eternos; lembretes não eram
+restaurados após reiniciar no Android 12+; e interface/serviço discordavam quando o
+Android recusava primeiro plano. Detalhes técnicos no `CHANGELOG.md`.
 
 ## Destaques da 1.10.0 — obedece de verdade e com personalidade própria
 
@@ -166,7 +176,7 @@ Passo a passo do build também em `TESTES.md` e `GUIA-ACESSOS-ANDROID.md` (permi
 ## Instalar e atualizar pelo próprio aparelho
 
 1. Abra o release **v1.10.0** no GitHub pelo navegador do celular e baixe
-   `jarvis-nova-1.10.0-10100.apk` (e, se quiser conferir, o `.sha256` ao lado).
+   `jarvis-nova-1.10.1-10101.apk` (e, se quiser conferir, o `.sha256` ao lado).
 2. Toque no arquivo baixado. O Android pede para permitir “instalar apps desconhecidos” para o
    navegador — autorize só para ele, instale e depois pode revogar.
 3. Na primeira instalação ele pede microfone, notificações e contatos; a permissão **Telefone**

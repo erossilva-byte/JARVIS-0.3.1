@@ -1,19 +1,19 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.10.0",
-  "versionCode": 10100,
+  "version": "1.10.1",
+  "versionCode": 10101,
   "androidAppId": "com.jarvis.nova",
   "base": "código-fonte na raiz do repositório",
   "gerado": "2026-10-25",
-  "status": "1.10.0: ligação completada de verdade (ACTION_CALL com permissão de telefone), player de música local que toca o arquivo do aparelho, personalidade do J.A.R.V.I.S. centralizada em PERSONALIDADE, verificação de voz falada em voz alta e exigida uma vez por sessão, e rede de segurança contra exceções na interface e na IA local.",
+  "status": "1.10.1: correções de segundo plano — player não deixa o serviço sem primeiro plano, vigia com alarme rápido separado, escuta pausada é retomada se o app fechar no meio do comando, falha fatal não prende o serviço em primeiro plano, lembretes voltam após reiniciar e interface/nativo não divergem mais.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.10.0 (2026-10-25). Requisito por requisito: (1) a personalidade passou a viver em um único ponto, o objeto PERSONALIDADE em app.js (formal, espirituoso e leal; lealdade, tratamento, humor e limites separados) e o prompt de sistema é montado a partir dele; (2) a inteligência de conversa continua no mesmo prompt, agora com as regras de conversa somadas à personalidade; (3) a palavra de ativação não mudou de motor (Porcupine ou Android), porque a personalidade não interfere nela; (4) na ativação o app agora FALA “Analisando sua voz” em voz alta e só então grava os 4 segundos para comparar com o perfil; a conferência é exigida uma vez por sessão (primeiro acesso e depois de ligar o celular) e, se o usuário quiser, em toda ativação — (8) em segundo plano o reconhecimento do WebView é encerrado e só o serviço nativo espera a palavra de ativação; (5) “coloque a música X” passou a procurar o arquivo na biblioteca do aparelho (MediaStore, ignorando acentos e ordem das palavras) e iniciar a reprodução num serviço em primeiro plano com notificação e MediaSession; sem arquivo correspondente, cai na busca de um app de streaming com o aviso de que ele não inicia a faixa sozinho; “ligue para X” passou a usar ACTION_CALL com a permissão Telefone (antes só abria o discador com tel:) e cai no discador com aviso se o Android negar; (6)(7) exceções da interface viram aviso em vez de fechar o app e o carregamento do modelo local confere memória antes de carregar, transformando um OutOfMemoryError nativo em mensagem.",
+  "notas": "Revisão 1.10.1 (2026-10-25), só correções. (1) JarvisMusicaService: o comando de mídia era enviado com startForegroundService() e o serviço não chamava startForeground() — o Android encerrava o processo com ForegroundServiceDidNotStartInTimeException ao pedir \"pausar\" ou \"próxima\" com o player parado. Agora toda ação promove o serviço e, sem player, ele encerra. (2) JarvisWatchdog: o alarme rápido usava o mesmo PendingIntent do periódico, então \"tenta de novo em 8 s\" era substituído por 60 s/15 min. Passou a ter request code próprio e o cancelar cancela os dois. (3) JarvisService.onTaskRemoved: se a interface pausou a escuta para gravar o comando e morreu (app fechado pelos recentes), o serviço ficava em \"Escuta em espera\" para sempre e o vigia não agia porque o serviço estava vivo; agora retoma a escuta na hora. (4) pararPorFalha mantinha primeiro plano e notificação eternos sem escuta: sai sozinho depois de 2 minutos se ninguém religar. (5) JarvisAlarmScheduler.restaurar abortava no Android 12+ sem SCHEDULE_EXACT_ALARM, mas setAlarmClock() é isento dessa permissão — os lembretes não voltavam depois de reiniciar. (6) JarvisBackgroundPlugin desfaz a preferência quando o FGS é recusado. (7) app.js: evento \"parou\" pendente desliga a chave e falha só do serviço em primeiro plano não desliga mais a ativação (situação temporária).",
   "build": {
-    "resultado": "success",
-    "sha256": "261f78f250e935bff410743af97442242e34ff73b0dfd1d50d39780c1821877b",
-    "bytes": 72647038,
+    "resultado": "pendente",
+    "sha256": "",
+    "bytes": 0,
     "data": "2026-10-25",
-    "observacao": "APK do release v1.10.0 compilado pelo workflow com ci/debug.keystore. Verificado: versão 1.10.0/10100, minSdk 26, certificado 04e04712… (o mesmo das releases anteriores, então instala por cima), JarvisMusicaPlugin/Service no DEX, permissões CALL_PHONE, READ_MEDIA_AUDIO e FOREGROUND_SERVICE_MEDIA_PLAYBACK e o serviço declarado com foregroundServiceType=mediaPlayback. Build local reproduz o mesmo APK (sha256 da68f586…) fora do release."
+    "observacao": "Recompilado pelo workflow de release com ci/debug.keystore."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"

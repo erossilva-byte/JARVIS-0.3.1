@@ -471,7 +471,12 @@ public class JarvisService extends Service {
         notificar();
         if (avisar) JarvisWakeBus.parou("Detector local: " + (motivo == null ? "falha desconhecida" : motivo));
         // O serviço continua vivo (em espera) para a interface poder religar a escuta
-        // sem precisar reiniciar um serviço de microfone a partir do fundo.
+        // sem precisar reiniciar um serviço de microfone a partir do fundo. Se ninguém
+        // religar em dois minutos, ele sai: primeiro plano e notificação sem escuta só
+        // gastariam bateria e ficariam presos na barra de status.
+        main.postDelayed(() -> {
+            if (!querEscuta && !JarvisPrefs.desejaOuvir(JarvisService.this)) stopSelf();
+        }, 120000L);
     }
 
     private void disparar(String texto) {
@@ -795,10 +800,21 @@ public class JarvisService extends Service {
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-        // O usuário fechou pelos recentes: se a escuta deve continuar, pede um reinício curto.
+        // O usuário fechou pelos recentes: se a escuta deve continuar, o serviço volta a
+        // ouvir na hora e, como garantia, um alarme rápido tenta de novo em 8 s.
         if (JarvisPrefs.desejaOuvir(this)) {
-            JarvisWatchdog.agendar(this, 8000L);
-            JarvisWatchdog.agendar(this, 60000L);
+            // A interface pausa a escuta para gravar o comando. Se ela morrer no meio (o
+            // usuário fecha o app durante a resposta), ninguém religava: o serviço ficava
+            // em "Escuta em espera" e o vigia não agia, porque o serviço ainda estava vivo.
+            if (!querEscuta && testeAte == 0) {
+                pausadoPelaInterface = false;
+                try {
+                    iniciarEscutaInterna();
+                } catch (Exception e) {
+                    pararPorFalha(mensagemFalha(e));
+                }
+            }
+            JarvisWatchdog.agendarRapido(this, 8000L);
         }
         super.onTaskRemoved(rootIntent);
     }
@@ -813,8 +829,9 @@ public class JarvisService extends Service {
         pausarMotor();
         escutando = false;
         instancia = null;
-        // Se o sistema derrubou o serviço com a escuta ligada, o vigia tenta de novo.
-        if (JarvisPrefs.desejaOuvir(this)) JarvisWatchdog.agendar(this, 120000L);
+        // Se o sistema derrubou o serviço com a escuta ligada, o vigia tenta de novo em
+        // 20 s (alarme rápido, separado do periódico de 15 min).
+        if (JarvisPrefs.desejaOuvir(this)) JarvisWatchdog.agendarRapido(this, 20000L);
         stopForeground(true);
         super.onDestroy();
     }

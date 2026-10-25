@@ -23,15 +23,29 @@ import android.os.Build;
 public class JarvisWatchdog extends BroadcastReceiver {
 
     static final String ACAO = "com.jarvis.nova.VERIFICAR_ESCUTA";
-    private static final int ID = 90210;
+    private static final int ID = 90210;          // verificação periódica (15 min)
+    private static final int ID_RAPIDO = 90211;   // recuperação logo após app fechado/morto
     private static final long INTERVALO = 15L * 60L * 1000L;
 
+    /**
+     * Recuperação imediata. Usa um PendingIntent separado do periódico: com um só,
+     * o pedido de 8 s era sobrescrito pelo de 60 s (FLAG_UPDATE_CURRENT no mesmo
+     * request code), e a escuta só voltava no próximo ciclo longo.
+     */
+    static void agendarRapido(Context c, long emMs) {
+        agendarCom(c, emMs, ID_RAPIDO);
+    }
+
     static void agendar(Context c, long emMs) {
+        agendarCom(c, emMs, ID);
+    }
+
+    private static void agendarCom(Context c, long emMs, int id) {
         try {
             AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
             if (am == null) return;
             Intent i = new Intent(c, JarvisWatchdog.class).setAction(ACAO);
-            PendingIntent pi = PendingIntent.getBroadcast(c, ID, i, flags());
+            PendingIntent pi = PendingIntent.getBroadcast(c, id, i, flags());
             long quando = System.currentTimeMillis() + Math.max(5000L, emMs);
             if (Build.VERSION.SDK_INT >= 31) {
                 // Com alarme exato autorizado o reinício é pontual; sem ele, o alarme
@@ -47,11 +61,16 @@ public class JarvisWatchdog extends BroadcastReceiver {
     }
 
     static void cancelar(Context c) {
+        cancelarCom(c, ID);
+        cancelarCom(c, ID_RAPIDO);
+    }
+
+    private static void cancelarCom(Context c, int id) {
         try {
             AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
             if (am == null) return;
             Intent i = new Intent(c, JarvisWatchdog.class).setAction(ACAO);
-            PendingIntent pi = PendingIntent.getBroadcast(c, ID, i, flags());
+            PendingIntent pi = PendingIntent.getBroadcast(c, id, i, flags());
             am.cancel(pi);
             pi.cancel();
         } catch (Exception ignored) { }

@@ -127,3 +127,5 @@ jobs:
             “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
+
+            **1.10.1:** correções de estabilidade do segundo plano (player, vigia, escuta em espera e lembretes após reiniciar).

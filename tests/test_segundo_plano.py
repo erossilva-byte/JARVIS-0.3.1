@@ -25,7 +25,7 @@ checks = {
     "Serviço é START_STICKY quando ouve": "return START_STICKY;" in servico,
     "Reinício sem intent retoma o estado salvo": (
         "if (acao == null) {" in servico and "JarvisPrefs.desejaOuvir(this)" in servico),
-    "Saída dos recentes agenda reinício": "onTaskRemoved" in servico and "JarvisWatchdog.agendar(this, 8000L)" in servico,
+    "Saída dos recentes agenda reinício rápido": "onTaskRemoved" in servico and "JarvisWatchdog.agendarRapido(this, 8000L)" in servico,
     "Rearme quando a tela não responde": "agendarRearmeSeTelaNaoResponder" in servico and "9000" in servico,
     "Modo teste sem abrir o app": "testeAtivoInterno" in servico and "testeDeteccoes" in servico,
     "Notificação com Ouvir agora e Desligar escuta": (

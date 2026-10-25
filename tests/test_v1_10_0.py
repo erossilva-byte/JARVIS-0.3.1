@@ -134,12 +134,13 @@ checagens = {
         and "if (recAtual && recAtual.state !== 'inactive') { recAtual.stop();" in app),
 
     # 9. Versão e documentação
-    "Versão 1.10.0 e versionCode 10100": (
-        versao.get("version") == "1.10.0"
-        and versao.get("versionCode") == 10100
-        and pacote.get("version") == "1.10.0"
-        and "const VERSAO_APP = '1.10.0';" in app
-        and (not gradle or ('versionCode 10100' in gradle and 'versionName "1.10.0"' in gradle))),
+    "Versão da linha 1.10 com versionCode >= 10100": (
+        str(versao.get("version", "")).startswith("1.10.")
+        and versao.get("versionCode", 0) >= 10100
+        and pacote.get("version") == versao.get("version")
+        and "const VERSAO_APP = '" + str(versao.get("version")) + "';" in app
+        and (not gradle or ('versionCode %d' % versao.get('versionCode', 0) in gradle
+                             and 'versionName "%s"' % versao.get('version') in gradle))),
     "Mudança registrada no CHANGELOG": "## 1.10.0" in historico,
     "Instruções de instalação e assinatura no LEIA-ME": (
         "1.10.0" in leituras and "assinatura" in leituras.lower()),

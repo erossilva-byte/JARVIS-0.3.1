@@ -134,6 +134,12 @@ public class JarvisBackgroundPlugin extends Plugin {
             o.put("motor", JarvisPrefs.motor(getContext()));
             call.resolve(o);
         } catch (Exception e) {
+            // O serviço não subiu (tipicamente ForegroundServiceStartNotAllowedException
+            // no Android 12+ com o app em segundo plano). Desfaz o pedido: sem isto a
+            // preferência nativa ficava ligada, o vigia tentava de novo a cada 15 min e a
+            // interface mostrava "desligado" ao mesmo tempo.
+            JarvisPrefs.desejaOuvir(getContext(), false);
+            JarvisWatchdog.cancelar(getContext());
             call.reject("Não consegui iniciar a escuta em segundo plano: "
                 + (e.getMessage() == null ? "erro desconhecido" : e.getMessage()));
         }
