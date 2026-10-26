@@ -93,7 +93,9 @@ checagens = {
     "Abertura nunca prende o usuário": (
         'id="boot-pular"' in html
         and "btnBootPular.onclick" in app
-        and "Date.now() + 25000" in app),
+        and "Date.now() + 25000" in app
+        and "abertura: limite de 45 s atingido" in app
+        and "abertura: ' + (e && e.message ? e.message : e)" in app),
     "Comando por voz libera a tela na hora": "liberarApp();                       // o comando por voz tem prioridade" in app,
     "Interface travada enquanto a abertura roda": (
         ".boot{" in css and "body.travado header" in css and ".boot.saindo{opacity:0" in css),

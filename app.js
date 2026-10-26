@@ -4688,6 +4688,13 @@ chavesProntas.then(() => {
 });
 registrar('núcleo', Hermes.nome + ' ' + Hermes.versao + ' com ' + Hermes.habilidades.length + ' habilidade(s) próprias');
 // A animação de abertura entra depois do primeiro quadro e sai de cena na hora se um
-// comando por voz já estiver chegando.
-setTimeout(() => { if (!bootConcluido && !ocupado) iniciarSequenciaBoot(); else liberarApp(); }, 700);
+// comando por voz já estiver chegando. Duas redes de segurança: se a sequência falhar, e
+// se por algum motivo ela não terminar em 45 s, a interface é liberada assim mesmo —
+// nenhuma animação pode trancar o aplicativo.
+setTimeout(() => {
+  if (bootConcluido || ocupado) return liberarApp();
+  try { iniciarSequenciaBoot(); }
+  catch (e) { registrar('erro', 'abertura: ' + (e && e.message ? e.message : e)); liberarApp(); }
+}, 700);
+setTimeout(() => { if (!bootConcluido) { registrar('erro', 'abertura: limite de 45 s atingido'); liberarApp(); } }, 45000);
 })();
