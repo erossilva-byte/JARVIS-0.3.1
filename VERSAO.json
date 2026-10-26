@@ -10,10 +10,10 @@
   "notas": "Revisão 1.12.0 (2026-10-26). (1) hermes.js: núcleo único de linguagem e decisão, com rotas declaradas, telemetria por rota e validação da decisão da IA (ação inventada ou indisponível é descartada em vez de virar promessa vazia). (2) Briefing diário: no primeiro \"bom dia\" do dia ele fala a temperatura atual e as manchetes, com clima e notícias buscados em paralelo; depois disso cumprimenta curto. (3) Autodiagnóstico por voz (\"verifique o sistema\") cobrindo reconhecimento de voz, síntese, IA local, rede, núcleo Hermes e permissão de microfone, com resumo falado montado pelo próprio núcleo. (4) Abertura: animação do núcleo e, com perfil de voz cadastrado, espera a voz do usuário para liberar a interface — com botão de pular e limite de 25 s, para nunca prender ninguém. (5) Fluidez: camadas do HUD compostas na GPU e transições só de transform/opacity.",
   "build": {
     "resultado": "success",
-    "sha256": "8e07dc562d4add284536cc4b9183f141209052889c059953054e804055d96fd9",
-    "bytes": 72664795,
+    "sha256": "3a199c00e0ff8d487acacf2a492c9b45ffec1f8ab723986c8354f20ae4d09344",
+    "bytes": 72664943,
     "data": "2026-10-26",
-    "observacao": "APK do release v1.12.0 (jarvis-nova-1.12.0-10120.apk), compilado pelo workflow de release com ci/debug.keystore — mesma assinatura de 1.10.1, então o app instalado se atualiza por cima."
+    "observacao": "APK do release v1.12.0 (jarvis-nova-1.12.0-10120.apk), compilado pelo workflow de release com ci/debug.keystore — mesma assinatura de 1.10.1, então o app instalado se atualiza por cima. Checksum conferido depois do download do próprio release."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"
