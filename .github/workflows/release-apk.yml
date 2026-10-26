@@ -128,4 +128,8 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
+            **Novidades da 1.12.0:** núcleo Hermes Agent decidindo toda resposta, briefing diário
+            (temperatura e manchetes) no primeiro “bom dia”, autodiagnóstico por voz com resumo falado
+            e abertura que só libera o app depois de reconhecer a sua voz.
+
             **1.10.1:** correções de estabilidade do segundo plano (player, vigia, escuta em espera e lembretes após reiniciar).

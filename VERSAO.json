@@ -1,19 +1,19 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.11.0",
-  "versionCode": 10110,
+  "version": "1.12.0",
+  "versionCode": 10120,
   "androidAppId": "com.jarvis.nova",
   "base": "código-fonte na raiz do repositório",
-  "gerado": "2026-10-25",
-  "status": "1.11.0: revisão de fluidez — resposta em streaming com fala antecipada, pré-aquecimento da rede e da voz, tom do turno (pressa/sensível) no humor, gravador que não trava mais o app, memória limitada e código morto removido.",
+  "gerado": "2026-10-26",
+  "status": "1.12.0: o núcleo Hermes Agent passa a decidir toda resposta (habilidade própria → comando no aparelho → IA), com briefing diário (temperatura e notícias) no primeiro \"bom dia\", autodiagnóstico por voz, animação de abertura que só libera o app depois de reconhecer a voz do usuário e release publicada para atualização pelo próprio aplicativo.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.11.0 (2026-10-25). (1) A resposta da IA passou a ser lida em streaming: assim que o campo \"fala\" fecha no JSON parcial o app começa a falar, enquanto a geração continua; qualquer provedor sem streaming, rede caindo ou resposta vazia cai no caminho normal de antes, com os mesmos tratamentos de erro. (2) O pré-aquecimento da conexão com a IA (aquecer) existia mas nunca era chamado; agora roda na ativação e na transcrição, junto com o aquecimento mudo do TTS do Android. (3) gravar() usava executor async: se o AudioContext ou o MediaRecorder falhasse depois de abrir o microfone, a promessa ficava pendurada e o app travava em \"ouvindo\"; agora falha com reject e libera tudo. (4) Tom do turno: pressa e assunto sensível entram no prompt e desligam o humor nas frases próprias; FRASES/fraseApp concentram os textos fixos com rotação para não repetir. (5) Histórico limitado a 120 mensagens e cache da lista de vozes, para sessões longas não gastarem memória nem chamada nativa por pedaço falado. (6) Voltar ao primeiro plano religa a ativação se ela deveria estar ligada. (7) Código morto removido: JarvisWatchdog.garantir, JarvisService.pararTeste e os métodos de plugin pausarEscuta/pararTesteEscuta/statusEscuta, sem nenhum chamador.",
+  "notas": "Revisão 1.12.0 (2026-10-26). (1) hermes.js: núcleo único de linguagem e decisão, com rotas declaradas, telemetria por rota e validação da decisão da IA (ação inventada ou indisponível é descartada em vez de virar promessa vazia). (2) Briefing diário: no primeiro \"bom dia\" do dia ele fala a temperatura atual e as manchetes, com clima e notícias buscados em paralelo; depois disso cumprimenta curto. (3) Autodiagnóstico por voz (\"verifique o sistema\") cobrindo reconhecimento de voz, síntese, IA local, rede, núcleo Hermes e permissão de microfone, com resumo falado montado pelo próprio núcleo. (4) Abertura: animação do núcleo e, com perfil de voz cadastrado, espera a voz do usuário para liberar a interface — com botão de pular e limite de 25 s, para nunca prender ninguém. (5) Fluidez: camadas do HUD compostas na GPU e transições só de transform/opacity.",
   "build": {
     "resultado": "pendente",
     "sha256": "",
     "bytes": 0,
-    "data": "2026-10-25",
-    "observacao": "Recompilado pelo workflow de release com ci/debug.keystore."
+    "data": "2026-10-26",
+    "observacao": "Recompilado localmente e publicado no release v1.12.0 com a chave fixa ci/debug.keystore (mesma assinatura das versões anteriores)."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"

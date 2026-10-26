@@ -56,8 +56,12 @@ checagens = {
         and "} catch (e) { falhar(e); }" in app),
 
     # 4. Tom do turno e humor
+    # 1.12.0: os marcadores de tom passaram para o núcleo (hermes.js) e o app delega nele.
     "Pressa e assunto sensível são detectados por turno": (
-        "const RX_SENSIVEL =" in app and "const RX_PRESSA =" in app and "function tomDoTurno(" in app),
+        "RX_SENSIVEL" in (raiz / "hermes.js").read_text(encoding="utf-8")
+        and "RX_PRESSA" in (raiz / "hermes.js").read_text(encoding="utf-8")
+        and "tom(texto) {" in (raiz / "hermes.js").read_text(encoding="utf-8")
+        and "function tomDoTurno(texto) { return Hermes.tom(texto); }" in app),
     "O prompt recebe o contexto do turno": "CONTEXTO DO TURNO" in app and "${tomTurno}" in app,
     "Frases próprias com variação e gating de humor": (
         "const FRASES = {" in app and "function fraseApp(" in app and "const rotacaoFrases = {};" in app),
@@ -86,16 +90,18 @@ checagens = {
         and "public void statusEscuta" not in plug),
 
     # 7. Versão e documentação
-    "Versão 1.11.0 com versionCode 10110": (
-        versao.get("version") == "1.11.0"
-        and versao.get("versionCode") == 10110
-        and pacote.get("version") == "1.11.0"
-        and "const VERSAO_APP = '1.11.0';" in app
-        and (not gradle or ("versionCode 10110" in gradle and 'versionName "1.11.0"' in gradle))),
+    # A versão desta revisão é conferida contra o VERSAO.json (o teste da versão publicada
+    # fixa o número); aqui só se garante que tudo continua batendo entre si.
+    "Versão coerente entre VERSAO.json, package.json, app.js e Gradle": (
+        versao.get("versionCode", 0) >= 10110
+        and pacote.get("version") == versao.get("version")
+        and "const VERSAO_APP = '" + str(versao.get("version")) + "';" in app
+        and (not gradle or ("versionCode %d" % versao.get("versionCode") in gradle
+                            and 'versionName "%s"' % versao.get("version") in gradle))),
     "Mudança registrada no CHANGELOG": "## 1.11.0" in historico,
     "Instruções atualizadas no LEIA-ME": (
-        "# J.A.R.V.I.S. Nova 1.11.0" in leituras
-        and "1.10.0" in leituras  # histórico preservado
+        "1.11.0" in leituras           # esta revisão continua documentada
+        and "1.10.0" in leituras       # histórico preservado
         and "assinatura" in leituras.lower()),
     "Teste de comportamento do streaming na suíte": "test_stream_1110.js" in pacote.get("scripts", {}).get("test:all", ""),
 }

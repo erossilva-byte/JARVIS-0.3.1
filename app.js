@@ -12,7 +12,7 @@ const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.11.0';
+const VERSAO_APP = '1.12.0';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -38,6 +38,10 @@ const PERSONALIDADE = {
 const MODELOS_RESERVA = ['openai/gpt-oss-20b', 'openai/gpt-oss-120b'];
 // Plugins nativos do Capacitor (voz e serviço em segundo plano). Só existem no Android.
 const plug = (n) => !ehAndroid ? null : ((Cap.Plugins && Cap.Plugins[n]) || (typeof Cap.registerPlugin === 'function' ? Cap.registerPlugin(n) : null));
+// Núcleo de linguagem e decisão do assistente (hermes.js, carregado antes deste arquivo).
+// Todo turno passa por ele: habilidade própria → comando no aparelho → IA.
+const Hermes = window.Hermes;
+if (!Hermes || typeof Hermes.instalar !== 'function') throw new Error('Núcleo Hermes ausente: hermes.js precisa ser carregado antes de app.js.');
 const hist = [];
 // Preferências por conversa não ficam memorizadas entre sessões; o usuário pode alterá-las no rodapé.
 let usarContextoNestaConversa = true, usarMemoriaNestaConversa = true;
@@ -1087,31 +1091,37 @@ async function tokenSessaoVoz() {
   } catch (e) { sessaoVozCache = '1'; }
   return sessaoVozCache;
 }
-async function confirmarVozDoUsuario() {
+// A conferência só é pedida uma vez por sessão (ou em toda ativação, se o usuário
+// escolher). Sem perfil cadastrado, ou com a chave desligada, ela não bloqueia ninguém.
+async function conferirPerfilAgora() {
   const p = lerPerfilAcustico();
-  // Existe perfil cadastrado? Então a conferência vem ligada por padrão — é o
-  // comportamento pedido: gravar a voz na ativação e só liberar se reconhecer.
-  // Sem perfil (ou com o usuário desligando a chave) ele não bloqueia ninguém.
-  if (!p || p.samples < 3 || store.get('wake_perfil', '1') !== '1') return true;
+  if (!p || p.samples < 3 || store.get('wake_perfil', '1') !== '1') return false;
   const token = await tokenSessaoVoz();
   if (store.get('wake_perfil_modo', 'sessao') !== 'sempre' && store.get('wake_perfil_sessao', '') === token) {
     registrar('voz', 'perfil já confirmado nesta sessão');
-    return true;
+    return false;
   }
+  return true;
+}
+async function confirmarVozDoUsuario(opcoes) {
+  const o = opcoes || {};
+  if (!(await conferirPerfilAgora())) return true;
+  const avisar = o.aoProgresso || mostrarWakeMini;
   try {
     const nomeV = nomeUsuario() || trat();
-    mostrarWakeMini('Analisando sua voz, ' + nomeV + '…');
-    // Fala em voz alta que está analisando — e só grava depois que a própria voz termina,
-    // para o microfone não captar a resposta dele mesmo.
-    await falar('Analisando sua voz, ' + nomeV + '. Um instante.', false);
-    mostrarWakeMini('Gravando sua voz para comparar com o perfil…');
+    avisar('Analisando sua voz, ' + nomeV + '…');
+    // Na ativação por voz ele fala em voz alta que está analisando — e só grava depois de
+    // terminar de falar, para o microfone não captar a resposta dele mesmo. Na abertura
+    // (o.falado = false) quem explica o que está acontecendo é a própria animação.
+    if (o.falado !== false) await falar('Analisando sua voz, ' + nomeV + '. Um instante.', false);
+    avisar('Gravando sua voz para comparar com o perfil…');
     const v = await capturarVetorVoz();
     const score = Math.max(0, similaridadeVoz(p.v, v));
     const limiar = Math.max(0.45, Math.min(0.9, Number(store.get('wake_perfil_limiar', '0.6')) || 0.6));
     registrar('voz', 'verificação na ativação: ' + Math.round(score * 100) + '% (limiar ' + Math.round(limiar * 100) + '%)');
     if (score >= limiar) {
       store.set('wake_perfil_sessao', token);
-      mostrarWakeMini('Perfil confirmado, ' + (nomeUsuario() || trat()) + ' · ' + Math.round(score * 100) + '%');
+      avisar('Perfil confirmado, ' + (nomeUsuario() || trat()) + ' · ' + Math.round(score * 100) + '%');
       return true;
     }
     const humor = Math.max(0, Math.min(100, Number(store.get('humor', '40'))));
@@ -1784,13 +1794,10 @@ async function atualizarStatusIALocal() {
 // Detecta, a cada pergunta, se o usuário está com pressa ou numa situação sensível.
 // O resultado entra no prompt (a IA ajusta o tom) e nas frases próprias do aplicativo.
 // Nunca é motivo para recusar ajuda: só muda a intensidade do humor e a extensão.
-const RX_SENSIVEL = /\b(urgente|urgencia|emergencia|socorro|acidente|incendio|infarto|choque|ambulancia|hospital|medico|medica|remedio|doente|dor |febre|depress|suicid|ameaca|assalt|roubaram|me roubaram|medo de|crise|luto|morte|morreu|grave|graves|polici|delegacia|advogad|perdido no)\b/i;
-const RX_PRESSA = /\b(rapido|rapida|pressa|agora ja|depressa|resuma|resumido|resumidamente|breve|curto|sem rodeios|to com pressa|correndo|em um minuto|na lata)\b/i;
 let perguntaAtual = '';
-function tomDoTurno(texto) {
-  const n = norm(texto);
-  return { serio: RX_SENSIVEL.test(n), pressa: RX_PRESSA.test(n) };
-}
+// O tom do turno vive no núcleo Hermes (hermes.js): lá ficam os marcadores de pressa e de
+// assunto sensível que o prompt da IA e as frases próprias do aplicativo consultam.
+function tomDoTurno(texto) { return Hermes.tom(texto); }
 /* ---------- Frases próprias do app: variação e humor controlado ---------- */
 // Um único ponto para o texto fixo do aplicativo. A variante com humor só entra com o
 // slider de humor >= 40 e sem pressa nem assunto sensível; a rotação evita repetir a
@@ -1802,6 +1809,31 @@ const FRASES = {
       'Essa função não consta no meu repertório, {t}. Posso fingir que executei, mas a sua confiança vale mais.',
       'Não tenho essa ferramenta instalada, {t}. Improviso é bonito até a primeira tentativa de desligar o celular.'
     ]
+  },
+  respostaVazia: {
+    seco: ['Não consegui formular uma resposta agora, {t}. Pode repetir de outra forma?'],
+    comHumor: [
+      'Travei na formulação, {t} — aceitável para quem improvisa e prefere não inventar.',
+      'Saí em branco por um instante, {t}. Reformule o pedido que eu retomo o fio.'
+    ]
+  },
+  saudacaoCurta: {
+    seco: ['Em que posso ajudar?'],
+    comHumor: [
+      'Em que posso ajudar? E sim, continuo funcionando.',
+      'Diga o comando — o resto do expediente eu improviso com competência.'
+    ]
+  },
+  briefingFecho: {
+    seco: ['Fico à disposição, {t}.'],
+    comHumor: [
+      'O resto do dia é com você, {t}; eu apenas relato com precisão.',
+      'Se o dia desandar, mantenho o plano B: reclamar com elegância e resolver.'
+    ]
+  },
+  nucleoFecho: {
+    seco: [''],
+    comHumor: ['Continuo preferindo decidir aqui dentro a pedir opinião à nuvem.']
   }
 };
 const rotacaoFrases = {};
@@ -2128,16 +2160,25 @@ async function chamar(conteudo, ocultarNoHistorico, aoFalar) {
   atualizarChipIA();
   if (ocultarNoHistorico) { hist[idx].content = '[conteúdo externo omitido]'; persistirHistorico(); }
   adicionarHist({ role: 'assistant', content: raw });
-  const o = lerJson(raw);
-  if (!o || typeof o !== 'object') return { fala: raw, acao: null };
-  return { fala: String(o.fala || ''), acao: o.acao && o.acao.nome ? o.acao : null };
+  // A decisão do modelo passa pelo núcleo antes de virar ação: ação inventada ou
+  // indisponível nesta plataforma é descartada, em vez de virar promessa vazia.
+  const decisao = Hermes.validarDecisao(lerJson(raw), {
+    acoes: ACOES, disponiveis: disponiveis(), textoBruto: raw,
+    frase: (chave) => fraseApp(chave)
+  });
+  if (decisao.aviso) registrar('núcleo', 'decisão ajustada — ' + decisao.aviso);
+  return { fala: decisao.fala, acao: decisao.acao };
 }
 async function turno(texto, contaminado = false, profundidade = 0) {
-  // Pedidos simples (hora, clima, abrir app, lembretes...) são resolvidos aqui, sem chamar a IA.
+  // O núcleo Hermes decide a rota do turno: habilidade própria (saudação/briefing diário,
+  // autodiagnóstico, status do núcleo) → comando resolvido no próprio aparelho → IA.
+  // Os dois primeiros degraus respondem na hora, sem gastar cota.
   if (profundidade === 0 && !contaminado) {
-    let feito = false;
-    try { feito = await comandoRapido(texto); } catch (e) { registrar('erro', 'comando rápido: ' + e.message); }
-    if (feito) return;
+    Hermes.anotarTexto(texto);
+    let decisao = null;
+    try { decisao = await Hermes.despachar(texto); }
+    catch (e) { registrar('erro', 'núcleo Hermes: ' + (e && e.message ? e.message : e)); }
+    if (decisao && decisao.tratado) return;
   }
   if (store.get('offline', '0') === '1') {
     try {
@@ -2721,6 +2762,7 @@ function atualizarWake() {
   else { pararWake(true).then(() => { if (!ocupado) setEstado('idle'); }); }
 }
 async function aoAcordar(texto) {
+  liberarApp();                       // o comando por voz tem prioridade sobre a animação de abertura
   mostrarWakeMini('Ativação detectada · preparando o microfone…');
   if (paradaAtiva) { // o detector identifica Jarvis; o reconhecimento completo só então procura o comando de parada
     paradaAtiva = false;
@@ -3368,7 +3410,11 @@ function salvarRotinaEditor() {
   $('#rt-status').textContent = 'Rotina “' + nome + '” salva neste aparelho.';
   indiceRotinaEditando = rs.findIndex((r) => r.nome === nome); renderRotinasSalvas(); registrar('rotina', 'salva/editada visualmente: ' + nome);
 }
+// Coletor opcional: enquanto o diagnóstico roda, cada linha também entra na lista que o
+// núcleo Hermes transforma no resumo falado ("verifique o sistema").
+let diagColetor = null;
 function diagLinha(tipo, titulo, detalhe) {
+  if (diagColetor) diagColetor.push({ nome: titulo, estado: tipo, detalhe: String(detalhe || '') });
   const el = document.createElement('div'); el.className = 'diag-row ' + tipo;
   const icon = document.createElement('span'); icon.className = 'diag-mark'; icon.textContent = tipo === 'ok' ? '✓' : (tipo === 'fail' ? '!' : '·'); el.appendChild(icon);
   const box = document.createElement('div'); const b = document.createElement('b'); b.textContent = titulo; box.appendChild(b);
@@ -3381,8 +3427,10 @@ async function testarRedeDiagnostico() {
 }
 async function executarDiagnostico() {
   const btn = $('#c-diagnostico'), box = $('#c-diagnostico-result');
-  if (btn.disabled) return;
+  if (btn.disabled) return { itens: [], resumo: 'O diagnóstico já está em execução, ' + trat() + '.' };
   btn.disabled = true; btn.textContent = 'Executando testes…'; box.textContent = '';
+  diagColetor = [];
+  let itens = diagColetor;
   diagLinha('warn', 'Execução iniciada', 'Os resultados dependem das permissões e da rede deste aparelho.');
   try {
     await chavesProntas;
@@ -3391,6 +3439,40 @@ async function executarDiagnostico() {
     diagLinha(secure ? 'ok' : 'warn', 'Contexto seguro', secure ? 'Contexto considerado seguro para recursos de mídia.' : 'Microfone normalmente exige HTTPS ou origem local segura.');
     const mediaOk = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && (window.AudioContext || window.webkitAudioContext));
     diagLinha(mediaOk ? 'ok' : 'fail', 'Compatibilidade de áudio', mediaOk ? 'getUserMedia e AudioContext disponíveis.' : 'Falta getUserMedia ou AudioContext neste ambiente.');
+    // Núcleo de linguagem e decisão: o motor que escolhe a rota de cada turno.
+    const nM = Hermes.metricas();
+    diagLinha('ok', 'Núcleo ' + Hermes.nome + ' ' + Hermes.versao, nM.turnos
+      ? nM.turnos + ' turno(s) nesta sessão; ' + Math.round((nM.noAparelho / nM.turnos) * 100) + '% resolvidos no próprio aparelho.'
+      : 'Carregado e pronto; nenhum pedido resolvido nesta sessão ainda.');
+    // Entrada de voz: plugin nativo no Android e reconhecimento da plataforma.
+    const pVozDiag = plug('JarvisVoz');
+    const recPlataforma = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    diagLinha(pVozDiag || recPlataforma ? 'ok' : 'fail', 'Reconhecimento de voz', pVozDiag
+      ? 'Plugin nativo disponível; a transcrição usa o reconhecimento do sistema e o Whisper da Groq como reserva.'
+      : recPlataforma ? 'Reconhecimento da plataforma disponível; sem ele, o comando digitado continua funcionando.'
+        : 'Nenhum reconhecimento de voz neste ambiente.');
+    // Saída de voz: voz neural baixada, TTS nativo ou síntese da plataforma.
+    const modeloVozDiag = neuralAtiva();
+    const ttsSistema = !!(TTSN() || (typeof window.speechSynthesis !== 'undefined' && 'SpeechSynthesisUtterance' in window));
+    diagLinha(modeloVozDiag ? 'ok' : (ttsSistema ? 'warn' : 'fail'), 'Síntese de voz', modeloVozDiag
+      ? 'Voz neural no próprio aparelho ativa (' + (modeloVozDiag.nome || modeloVozDiag.id || 'modelo escolhido') + '): fala offline.'
+      : ttsSistema ? 'Motor de voz do sistema disponível; nenhuma voz neural baixada (opcional, é baixada uma vez e fala offline).'
+        : 'Nenhum motor de síntese de voz: as respostas apareceriam apenas no texto.');
+    // IA local no aparelho.
+    const iaLocalDiag = await statusIALocal();
+    diagLinha(iaLocalDiag && iaLocalDiag.installed ? 'ok' : 'warn', 'IA local no aparelho',
+      iaLocalDiag && iaLocalDiag.installed ? 'Modelo .task importado: a inferência pode funcionar sem internet e sem chave.'
+        : iaLocalDiag && iaLocalDiag.supported ? 'O aparelho suporta, mas nenhum modelo .task está importado; a nuvem cobre esse caminho.'
+          : 'Indisponível nesta plataforma (opcional).');
+    // Permissão do microfone pelo lado nativo, quando houver.
+    const pFundoDiag = plug('JarvisBackground');
+    if (ehAndroid && pFundoDiag && typeof pFundoDiag.checkPermissions === 'function') {
+      try {
+        const permMic = await pFundoDiag.checkPermissions();
+        const micOk = permMic && permMic.mic === 'granted';
+        diagLinha(micOk ? 'ok' : 'fail', 'Permissão de microfone (Android)', micOk ? 'Concedida ao aplicativo.' : 'Negada ou ainda não solicitada: conceda em Ajustes, na aba Voz.');
+      } catch (e) { diagLinha('warn', 'Permissão de microfone (Android)', 'Não foi possível consultar: ' + String(e.message || e).slice(0, 100)); }
+    }
     if (navigator.permissions && navigator.permissions.query) {
       try { const perm = await navigator.permissions.query({ name: 'microphone' }); diagLinha(perm.state === 'granted' ? 'ok' : perm.state === 'denied' ? 'fail' : 'warn', 'Permissão de microfone', 'Estado reportado pelo navegador: ' + perm.state + (perm.state === 'prompt' ? '. O teste solicitará permissão ao iniciar.' : '.')); }
       catch (e) { diagLinha('warn', 'Permissão de microfone', 'O navegador não expõe o estado; toque em “Testar microfone” para solicitar e confirmar.'); }
@@ -3415,7 +3497,12 @@ async function executarDiagnostico() {
     registrar('diagnóstico', 'teste integrado executado');
   } catch (e) {
     diagLinha('fail', 'Diagnóstico interrompido', String(e.message || e).slice(0, 200));
-  } finally { btn.disabled = false; btn.textContent = 'Executar diagnóstico novamente'; }
+  } finally {
+    btn.disabled = false; btn.textContent = 'Executar diagnóstico novamente';
+    itens = diagColetor || itens; diagColetor = null;
+  }
+  // O resumo falado é montado pelo núcleo Hermes — o mesmo usado por voz: "verifique o sistema".
+  return { itens, resumo: Hermes.resumoDiagnostico(itens, { tratamento: trat() }) };
 }
 const H = (typeof history !== 'undefined') ? history : null;
 const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas'];
@@ -4481,10 +4568,126 @@ if (ehAndroid) {
   // A escuta permanece desligada por padrão; o usuário ativa o detector local em Ajustes.
   // A ativação contínua usa Porcupine e exige AccessKey; o microfone manual continua disponível sem chave.
 }
+/* ---------- Núcleo Hermes: capacidades do aplicativo e abertura ---------- */
+// O núcleo não conhece o aplicativo: recebe aqui exatamente o que precisa para decidir,
+// falar e gravar preferências. Nenhuma chave de API passa por ele.
+async function noticiasDeHoje() {
+  const r = await pesquisarWeb('principais manchetes de hoje no Brasil');
+  return { fala: r.fala, links: r.links || [] };
+}
+// Diagnóstico por voz ("verifique o sistema"): abre a aba, roda as mesmas checagens do
+// botão e devolve a lista que o núcleo transforma em resumo falado.
+async function diagnosticoSistemaFalado() {
+  abrirConfig();
+  mudarCategoriaConfig('diagnostico');
+  const painelAtual = $('#painel-config');
+  if (painelAtual && painelAtual.hidden) abrirPainel('#painel-config');
+  return executarDiagnostico();
+}
+Hermes.instalar({
+  registrar: (tipo, detalhe) => registrar(tipo, detalhe),
+  falar: (texto, semMsg, opcoes, links) => falar(texto, semMsg, opcoes, links),
+  trat: () => trat(),
+  nomeUsuario: () => nomeUsuario(),
+  ler: (chave, padrao) => store.get(chave, padrao),
+  gravar: (chave, valor) => store.set(chave, valor),
+  agora: () => new Date(),
+  offline: () => store.get('offline', '0') === '1',
+  comandoLocal: (texto) => comandoRapido(texto),
+  clima: (dia) => clima(dia),
+  noticias: noticiasDeHoje,
+  frase: (chave, vars) => fraseApp(chave, vars),
+  diagnosticoSistema: diagnosticoSistemaFalado
+});
+
+/* ---------- Abertura: animação, reconhecimento da voz e liberação do app ---------- */
+// A sequência mostra o núcleo acordando. Com a conferência de voz ligada e um perfil
+// cadastrado, ela só termina quando reconhecer quem falou — e então libera o resto da
+// interface. Sem conferência (ou sem microfone), roda só a animação inicial e libera.
+// Nada aqui prende o usuário: existe "continuar sem reconhecer" e um limite de 25 segundos.
+const BOOT_ETAPAS = [
+  'Acordando o núcleo de decisão…',
+  'Carregando personalidade e humor…',
+  'Conferindo voz, rede e permissões…',
+  'Sistemas prontos.'
+];
+let bootConcluido = false;
+const esperaBoot = (ms) => new Promise((r) => setTimeout(r, ms));
+function bootProgresso(pct, texto) {
+  const preenche = $('#boot-preenche'), status = $('#boot-status'), barra = $('#boot-barra');
+  const valor = Math.max(0, Math.min(100, Math.round(pct)));
+  if (preenche) preenche.style.width = valor + '%';
+  if (barra) barra.setAttribute('aria-valuenow', String(valor));
+  if (status && texto) status.textContent = texto;
+}
+// Tira a tela de abertura e devolve o controle da interface. Chamado também quando um
+// comando chega por voz: ele tem prioridade sobre qualquer animação.
+function liberarApp() {
+  const tela = $('#boot');
+  const jaLivre = bootConcluido && (!tela || tela.hidden);
+  if (jaLivre) return;
+  bootConcluido = true;
+  document.body.classList.remove('travado');
+  if (tela && !tela.hidden) {
+    tela.classList.add('saindo');
+    setTimeout(() => { tela.hidden = true; tela.classList.remove('saindo'); }, 450);
+  }
+}
+async function finalizarBoot(motivo) {
+  bootProgresso(100, motivo || 'Sistemas prontos.');
+  await esperaBoot(420);
+  liberarApp();
+  registrar('abertura', motivo || 'sistemas prontos');
+}
+async function esperarVozNaAbertura() {
+  const voz = $('#boot-voz'), pular = $('#boot-pular'), tentar = $('#boot-tentar');
+  if (voz) { voz.hidden = false; voz.textContent = 'Fale para eu confirmar a sua voz.'; }
+  if (pular) pular.hidden = false;
+  bootProgresso(78, 'Aguardando a sua voz…');
+  const limite = Date.now() + 25000;
+  while (!bootConcluido && Date.now() < limite) {
+    const ok = await confirmarVozDoUsuario({
+      falado: false,
+      aoProgresso: (texto) => { if (voz && texto) voz.textContent = texto; }
+    });
+    if (bootConcluido) return;
+    if (ok) { if (voz) voz.textContent = 'Identidade confirmada.'; return finalizarBoot('Identidade confirmada, ' + trat() + '.'); }
+    if (tentar) tentar.hidden = false;
+    bootProgresso(80, 'Não reconheci essa voz. Fale de novo ou toque em continuar.');
+  }
+  if (!bootConcluido) return finalizarBoot('Seguindo sem confirmar a voz.');
+}
+async function iniciarSequenciaBoot() {
+  const tela = $('#boot');
+  if (!tela) return liberarApp();
+  document.body.classList.add('travado');
+  tela.hidden = false;
+  const reduzido = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const pausa = reduzido ? 40 : 360;
+  for (let i = 0; i < BOOT_ETAPAS.length && !bootConcluido; i++) {
+    bootProgresso((i / BOOT_ETAPAS.length) * 70, BOOT_ETAPAS[i]);
+    await esperaBoot(pausa);
+  }
+  if (bootConcluido) return;
+  let conferir = false;
+  try { conferir = await conferirPerfilAgora(); }
+  catch (e) { registrar('erro', 'conferência de voz na abertura: ' + (e && e.message ? e.message : e)); }
+  if (conferir) return esperarVozNaAbertura();
+  return finalizarBoot('Sistemas prontos, ' + trat() + '.');
+}
+const btnBootPular = $('#boot-pular');
+if (btnBootPular) btnBootPular.onclick = () => { registrar('abertura', 'voz não confirmada pelo usuário'); liberarApp(); };
+const btnBootTentar = $('#boot-tentar');
+if (btnBootTentar) btnBootTentar.onclick = () => { const voz = $('#boot-voz'); if (voz) voz.textContent = 'Pode falar: estou analisando.'; };
+
 restaurarHistoricoUI();
 msg('sis', saudacaoInicial());
 chavesProntas.then(() => {
   atualizarChipIA();
   if (!provedoresComChave().length) msg('sis', 'Primeiro passo: abra Ajustes e cole sua chave da API Groq.');
 });
+registrar('núcleo', Hermes.nome + ' ' + Hermes.versao + ' com ' + Hermes.habilidades.length + ' habilidade(s) próprias');
+// A animação de abertura entra depois do primeiro quadro e sai de cena na hora se um
+// comando por voz já estiver chegando.
+setTimeout(() => { if (!bootConcluido && !ocupado) iniciarSequenciaBoot(); else liberarApp(); }, 700);
 })();

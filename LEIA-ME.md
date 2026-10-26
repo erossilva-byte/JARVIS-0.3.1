@@ -1,6 +1,29 @@
-# J.A.R.V.I.S. Nova 1.11.0
+# J.A.R.V.I.S. Nova 1.12.0
 
-## Novidades da 1.11.0 — mais rápido e com humor de contexto
+## Novidades da 1.12.0 — Hermes no comando do dia
+- **Núcleo Hermes Agent.** Toda resposta passa por um motor único, que decide a rota em ordem:
+  habilidade própria do núcleo → comando resolvido no aparelho → IA. O núcleo é um arquivo só
+  (`hermes.js`), sem DOM: o aplicativo injeta o que ele pode usar. "Bom dia" e os comandos do
+  dia a dia deixaram de gastar chamada de IA.
+- **Briefing diário.** No primeiro "bom dia" do dia ele fala a **temperatura atual** e as
+  **manchetes do momento** (buscadas em paralelo); depois disso cumprimenta curto. Em modo
+  offline avisa e não consulta nada.
+- **Autodiagnóstico por voz.** "Verifique o sistema" confere núcleo, reconhecimento de voz,
+  síntese (incluindo a voz neural, quando baixada), IA local, rede/CORS, chaves e permissão de
+  microfone — e responde falando o que passou e o que está pendente.
+- **Abertura com reconhecimento de voz.** A animação de inicialização só conclui e libera as
+  demais opções do app quando reconhece a sua voz. Sem perfil cadastrado (ou com a conferência
+  desligada), roda só a animação inicial. Há botão de continuar sem reconhecer e limite de 25
+  segundos: a tela nunca fica presa.
+- **Decisão conferida.** Se a IA inventar uma ação que não existe (ou que não funciona nesta
+  plataforma), ela é descartada e a fala é ajustada — o assistente não anuncia o que não vai
+  fazer.
+- **Animação mais fluida.** As camadas do núcleo agora são compostas na GPU e as transições de
+  estado usam só `transform`/`opacity`.
+
+Versões anteriores: 1.11.0 (streaming, humor por contexto), 1.10.0 e 1.10.1 (segundo plano), 1.9.0 (voz neural).
+
+## Novidades da 1.11.0 (histórico) — mais rápido e com humor de contexto
 - **Resposta em streaming**: a fala começa assim que o texto falado está pronto, sem esperar a IA terminar de gerar o resto. Se o provedor não cooperar, o app volta ao pedido completo sozinho.
 - **Menos espera**: a conexão com a IA e o motor de voz são aquecidos enquanto você ainda está falando.
 - **Tom do turno**: com pressa ele responde curto e seco; em assunto sensível o humor desaparece.

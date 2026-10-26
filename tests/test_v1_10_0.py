@@ -62,9 +62,12 @@ checagens = {
         and "JarvisPrefs.motor" in (raiz / "JarvisService.java").read_text(encoding="utf-8")),
 
     # 4. Verificação de voz, falada e uma vez por sessão
+    # 1.12.0: na ativação a fala continua igual; o indicador usa "avisar", que na abertura
+    # é a própria animação e na ativação por voz é o mostrarWakeMini de sempre.
     "Assistente fala em voz alta que está analisando a voz": (
         "await falar('Analisando sua voz, ' + nomeV + '. Um instante.', false);" in app
-        and "mostrarWakeMini('Analisando sua voz, ' + nomeV" in app),
+        and "avisar('Analisando sua voz, ' + nomeV" in app
+        and "const avisar = o.aoProgresso || mostrarWakeMini;" in app),
     "Gravação acontece depois da fala (evita captar a própria voz)": (
         app.find("await falar('Analisando sua voz") < app.find("const v = await capturarVetorVoz();")),
     "Verificação é exigida uma vez por sessão e liberada na confirmação": (
@@ -134,8 +137,10 @@ checagens = {
         and "if (recAtual && recAtual.state !== 'inactive') { recAtual.stop();" in app),
 
     # 9. Versão e documentação
-    "Versão da linha 1.1x com versionCode >= 10100": (
-        str(versao.get("version", "")).startswith(("1.10.", "1.11."))
+    # A linha 1.10 continua válida para as versões seguintes; o número exato da versão
+    # publicada é conferido pelo teste daquela versão (test_v1_12_0.py e seguintes).
+    "Versão a partir da 1.10 com versionCode >= 10100": (
+        re.match(r"^1\.(1[0-9]|[2-9][0-9])\.", str(versao.get("version", "")))
         and versao.get("versionCode", 0) >= 10100
         and pacote.get("version") == versao.get("version")
         and "const VERSAO_APP = '" + str(versao.get("version")) + "';" in app

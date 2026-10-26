@@ -12,6 +12,19 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body data-state="idle">
+<div id="boot" class="boot" hidden>
+  <div class="boot-nucleo" aria-hidden="true">
+    <span class="bn-aro bn1"></span><span class="bn-aro bn2"></span><span class="bn-aro bn3"></span><span class="bn-nucleo"></span>
+  </div>
+  <p class="boot-marca">J.A.R.V.I.S. NOVA</p>
+  <div id="boot-barra" class="boot-barra" role="progressbar" aria-label="Inicialização do sistema" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="boot-preenche"></span></div>
+  <p id="boot-status" class="boot-status" role="status" aria-live="polite">Iniciando o núcleo…</p>
+  <p id="boot-voz" class="boot-voz" hidden>Fale para eu confirmar a sua voz.</p>
+  <div class="boot-acoes">
+    <button id="boot-tentar" type="button" class="secundario" hidden>Analisar minha voz de novo</button>
+    <button id="boot-pular" type="button" class="secundario" hidden>Continuar sem reconhecer</button>
+  </div>
+</div>
 <header>
   <div class="marca"><span class="ponto"></span><b>J.A.R.V.I.S. Nova</b><span id="estado-txt">em espera</span></div>
   <div class="acoes-topo">
@@ -80,7 +93,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.6.0</span>
+      <span class="orb-sub" aria-hidden="true">v1.12.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -110,6 +123,7 @@
     <div class="dash-card comandos">
       <div class="dash-head"><span class="dash-eyebrow">QUICK COMMANDS</span></div>
       <div class="cmd-lista">
+        <button type="button" class="cmd" data-cmd="bom dia">Bom dia</button>
         <button type="button" class="cmd" data-cmd="que horas são">Hora</button>
         <button type="button" class="cmd" data-cmd="como está o tempo">Clima</button>
         <button type="button" class="cmd" data-cmd="abrir spotify">Spotify</button>
@@ -122,6 +136,7 @@
         <button type="button" class="cmd" data-cmd="contar uma piada">Piada</button>
         <button type="button" class="cmd" data-cmd="qual a versão">Versão</button>
         <button type="button" class="cmd" data-cmd="verificar atualização">Atualizar</button>
+        <button type="button" class="cmd" data-cmd="verificar o sistema">Diagnóstico</button>
       </div>
     </div>
   </section>
@@ -151,7 +166,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.6.0</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.12.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -383,6 +398,8 @@
 </div>
 
 <script src="apps.js"></script>
+<!-- Núcleo de linguagem e decisão: precisa vir antes de app.js. -->
+<script src="hermes.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

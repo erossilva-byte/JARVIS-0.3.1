@@ -767,3 +767,45 @@ body[data-state=thinking] .hud-meta{color:rgba(var(--rgb),.8)}
 .neural-barra{height:6px;border-radius:999px;background:rgba(var(--rgb),.14);overflow:hidden;margin-top:8px}
 .neural-barra span{display:block;height:100%;border-radius:999px;background:var(--cor);transition:width .25s ease}
 .dica.erro{color:var(--alerta)}
+
+/* ---- 1.12.0 — abertura do núcleo, reconhecimento da voz e fluidez ---- */
+/* Fluidez: as camadas do núcleo passam a ser compostas na GPU e as mudanças de estado
+   usam transform/opacity, que não forçam relayout a cada quadro. */
+.hud{transform:translateZ(0);will-change:transform}
+.anel,.hud .n-ponto,.halo,.cam{will-change:transform,opacity}
+.hud .cam{transition:opacity .45s ease}
+.chip.estado{transition:color .3s ease,background-color .3s ease,border-color .3s ease}
+.marca .ponto{transition:background .3s ease,box-shadow .3s ease}
+.wake-mini-orb span{transition:transform .35s ease,opacity .35s ease}
+
+/* Tela de abertura: roda toda vez que o app abre; com a conferência de voz ligada, ela
+   espera a voz do usuário e só então libera o resto da interface. */
+.boot{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px 24px calc(32px + env(safe-area-inset-bottom));text-align:center;
+  background:radial-gradient(62% 40% at 50% 42%,rgba(var(--rgb),.16),transparent 70%),var(--fundo);
+  opacity:1;transition:opacity .42s ease,transform .42s ease}
+.boot[hidden]{display:none}
+.boot.saindo{opacity:0;transform:scale(1.02)}
+.boot-nucleo{position:relative;width:172px;height:172px;display:grid;place-items:center}
+.bn-aro{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(var(--rgb),.32)}
+.bn1{animation:bnGira 7s linear infinite;border-top-color:rgba(var(--rgb),.85);border-right-color:rgba(var(--rgb),.6)}
+.bn2{inset:16px;animation:bnGira 4.5s linear infinite reverse;border-bottom-color:rgba(var(--rgb),.75)}
+.bn3{inset:34px;animation:bnPulsa 2.2s ease-in-out infinite;border-color:rgba(var(--rgb),.5)}
+.bn-nucleo{width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 42% 36%,rgba(var(--rgb),.95),rgba(var(--rgb),.25) 62%,transparent 74%);box-shadow:0 0 34px rgba(var(--rgb),.5);animation:bnPulsa 2.6s ease-in-out infinite}
+.boot-marca{margin:6px 0 0;font-size:12px;letter-spacing:.34em;color:var(--suave);font-weight:600}
+.boot-barra{width:min(320px,78vw);height:4px;border-radius:99px;background:rgba(var(--rgb),.16);overflow:hidden}
+.boot-barra span{display:block;width:0;height:100%;border-radius:99px;background:linear-gradient(90deg,rgba(var(--rgb),.5),var(--cor));transition:width .38s cubic-bezier(.22,.61,.36,1)}
+.boot-status{margin:0;font-size:13px;color:var(--suave);min-height:18px}
+.boot-voz{margin:0;font-size:14px;color:var(--texto);animation:bnPulsa 2s ease-in-out infinite}
+.boot-acoes{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.boot-acoes button{min-height:36px;font-size:13px}
+@keyframes bnGira{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes bnPulsa{0%,100%{opacity:.55}50%{opacity:1}}
+
+/* Enquanto a abertura não termina, o resto da interface fica visível mas inerte — é o
+   "libera as demais opções" do reconhecimento de voz. */
+body.travado header,body.travado nav,body.travado main,body.travado footer{pointer-events:none;opacity:.35;transition:opacity .4s ease}
+
+@media (prefers-reduced-motion:reduce){
+  .bn1,.bn2,.bn3,.bn-nucleo,.boot-voz{animation:none!important}
+  .boot{transition:none}
+}

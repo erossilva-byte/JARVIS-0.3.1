@@ -16,10 +16,13 @@ function bloco(inicio, fim, rotulo) {
 }
 
 /* ---------- Extração dos blocos reais ---------- */
-const fonteTom = bloco('const RX_SENSIVEL =', 'function promptSistema() {', 'de tom do turno');
+// O tom do turno mora no núcleo Hermes (1.12.0) e é consumido por tomDoTurno/fraseApp do
+// app.js: o teste carrega o núcleo de verdade e injeta nele, em vez de simular as regras.
+const Hermes = require(path.join(__dirname, '..', 'hermes.js'));
+const fonteTom = bloco('let perguntaAtual = ', 'function promptSistema() {', 'de tom do turno');
 const fonteStream = bloco("const usaStream =", 'async function tentarModelo(p, key, m) {', 'de streaming');
 
-const criarTom = new Function('norm', 'store', 'trat',
+const criarTom = new Function('norm', 'store', 'trat', 'Hermes',
   fonteTom + '\nreturn { tomDoTurno, fraseApp, setPergunta: (t) => { perguntaAtual = t; } };');
 
 const criarStream = new Function('fetch', 'store', 'ctrlRede', 'corpoChat', 'CHAVES', 'modelosDe',
@@ -29,7 +32,7 @@ const criarStream = new Function('fetch', 'store', 'ctrlRede', 'corpoChat', 'CHA
 /* ---------- Stubs ---------- */
 const store = { d: {}, get(k, v) { return k in this.d ? this.d[k] : v; }, set(k, v) { this.d[k] = v; } };
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-const tom = criarTom(norm, store, () => 'senhor');
+const tom = criarTom(norm, store, () => 'senhor', Hermes);
 
 // Provedor simulado: SSE repartido em pedaços de 7 bytes (corta linhas no meio) e
 // contador de leituras, para provar que a fala começou antes do fim do corpo.
