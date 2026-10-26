@@ -51,7 +51,9 @@ jobs:
       - name: Preparar os recursos web do aplicativo
         run: |
           mkdir -p www
-          cp index.html style.css app.js apps.js www/
+          # Todo recurso web do app precisa estar aqui: sem hermes.js o app.js recusa
+          # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
+          cp index.html style.css app.js apps.js hermes.js www/
 
       - name: Gerar estrutura nativa do Android
         run: |
