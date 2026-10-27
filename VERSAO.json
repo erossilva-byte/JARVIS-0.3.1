@@ -9,8 +9,11 @@
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
   "notas": "Revisão 1.14.0 (2026-10-27). (1) Escuta pela Groq: cicloEscutaGroq/capturarTrechoGroq no app.js gravam pedaços de 2,5 s e transcrevem com o Whisper da Groq; Hermes.ativacao (as mesmas 33 variantes do Java) decide a palavra de ativação — incluindo 'jerves', 'gerves', 'garves', 'jaive', 'jaives' e 'jaivi', as palavras extras do usuário e a tolerância de sotaque da sensibilidade. Hermes.transcricaoGroq.erro traduz 429 (limite), 401/403 (chave), 413 (áudio), 5xx (fora) e falha de rede, com espera entre tentativas; permissão de microfone negada tem mensagem própria. Limites: roda com o app aberto, exige chave, consome cota e envia áudio para fora — por isso é desligado por padrão e o detector do Android continua sendo o caminho de segundo plano. (2) Menu Informações: bateria, memória, armazenamento, conexão, aparelho, temperatura da bateria, clima da cidade e manchetes com fontes; abre pelo card da central, pela barra lateral e por voz ('informações', 'manchetes', 'dados do celular'). (3) Conversa em tela própria: o chat saiu do menu (onde o espaço era curto e o fim das mensagens ficava cortado); acabaram o clip de pintura e os limites em dvh na área de conversa, e a rolagem ganhou segunda passada após o layout. (4) Eco único: Hermes.eco.unico bloqueia balão e fala repetidos em sequência, com registro do descarte. (5) Animações: verificação do sistema compartilhada por diagnóstico, menu Informações e abertura; ondas de voz alimentadas pelo nível real do microfone; entrada animada ao trocar de categoria; destaque do HUD por estado.",
   "build": {
-    "resultado": "pendente",
-    "observacao": "A compilação do APK 1.14.0 é feita pelo workflow de release (GitHub Actions) com ci/debug.keystore — a mesma assinatura de 1.10.1/1.12.0/1.13.0, para o atualizador interno instalar por cima. O checksum e o tamanho entram aqui depois que a compilação terminar."
+    "resultado": "success",
+    "sha256": "d90123faced110a234fb9de80ace9d898a2d25af6d45f4329933a80e8697f01a",
+    "bytes": 70663239,
+    "data": "2026-10-27",
+    "observacao": "APK do release v1.14.0 (jarvis-nova-1.14.0-10140.apk), compilado pelo workflow de release com ci/debug.keystore — mesma assinatura de 1.10.1/1.12.0/1.13.0, então o app instalado se atualiza por cima pelo próprio atualizador interno. Checksum conferido depois de baixar o arquivo do próprio release."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"
