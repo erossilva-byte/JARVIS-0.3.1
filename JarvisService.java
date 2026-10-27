@@ -501,7 +501,7 @@ public class JarvisService extends Service {
     /** Calibragem em uso, em uma linha legível, para o diagnóstico e o registro. */
     static String calibragem() {
         JarvisService s = instancia;
-        return s == null ? '' : s.cfg.descricao();
+        return s == null ? "" : s.cfg.descricao();
     }
 
     private void agendarSessao(long atrasoMs) {
