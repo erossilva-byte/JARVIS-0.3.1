@@ -1,4 +1,5 @@
 """Verificações estáticas do cofre de chaves para Android/Electron."""
+import re
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 app = (ROOT / "app.js").read_text(encoding="utf-8")
@@ -9,10 +10,17 @@ checks = {
     "Desktop usa safeStorage": "safeStorage.encryptString" in main and "safeStorage.decryptString" in main,
     "Cofre desktop falha fechado": "O armazenamento criptografado do sistema não está disponível" in main,
     "Segredos do desktop ficam fora do renderer": "jarvis-secrets.json" in main and "guardar_chave_segura" in main,
-    "Nomes de chave são permitidos por lista": "groq|cerebras|mistral|gemini|picovoice" in main,
+    "Nomes de chave são permitidos por lista": "groq|cerebras|mistral|gemini" in main and "picovoice" not in main,
     "Navegador não persiste chaves em texto puro": "O navegador comum não possui cofre criptográfico integrado" in app,
-    "Campo Picovoice avisa salvamento ao sair do campo": "A chave é salva quando você sai do campo" in html,
-    "Campo Picovoice permanece protegido por senha": 'id="c-key-picovoice" type="password"' in html,
+    # O detector de ativação é próprio: nenhum campo de chave na interface. A checagem
+    # olha para o campo (input), não para a palavra: o texto explica que nenhuma chave
+    # é necessária, e isso é justamente o que se quer manter.
+    "Ativação própria não tem campo de chave": (
+        'c-key-picovoice' not in html
+        and not re.search(r'<input[^>]*(accesskey|picovoice)', html, re.IGNORECASE)
+        and 'nenhuma AccessKey' in html),
+    "Calibragem da ativação exposta com sensibilidade e palavras extras": (
+        'id="c-wake-sensibilidade"' in html and 'id="c-wake-variantes"' in html),
 }
 for nome, ok in checks.items():
     print(("OK" if ok else "FALHA") + ": " + nome)

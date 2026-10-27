@@ -17,10 +17,15 @@ css = (ROOT / "style.css").read_text(encoding="utf-8")
 checks = {
     # ---- Estado persistente e segredo ----
     "Estado desejado persistido fora do WebView": "desejaOuvir" in prefs and "MODE_PRIVATE" in prefs,
-    "AccessKey cifrada no Keystore": (
-        "AndroidKeyStore" in prefs and "AES/GCM/NoPadding" in prefs and "PREFIXO" in prefs),
-    "Chave não é gravada em texto puro": "sp(c).edit().remove(\"chave\")" in prefs and "cifrar(limpa)" in prefs,
-    "Serviço restaura a chave salva": "JarvisPrefs.lerChave(this)" in servico,
+    # O detector de ativação é próprio: não há chave de terceiro para cifrar, e o cofre
+    # saiu junto com o Picovoice. O que a preferência guarda agora é a calibragem.
+    "Nenhum segredo de ativação sobrou nas preferências": (
+        "AndroidKeyStore" not in prefs and "cifrar(" not in prefs and "lerChave" not in prefs),
+    "Calibragem da ativação persistida": (
+        "static int sensibilidade(Context c)" in prefs and "static String variantes(Context c)" in prefs
+        and "static int rejeitadas(Context c)" in prefs),
+    "Serviço lê a calibragem salva ao abrir sessão": (
+        "JarvisPrefs.sensibilidade(this)" in servico and "JarvisPrefs.variantes(this)" in servico),
     # ---- Serviço ----
     "Serviço é START_STICKY quando ouve": "return START_STICKY;" in servico,
     "Reinício sem intent retoma o estado salvo": (

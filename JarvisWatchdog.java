@@ -90,7 +90,7 @@ public class JarvisWatchdog extends BroadcastReceiver {
         }
         if (!JarvisService.ativo()) {
             try {
-                JarvisService.iniciarEscuta(ctx, JarvisPrefs.lerChave(ctx), JarvisPrefs.pausarMusica(ctx), JarvisPrefs.motor(ctx));
+                JarvisService.iniciarEscuta(ctx, JarvisPrefs.pausarMusica(ctx));
             } catch (Exception e) {
                 JarvisPrefs.ultimoErro(ctx, "vigia não conseguiu reiniciar a escuta: " + e.getMessage());
             }

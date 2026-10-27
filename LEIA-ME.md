@@ -1,4 +1,40 @@
-# J.A.R.V.I.S. Nova 1.12.0
+# J.A.R.V.I.S. Nova 1.13.0
+
+## Novidades da 1.13.0 — detector próprio, motor roteado e visão pela câmera
+- **Picovoice saiu do projeto.** Não há mais SDK de palavra de ativação, AccessKey nem
+  dependência de terceiro para ouvir. A ativação é um **detector próprio**: o reconhecimento do
+  Android transcreve em sessões curtas e as regras de fonética locais decidem — 26 variantes
+  conhecidas (“javis”, “charvis”, “garvis”, “jarviz”…), tolerância a sotaque por distância de
+  edição, comparação pelo esqueleto consonantal e tolerância que só vale para palavras da
+  família “jarv-” (é o que impede “jardim” e “jargão” de acordar o assistente). As mesmas regras
+  rodam no serviço (`JarvisAtivacao.java`) e no WebView (`Hermes.ativacao`), conferidas por teste.
+- **Calibragem na mão do usuário.** Slider de sensibilidade (0–100) e campo de palavras extras
+  (“nova”, um apelido, o seu jeito de falar). Mais sensível = aceita resultado parcial e responde
+  antes de a frase terminar; menos sensível = exige a palavra quase perfeita, melhor com televisão
+  ligada. Há ainda o **porteiro de ruído** por nível de áudio: transcrição que aparece com o som
+  baixo demais é descartada, e o diagnóstico mostra quantas foram descartadas.
+- **Roteador de motores de IA no núcleo.** `Hermes.planejarIA()` escolhe entre Groq, Cerebras,
+  Mistral e Gemini por tipo de tarefa (conversa curta, raciocínio, pesquisa/atualidade, imagem),
+  pela **latência realmente medida** no seu aparelho (média móvel), pelas falhas recentes e pela
+  disponibilidade. O segundo colocado da fila é o fallback automático em erro, cota ou tempo
+  esgotado, e cada tipo de tarefa tem seu tempo-limite (12 s para pergunta curta).
+- **Câmera que reconhece objetos.** O painel **Visão** abre a câmera ao vivo; ao tocar em
+  analisar, UM quadro é enviado ao provedor que enxerga imagens e cada objeto reconhecido ganha
+  um **balão sobre a própria imagem** — toque no balão para ouvir o detalhe. Nada de vídeo
+  contínuo e nada em segundo plano: fechar o painel desliga a câmera. Por voz: “o que você está
+  vendo?”.
+- **Diagnóstico ampliado.** Além de microfone, voz, IA local, rede e permissões, o diagnóstico
+  agora confere **câmera**, **chaves** e **motores de IA** (com a latência medida de cada um e a
+  última escolha do roteador). Continua disponível por voz: “verifique o sistema”.
+- **Conversa mais legível.** A área de mensagens ganhou balão de carregamento animado (o estado
+  explícito entre perguntar e ouvir), espaçamento consistente, melhor contraste e rolagem que não
+  puxa a tela enquanto você lê acima.
+- **Humor seco documentado.** O prompt de sistema agora descreve o sarcasmo seco, irônico e
+  levemente debochado com limites explícitos: nunca rude, nunca sobre pessoas, aparência,
+  religião ou tragédia, e suspenso por completo em assunto sensível ou urgente. As frases
+  próprias do app ganharam variantes novas (visão sem resultado, troca de motor).
+- Versão 1.13.0 (versionCode 10130), mesmo pacote `com.jarvis.nova` e mesma assinatura de CI:
+  instala por cima da 1.12.0 e é atualizável pelo próprio app.
 
 ## Novidades da 1.12.0 — Hermes no comando do dia
 - **Núcleo Hermes Agent.** Toda resposta passa por um motor único, que decide a rota em ordem:

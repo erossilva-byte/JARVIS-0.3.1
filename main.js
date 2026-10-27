@@ -57,7 +57,7 @@ function exigirCofreDesktop() {
 }
 function guardarChaveDesktop({ nome, valor }) {
   exigirCofreDesktop();
-  if (!/^(groq|cerebras|mistral|gemini|picovoice)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
+  if (!/^(groq|cerebras|mistral|gemini)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
   const dados = lerCofreDesktop();
   if (!valor) delete dados[nome];
   else dados[nome] = safeStorage.encryptString(String(valor)).toString('base64');
@@ -66,7 +66,7 @@ function guardarChaveDesktop({ nome, valor }) {
 }
 function lerChaveDesktop({ nome }) {
   exigirCofreDesktop();
-  if (!/^(groq|cerebras|mistral|gemini|picovoice)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
+  if (!/^(groq|cerebras|mistral|gemini)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
   const cifrado = lerCofreDesktop()[nome];
   if (!cifrado) return '';
   return safeStorage.decryptString(Buffer.from(String(cifrado), 'base64'));

@@ -1,19 +1,16 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.12.0",
-  "versionCode": 10120,
+  "version": "1.13.0",
+  "versionCode": 10130,
   "androidAppId": "com.jarvis.nova",
   "base": "código-fonte na raiz do repositório",
-  "gerado": "2026-10-26",
-  "status": "1.12.0: o núcleo Hermes Agent passa a decidir toda resposta (habilidade própria → comando no aparelho → IA), com briefing diário (temperatura e notícias) no primeiro \"bom dia\", autodiagnóstico por voz, animação de abertura que só libera o app depois de reconhecer a voz do usuário e release publicada para atualização pelo próprio aplicativo.",
+  "gerado": "2026-10-27",
+  "status": "1.13.0: o Picovoice saiu por completo e a palavra de ativação passou a ser um detector próprio (reconhecimento do Android + regras de fonética locais, com sensibilidade ajustável e porteiro de ruído); o núcleo Hermes roteia as respostas entre Groq, Cerebras, Mistral e Gemini por tipo de tarefa, latência medida e disponibilidade; a câmera reconhece objetos e mostra balões informativos sobre a imagem; o diagnóstico cobre câmera, chaves e motores de IA; e a conversa ganhou estado de carregamento e legibilidade.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.12.0 (2026-10-26). (1) hermes.js: núcleo único de linguagem e decisão, com rotas declaradas, telemetria por rota e validação da decisão da IA (ação inventada ou indisponível é descartada em vez de virar promessa vazia). (2) Briefing diário: no primeiro \"bom dia\" do dia ele fala a temperatura atual e as manchetes, com clima e notícias buscados em paralelo; depois disso cumprimenta curto. (3) Autodiagnóstico por voz (\"verifique o sistema\") cobrindo reconhecimento de voz, síntese, IA local, rede, núcleo Hermes e permissão de microfone, com resumo falado montado pelo próprio núcleo. (4) Abertura: animação do núcleo e, com perfil de voz cadastrado, espera a voz do usuário para liberar a interface — com botão de pular e limite de 25 s, para nunca prender ninguém. (5) Fluidez: camadas do HUD compostas na GPU e transições só de transform/opacity.",
+  "notas": "Revisão 1.13.0 (2026-10-27). (1) Detector de ativação próprio: nenhum SDK de palavra de ativação e nenhuma chave de terceiro — JarvisAtivacao.java (serviço) e Hermes.ativacao (WebView) usam as mesmas 26 variantes fonéticas, tolerância a sotaque por distância de edição, esqueleto consonantal, resultado parcial (responde antes de a frase terminar) e porteiro de ruído por nível de áudio; os descartes aparecem no diagnóstico. (2) Roteador de motores: Hermes.planejarIA ordena os provedores por qualidade esperada para a tarefa, latência medida no aparelho (média móvel), falhas recentes e disponibilidade, com tempo-limite por tipo de tarefa e fallback automático. (3) Visão: painel de câmera que envia UM quadro ao provedor que enxerga imagens, desenha balões sobre a foto e fala o detalhe do objeto tocado; nada de vídeo contínuo nem câmera em segundo plano. (4) Diagnóstico ampliado (câmera, chaves, motores e calibragem da ativação), por voz em \"verifique o sistema\". (5) Área de mensagens: balão de carregamento animado, espaçamento, rolagem e legibilidade. (6) Personalidade: humor seco e irônico documentado no prompt, com limites explícitos e frases próprias novas.",
   "build": {
-    "resultado": "success",
-    "sha256": "3a199c00e0ff8d487acacf2a492c9b45ffec1f8ab723986c8354f20ae4d09344",
-    "bytes": 72664943,
-    "data": "2026-10-26",
-    "observacao": "APK do release v1.12.0 (jarvis-nova-1.12.0-10120.apk), compilado pelo workflow de release com ci/debug.keystore — mesma assinatura de 1.10.1, então o app instalado se atualiza por cima. Checksum conferido depois do download do próprio release."
+    "resultado": "pendente",
+    "observacao": "O APK da 1.13.0 é gerado pelo workflow de release com ci/debug.keystore (mesma assinatura de 1.10.1/1.12.0), então o app instalado se atualiza por cima pelo próprio atualizador interno."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"

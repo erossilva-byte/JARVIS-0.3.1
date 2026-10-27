@@ -130,18 +130,22 @@ checagens = {
         and "python3 tests/test_v1_12_0.py" in pacote.get("scripts", {}).get("test:all", "")),
 
     # 7. Versão e documentação
-    "Versão 1.12.0 com versionCode 10120": (
-        versao.get("version") == "1.12.0"
-        and versao.get("versionCode") == 10120
-        and pacote.get("version") == "1.12.0"
-        and "const VERSAO_APP = '1.12.0';" in app
-        and (not gradle or ("versionCode 10120" in gradle and 'versionName "1.12.0"' in gradle))),
+    # A versão publicada avança: o teste confere que a revisão 1.12.0 continua dentro do
+    # pacote atual (>= 1.12.0) e que número e nome acompanham o VERSAO.json, em vez de fixar
+    # um literal que envelhece a cada release.
+    "Versão publicada é igual ou posterior à 1.12.0": (
+        str(versao.get("version", "")) >= "1.12.0"
+        and int(versao.get("versionCode", 0)) >= 10120
+        and pacote.get("version") == versao.get("version")
+        and ("const VERSAO_APP = '%s';" % versao.get("version")) in app
+        and (not gradle or ("versionCode %d" % int(versao.get("versionCode")) in gradle
+                            and 'versionName "%s"' % versao.get("version") in gradle))),
     "Versão na interface acompanha o release": (
-        '<span class="orb-sub" aria-hidden="true">v1.12.0</span>' in html
-        and '<span class="versao-chip">v1.12.0</span>' in html),
+        ('<span class="orb-sub" aria-hidden="true">v%s</span>' % versao.get("version")) in html
+        and ('<span class="versao-chip">v%s</span>' % versao.get("version")) in html),
     "Mudança registrada no CHANGELOG": "## 1.12.0" in historico,
     "Instruções atualizadas no LEIA-ME": (
-        "# J.A.R.V.I.S. Nova 1.12.0" in leituras
+        ("# J.A.R.V.I.S. Nova %s" % versao.get("version")) in leituras
         and "1.11.0" in leituras       # histórico preservado
         and "assinatura" in leituras.lower()),
 }
@@ -150,6 +154,6 @@ falhas = [nome for nome, ok in checagens.items() if not ok]
 for nome, ok in checagens.items():
     print(("OK: " if ok else "FALHA: ") + nome)
 if falhas:
-    print("\n%d verificação(ões) da 1.12.0 falharam." % len(falhas))
+    print("\n%d verificação(ões) da revisão 1.12 falharam." % len(falhas))
     sys.exit(1)
-print("\n%d verificações da 1.12.0 aprovadas." % len(checagens))
+print("\n%d verificações da revisão 1.12 aprovadas." % len(checagens))

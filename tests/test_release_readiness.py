@@ -58,10 +58,12 @@ if 'Compilação Android real' not in readme or 'aparelho físico' not in readme
 if "const bateria = Number(r.bateria)" not in app or "bateria >= 0 ? bateria + '%' : 'indisponível'" not in app:
     issues.append('Comando de estado do dispositivo deve tratar bateria desconhecida sem exibir -1%')
 
-if "'Ouvindo “Jarvis” · ' + (CHAVE_PICOVOICE ? 'Porcupine' : 'detector do Android')" not in app:
-    issues.append('Interface não informa qual detector de ativação está em uso (Porcupine ou detector livre do Android)')
-if 'iniciarSessaoLivre' not in (ROOT / 'JarvisService.java').read_text(encoding='utf-8'):
-    issues.append('Detector livre sem AccessKey ausente do serviço em segundo plano')
+if "'Ouvindo “Jarvis” · detector próprio'" not in app:
+    issues.append('Interface não informa o detector de ativação próprio em uso')
+if 'JarvisAtivacao.presente' not in (ROOT / 'JarvisService.java').read_text(encoding='utf-8'):
+    issues.append('Detector de ativação próprio ausente do serviço em segundo plano')
+if 'porcupine' in (ROOT / 'JarvisService.java').read_text(encoding='utf-8').lower():
+    issues.append('Serviço ainda depende do SDK de palavra de ativação removido')
 if "if (ehAndroid) {\n    if (!s || typeof s.guardarSeguro !== 'function') throw new Error('Cofre seguro do Android indisponível." not in app:
     issues.append('Armazenamento de chaves não falha fechado no Android')
 if "$('#c-salvar').onclick = () => salvarConfig().catch" not in app:
@@ -78,8 +80,14 @@ if 'flex-wrap:wrap' not in css or '#btn-config{order:99' not in css or 'visibili
 native_wake = (ROOT / 'JarvisService.java').read_text(encoding='utf-8')
 if 'OpenWakeWord' in native_wake:
     issues.append('Dependência openWakeWord não resolvida ainda está no plugin nativo')
-if 'Porcupine integrado' not in (ROOT / 'index.html').read_text(encoding='utf-8') or 'Porcupine.BuiltInKeyword.JARVIS' not in native_wake:
-    issues.append('Integração Porcupine não identificada na interface/código nativo')
+html_doc = (ROOT / 'index.html').read_text(encoding='utf-8')
+if 'Detector próprio' not in html_doc or 'c-wake-sensibilidade' not in html_doc or 'JarvisAtivacao' not in native_wake:
+    issues.append('Detector de ativação próprio não identificado na interface/código nativo')
+if 'painel-visao' not in html_doc or 'pedirVisaoIA' not in app or 'desenharBaloes' not in app:
+    issues.append('Reconhecimento de objetos pela câmera com balões não está implementado')
+hermes_src = (ROOT / 'hermes.js').read_text(encoding='utf-8')
+if 'planejarIA' not in hermes_src or 'Hermes.planejarIA' not in app:
+    issues.append('Roteador de motores de IA não está ligado ao aplicativo')
 
 if issues:
     print('FALHA na auditoria de prontidão:')

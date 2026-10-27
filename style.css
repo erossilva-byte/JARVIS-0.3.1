@@ -335,7 +335,7 @@ body.chat-ampliado footer{max-width:1000px;padding-top:8px}
 /* Atalho visível para o painel de saúde do aparelho */
 .atalho-status-celular{display:flex;align-items:center;gap:11px;width:min(100% - 32px,440px);margin:12px auto 0;padding:10px 13px;text-align:left;color:var(--texto);background:linear-gradient(120deg,rgba(0,132,255,.14),rgba(0,220,255,.05));border:1px solid rgba(38,157,255,.48);border-radius:15px;box-shadow:0 0 18px rgba(0,115,255,.08);cursor:pointer;transition:transform .18s,border-color .18s}
 .atalho-status-celular:active{transform:scale(.985)}.atalho-status-icone{display:grid;place-items:center;flex:none;width:38px;height:38px;border-radius:12px;background:rgba(0,145,255,.16);color:#48caff;font-size:26px;line-height:1}.atalho-status-celular b{display:block;font-size:13px}.atalho-status-celular small{display:block;margin-top:3px;color:var(--suave);font-size:10.5px}.atalho-status-seta{margin-left:auto;color:#48caff;font-size:24px}
-.picovoice-card{margin-top:14px;padding:13px;border:1px solid rgba(38,157,255,.32);border-radius:14px;background:rgba(9,25,43,.62)}.picovoice-card h3{margin-top:0}.link-botao{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.ativacao-card{margin-top:14px;padding:13px;border:1px solid rgba(38,157,255,.32);border-radius:14px;background:rgba(9,25,43,.62)}.ativacao-card h3{margin-top:0}.link-botao{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 
 
 /* Correção de responsividade: nenhum atalho do cabeçalho pode ser comprimido/ocultado.
@@ -369,15 +369,15 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
 .config-intro h3{margin:5px 0!important;font-size:1.1rem!important}
 .config-intro p{margin:6px 0 0;max-width:440px;line-height:1.5;color:var(--texto-secundario,#a9b7c9)}
 .config-intro button{flex:0 0 auto;align-self:center}
-.picovoice-card{padding:17px!important;border-color:rgba(72,202,255,.28)!important;background:rgba(8,20,35,.68)!important}
-.picovoice-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.picovoice-heading h3{margin:5px 0!important}
+.ativacao-card{padding:17px!important;border-color:rgba(72,202,255,.28)!important;background:rgba(8,20,35,.68)!important}
+.ativacao-cabecalho{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.ativacao-cabecalho h3{margin:5px 0!important}
 .status-pill{display:inline-flex;align-items:center;border:1px solid rgba(255,190,90,.35);border-radius:999px;padding:5px 9px;font-size:.72rem;color:#ffd18a;white-space:nowrap}
 .personalidade-preview{padding:13px 15px;border:1px solid var(--linha);border-radius:13px;background:rgba(12,25,41,.72)}
 .personalidade-preview b{display:block;font-size:.86rem;color:#8bdcff}
 .personalidade-preview p{margin:7px 0 0;line-height:1.5}
 #painel-config .barra{position:sticky;bottom:0;z-index:3;padding:12px 18px;background:rgba(7,13,23,.97);backdrop-filter:blur(16px);border-top:1px solid var(--linha)}
-@media(max-width:520px){.config-intro{flex-direction:column}.config-intro button{width:100%}.picovoice-heading{align-items:flex-start;flex-direction:column}#painel-config .grupo{padding:16px}#painel-config .painel-topo{padding:16px}}
+@media(max-width:520px){.config-intro{flex-direction:column}.config-intro button{width:100%}.ativacao-cabecalho{align-items:flex-start;flex-direction:column}#painel-config .grupo{padding:16px}#painel-config .painel-topo{padding:16px}}
 
 
 /* ---- J.A.R.V.I.S. Nova 1.4.0: HUD cinematográfico, responsivo e com movimento consciente ---- */
@@ -809,3 +809,46 @@ body.travado header,body.travado nav,body.travado main,body.travado footer{point
   .bn1,.bn2,.bn3,.bn-nucleo,.boot-voz{animation:none!important}
   .boot{transition:none}
 }
+
+/* ---- J.A.R.V.I.S. Nova 1.13.0: ativação própria, visão pela câmera e conversa legível ---- */
+.ativacao-card{margin-top:14px;padding:17px;border:1px solid rgba(72,202,255,.28);border-radius:14px;background:rgba(8,20,35,.68)}
+.ativacao-cabecalho{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.ativacao-cabecalho h3{margin:5px 0}
+#c-wake-variantes-lista{color:#8fb6d4}
+@media(max-width:520px){.ativacao-cabecalho{align-items:flex-start;flex-direction:column}}
+
+/* Visão: câmera ao vivo, balões sobre a imagem e leitura do objeto */
+.painel-visao .grupo{padding:0 18px 18px}
+.visao-palco{position:relative;width:100%;aspect-ratio:3/4;max-height:54vh;background:#04070d;border:1px solid var(--linha);border-radius:16px;overflow:hidden;contain:paint}
+.visao-palco video,.visao-palco canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#04070d}
+.visao-palco canvas[hidden],.visao-palco video[hidden]{display:none}
+.visao-baloes{position:absolute;inset:0;pointer-events:none}
+.balao{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;max-width:72%;background:rgba(6,16,28,.9);border:1px solid rgba(var(--rgb),.55);color:#eaf6ff;border-radius:999px;padding:6px 11px;font:inherit;font-size:12px;line-height:1.25;backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(0,0,0,.35);animation:entra .18s ease-out}
+.balao:active{background:rgba(20,45,72,.95)}
+.balao-lista{position:static;transform:none;display:inline-flex;max-width:100%;margin:4px 6px 0 0}
+.visao-lista{display:flex;flex-wrap:wrap;align-items:flex-start;margin-top:8px}
+.visao-status{position:absolute;left:10px;right:10px;bottom:10px;margin:0;font-size:12px;line-height:1.4;color:#cfe6f5;background:rgba(4,10,18,.85);border:1px solid var(--linha);border-radius:11px;padding:8px 10px}
+.visao-status[data-estado="fail"]{color:#ffc9c9;border-color:rgba(255,120,120,.45)}
+.visao-status[data-estado="warn"]{color:#ffe6a8;border-color:rgba(255,190,90,.4)}
+.visao-status[data-estado="carregando"]{color:#ffe6a8;border-color:rgba(255,190,90,.4)}
+.visao-status[data-estado="ok"]{color:#c9ffe4;border-color:rgba(80,220,150,.35)}
+.visao-detalhe{margin-top:10px;padding:11px 13px;border:1px solid rgba(var(--rgb),.3);border-radius:12px;background:rgba(9,25,43,.7);font-size:13.5px;line-height:1.5}
+.visao-palco + .botoes,.painel-visao .botoes{margin-top:10px}
+
+/* Conversa: espaçamento, legibilidade e estado de carregamento explícito */
+#chat{gap:12px;padding:20px 2px 14px;scroll-padding-block-end:16px}
+#chat .msg{line-height:1.62}
+.msg.sis{color:#9fb6c8;line-height:1.5;max-width:96%}
+.msg .links{margin-top:12px}
+.msg.pensando{display:flex;align-items:center;gap:10px;color:#9fc6e6;font-size:13.5px}
+.msg.pensando::before{display:none}
+.pensando-texto{opacity:.92}
+.pensando-pontos{position:relative;display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulsar .9s ease-in-out infinite}
+.pensando-pontos::before,.pensando-pontos::after{content:"";position:absolute;top:0;width:6px;height:6px;border-radius:50%;background:currentColor}
+.pensando-pontos::before{left:-10px;animation:pulsar .9s ease-in-out infinite .15s}
+.pensando-pontos::after{left:10px;animation:pulsar .9s ease-in-out infinite .3s}
+@keyframes pulsar{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
+
+/* Navegação lateral com um item a mais: rola sem cortar nenhum atalho */
+#lateral{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+@media(prefers-reduced-motion:reduce){.balao,.pensando-pontos,.pensando-pontos::before,.pensando-pontos::after{animation:none!important}}

@@ -125,13 +125,21 @@ public class JarvisBackgroundPlugin extends Plugin {
 
     private void iniciarWake(PluginCall call) {
         try {
-            String accessKey = call.getString("accessKey", "");
             boolean pausar = !Boolean.FALSE.equals(call.getBoolean("pausarDuranteMusica", true));
-            String motor = call.getString("motor", JarvisPrefs.motor(getContext()));
-            JarvisService.iniciarEscuta(getContext(), accessKey, pausar, motor);
+            // Calibragem do detector próprio: a tela envia o que o usuário acabou de
+            // ajustar, para o serviço ouvir já com a regra nova (sem reiniciar nada).
+            if (call.hasOption("sensibilidade")) {
+                JarvisPrefs.sensibilidade(getContext(), call.getInt("sensibilidade", JarvisPrefs.sensibilidade(getContext())));
+            }
+            if (call.hasOption("variantes")) {
+                JarvisPrefs.variantes(getContext(), call.getString("variantes", ""));
+            }
+            JarvisService.iniciarEscuta(getContext(), pausar);
             JSObject o = new JSObject();
             o.put("servico", "JarvisService");
-            o.put("motor", JarvisPrefs.motor(getContext()));
+            o.put("detector", JarvisService.DETECTOR);
+            o.put("sensibilidade", JarvisPrefs.sensibilidade(getContext()));
+            o.put("variantes", JarvisPrefs.variantes(getContext()));
             call.resolve(o);
         } catch (Exception e) {
             // O serviço não subiu (tipicamente ForegroundServiceStartNotAllowedException
@@ -228,8 +236,10 @@ public class JarvisBackgroundPlugin extends Plugin {
         o.put("escutando", JarvisService.escutando());
         o.put("detector", JarvisService.detectorAtual());
         o.put("desejada", JarvisPrefs.desejaOuvir(c));
-        o.put("chaveSalva", JarvisPrefs.temChave(c));
-        o.put("motor", JarvisPrefs.motor(c));
+        o.put("sensibilidade", JarvisPrefs.sensibilidade(c));
+        o.put("variantes", JarvisPrefs.variantes(c));
+        o.put("calibragem", JarvisService.calibragem());
+        o.put("descartesRuido", JarvisPrefs.rejeitadas(c));
         o.put("ultimoErro", JarvisPrefs.ultimoErro(c));
         o.put("ultimoEvento", JarvisPrefs.ultimoEvento(c));
         o.put("fabricante", Build.MANUFACTURER == null ? "" : Build.MANUFACTURER);
@@ -350,7 +360,7 @@ public class JarvisBackgroundPlugin extends Plugin {
             return;
         }
         boolean preferirLocal = Boolean.TRUE.equals(call.getBoolean("preferirLocal", true));
-        // Pequena espera para o serviço soltar o microfone (Porcupine/reconhecedor) antes de abrir outro.
+        // Pequena espera para o serviço soltar o microfone antes de abrir outra captura.
         final boolean usarLocal = existirLocal && (transcricaoSomenteLocal || preferirLocal);
         main.postDelayed(() -> {
             if (transcricaoCall != null) iniciarReconhecedor(usarLocal);

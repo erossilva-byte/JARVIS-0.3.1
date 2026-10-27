@@ -22,9 +22,6 @@ import android.speech.SpeechRecognizer;
 
 import androidx.core.content.ContextCompat;
 
-import ai.picovoice.porcupine.Porcupine;
-import ai.picovoice.porcupine.PorcupineManager;
-
 import com.getcapacitor.JSObject;
 
 import java.util.ArrayList;
@@ -33,9 +30,13 @@ import java.util.ArrayList;
  * Serviço em primeiro plano que mantém a escuta de ativação viva fora da tela.
  *
  * O detector pertence ao serviço (não à tela) e o estado desejado é persistido em
- * JarvisPrefs, com a AccessKey cifrada no Keystore. Assim, quando o Android reinicia
- * o serviço (START_STICKY), reinicia o aparelho ou encerra o app pelos recentes, a
- * escuta volta sozinha — com o mesmo detector que o usuário escolheu.
+ * JarvisPrefs, junto da calibragem (sensibilidade e palavras extras). Assim, quando o
+ * Android reinicia o serviço (START_STICKY), reinicia o aparelho ou encerra o app pelos
+ * recentes, a escuta volta sozinha e calibrada do jeito que o usuário deixou.
+ *
+ * A detecção é 100% local: o reconhecimento do Android transcreve e as regras de
+ * JarvisAtivacao decidem. Não há chave de terceiro, não há SDK de palavra de ativação e
+ * nenhum áudio sai do aparelho.
  */
 public class JarvisService extends Service {
 
@@ -48,8 +49,6 @@ public class JarvisService extends Service {
     static final String ACAO_ESCUTA_OFF = "com.jarvis.nova.ESCUTA_OFF";
     static final String ACAO_TESTE_ON = "com.jarvis.nova.TESTE_ON";
     static final String ACAO_TESTE_OFF = "com.jarvis.nova.TESTE_OFF";
-    static final String EXTRA_CHAVE = "accessKey";
-    static final String EXTRA_MOTOR = "motor";
     static final String EXTRA_MUSICA = "pausarMusica";
     static final String EXTRA_SEGUNDOS = "segundos";
 
@@ -58,10 +57,6 @@ public class JarvisService extends Service {
     private static volatile String detectorAtual = "";
 
     private final Handler main = new Handler(Looper.getMainLooper());
-    private PorcupineManager porcupine;
-    private String chave = "";
-    /** Motor pedido nesta execução ("" = usar o salvo em JarvisPrefs). */
-    private String motorPedido = "";
     private boolean pausarDuranteMusica = true;
     private boolean querEscuta = false;
     private String estadoNotificacao = "Escuta em espera";
@@ -94,15 +89,23 @@ public class JarvisService extends Service {
         }
     };
 
-    // Detector livre (sem AccessKey): sessões curtas do reconhecimento do Android.
-    private SpeechRecognizer livreRec;
-    private Runnable livreProximo;
-    private Runnable livreTimeout;
-    private boolean livreSessao = false;
-    private int livreFalhas = 0;
-    private int livreErrosIdioma = 0;
-    private String livreParcial = "";
+    // Detector de ativação próprio: sessões do reconhecimento do Android conferidas no
+    // próprio aparelho pelas regras de JarvisAtivacao (variantes fonéticas + limiar).
+    private SpeechRecognizer rec;
+    private Runnable proximo;
+    private Runnable timeout;
+    private boolean sessao = false;
+    private int falhas = 0;
+    private int errosIdioma = 0;
+    private String parcial = "";
     private boolean preferirRede = false; // true quando o aparelho não tem o idioma offline
+    private JarvisAtivacao.Config cfg = JarvisAtivacao.config(55, "");
+    // Porteiro de ruído: pico de nível da sessão. Transcrição que só aparece com o som
+    // baixo (televisão ao fundo, conversa de outra sala) não acorda o assistente.
+    private float picoDb = -120f;
+    private int rejeitadasRuido = 0;
+    /** Nome do detector, exposto no diagnóstico e na notificação. */
+    static final String DETECTOR = "proprio";
 
     private final Runnable monitorMidia = new Runnable() {
         @Override public void run() {
@@ -110,8 +113,8 @@ public class JarvisService extends Service {
             // Chamada/VoIP nunca divide o microfone com o detector; mídia só pausa se o usuário pediu.
             boolean ocupado = chamadaAtiva() || (pausarDuranteMusica && musicaAtiva());
             if (ocupado) {
-                if (porcupine != null || livreSessao || livreProximo != null) pausarMotor();
-            } else if (porcupine == null && !livreSessao && livreProximo == null) {
+                if (sessao || proximo != null) pausarMotor();
+            } else if (!sessao && proximo == null) {
                 try { iniciarMotor(); } catch (Exception e) { pararPorFalha(mensagemFalha(e)); return; }
             }
             main.postDelayed(this, 1000);
@@ -162,17 +165,12 @@ public class JarvisService extends Service {
     }
 
     /** Liga o serviço, persiste o estado desejado e começa a escutar. */
-    static void iniciarEscuta(Context ctx, String accessKey, boolean pausarMusica, String motor) {
+    static void iniciarEscuta(Context ctx, boolean pausarMusica) {
         JarvisPrefs.desejaOuvir(ctx, true);
         JarvisPrefs.pausarMusica(ctx, pausarMusica);
-        JarvisPrefs.motor(ctx, motor);
-        boolean temChave = accessKey != null && !accessKey.trim().isEmpty();
-        if (temChave) JarvisPrefs.guardarChave(ctx, accessKey);
         JarvisWatchdog.agendar(ctx, 15L * 60L * 1000L);
         Intent i = new Intent(ctx, JarvisService.class)
             .setAction(ACAO_ESCUTA_ON)
-            .putExtra(EXTRA_CHAVE, temChave ? accessKey.trim() : JarvisPrefs.lerChave(ctx))
-            .putExtra(EXTRA_MOTOR, JarvisPrefs.motor(ctx))
             .putExtra(EXTRA_MUSICA, pausarMusica);
         ContextCompat.startForegroundService(ctx, i);
     }
@@ -215,8 +213,6 @@ public class JarvisService extends Service {
         Intent i = new Intent(ctx, JarvisService.class)
             .setAction(ACAO_TESTE_ON)
             .putExtra(EXTRA_SEGUNDOS, dur)
-            .putExtra(EXTRA_CHAVE, JarvisPrefs.lerChave(ctx))
-            .putExtra(EXTRA_MOTOR, JarvisPrefs.motor(ctx))
             .putExtra(EXTRA_MUSICA, false); // no teste, música não deve mascarar o resultado
         ContextCompat.startForegroundService(ctx, i);
     }
@@ -287,16 +283,11 @@ public class JarvisService extends Service {
 
         if (ACAO_TESTE_ON.equals(acao)) {
             int segundos = intent == null ? 20 : intent.getIntExtra(EXTRA_SEGUNDOS, 20);
-            String k = intent == null ? "" : intent.getStringExtra(EXTRA_CHAVE);
-            motorPedido = intent == null || intent.getStringExtra(EXTRA_MOTOR) == null
-                ? "" : intent.getStringExtra(EXTRA_MOTOR).trim();
-            chave = k == null ? JarvisPrefs.lerChave(this) : k.trim();
-            if (chave.isEmpty()) chave = JarvisPrefs.lerChave(this);
             pausarDuranteMusica = false;
             main.removeCallbacks(testeFim);
             testeDeteccoes = 0;
             testeAte = System.currentTimeMillis() + Math.max(10, Math.min(60, segundos)) * 1000L;
-            testeDetector = chave.isEmpty() || "android".equals(motorEscolhido()) ? "android-sem-chave" : "picovoice-porcupine";
+            testeDetector = DETECTOR;
             main.postDelayed(testeFim, Math.max(10, Math.min(60, segundos)) * 1000L + 300);
             iniciarEscutaInterna();
             estadoNotificacao = "Teste da palavra de ativação — diga “Jarvis”";
@@ -305,11 +296,6 @@ public class JarvisService extends Service {
         }
 
         if (ACAO_SERVICO_ON.equals(acao)) {
-            if (intent != null && intent.hasExtra(EXTRA_CHAVE)) {
-                String k = intent.getStringExtra(EXTRA_CHAVE);
-                chave = k == null ? "" : k.trim();
-            }
-            if (chave.isEmpty()) chave = JarvisPrefs.lerChave(this);
             estadoNotificacao = "Escuta em espera";
             notificar();
             return JarvisPrefs.desejaOuvir(this) ? START_STICKY : START_NOT_STICKY;
@@ -332,12 +318,6 @@ public class JarvisService extends Service {
             pararPorFalha("a permissão de microfone foi negada. Autorize em Configurações ▸ Apps ▸ Jarvis ▸ Permissões.");
             return START_NOT_STICKY;
         }
-        String extraChave = intent == null ? null : intent.getStringExtra(EXTRA_CHAVE);
-        if (extraChave != null) chave = extraChave.trim();
-        if (intent != null && intent.getStringExtra(EXTRA_MOTOR) != null) {
-            motorPedido = intent.getStringExtra(EXTRA_MOTOR).trim();
-        }
-        if (chave.isEmpty()) chave = JarvisPrefs.lerChave(this);
         if (intent != null && intent.hasExtra(EXTRA_MUSICA)) {
             pausarDuranteMusica = intent.getBooleanExtra(EXTRA_MUSICA, JarvisPrefs.pausarMusica(this));
         } else {
@@ -345,7 +325,6 @@ public class JarvisService extends Service {
         }
         // O pedido veio do usuário (ou do vigia com estado salvo): persiste e mantém o vigia.
         JarvisPrefs.desejaOuvir(this, true);
-        if (!chave.isEmpty()) JarvisPrefs.guardarChave(this, chave);
         JarvisWatchdog.agendar(this, 15L * 60L * 1000L);
         pausadoPelaInterface = false;
         iniciarEscutaInterna();
@@ -369,69 +348,31 @@ public class JarvisService extends Service {
 
     private String mensagemFalha(Exception e) {
         String detalhe = e == null || e.getMessage() == null ? "" : " Detalhe: " + e.getMessage();
-        if (!chave.isEmpty()) {
-            return "não consegui iniciar o Porcupine. Confira a AccessKey, a conexão inicial e o limite da conta Picovoice." + detalhe;
-        }
-        return "o reconhecimento de voz do Android não está disponível neste aparelho. Confira a permissão de microfone ou configure uma AccessKey Picovoice em Ajustes ▸ Voz." + detalhe;
+        return "o detector de ativação próprio não conseguiu ouvir. Confira a permissão de microfone e, se o aparelho não tiver o reconhecimento de português, instale o pacote de idioma (Configurações ▸ Google ▸ Voz)." + detalhe;
     }
 
-    /* ---------- Motor de escuta ---------- */
-
-    /** Motor efetivo: o pedido nesta execução, senão o salvo pelo usuário. */
-    private String motorEscolhido() {
-        String m = motorPedido == null ? "" : motorPedido;
-        if (m.isEmpty()) m = JarvisPrefs.motor(this);
-        return m;
-    }
+    /* ---------- Motor de escuta (detector próprio) ---------- */
 
     private void iniciarMotor() throws Exception {
         if (!querEscuta) return;
         if (chamadaAtiva() || (pausarDuranteMusica && musicaAtiva())) return;
-        String motor = motorEscolhido();
-        if ("porcupine".equals(motor) && chave.isEmpty()) {
-            // Escolha explícita sem chave: avisar em vez de cair calado no detector livre.
-            pararPorFalha("o detector Porcupine está selecionado, mas não há AccessKey Picovoice salva. Cole a chave ou mude o detector para “Android (grátis)” em Ajustes ▸ Voz");
-            return;
-        }
-        boolean usarPorcupine = !chave.isEmpty() && !"android".equals(motor);
-        if (usarPorcupine) {
-            if (porcupine == null) {
-                porcupine = new PorcupineManager.Builder()
-                    .setAccessKey(chave)
-                    .setKeyword(Porcupine.BuiltInKeyword.JARVIS)
-                    .setSensitivity(0.55f)
-                    .build(getApplicationContext(), keywordIndex -> {
-                        if (!querEscuta) return;
-                        main.post(() -> disparar("Jarvis"));
-                    });
-            }
-            porcupine.start();
-            detectorAtual = "picovoice-porcupine";
-            escutando = true;
-            estadoNotificacao = testeAtivoInterno()
-                ? "Teste · diga “Jarvis” (" + testeDeteccoes + ")"
-                : "Ouvindo “Jarvis” · Porcupine";
-            notificar();
-            return;
-        }
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            throw new IllegalStateException("AccessKey Picovoice ausente e o reconhecimento de voz do Android não está disponível neste aparelho.");
+            throw new IllegalStateException("o reconhecimento de voz do Android não está disponível neste aparelho.");
         }
-        detectorAtual = "android-sem-chave";
+        // A calibragem é relida no começo de cada sessão: mexer na sensibilidade na tela
+        // passa a valer sem reiniciar o serviço.
+        cfg = JarvisAtivacao.config(JarvisPrefs.sensibilidade(this), JarvisPrefs.variantes(this));
+        detectorAtual = DETECTOR;
         escutando = true;
         estadoNotificacao = testeAtivoInterno()
             ? "Teste · diga “Jarvis” (" + testeDeteccoes + ")"
-            : "Ouvindo “Jarvis” · reconhecimento do Android";
+            : "Ouvindo “Jarvis” · detector próprio";
         notificar();
-        if (!livreSessao && livreProximo == null) agendarSessaoLivre(0);
+        if (!sessao && proximo == null) agendarSessao(0);
     }
 
     private void pausarMotor() {
-        try {
-            if (porcupine != null) porcupine.delete();
-        } catch (Exception ignored) { }
-        porcupine = null;
-        encerrarSessaoLivre(true);
+        encerrarSessao(true);
         escutando = false;
     }
 
@@ -541,132 +482,144 @@ public class JarvisService extends Service {
         }
     }
 
-    /* ---------- Detector livre (sem AccessKey) ---------- */
+    /* ---------- Detector de ativação próprio ----------
+     * O transcritor do Android não conhece "Jarvis": com voz brasileira ele escreve "já vi",
+     * "javis", "jarvi", "charvis" e variações. Aqui cada sessão devolve até cinco hipóteses,
+     * todas são conferidas pelas regras de JarvisAtivacao e o resultado PARCIAL já vale: o
+     * assistente é chamado antes de a frase terminar — é isso que faz a ativação parecer
+     * instantânea em vez de esperar o silêncio. Duas travas evitam sustos: o porteiro de
+     * ruído (som baixo demais para ser voz dirigida ao aparelho) e o mínimo de caracteres
+     * aceito em resultado parcial.
+     */
 
-    // O transcritor do Android não conhece "Jarvis": medido com voz brasileira, ele escreve
-    // "já vi", "javis", "jarvi", "charvis" e variações. Além de tolerar essas formas, a sessão
-    // agora devolve 5 hipóteses e todas são conferidas — a palavra costuma aparecer em uma delas.
-    private static final String RX_WAKE_NATIVO =
-        "(?i)\\b(jarvis|jarvi|jarvys|jarvs|jarves|jarvez|jarvy|jarvi|javis|javy|jervis|jervys|gervis|garvis|garvys|charvis|charves|jarbis|jorfis|sharvis|jar\\s+vis)\\b";
-
-    private static String simplificarTexto(String s) {
-        if (s == null) return "";
-        return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
+    /** Quantas ativações o porteiro de ruído descartou (aparece no diagnóstico). */
+    static int descartesRuido() {
+        JarvisService s = instancia;
+        return s == null ? 0 : s.rejeitadasRuido;
     }
 
-    private ArrayList<String> todosTextosLivre(Bundle results) {
-        ArrayList<String> lista = results == null ? null : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-        return lista == null ? new ArrayList<>() : lista;
+    /** Calibragem em uso, em uma linha legível, para o diagnóstico e o registro. */
+    static String calibragem() {
+        JarvisService s = instancia;
+        return s == null ? '' : s.cfg.descricao();
     }
 
-    private void agendarSessaoLivre(long atrasoMs) {
-        if (livreProximo != null) main.removeCallbacks(livreProximo);
-        livreProximo = () -> {
-            livreProximo = null;
-            iniciarSessaoLivre();
+    private void agendarSessao(long atrasoMs) {
+        if (proximo != null) main.removeCallbacks(proximo);
+        proximo = () -> {
+            proximo = null;
+            iniciarSessao();
         };
-        main.postDelayed(livreProximo, Math.max(0, atrasoMs));
+        main.postDelayed(proximo, Math.max(0, atrasoMs));
     }
 
     private boolean temReconhecimentoLocal() {
         return Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(this);
     }
 
-    private void iniciarSessaoLivre() {
-        if (!querEscuta || livreSessao) return;
+    private ArrayList<String> hipoteses(Bundle results) {
+        ArrayList<String> lista = results == null ? null
+            : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+        return lista == null ? new ArrayList<>() : lista;
+    }
+
+    private void iniciarSessao() {
+        if (!querEscuta || sessao) return;
         if (chamadaAtiva() || (pausarDuranteMusica && musicaAtiva())) return;
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            pararPorFalha("reconhecimento de voz indisponível neste aparelho");
+            pararPorFalha("o reconhecimento de voz do Android não está disponível neste aparelho");
             return;
         }
         final boolean noDispositivo = temReconhecimentoLocal() && !preferirRede;
         try {
-            livreRec = noDispositivo
+            rec = noDispositivo
                 ? SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
                 : SpeechRecognizer.createSpeechRecognizer(this);
         } catch (Exception e) {
             // Muitos aparelhos oferecem o reconhecedor local mas sem o pacote de português.
             if (noDispositivo) {
                 preferirRede = true;
-                agendarSessaoLivre(200);
+                agendarSessao(200);
                 return;
             }
             pararPorFalha(e.getMessage());
             return;
         }
-        livreSessao = true;
-        livreParcial = "";
+        sessao = true;
+        parcial = "";
+        picoDb = -120f;
         final boolean usouLocal = noDispositivo;
-        final SpeechRecognizer rec = livreRec;
-        rec.setRecognitionListener(new RecognitionListener() {
+        final SpeechRecognizer r = rec;
+        r.setRecognitionListener(new RecognitionListener() {
             @Override public void onReadyForSpeech(Bundle params) { }
             @Override public void onBeginningOfSpeech() { }
-            @Override public void onRmsChanged(float rmsdB) { }
+            /** Nível do áudio: alimenta o porteiro de ruído da ativação. */
+            @Override public void onRmsChanged(float rmsdB) { if (rmsdB > picoDb) picoDb = rmsdB; }
             @Override public void onBufferReceived(byte[] buffer) { }
             @Override public void onEndOfSpeech() { }
             @Override public void onEvent(int eventType, Bundle params) { }
 
             @Override public void onPartialResults(Bundle results) {
-                conferirWakeLivreEmLote(results, false);
+                conferirEmLote(results, false);
             }
 
             @Override public void onResults(Bundle results) {
-                if (conferirWakeLivreEmLote(results, true)) return;
-                if (conferirWakeLivre(livreParcial, true)) return;
-                encerrarSessaoLivre(false);
+                if (conferirEmLote(results, true)) return;
+                if (conferirAtivacao(parcial, true)) return;
+                encerrarSessao(false);
                 if (querEscuta) {
-                    livreFalhas = 0;
-                    agendarSessaoLivre(600);
+                    falhas = 0;
+                    agendarSessao(400);
                 }
             }
 
             @Override public void onError(int error) {
-                if (conferirWakeLivre(livreParcial, true)) return;
-                String parcial = livreParcial;
-                encerrarSessaoLivre(false);
+                if (conferirAtivacao(parcial, true)) return;
+                boolean tinhaFala = parcial != null && !parcial.trim().isEmpty();
+                encerrarSessao(false);
                 if (!querEscuta) return;
                 switch (error) {
                     case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
                         pararPorFalha("permissão de microfone negada pelo usuário");
                         return;
                     case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-                        agendarSessaoLivre(1800);
+                        agendarSessao(1500);
                         return;
                     case 12: // ERROR_LANGUAGE_NOT_SUPPORTED
                     case 13: // ERROR_LANGUAGE_UNAVAILABLE (pacote offline ausente)
                     case 14: // ERROR_CANNOT_CHECK_SUPPORT
-                        livreErrosIdioma++;
-                        if (usouLocal && livreErrosIdioma < 3) {
+                        errosIdioma++;
+                        if (usouLocal && errosIdioma < 3) {
                             preferirRede = true;
-                            agendarSessaoLivre(300);
+                            agendarSessao(300);
                             return;
                         }
-                        pararPorFalha("o Android não tem o reconhecimento de português instalado. Baixe o pacote de idioma (Configurações ▸ Google ▸ Voz) ou use uma AccessKey Picovoice");
+                        pararPorFalha("o Android não tem o reconhecimento de português instalado. Baixe o pacote de idioma (Configurações ▸ Google ▸ Voz) ou cadastre palavras extras do seu jeito de falar em Ajustes ▸ Voz");
                         return;
                     case SpeechRecognizer.ERROR_NETWORK:
                     case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
                         if (preferirRede && temReconhecimentoLocal()) preferirRede = false;
-                        livreFalhas++;
-                        if (livreFalhas >= 6) {
-                            pararPorFalha("sem conexão e o reconhecimento local não respondeu. O detector livre precisa de rede quando o aparelho não tem o idioma offline");
+                        falhas++;
+                        if (falhas >= 6) {
+                            pararPorFalha("sem conexão e o reconhecimento local não respondeu. O detector próprio precisa de rede quando o aparelho não tem o idioma offline");
                             return;
                         }
-                        agendarSessaoLivre(Math.min(8000, 600L * livreFalhas));
+                        agendarSessao(Math.min(8000, 600L * falhas));
                         return;
                     case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
                     case SpeechRecognizer.ERROR_NO_MATCH:
-                        livreFalhas = 0;
-                        // Pausa um pouco maior entre sessões: o microfone não fica abrindo e
-                        // fechando a cada 200 ms (o "pisca-pisca" do ícone de microfone).
-                        agendarSessaoLivre(parcial != null && !parcial.trim().isEmpty() ? 500 : 900);
+                        falhas = 0;
+                        // Reinício curto: quanto menos tempo entre sessões, menor a chance de
+                        // o usuário falar exatamente no intervalo em que ninguém está ouvindo.
+                        agendarSessao(tinhaFala ? 350 : 700);
                         return;
                     default:
-                        livreFalhas++;
-                        if (livreFalhas >= 10) {
+                        falhas++;
+                        if (falhas >= 10) {
                             pararPorFalha("o reconhecimento do Android falhou repetidamente (último código " + error + ")");
                             return;
                         }
-                        agendarSessaoLivre(Math.min(4000, 300L * livreFalhas));
+                        agendarSessao(Math.min(4000, 300L * falhas));
                 }
             }
         });
@@ -676,68 +629,77 @@ public class JarvisService extends Service {
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "pt-BR")
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-            // Sessões mais longas, com mais silêncio tolerado: o microfone abre menos vezes
-            // e a palavra dita no meio de uma frase tem mais chance de ser transcrita.
+            // Sessões longas, com mais silêncio tolerado: o microfone abre menos vezes e a
+            // palavra dita no meio de uma frase tem mais chance de ser transcrita.
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 5000L)
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1600L)
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
             .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
         if (usouLocal) intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
-        livreTimeout = () -> {
-            if (!livreSessao) return;
-            if (conferirWakeLivre(livreParcial, true)) return;
-            encerrarSessaoLivre(false);
-            if (querEscuta) agendarSessaoLivre(500);
+        timeout = () -> {
+            if (!sessao) return;
+            if (conferirAtivacao(parcial, true)) return;
+            encerrarSessao(false);
+            if (querEscuta) agendarSessao(400);
         };
-        main.postDelayed(livreTimeout, 15000);
+        main.postDelayed(timeout, 15000);
         try {
-            rec.startListening(intent);
+            r.startListening(intent);
         } catch (Exception e) {
-            encerrarSessaoLivre(false);
+            encerrarSessao(false);
             pararPorFalha(e.getMessage());
         }
     }
 
     /** Confere todas as hipóteses devolvidas pelo Android, não só a primeira. */
-    private boolean conferirWakeLivreEmLote(Bundle results, boolean definitivo) {
+    private boolean conferirEmLote(Bundle results, boolean definitivo) {
         if (!querEscuta) return true;
-        ArrayList<String> lista = todosTextosLivre(results);
-        if (lista.isEmpty()) return conferirWakeLivre(null, definitivo);
+        ArrayList<String> lista = hipoteses(results);
+        if (lista.isEmpty()) return conferirAtivacao(null, definitivo);
         String primeiro = lista.get(0) == null ? "" : lista.get(0).trim();
-        if (primeiro.length() > livreParcial.length()) livreParcial = primeiro;
-        if (!definitivo && primeiro.length() < 6) return false;
+        if (primeiro.length() > parcial.length()) parcial = primeiro;
+        if (!definitivo && primeiro.length() < cfg.minimoParcial) return false;
         for (String hip : lista) {
-            if (conferirWakeLivre(hip, definitivo)) return true;
+            if (conferirAtivacao(hip, definitivo)) return true;
         }
         return false;
     }
 
     /** true quando a palavra foi encontrada (ou quando a ativação já foi encerrada). */
-    private boolean conferirWakeLivre(String texto, boolean definitivo) {
+    private boolean conferirAtivacao(String texto, boolean definitivo) {
         if (!querEscuta) return true;
         if (texto == null || texto.trim().isEmpty()) return false;
-        livreParcial = texto;
-        java.util.regex.Matcher m =
-            java.util.regex.Pattern.compile(RX_WAKE_NATIVO).matcher(simplificarTexto(texto));
-        if (!m.find()) return false;
-        if (!definitivo && texto.trim().length() < 6) return false; // evita gatilho fraco em ruído
+        parcial = texto;
+        if (!definitivo && !cfg.aceitaParcial) return false;
+        if (!JarvisAtivacao.presente(texto, cfg)) return false;
+        if (!definitivo && texto.trim().length() < cfg.minimoParcial) return false;
+        if (picoDb < cfg.ruidoDb) {
+            // Porteiro de ruído: a transcrição veio, mas o microfone mal registrou som —
+            // típico de televisão, conversa ao fundo ou ruído que o reconhecimento tentou
+            // interpretar. Não acorda; conta o descarte para a calibragem ficar visível.
+            rejeitadasRuido++;
+            JarvisPrefs.rejeitadas(this, JarvisPrefs.rejeitadas(this) + 1);
+            encerrarSessao(false);
+            if (querEscuta) agendarSessao(250);
+            return true;
+        }
         String limpo = texto.trim();
         querEscuta = false;
-        encerrarSessaoLivre(true);
+        encerrarSessao(true);
         disparar(limpo);
         return true;
     }
 
-    private void encerrarSessaoLivre(boolean limparParcial) {
-        if (livreTimeout != null) { main.removeCallbacks(livreTimeout); livreTimeout = null; }
-        if (livreProximo != null) { main.removeCallbacks(livreProximo); livreProximo = null; }
-        livreSessao = false;
-        SpeechRecognizer rec = livreRec;
-        livreRec = null;
-        if (rec != null) {
-            try { rec.cancel(); rec.destroy(); } catch (Exception ignored) { }
+    private void encerrarSessao(boolean limparParcial) {
+        if (timeout != null) { main.removeCallbacks(timeout); timeout = null; }
+        if (proximo != null) { main.removeCallbacks(proximo); proximo = null; }
+        sessao = false;
+        SpeechRecognizer r = rec;
+        rec = null;
+        if (r != null) {
+            try { r.cancel(); r.destroy(); } catch (Exception ignored) { }
         }
-        if (limparParcial) livreParcial = "";
+        if (limparParcial) parcial = "";
     }
 
     /* ---------- Notificação ---------- */

@@ -74,7 +74,8 @@ jobs:
           D=android/app/src/main/java/com/jarvis/nova
           mkdir -p "$D"
           find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
-          for f in MainActivity.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java; do
+          # Lista alinhada com o workflow de build: toda classe nativa da raiz é obrigatória.
+          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java; do
             test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
           done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
@@ -129,6 +130,14 @@ jobs:
             “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
+
+            **Novidades da 1.13.0:** o Picovoice saiu do projeto e a palavra de ativação passou a ser
+            um detector próprio (reconhecimento do Android + regras de fonética locais), sem chave e
+            sem SDK de terceiro, com sensibilidade ajustável, tolerância a sotaque e porteiro de ruído;
+            roteador de motores no núcleo Hermes (Groq, Cerebras, Mistral e Gemini) escolhido por tipo de
+            tarefa, latência medida e disponibilidade, com fallback automático; câmera que reconhece
+            objetos e mostra balões informativos sobre a imagem; diagnóstico ampliado (câmera, chaves e
+            motores); e área de mensagens com estado de carregamento e legibilidade.
 
             **Novidades da 1.12.0:** núcleo Hermes Agent decidindo toda resposta, briefing diário
             (temperatura e manchetes) no primeiro “bom dia”, autodiagnóstico por voz com resumo falado

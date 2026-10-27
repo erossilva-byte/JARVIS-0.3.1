@@ -53,6 +53,7 @@
   <button type="button" class="lat-btn ativo" data-lat="central" title="Voltar à tela de comando"><span aria-hidden="true">◎</span>Comando</button>
   <button type="button" class="lat-btn" data-lat="ia" title="Inteligência artificial e chaves"><span aria-hidden="true">◈</span>IA Core</button>
   <button type="button" class="lat-btn" data-lat="voz" title="Voz, microfone e palavra de ativação"><span aria-hidden="true">◉</span>Voz</button>
+  <button type="button" class="lat-btn" data-lat="visao" title="Câmera e reconhecimento de objetos"><span aria-hidden="true">⌖</span>Visão</button>
   <button type="button" class="lat-btn" data-lat="tarefas" title="Lista de tarefas"><span aria-hidden="true">▤</span>Tarefas</button>
   <button type="button" class="lat-btn" data-lat="rotinas" title="Rotinas automáticas"><span aria-hidden="true">⚡</span>Rotinas</button>
   <button type="button" class="lat-btn" data-lat="celular" title="Status do celular"><span aria-hidden="true">▰</span>Celular</button>
@@ -93,7 +94,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.12.0</span>
+      <span class="orb-sub" aria-hidden="true">v1.13.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -137,6 +138,7 @@
         <button type="button" class="cmd" data-cmd="qual a versão">Versão</button>
         <button type="button" class="cmd" data-cmd="verificar atualização">Atualizar</button>
         <button type="button" class="cmd" data-cmd="verificar o sistema">Diagnóstico</button>
+        <button type="button" class="cmd" data-cmd="o que você está vendo">Visão</button>
       </div>
     </div>
   </section>
@@ -166,7 +168,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.12.0</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.13.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -180,7 +182,7 @@
   </nav>
 
   <section class="grupo" data-category="ia" role="tabpanel">
-    <div class="config-intro"><div><span class="eyebrow">CONFIGURAÇÃO RÁPIDA</span><h3>Personalize seu J.A.R.V.I.S.</h3><p>Chaves, estilo de conversa e humor ficam aqui. Microfone e palavra de ativação ficam em Voz.</p></div><button type="button" class="secundario" data-abrir-voz>Configurar voz e Picovoice</button></div>
+    <div class="config-intro"><div><span class="eyebrow">CONFIGURAÇÃO RÁPIDA</span><h3>Personalize seu J.A.R.V.I.S.</h3><p>Chaves, estilo de conversa e humor ficam aqui. Microfone e palavra de ativação ficam em Voz.</p></div><button type="button" class="secundario" data-abrir-voz>Configurar voz e ativação</button></div>
     <h3>Provedores de inteligência artificial</h3>
     <p class="dica">As chaves são usadas diretamente pelo aparelho para conectar aos provedores. No Android, são cifradas com Android Keystore; no aplicativo desktop Electron, usamos o cofre criptográfico do sistema. No navegador comum, não há cofre nativo integrado: evite salvar chaves nesse modo.</p>
     <div class="chave"><label>1. Groq — principal<input id="c-key" type="password" autocomplete="off" placeholder="cole sua chave aqui"></label><button type="button" class="mini" id="c-apagar-groq">apagar</button></div><p class="dica links-chaves"><a href="https://console.groq.com/keys" target="_blank" rel="noreferrer">Criar chave Groq</a> · opção com cota gratuita sujeita aos limites do provedor.</p>
@@ -213,7 +215,7 @@
     <label>Velocidade da fala <output id="c-rate-valor">1,00×</output><input id="c-rate" type="range" min="0.7" max="1.4" step="0.05" value="1"></label>
     <div class="botoes"><button id="c-voz-grave" type="button" class="secundario">Mais grave</button><button id="c-voz-rapida" type="button" class="secundario">Mais rápida</button></div>
     <button id="c-testar" type="button" class="secundario">Testar voz</button>
-    <div class="info-card neural-card"><span class="info-icon">◈</span><div><div class="neural-cabecalho"><div><span class="eyebrow">VOZ NEURAL OFFLINE</span><b>Vozes no próprio aparelho (sherpa-onnx)</b></div><span class="status-pill" id="c-neural-status">verificando</span></div><p>Baixe uma voz uma única vez e o J.A.R.V.I.S. passa a sintetizar no próprio aparelho, sem internet e sem chave de API. Os modelos não vêm dentro do APK (somaríamos centenas de MB): cada voz é baixada para o armazenamento privado do app e pode ser apagada quando quiser.</p><div id="c-neural-lista" class="neural-lista" aria-live="polite">Consultando o motor de voz do aparelho…</div></div></div><label>Voz neural de resposta<select id="c-neural-voz"><option value="">Desligada — usar a voz do Android</option></select></label><label id="c-neural-falante-row" hidden>Timbre<select id="c-neural-falante"></select></label><label>Profundidade da voz neural <output id="c-neural-tom-valor">0,90</output><input id="c-neural-tom" type="range" min="0.7" max="1.1" step="0.01" value="0.9"></label><p class="dica">Abaixo de 1,00 a fala fica mais grave e mais lenta, como no filme; acima de 1,00, mais aguda e mais rápida.</p><div class="botoes"><button id="c-neural-testar" type="button">Testar voz neural</button><button id="c-neural-parar" type="button" class="secundario">Parar</button><button id="c-neural-liberar" type="button" class="secundario perigo">Liberar memória</button></div><p id="c-neural-msg" class="dica" role="status" aria-live="polite">Nenhuma voz neural baixada: o J.A.R.V.I.S. usa a voz instalada no Android.</p><p class="dica">O detector de palavra-chave do sherpa-onnx continua fora: o único modelo público de palavra-chave é em inglês e erraria “Jarvis” em português. Para ativar por voz, o app segue com o detector do Android ou com o Porcupine.</p>
+    <div class="info-card neural-card"><span class="info-icon">◈</span><div><div class="neural-cabecalho"><div><span class="eyebrow">VOZ NEURAL OFFLINE</span><b>Vozes no próprio aparelho (sherpa-onnx)</b></div><span class="status-pill" id="c-neural-status">verificando</span></div><p>Baixe uma voz uma única vez e o J.A.R.V.I.S. passa a sintetizar no próprio aparelho, sem internet e sem chave de API. Os modelos não vêm dentro do APK (somaríamos centenas de MB): cada voz é baixada para o armazenamento privado do app e pode ser apagada quando quiser.</p><div id="c-neural-lista" class="neural-lista" aria-live="polite">Consultando o motor de voz do aparelho…</div></div></div><label>Voz neural de resposta<select id="c-neural-voz"><option value="">Desligada — usar a voz do Android</option></select></label><label id="c-neural-falante-row" hidden>Timbre<select id="c-neural-falante"></select></label><label>Profundidade da voz neural <output id="c-neural-tom-valor">0,90</output><input id="c-neural-tom" type="range" min="0.7" max="1.1" step="0.01" value="0.9"></label><p class="dica">Abaixo de 1,00 a fala fica mais grave e mais lenta, como no filme; acima de 1,00, mais aguda e mais rápida.</p><div class="botoes"><button id="c-neural-testar" type="button">Testar voz neural</button><button id="c-neural-parar" type="button" class="secundario">Parar</button><button id="c-neural-liberar" type="button" class="secundario perigo">Liberar memória</button></div><p id="c-neural-msg" class="dica" role="status" aria-live="polite">Nenhuma voz neural baixada: o J.A.R.V.I.S. usa a voz instalada no Android.</p><p class="dica">O detector de palavra-chave do sherpa-onnx continua fora: o único modelo público de palavra-chave é em inglês e erraria “Jarvis” em português. Para ativar por voz, o app usa o detector próprio (reconhecimento do Android + regras de fonética locais).</p>
     <div class="info-card"><span class="info-icon">◈</span><div><b>Voz mais parecida com o JARVIS do filme</b><p>O timbre depende das vozes instaladas no Android — o app não inventa um timbre que o motor não tenha. Para uma voz masculina brasileira, grave e offline, instale um motor de voz Piper/SherpaTTS e adicione a voz <code>pt_BR-faber</code> ou <code>pt_BR-cadu</code>: o J.A.R.V.I.S. passa a oferecê-la sozinho em “Voz de resposta” e você só escolhe o perfil “Jarvis completo”. Em inglês britânico, a voz <code>bm_george</code> do Kokoro é a mais próxima do tom do filme. Todas falam no aparelho, sem internet.</p><div class="botoes"><a class="secundario link-botao" href="https://f-droid.org/en/packages/org.woheller69.ttsengine/" target="_blank" rel="noreferrer">Instalar motor de voz offline</a></div></div></div>
     <p class="dica">O tom e a velocidade dependem da voz instalada no Android ou no sistema do computador. Algumas vozes podem ignorar parte dos ajustes.</p>
     <label>Sensibilidade do microfone <output id="c-sensibilidade-valor">100%</output><input id="c-sensibilidade" type="range" min="0.7" max="1.6" step="0.1" value="1"></label>
@@ -234,12 +236,19 @@
     <p id="c-offline-status" class="dica" role="status" aria-live="polite">Modo online: a IA pode usar a API selecionada.</p>
     <div class="divider-small"></div>
     <h3>Ativação por voz</h3>
-    <p class="dica">A escuta roda dentro do serviço em primeiro plano (a notificação “J.A.R.V.I.S. Nova ativo” fica na barra de status), então continua valendo com o app fechado ou outra tela aberta. Sem chave nenhuma, o detector livre usa o reconhecimento do Android em sessões curtas, aproveitando o modo offline quando o pacote de português está instalado. Com AccessKey Picovoice, uso o Porcupine, que gasta bem menos bateria. A escuta fica desligada por padrão e a transcrição completa só começa depois de “Jarvis”.</p>
+    <p class="dica">A escuta roda dentro do serviço em primeiro plano (a notificação “J.A.R.V.I.S. Nova ativo” fica na barra de status), então continua valendo com o app fechado ou outra tela aberta. O detector é <b>próprio</b>: o reconhecimento do Android transcreve e as regras de fonética do núcleo decidem no aparelho — sem chave de terceiro, sem SDK de palavra de ativação e sem áudio saindo daqui. Ele confere todas as hipóteses da transcrição e aceita resultado parcial, então responde antes de a frase terminar. A escuta fica desligada por padrão e o comando completo só começa depois de “Jarvis”.</p>
     <p class="dica">Enquanto a escuta estiver ligada, o microfone fica em uso e o indicador verde do Android aparece; por isso pauso o detector automaticamente durante chamadas e, se você marcar abaixo, também em música e vídeos. Se outro app reclamar de microfone ocupado, desligue a escuta no botão do topo.</p>
-    <label>Motor da palavra de ativação<select id="c-wake-motor"><option value="auto">Automático (Porcupine se houver AccessKey, senão Android)</option><option value="android">Android (grátis, sem chave)</option><option value="porcupine">Porcupine (AccessKey Picovoice)</option></select></label>
-    <p id="c-wake-motor-status" class="dica" role="status" aria-live="polite">O detector do Android usa o reconhecimento de voz do sistema em sessões curtas e entende “Jarvis” falado em português, inclusive com o pacote de idioma offline. Se a troca de motor não for aplicada na hora, desligue e ligue a escuta.</p>
-    <label class="linha" id="c-wake-row"><input id="c-wake" type="checkbox"><span>Ativar palavra de ativação “Jarvis”<small>Detector: Porcupine quando há AccessKey; senão, o reconhecimento de voz do Android. Funciona mesmo com outro app em primeiro plano, sujeito às restrições de microfone em segundo plano de cada fabricante.</small></span></label>
-    <div class="picovoice-card"><div class="picovoice-heading"><div><span class="eyebrow">PALAVRA DE ATIVAÇÃO</span><h3>Picovoice Porcupine</h3></div><span class="status-pill">Porcupine integrado</span></div><p class="dica">Opcional: cole uma AccessKey para usar o detector dedicado Porcupine (palavra “Jarvis” integrada), que consome menos bateria que o detector livre. Sem chave eu continuo escutando pelo reconhecimento do Android. A validação inicial da chave pode exigir internet; depois disso a detecção é local.</p><label>AccessKey Picovoice<input id="c-key-picovoice" type="password" autocomplete="off" placeholder="cole sua AccessKey aqui"></label><div class="botoes"><button id="c-apagar-picovoice" type="button" class="secundario">Apagar chave</button><a class="secundario link-botao" href="https://console.picovoice.ai/" target="_blank" rel="noreferrer">Criar AccessKey</a></div><p id="c-picovoice-status" class="dica" role="status" aria-live="polite">Sem AccessKey: detector livre do Android ativo quando você ligar a escuta.</p><p class="dica">Como colocar: abra o link oficial, crie uma conta, copie a AccessKey completa e cole no campo acima. A chave é salva quando você sai do campo; o botão “Salvar ajustes” não é necessário para ela. Não envie a chave em mensagens ou prints.</p></div>
+    <label class="linha" id="c-wake-row"><input id="c-wake" type="checkbox"><span>Ativar palavra de ativação “Jarvis”<small>Detector próprio: reconhecimento de voz do Android conferido por regras de fonética no aparelho. Funciona mesmo com outro app em primeiro plano, sujeito às restrições de microfone em segundo plano de cada fabricante.</small></span></label>
+    <div class="ativacao-card"><div class="ativacao-cabecalho"><div><span class="eyebrow">PALAVRA DE ATIVAÇÃO</span><h3>Detector próprio</h3></div><span class="status-pill">sem chave · 100% local</span></div>
+      <p class="dica">Nenhum serviço de terceiro, nenhuma AccessKey, nenhum áudio enviado para fora. O reconhecimento do Android transcreve em sessões curtas e o detector confere cada hipótese com três degraus: variantes conhecidas (“javis”, “charvis”, “garvis”…), distância de edição pequena (tolerância a sotaque) e comparação pelo esqueleto consonantal. O resultado parcial já vale, então a ativação responde antes de a frase terminar.</p>
+      <label>Sensibilidade da ativação <output id="c-wake-sensibilidade-valor">55%</output><input id="c-wake-sensibilidade" type="range" min="0" max="100" step="5" value="55"></label>
+      <p class="dica">Mais alto aceita a palavra dita mais torta, responde em resultado parcial e tolera mais ruído. Mais baixo exige a palavra quase perfeita e já com a fala terminada — melhor em ambiente barulhento ou com televisão ligada.</p>
+      <label>Palavras extras que também me acordam<input id="c-wake-variantes" type="text" autocomplete="off" placeholder="ex.: nova, jarvi, jarbas (separadas por vírgula)"></label>
+      <p class="dica">Use para o seu jeito de falar ou para um apelido. Cada palavra extra vale como forma exata; o resto da tolerância continua valendo para “Jarvis”.</p>
+      <p id="c-wake-calibragem" class="dica" role="status" aria-live="polite">sensibilidade 55%</p>
+      <p id="c-wake-variantes-lista" class="dica"></p>
+    </div>
+    <p class="dica">Mudar a sensibilidade vale na hora: se a escuta estiver ligada, o detector sobe de novo já calibrado. O porteiro de ruído também entra em ação — transcrição que aparece com o som baixo demais (televisão ao fundo, conversa de outra sala) é descartada em vez de acordar o assistente, e o diagnóstico mostra quantas foram descartadas.</p>
     <label class="linha" id="c-wake-musica-row"><input id="c-wake-pausa-musica" type="checkbox" checked><span>Pausar detector durante música e vídeos<small>Reduz conflito de áudio, mas você precisará pausar a mídia ou usar o botão de microfone para chamar o Jarvis durante a reprodução.</small></span></label>
     <label class="linha" id="c-pararvoz-row"><input id="c-pararvoz" type="checkbox"><span>Permitir “Jarvis, para”<small>Experimental, no Android.</small></span></label>
     <label class="linha" id="c-anunciar-chamadas-row"><input id="c-anunciar-chamadas" type="checkbox"><span>Anunciar chamadas recebidas<small>Opcional. Exige acesso às notificações e só anuncia quando o Android identifica uma notificação de chamada.</small></span></label>
@@ -384,6 +393,27 @@
   <div class="painel-topo"><h2>Registro de ações</h2></div>
   <div id="log-lista"></div>
   <div class="botoes barra"><button id="l-limpar" type="button">Limpar</button><button id="l-fechar" type="button" class="primario">Fechar</button></div>
+</aside>
+
+<aside id="painel-visao" class="painel painel-visao" hidden aria-label="Visão do J.A.R.V.I.S. Nova: câmera e reconhecimento de objetos">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · VISÃO</p><h2>Câmera e objetos</h2></div><span class="versao-chip">a imagem só sai quando você analisa</span></div>
+  <section class="grupo">
+    <div class="visao-palco">
+      <video id="visao-video" playsinline muted autoplay></video>
+      <canvas id="visao-canvas" hidden></canvas>
+      <div id="visao-baloes" class="visao-baloes"></div>
+      <p id="visao-status" class="visao-status" role="status" aria-live="polite">Abrindo a câmera…</p>
+    </div>
+    <div class="botoes">
+      <button id="visao-botao-analisar" type="button" class="primario">Analisar o que estou vendo</button>
+      <button id="visao-botao-nova" type="button" class="secundario">Nova análise</button>
+      <button id="visao-abrir-ajustes" type="button" class="secundario">Chaves de IA</button>
+    </div>
+    <div id="visao-detalhe" class="visao-detalhe" hidden></div>
+    <div id="visao-lista" class="visao-lista" aria-live="polite"></div>
+    <p class="dica">Um único quadro é enviado ao provedor que reconhece imagens — escolhido pelo roteador entre os que têm chave (Gemini, Groq ou Mistral). Nada de vídeo contínuo e nada em segundo plano: fechar este painel desliga a câmera. Cada objeto reconhecido ganha um balão sobre a imagem; toque no balão para ouvir o detalhe. Por voz: “Jarvis, o que você está vendo?” ou “Jarvis, analise isso”.</p>
+  </section>
+  <div class="botoes barra"><button id="visao-fechar" type="button">Fechar</button></div>
 </aside>
 
 <div id="modal" hidden>

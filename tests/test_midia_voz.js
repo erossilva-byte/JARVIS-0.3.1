@@ -149,11 +149,11 @@ async function comando(texto) {
   chk('plugin usa a sessão de mídia do Android', /getActiveSessions\(/.test(util) && /MediaSessionManager/.test(util));
   chk('plugin expõe tocarNoSpotify e midiaAtual', /public void tocarNoSpotify/.test(util) && /public void midiaAtual/.test(util));
   chk('plugin cai para teclas de mídia quando não há sessão', /enviarTeclaMidia\(/.test(util) && /KEYCODE_MEDIA_NEXT/.test(util));
-  chk('serviço respeita o motor escolhido', /JarvisPrefs\.motor\(/.test(servico) && /"\s*porcupine\s*"\.equals\(motor\)/.test(servico.replace(/\s+/g, ' ')));
-  chk('preferência do motor é persistida e validada', /static String motor\(Context c\)/.test(prefs) && /static void motor\(Context c, String v\)/.test(prefs));
-  chk('plugin aceita motor no startWake', /getString\("motor"/.test(plugin));
-  chk('interface tem seletor de motor, perfil e sinal', /id="c-wake-motor"/.test(html) && /id="c-voz-perfil"/.test(html) && /id="c-voz-chime"/.test(html));
-  chk('interface envia o motor escolhido ao serviço', /motor: store\.get\('wake_motor'/.test(app));
+  chk('serviço lê a calibragem do detector próprio', /JarvisPrefs\.sensibilidade\(/.test(servico) && /JarvisPrefs\.variantes\(/.test(servico));
+  chk('calibragem é persistida e limitada', /static int sensibilidade\(Context c\)/.test(prefs) && /static String variantes\(Context c\)/.test(prefs));
+  chk('plugin aceita a calibragem no startWake', /getInt\("sensibilidade"/.test(plugin) && /getString\("variantes"/.test(plugin));
+  chk('interface tem calibragem, perfil e sinal', /id="c-wake-sensibilidade"/.test(html) && /id="c-voz-perfil"/.test(html) && /id="c-voz-chime"/.test(html));
+  chk('interface envia a calibragem ao serviço', /wakeCalibragem\(\)/.test(app) && /startWake\(Object\.assign/.test(app));
 
   const falhas = ok.filter(([, v]) => !v);
   ok.forEach(([nome, v]) => console.log((v ? 'OK: ' : 'FALHOU: ') + nome));

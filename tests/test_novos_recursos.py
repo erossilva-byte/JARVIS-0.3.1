@@ -17,16 +17,16 @@ release = (ROOT / ".github/workflows/release-apk.yml").read_text(encoding="utf-8
 
 checks = {
     # ---- Palavra de ativação sem Picovoice ----
-    "Detector livre completo no serviço": all(t in servico for t in (
-        "iniciarSessaoLivre", "agendarSessaoLivre", "RX_WAKE_NATIVO")),
+    "Detector próprio completo no serviço": all(t in servico for t in (
+        "iniciarSessao", "agendarSessao", "JarvisAtivacao.presente")),
     "Plugin apenas delega a escuta ao serviço": "JarvisService.iniciarEscuta" in fundo and "JarvisWakeBus.registrar" in fundo,
-    "Porcupine continua sendo o detector preferido": (
-        "Porcupine.BuiltInKeyword.JARVIS" in servico and "setAccessKey(chave)" in servico),
+    "Nenhum SDK de palavra de ativação de terceiro": (
+        "picovoice" not in servico.lower() and "porcupine" not in servico.lower()),
     "Sem dependência openWakeWord": "OpenWakeWord" not in fundo and "OpenWakeWord" not in servico,
-    "Backoff do detector livre (bateria)": "livreFalhas" in servico and "Math.min(8000" in servico,
+    "Backoff do detector próprio (bateria)": "falhas++" in servico and "Math.min(8000" in servico,
     "Detector usa reconhecimento no dispositivo quando existe": "createOnDeviceSpeechRecognizer" in servico,
-    "Interface não exige mais AccessKey para escutar": (
-        "Detector de ativação ligado" in app and "indisponível sem AccessKey Picovoice" not in app),
+    "Interface não exige chave de terceiro para escutar": (
+        "Detector de ativação ligado" in app and "AccessKey" not in app and "wakeCalibragem" in app),
     "Evento de ativação continua conectado": "pj.addListener('wake'" in app,
     # ---- Reconhecimento do usuário pela voz ----
     "Perfil de voz verificado na ativação": (

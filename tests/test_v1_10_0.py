@@ -56,10 +56,10 @@ checagens = {
         and "com opinião própria" in prompt),
 
     # 3. Palavra de ativação intacta (a personalidade não mexe nela)
-    "Detector de ativação segue com Porcupine e Android": (
-        "porcupine" in app.lower()
-        and "startWake(" in app
-        and "JarvisPrefs.motor" in (raiz / "JarvisService.java").read_text(encoding="utf-8")),
+    "Detector de ativação é o próprio (reconhecimento + fonética local)": (
+        "JarvisAtivacao.presente" in (raiz / "JarvisService.java").read_text(encoding="utf-8")
+        and "Hermes.ativacao.casaToken" in app
+        and "startWake(" in app),
 
     # 4. Verificação de voz, falada e uma vez por sessão
     # 1.12.0: na ativação a fala continua igual; o indicador usa "avisar", que na abertura

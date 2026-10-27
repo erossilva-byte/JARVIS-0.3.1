@@ -7,6 +7,7 @@ import pathlib
 
 raiz = pathlib.Path(__file__).resolve().parent.parent
 servico = (raiz / "JarvisService.java").read_text(encoding="utf-8")
+ativacao = (raiz / "JarvisAtivacao.java").read_text(encoding="utf-8")
 plugin = (raiz / "JarvisBackgroundPlugin.java").read_text(encoding="utf-8")
 historico = (raiz / "CHANGELOG.md").read_text(encoding="utf-8")
 app = (raiz / "app.js").read_text(encoding="utf-8")
@@ -15,11 +16,14 @@ versao = json.loads((raiz / "VERSAO.json").read_text(encoding="utf-8"))
 pacote = json.loads((raiz / "package.json").read_text(encoding="utf-8"))
 
 checagens = {
+    # Na 1.13.0 as regras saíram do serviço e viraram uma classe própria (JarvisAtivacao),
+    # chamada a cada hipótese devolvida pelo reconhecimento do Android.
     "Detector confere todas as hipóteses do Android": (
-        "conferirWakeLivreEmLote" in servico
+        "conferirEmLote(results, false)" in servico
+        and "JarvisAtivacao.presente(texto, cfg)" in servico
         and "EXTRA_MAX_RESULTS, 5" in servico),
     "Aceita as formas que o transcritor realmente devolve": all(
-        forma in servico for forma in ("javis", "jarvy", "charves", "jarvis")),
+        forma in ativacao for forma in ("javis", "jarvy", "charves", "jarvis")),
     "Sessões mais longas reduzem abertura/fechamento do microfone": all(
         extra in servico for extra in (
             "EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS",

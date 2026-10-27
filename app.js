@@ -12,7 +12,7 @@ const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.12.0';
+const VERSAO_APP = '1.13.0';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -30,9 +30,9 @@ const PERSONALIDADE = {
   // Inteligência de conversa: como ele pensa e responde.
   conversa: 'Converse como uma pessoa muito competente e bem-humorada: acompanhe o fio da conversa, retome o que já foi dito, explique causa e efeito e entregue o próximo passo concreto. Se o pedido for ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar.',
   // Humor: a intensidade vem do controle de humor; aqui fica o caráter do humor.
-  humor: 'O humor é sutil e seco, de quem comenta a situação com elegância: ironia fina, nunca deboche, nunca piada em série. Em saúde, segurança, sofrimento, conflitos ou assuntos urgentes, suspenda o humor e seja direto e respeitoso.',
+  humor: 'Seu humor é sarcasmo seco, irônico e levemente debochado, sempre educado no fundo: uma observação afiada, elegante e curta, e o assunto volta. Nunca rude, nunca ofensivo, nunca humilhante. Você não debocha do usuário, de terceiros, de aparência, de religião, de política, de doença nem de tragédia, e nunca repete o mesmo comentário espirituoso na mesma conversa. Em saúde, segurança, sofrimento, emergência, conflito, dinheiro perdido ou qualquer assunto urgente, o humor desaparece por completo: resposta direta, respeitosa e útil primeiro. Humor nunca atrasa a informação nem é a resposta inteira.',
   // O que ele nunca faz.
-  limites: 'Nunca finja ter executado algo, nem alegue acesso ao aparelho que as ferramentas não oferecem. Ao errar, reconheça em uma frase e ofereça a correção.'
+  limites: 'Nunca finja ter executado algo, nem alegue acesso ao aparelho que as ferramentas não oferecem. Nunca faça piada de uma pessoa específica nem use o humor para esconder um erro. Ao errar, reconheça em uma frase, sem drama, e ofereça a correção.'
 };
  // espelho da VERSAO.json; no Android a versão instalada é lida do PackageManager.
 const MODELOS_RESERVA = ['openai/gpt-oss-20b', 'openai/gpt-oss-120b'];
@@ -83,13 +83,23 @@ const PROVEDORES = [
   { id: 'gemini', nome: 'Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai', modelos: ['gemini-2.5-flash', 'gemini-flash-latest'] }
 ];
 const pausas = {};   // id do provedor -> instante (ms) até quando ele fica em pausa
+// Falhas recentes por provedor: entram na nota do roteador do núcleo e zeram quando ele volta a responder.
+const errosIA = {};
 let provAtivo = '', avisoIA = '';
 const provedoresComChave = () => PROVEDORES.filter((p) => CHAVES[p.id]);
+// Modelos com preferência do roteador: tarefa de raciocínio pede o modelo mais forte do
+// provedor e tarefa de visão pede o modelo que enxerga; o preferido vai na frente.
+let modelosPreferidos = {};
 function modelosDe(p) {
-  if (p.id !== 'groq') return p.modelos;
-  const m = store.get('modelo', MODELO_PADRAO) || MODELO_PADRAO;
-  return [m, ...MODELOS_RESERVA.filter((x) => x !== m)];
+  const base = p.id !== 'groq'
+    ? (p.modelos || [])
+    : (() => { const m = store.get('modelo', MODELO_PADRAO) || MODELO_PADRAO; return [m, ...MODELOS_RESERVA.filter((x) => x !== m)]; })();
+  const pref = modelosPreferidos[p.id];
+  return pref && base.indexOf(pref) < 0 ? [pref, ...base] : base;
 }
+// Tempo máximo de cada pedido à IA, definido pelo tipo da tarefa (quem manda é o roteador):
+// pergunta curta não espera 25 s por um provedor lento — passa para o próximo.
+let timeoutIA = 25000;
 
 /* ---------- Texto: utilitários ---------- */
 // Tira acentos sem mudar o tamanho do texto (os índices continuam valendo no original).
@@ -98,8 +108,6 @@ const norm = (s) => semAcento(s).toLowerCase().replace(/[^a-z0-9: ]+/g, ' ').rep
 
 /* ---------- Chaves da API (cifradas no Android) ---------- */
 const CHAVES = { groq: '', cerebras: '', mistral: '', gemini: '' };
-let CHAVE_PICOVOICE = '';
-const NOME_CHAVE_PICOVOICE = 'picovoice';
 const nomeLS = (n) => (n === 'groq' ? 'key' : 'key_' + n);
 const SEG = () => plug('JarvisUtil');
 const LOCAL_AI = () => plug('JarvisLocalAI');
@@ -107,12 +115,12 @@ const limparChave = (v) => String(v || '').trim().replace(/^["']+|["']+$/g, '').
 // Troca qualquer chave que apareça num texto por pontinhos (erros, registro, tela).
 function mascarar(t) {
   let s = String(t);
-  for (const k of [...Object.values(CHAVES), CHAVE_PICOVOICE]) if (k && k.length > 8) s = s.split(k).join('••••');
+  for (const k of Object.values(CHAVES)) if (k && k.length > 8) s = s.split(k).join('••••');
   return s.replace(/\b(gsk_|csk-|sk-|AIza)[A-Za-z0-9_-]{8,}/g, '••••');
 }
 async function carregarChaves() {
   const s = SEG();
-  for (const n of [...Object.keys(CHAVES), NOME_CHAVE_PICOVOICE]) {
+  for (const n of Object.keys(CHAVES)) {
     let v = '';
     if (s) { try { v = limparChave((await s.lerSeguro({ nome: n })).valor); } catch (e) { v = ''; } }
     else if (plataforma === 'desktop') { try { v = limparChave((await nativo('ler_chave_segura', { nome: n })).valor); } catch (e) { v = ''; } }
@@ -150,7 +158,7 @@ async function carregarChaves() {
         v = '';
       }
     }
-    if (n === NOME_CHAVE_PICOVOICE) CHAVE_PICOVOICE = v; else CHAVES[n] = v;
+    CHAVES[n] = v;
   }
 }
 async function gravarChave(n, v) {
@@ -166,7 +174,7 @@ async function gravarChave(n, v) {
   } else {
     throw new Error('Para proteger suas chaves, cadastre-as no aplicativo Android ou desktop. O navegador comum não possui cofre criptográfico integrado.');
   }
-  if (n === NOME_CHAVE_PICOVOICE) CHAVE_PICOVOICE = v; else CHAVES[n] = v;
+  CHAVES[n] = v;
 }
 const chavesProntas = carregarChaves();
 const NUCLEO = document.querySelector('.nucleo');
@@ -187,7 +195,7 @@ const cortes = new Set(); // esperas de voz que o botão Parar precisa encerrar 
 const ROTULOS = { idle: 'em espera', listening: 'ouvindo', thinking: 'pensando', speaking: 'falando' };
 function setEstado(e) {
   document.body.dataset.state = e;
-  const txt = (e === 'idle' && wakeAtivo) ? 'aguardando “Jarvis” · detector ' + (CHAVE_PICOVOICE ? 'Porcupine' : 'do Android') : ROTULOS[e];
+  const txt = (e === 'idle' && wakeAtivo) ? 'aguardando “Jarvis” · detector próprio' : ROTULOS[e];
   $('#estado-txt').textContent = txt;
   $('#chip-estado').textContent = txt;
   if (e !== 'listening' && e !== 'speaking') setNivel(0);
@@ -263,6 +271,36 @@ function msg(tipo, texto, links) {
   chat.appendChild(d);
   while (chat.children && chat.children.length > 80 && chat.firstChild) chat.removeChild(chat.firstChild);
   if (perto) chat.scrollTop = chat.scrollHeight || 1e9;
+}
+/* ---------- Área de mensagens: estado de carregamento e rolagem ---------- */
+// O balão de “formulando” é o estado explícito de carregamento da conversa: três pontos
+// animados, anunciados por leitor de tela, e removidos na primeira fala. Sem ele a conversa
+// ficava parada entre a pergunta e a resposta, sem distinção entre esperar e falhar.
+let msgCarregando = null;
+function msgPensando(rotulo) {
+  removerPensando();
+  const chat = $('#chat');
+  if (!chat) return null;
+  const d = document.createElement('div');
+  d.className = 'msg jv pensando';
+  d.setAttribute('role', 'status');
+  d.setAttribute('aria-live', 'polite');
+  const t = document.createElement('span');
+  t.className = 'pensando-texto';
+  t.textContent = rotulo || 'formulando';
+  const p = document.createElement('span');
+  p.className = 'pensando-pontos';
+  p.setAttribute('aria-hidden', 'true');
+  d.append(t, p);
+  chat.appendChild(d);
+  if ((chat.scrollHeight - chat.scrollTop - chat.clientHeight) < 200) chat.scrollTop = chat.scrollHeight;
+  msgCarregando = d;
+  return d;
+}
+function removerPensando() {
+  if (!msgCarregando) return;
+  try { msgCarregando.remove(); } catch (e) { /* já saiu da tela */ }
+  msgCarregando = null;
 }
 function registrar(tipo, detalhe) {
   const l = JSON.parse(store.get('log', '[]'));
@@ -1834,6 +1872,20 @@ const FRASES = {
   nucleoFecho: {
     seco: [''],
     comHumor: ['Continuo preferindo decidir aqui dentro a pedir opinião à nuvem.']
+  },
+  visaoSemObjeto: {
+    seco: ['Não identifiquei objetos nesta imagem, {t}. Aproxime mais e confira a luz.'],
+    comHumor: [
+      'A imagem não me disse nada, {t}. Pode ser o ângulo, a luz ou o objeto em greve contra a minha precisão.',
+      'Nada reconhecível por aqui, {t}. Nem a Inteligência Artificial escapa de uma foto mal tirada.'
+    ]
+  },
+  roteadorTroca: {
+    seco: ['Troquei para {motor}, {t}.'],
+    comHumor: [
+      '{motor} entrou em cena, {t} — o anterior resolveu descansar e eu não insisto com quem não responde.',
+      'Seguindo com {motor}, {t}. Fidelidade a um provedor lento eu deixo para quem tem tempo.'
+    ]
   }
 };
 const rotacaoFrases = {};
@@ -1893,7 +1945,7 @@ function corpoChat(modelo, e, stream) {
 async function postChat(p, key, modelo, e) {
   if (store.get('offline', '0') === '1') throw new Error('Modo offline ativo: chamada à IA bloqueada.');
   const ac = new AbortController();
-  const lim = setTimeout(() => ac.abort(), 25000);
+  const lim = setTimeout(() => ac.abort(), Math.max(8000, Math.min(40000, timeoutIA)));
   const sinal = ctrlRede.signal;               // o botão Parar cancela o pedido em andamento
   const corta = () => ac.abort();
   sinal.addEventListener('abort', corta);
@@ -2086,19 +2138,43 @@ async function chamar(conteudo, ocultarNoHistorico, aoFalar) {
   adicionarHist({ role: 'user', content: conteudo });
   const idx = hist.length - 1;
   const agora = Date.now();
-  const livres = lista.filter((p) => (pausas[p.id] || 0) <= agora);
-  const fila = [...livres, ...lista.filter((p) => !livres.includes(p))]; // os em pausa ficam por último
+  // Quem escolhe o motor é o roteador do núcleo Hermes: tipo da tarefa, latência medida no
+  // próprio aparelho, qualidade esperada e histórico de falhas. A ordem devolvida é a fila
+  // de tentativas — o segundo da fila já é o fallback automático de erro, cota ou tempo.
+  const emPausa = lista.filter((p) => (pausas[p.id] || 0) > agora).map((p) => p.id);
+  const planoIA = Hermes.planejarIA({
+    texto: conteudo,
+    provedores: lista.map((p) => p.id),
+    latencias: Hermes.metricas().latencias,
+    erros: errosIA,
+    indisponiveis: emPausa
+  });
+  modelosPreferidos = planoIA.modelo || {};
+  timeoutIA = planoIA.timeoutMs || 25000;
+  Hermes.anotarEscolha(planoIA.motivo, planoIA.tarefa);
+  registrar('ia', 'roteador · ' + planoIA.motivo);
+  const porId = {};
+  lista.forEach((p) => { porId[p.id] = p; });
+  const fila = planoIA.ordem.map((id) => porId[id]).filter(Boolean);
+  lista.forEach((p) => { if (fila.indexOf(p) < 0) fila.push(p); }); // segurança: nenhum provedor fica de fora
   const falhas = [];
   let ok = null;
   for (const p of fila) {
     if (store.get('offline', '0') === '1') { removerUltimoHist(); throw new Error('A conexão caiu; o modo offline está ativo. Posso executar comandos locais compatíveis.'); }
     if (abortar) { removerUltimoHist(); throw new Error('Cancelado.'); }
+    const t0provedor = Date.now();
     // 1ª tentativa em streaming: se não rolar, o caminho normal resolve igual.
     // Com um aviso de troca de provedor na fila, a fala antecipada fica desligada para
     // não falar fora de ordem.
     if (usaStream() && !abortar) {
       const s = await tentarStream(p, conteudo, avisoIA ? null : aoFalar);
-      if (s && s.ok) { ok = { p, r: { ok: true, modelo: s.modelo }, raw: s.raw, jaFalou: s.jaFalou }; break; }
+      if (s && s.ok) {
+        // A latência real deste provedor alimenta o roteador da próxima pergunta.
+        Hermes.registrarLatencia(p.id, Date.now() - t0provedor);
+        errosIA[p.id] = 0;
+        ok = { p, r: { ok: true, modelo: s.modelo }, raw: s.raw, jaFalou: s.jaFalou };
+        break;
+      }
     }
     let r = await tentarProvedor(p);
     if (store.get('offline', '0') === '1') { removerUltimoHist(); throw new Error('A conexão caiu; nenhuma nova chamada à IA será tentada.'); }
@@ -2109,10 +2185,16 @@ async function chamar(conteudo, ocultarNoHistorico, aoFalar) {
         const j = await r.r.json();
         raw = String((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '').trim();
       } catch (e) { raw = ''; }
-      if (raw) { ok = { p, r, raw }; break; }
+      if (raw) {
+        Hermes.registrarLatencia(p.id, Date.now() - t0provedor);
+        errosIA[p.id] = 0;
+        ok = { p, r, raw };
+        break;
+      }
       r = { ok: false, tipo: 'erro', status: 200, txt: 'resposta vazia' };
     }
     falhas.push({ p, r });
+    errosIA[p.id] = (errosIA[p.id] || 0) + 1;
     registrar('erro', p.nome + ' ' + r.status + ': ' + msgErro(r.txt).slice(0, 160));
     const rec = r.status === 400 ? recuperarAcao(r.txt) : null;
     if (rec) {
@@ -2151,7 +2233,11 @@ async function chamar(conteudo, ocultarNoHistorico, aoFalar) {
   if (antesId !== p.id) {
     const antes = PROVEDORES.find((x) => x.id === antesId);
     const f = falhas.find((x) => x.p.id === antesId);
-    const aviso = f && antes ? `${antes.nome} ${MOTIVO_FALHA[f.r.tipo] || 'falhou'}. Usando ${p.nome}, ${trat()}.` : `Voltando para ${p.nome}, ${trat()}.`;
+    // Troca de motor é informação útil: sai como frase curta, com o humor do app quando o
+    // turno permite (sem pressa e sem assunto sensível — o mesmo portão de sempre).
+    const aviso = f && antes
+      ? `${antes.nome} ${MOTIVO_FALHA[f.r.tipo] || 'falhou'}. ` + fraseApp('roteadorTroca', { motor: p.nome })
+      : `Voltando para ${p.nome}, ${trat()}.`;
     avisoIA = aviso;
     msg('sis', aviso);
     registrar('config', 'IA ativa: ' + p.nome);
@@ -2201,7 +2287,16 @@ async function turno(texto, contaminado = false, profundidade = 0) {
     }
     return;
   }
-  const r = await chamar(texto, contaminado, (f) => falar(f, false));
+  // Estado de carregamento na conversa: o balão “formulando” sai assim que a primeira
+  // palavra é falada (ou quando a resposta chega), então a área de mensagens nunca fica
+  // sem sinal entre a pergunta e a resposta.
+  msgPensando();
+  let r = null;
+  try {
+    r = await chamar(texto, contaminado, (f) => falar(f, false));
+  } finally {
+    removerPensando();
+  }
   if (abortar) return;
   if (avisoIA) { const av = avisoIA; avisoIA = ''; await falar(av, true); }
   // Se a resposta já foi dita no streaming, só espera terminar (ordem das falas preservada).
@@ -2398,6 +2493,7 @@ function dividirFala(t, max) {
   return out.filter(Boolean);
 }
 async function falar(texto, semMsg, opcoes, links) {
+  removerPensando();
   if (!semMsg) msg('jv', texto, links);
   const partes = dividirFala(limparParaFala(texto));
   if (!partes.length) return;
@@ -2434,7 +2530,7 @@ async function armarParada() {
   const p = plug('JarvisBackground');
   if (!p || paradaAtiva || !wakeLigado() || store.get('pararvoz', '0') !== '1') return;
   paradaAtiva = true;
-  try { await p.startWake({ parar: true, pausarDuranteMusica: store.get('wake_pausa_musica', '1') === '1', accessKey: CHAVE_PICOVOICE, motor: store.get('wake_motor', 'auto') }); } catch (e) { paradaAtiva = false; }
+  try { await p.startWake(Object.assign({ parar: true, pausarDuranteMusica: store.get('wake_pausa_musica', '1') === '1' }, wakeCalibragem())); } catch (e) { paradaAtiva = false; }
 }
 async function desarmarParada() {
   const p = plug('JarvisBackground');
@@ -2665,17 +2761,44 @@ async function ouvirUmaVez() {
 }
 
 /* ---------- Palavra de ativação local "Jarvis" (Android) ---------- */
-// Porcupine fica em espera com AccessKey configurada; a transcrição completa só começa após o gatilho.
+// O detector é próprio: nenhum SDK de terceiro, nenhuma chave. Quem ouve de verdade no
+// Android é o serviço em primeiro plano (JarvisService + JarvisAtivacao); aqui, no WebView,
+// as MESMAS regras de fonética do núcleo Hermes conferem o que o reconhecimento escreveu —
+// é o caminho usado quando a transcrição chega pela tela (conversa contínua, desktop).
 const WAKE_WORD_DISPONIVEL = true;
-const RX_WAKE = /\b(jarvis|jarvi|jarves|jervis|gervis|garvis|charvis|jarbis|jarvez|jarvs)\b/i;
 const wakeLigado = () => WAKE_WORD_DISPONIVEL && ehAndroid && store.get('wake', '0') === '1';
 const conversaLigada = () => store.get('conversa', '1') === '1';
+/* ---------- Calibragem do detector de ativação ---------- */
+// Sensibilidade e palavras extras ficam no app e vão para o serviço nativo a cada
+// startWake: o número que o usuário mexe é o mesmo que o Java usa para decidir.
+function wakeCalibragem() {
+  const s = Math.max(0, Math.min(100, Number(store.get('wake_sensibilidade', '55')) || 55));
+  return { sensibilidade: Math.round(s), variantes: String(store.get('wake_variantes', '')).slice(0, 200) };
+}
+function configAtivacaoAtual() {
+  const c = wakeCalibragem();
+  return Hermes.ativacao.config(c.sensibilidade, c.variantes);
+}
+function descricaoCalibragem() {
+  const c = wakeCalibragem();
+  const cfg = configAtivacaoAtual();
+  return 'sensibilidade ' + c.sensibilidade + '% · tolerância ' + cfg.tolerancia +
+    ' · parcial ' + (cfg.aceitaParcial ? 'sim' : 'não') + ' · piso de voz ' + Math.round(cfg.ruidoDb) + ' dB' +
+    (cfg.extras.length ? ' · extras: ' + cfg.extras.join(', ') : ' · sem palavras extras');
+}
+// Tira a palavra de ativação do começo da transcrição e devolve o comando que sobrou.
 function extrairComando(t) {
-  t = String(t || '');
-  const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const m = RX_WAKE.exec(n);
-  if (!m) return '';
-  return t.slice(m.index + m[0].length).replace(/^[\s,.:;!?-]+/, '').trim();
+  const texto = String(t || '');
+  if (!texto) return '';
+  const partes = texto.split(/\s+/).filter(Boolean);
+  const cfg = configAtivacaoAtual();
+  for (let i = 0; i < partes.length; i++) {
+    if (Hermes.ativacao.casaToken(partes[i], cfg)) return partes.slice(i + 1).join(' ').replace(/^[\s,.:;!?-]+/, '').trim();
+    if (i + 1 < partes.length && Hermes.ativacao.casaToken(partes[i] + partes[i + 1], cfg)) {
+      return partes.slice(i + 2).join(' ').replace(/^[\s,.:;!?-]+/, '').trim();
+    }
+  }
+  return '';
 }
 let ultimoAquecer = 0;
 // Abre a conexão com a Groq enquanto você ainda fala: a 1ª resposta chega mais rápido.
@@ -2715,7 +2838,7 @@ async function iniciarWake() {
     await p.start();
     servicoPronto = true;
     segPlanoOk = true;
-    await p.startWake({ pausarDuranteMusica: store.get('wake_pausa_musica', '1') === '1', accessKey: CHAVE_PICOVOICE, motor: store.get('wake_motor', 'auto') });
+    await p.startWake(Object.assign({ pausarDuranteMusica: store.get('wake_pausa_musica', '1') === '1' }, wakeCalibragem()));
     if (!ocupado) { wakeAtivo = true; setEstado('idle'); atualizarWakeControles(); }
     else await p.stopWake();
   } catch (e) {
@@ -3004,7 +3127,7 @@ async function diagnosticoSegundoPlano(silencioso) {
     d.acessoNotificacoes ? 'Ativo: “o que chegou?” e respostas rápidas funcionam.' : 'Opcional. Sem isso o Jarvis não lê nem responde notificações.',
     d.acessoNotificacoes ? null : { rotulo: 'Autorizar', fn: () => bgDiagAbrirAjuste('acessoNotificacoes') });
 
-  const detector = d.detector === 'picovoice-porcupine' ? 'Porcupine (AccessKey)' : (d.detector ? 'reconhecimento do Android' : 'nenhum');
+  const detector = d.detector ? 'detector próprio (' + (d.calibragem || 'calibragem padrão') + ')' : 'nenhum';
   if (!d.desejada) {
     bgDiagRow('warn', 'Escuta desligada', 'A ativação por voz está desligada agora. Nada será ouvido até você ligar.');
     pendencias.push('escuta desligada');
@@ -3014,7 +3137,8 @@ async function diagnosticoSegundoPlano(silencioso) {
   } else if (!d.escutando) {
     bgDiagRow('warn', 'Serviço em espera', 'O serviço está ativo, mas o detector está pausado (ex.: durante um comando ou chamada). Detector previsto: ' + detector + '.');
   } else {
-    bgDiagRow('ok', 'Serviço ouvindo', 'Detector ativo: ' + detector + (d.chaveSalva ? ' · AccessKey guardada no Keystore.' : ' · sem AccessKey Picovoice.'));
+    bgDiagRow('ok', 'Serviço ouvindo', 'Detector ativo: ' + detector +
+      (d.descartesRuido ? ' · ' + d.descartesRuido + ' ativação(ões) descartada(s) pelo porteiro de ruído (som baixo demais para ser voz dirigida ao aparelho).' : ' · nenhuma ativação descartada por ruído.'));
   }
 
   if (d.ultimoEvento) {
@@ -3095,11 +3219,11 @@ async function testarEscutaAtivacao() {
     testandoEscuta = false;
     return;
   }
-  const nome = detector === 'picovoice-porcupine' ? 'Porcupine' : 'reconhecimento do Android';
+  const nome = 'detector próprio' + (detector && detector !== 'proprio' ? ' (' + detector + ')' : '');
   if (visto > 0) {
-    st.textContent = nome + ': ' + visto + ' ativação(ões) em 20 s. Se o número ficou próximo das vezes que você falou, está calibrado. Se aparecer detecção sem você falar, use a AccessKey Picovoice ou reduza a sensibilidade do microfone do aparelho.';
+    st.textContent = nome + ': ' + visto + ' ativação(ões) em 20 s. Se o número ficou próximo das vezes que você falou, está calibrado. Se aparecer detecção sem você falar, baixe a sensibilidade da ativação abaixo ou cadastre o ruído do ambiente como palavra extra não — o porteiro de ruído também descarta som baixo.';
   } else {
-    st.textContent = 'Nenhuma ativação detectada em 20 s com o ' + nome + '. Confira o microfone no diagnóstico acima, fale mais perto do aparelho e, se estiver sem AccessKey, instale o pacote de português offline (Configurações ▸ Google ▸ Voz).' + (interrompido ? ' O teste terminou antes do previsto.' : '');
+    st.textContent = 'Nenhuma ativação detectada em 20 s com o ' + nome + '. Confira o microfone no diagnóstico acima, fale mais perto do aparelho, aumente a sensibilidade da ativação e, se o aparelho não tiver o reconhecimento de português, instale o pacote de idioma (Configurações ▸ Google ▸ Voz).' + (interrompido ? ' O teste terminou antes do previsto.' : '');
   }
   registrar('voz', 'teste de ativação: ' + visto + ' detecção(ões) em 20 s (' + nome + ')');
   btn.disabled = false;
@@ -3147,10 +3271,8 @@ function mostrarChaves() {
     c.value = '';
     c.placeholder = CHAVES[n] ? 'salva ····' + CHAVES[n].slice(-4) + ' (cole outra para trocar)' : 'não configurada';
   }
-  const pic = $('#c-key-picovoice');
-  if (pic) { pic.value = ''; pic.placeholder = CHAVE_PICOVOICE ? 'salva ····' + CHAVE_PICOVOICE.slice(-4) + ' (cole outra para trocar)' : 'cole sua AccessKey aqui'; }
-  const picStatus = $('#c-picovoice-status');
-  if (picStatus) picStatus.textContent = CHAVE_PICOVOICE ? 'AccessKey salva no armazenamento seguro. Porcupine será usado ao ativar a escuta; a primeira validação exige internet.' : 'Chave não configurada: usarei o detector livre do Android (sessões curtas de reconhecimento) quando você ligar a escuta.';
+  const calibragem = $('#c-wake-calibragem');
+  if (calibragem) calibragem.textContent = descricaoCalibragem();
 }
 
 /* ---------- Categorias, memória, wake word, rotinas visuais e diagnóstico ---------- */
@@ -3175,7 +3297,7 @@ function atualizarWakeControles() {
     btn.setAttribute('aria-pressed', ligado ? 'false' : 'true');
     btn.setAttribute('aria-label', ligado ? 'Pausar ativação por voz' : 'Ativar ativação por voz');
     btn.title = ligado ? 'Pausar ativação por voz' : 'Ativar ativação por voz';
-    $('#wake-toggle-text').textContent = !ligado ? 'Escuta pausada' : (wakeAtivo ? 'Ouvindo “Jarvis” · ' + (CHAVE_PICOVOICE ? 'Porcupine' : 'detector do Android') : 'Ativação ligada');
+    $('#wake-toggle-text').textContent = !ligado ? 'Escuta pausada' : (wakeAtivo ? 'Ouvindo “Jarvis” · detector próprio' : 'Ativação ligada');
   }
   const c = $('#c-wake-toggle');
   if (c) {
@@ -3199,7 +3321,7 @@ async function toggleWakeRapido() {
   $('#c-wake').checked = ligar;
   atualizarWakeControles();
   if (ligar) {
-    msg('sis', 'Detector de ativação ligado. Diga “Jarvis”, aguarde o sinal e então fale seu pedido — por exemplo “Jarvis, que horas são”. ' + (CHAVE_PICOVOICE ? 'Usando o detector dedicado Porcupine.' : 'Sem AccessKey Picovoice eu uso o reconhecimento de voz do Android; no Android 12+ ele roda no próprio aparelho, sem internet.') + ' O comando completo só começa depois da palavra de ativação.');
+    msg('sis', 'Detector de ativação ligado (' + descricaoCalibragem() + '). Diga “Jarvis”, aguarde o sinal e então fale seu pedido — por exemplo “Jarvis, que horas são”. O detector é próprio: reconhecimento do Android mais regras de fonética no aparelho, sem chave e sem SDK de terceiro; no Android 12+ ele roda offline. O comando completo só começa depois da palavra de ativação.');
     try { await iniciarWake(); } catch (e) { registrar('erro', 'ativação por voz: ' + e.message); }
   } else {
     await pararWake(true);
@@ -3479,6 +3601,19 @@ async function executarDiagnostico() {
     } else diagLinha('warn', 'Permissão de microfone', 'Consulta de permissão não suportada; use o teste de áudio para confirmar.');
     diagLinha(CHAVES.groq ? 'ok' : 'warn', 'Chave Groq', CHAVES.groq ? 'Configurada (a presença não garante que esteja válida ou com cota).' : 'Não configurada; pesquisa browser_search e IA principal ficam indisponíveis até cadastrar a chave.');
     for (const n of ['cerebras','mistral','gemini']) diagLinha(CHAVES[n] ? 'ok' : 'warn', 'Chave ' + n[0].toUpperCase() + n.slice(1), CHAVES[n] ? 'Configurada; validade e cota não foram verificadas.' : 'Não configurada; é opcional como provedor de reserva.');
+    // Roteador de motores: quem responde a cada tipo de tarefa e o que já foi medido no aparelho.
+    const latIA = Hermes.metricas().latencias || {};
+    const listaMotores = PROVEDORES.map((p) => p.nome + (CHAVES[p.id]
+      ? (Number.isFinite(latIA[p.id]) ? ' ' + (latIA[p.id] / 1000).toFixed(1).replace('.', ',') + ' s' : ' sem medida')
+      : ' sem chave')).join(' · ');
+    const comChave = provedoresComChave();
+    diagLinha(comChave.length ? 'ok' : 'warn', 'Motores de IA (roteador)', (comChave.length
+      ? 'Ativos: ' + comChave.map((p) => p.nome).join(', ') + ' · reserva automática em erro, cota ou tempo. '
+      : 'Nenhuma chave cadastrada: o roteador só conta com a IA local. Cadastre ao menos o Groq em Ajustes ▸ IA. ')
+      + listaMotores + '. Última escolha: ' + ((Hermes.metricas().escolhasIA[0] || {}).motivo || 'nenhuma ainda') + '.');
+    // Câmera: o caminho da visão (reconhecimento de objetos).
+    const cam = await estadoCamera();
+    diagLinha(cam.estado, 'Câmera (visão)', cam.detalhe);
     if (store.get('offline', '0') === '1') {
       diagLinha('warn', 'Rede e APIs', 'Testes de rede e chamadas a provedores foram pulados porque o modo offline está ativo.');
     } else {
@@ -3505,7 +3640,7 @@ async function executarDiagnostico() {
   return { itens, resumo: Hermes.resumoDiagnostico(itens, { tratamento: trat() }) };
 }
 const H = (typeof history !== 'undefined') ? history : null;
-const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas'];
+const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas', '#painel-visao'];
 const estadoPainelJarvis = (estado) => Boolean(estado && estado.jarvisPainel === true);
 function algumPainelAberto() {
   return PAINEIS.some((sel) => { const el = $(sel); return Boolean(el && !el.hidden); });
@@ -3532,6 +3667,8 @@ function abrirPainel(sel) {
 function fecharPaineis(vindoDoHistorico) {
   const aberto = algumPainelAberto();
   PAINEIS.forEach((sel) => { const el = $(sel); if (el) el.hidden = true; });
+  // Fechar os painéis precisa desligar a câmera: nada de câmera ligada em segundo plano.
+  pararCamera();
   const scrim = $('#scrim');
   if (scrim) scrim.hidden = true;
   if (aberto && !vindoDoHistorico && H && estadoPainelJarvis(H.state)) {
@@ -3627,7 +3764,16 @@ function abrirConfig() {
   const perfilSalvo = perfilVozAtual();
   if ($('#c-voz-perfil')) $('#c-voz-perfil').value = perfilSalvo;
   if ($('#c-voz-chime')) $('#c-voz-chime').checked = store.get('voz_chime', '0') === '1';
-  if ($('#c-wake-motor')) $('#c-wake-motor').value = store.get('wake_motor', 'auto');
+  const selSensibilidade = $('#c-wake-sensibilidade');
+  if (selSensibilidade) {
+    selSensibilidade.value = String(wakeCalibragem().sensibilidade);
+    const outSens = $('#c-wake-sensibilidade-valor');
+    if (outSens) outSens.textContent = wakeCalibragem().sensibilidade + '%';
+  }
+  const campoVariantesUI = $('#c-wake-variantes');
+  if (campoVariantesUI && document.activeElement !== campoVariantesUI) campoVariantesUI.value = wakeCalibragem().variantes;
+  const resumoCalibragem = $('#c-wake-calibragem');
+  if (resumoCalibragem) resumoCalibragem.textContent = descricaoCalibragem();
   const cfgVoz = PERFIS_VOZ[perfilSalvo] || PERFIS_VOZ.padrao;
   $('#c-pitch').value = store.get('pitch', cfgVoz.pitch);
   $('#c-rate').value = store.get('rate', cfgVoz.rate);
@@ -3810,6 +3956,8 @@ document.querySelectorAll('[data-lat]').forEach((b) => {
     const alvo = b.dataset.lat;
     if (alvo === 'central') { fecharPaineis(); return; }
     if (alvo === 'tarefas') { abrirTarefas(); return; }
+    // Visão tem painel próprio (câmera ao vivo), não uma aba de configuração.
+    if (alvo === 'visao') { abrirVisao(); return; }
     abrirConfig();
     mudarCategoriaConfig(alvo);
     if (alvo === 'celular') atualizarStatusCelular();
@@ -3923,8 +4071,33 @@ if (btnDeleteLocal) btnDeleteLocal.onclick = async () => {
 };
 void atualizarStatusIALocal();
 
-$('#c-apagar-picovoice').onclick = async () => { try { await gravarChave(NOME_CHAVE_PICOVOICE, ''); mostrarChaves(); $('#c-picovoice-status').textContent = 'AccessKey apagada.'; registrar('config', 'AccessKey Picovoice apagada'); } catch (e) { $('#c-picovoice-status').textContent = 'Não foi possível apagar: ' + (e.message || 'erro'); } };
-$('#c-key-picovoice').addEventListener('change', async () => { const v = String($('#c-key-picovoice').value || '').trim(); if (!v) return; try { await gravarChave(NOME_CHAVE_PICOVOICE, v); $('#c-key-picovoice').value = ''; mostrarChaves(); $('#c-picovoice-status').textContent = 'AccessKey salva no armazenamento protegido. Na próxima ativação por voz, o app tentará usar Porcupine com a palavra “Jarvis”. A validação inicial pode exigir internet.'; registrar('config', 'AccessKey Picovoice armazenada'); } catch (e) { $('#c-picovoice-status').textContent = 'Não consegui salvar a chave: ' + (e.message || 'erro'); } });
+// Calibragem da ativação: aplica na hora. Se a escuta estiver ligada, o detector sobe de
+// novo já com o número novo — sem obrigar a desligar e ligar a ativação.
+async function calibrarAtivacao() {
+  const resumo = $('#c-wake-calibragem');
+  if (resumo) resumo.textContent = descricaoCalibragem();
+  registrar('voz', 'calibragem da ativação: ' + descricaoCalibragem());
+  if (!ehAndroid || !wakeLigado()) return;
+  try { await pararWake(); await iniciarWake(); }
+  catch (e) { registrar('erro', 'recalibrar ativação: ' + (e && e.message ? e.message : e)); }
+}
+const sliderSensibilidade = $('#c-wake-sensibilidade');
+if (sliderSensibilidade) {
+  sliderSensibilidade.addEventListener('input', () => {
+    const out = $('#c-wake-sensibilidade-valor');
+    if (out) out.textContent = sliderSensibilidade.value + '%';
+  });
+  sliderSensibilidade.addEventListener('change', () => {
+    store.set('wake_sensibilidade', String(sliderSensibilidade.value));
+    calibrarAtivacao();
+  });
+}
+const campoVariantesWake = $('#c-wake-variantes');
+if (campoVariantesWake) campoVariantesWake.addEventListener('change', () => {
+  store.set('wake_variantes', String(campoVariantesWake.value || '').trim().slice(0, 200));
+  gerenciarVariantesWake();
+  calibrarAtivacao();
+});
 $('#cel-abrir-config').onclick = () => nativo('abrirConfiguracaoSistema', { alvo: 'geral' }).catch((e) => msg('sis', e.message));
 $('#cel-abrir-bateria').onclick = () => nativo('abrirConfiguracaoSistema', { alvo: 'bateria' }).catch((e) => msg('sis', e.message));
 $('#cel-abrir-armazenamento').onclick = () => nativo('abrirConfiguracaoSistema', { alvo: 'armazenamento' }).catch((e) => msg('sis', e.message));
@@ -4048,15 +4221,16 @@ if (selPerfilVoz) selPerfilVoz.onchange = () => {
 };
 const chkVozChime = $('#c-voz-chime');
 if (chkVozChime) { chkVozChime.checked = store.get('voz_chime', '0') === '1'; chkVozChime.onchange = () => store.set('voz_chime', chkVozChime.checked ? '1' : '0'); }
-const selMotorWake = $('#c-wake-motor');
-if (selMotorWake) selMotorWake.onchange = async () => {
-  store.set('wake_motor', selMotorWake.value);
-  const st = $('#c-wake-motor-status');
-  const rotulo = { auto: 'Automático', android: 'Android (grátis)', porcupine: 'Porcupine' }[selMotorWake.value] || selMotorWake.value;
-  if (st) st.textContent = 'Motor salvo: ' + rotulo + '.';
-  // Vale na próxima vez que a escuta subir; se já estiver ouvindo, reinicia com o novo motor.
-  if (wakeLigado()) { try { await pararWake(); await iniciarWake(); if (st) st.textContent = 'Motor salvo e escuta reiniciada com: ' + rotulo + '.'; } catch (e) { if (st) st.textContent = 'Motor salvo, mas reiniciar a escuta falhou: ' + (e && e.message ? e.message : e); } }
-};
+// Lista de variantes reconhecidas (só leitura, para o usuário conferir a calibragem).
+function gerenciarVariantesWake() {
+  const alvo = $('#c-wake-variantes-lista');
+  if (!alvo) return;
+  const cfg = configAtivacaoAtual();
+  const base = Hermes.ativacao.variantes.slice(0, 12).join(', ');
+  alvo.textContent = 'Formas reconhecidas: ' + base + (cfg.extras.length ? ' · ' + cfg.extras.join(', ') : '') +
+    '. Tolerância atual: ' + cfg.tolerancia + ' letra(s) trocada(s) em palavras começando com “j”.';
+}
+gerenciarVariantesWake();
 // Perfil acústico experimental: extrai apenas estatísticas do sinal, nunca salva o áudio.
 // Isto é uma comparação rudimentar de timbre, não reconhecimento biométrico seguro.
 const VOZ_PERFIL_KEY = 'perfil_acustico_v2';
@@ -4565,9 +4739,309 @@ if (ehAndroid) {
       });
     }
   }
-  // A escuta permanece desligada por padrão; o usuário ativa o detector local em Ajustes.
-  // A ativação contínua usa Porcupine e exige AccessKey; o microfone manual continua disponível sem chave.
+  // A escuta permanece desligada por padrão; o usuário liga a ativação em Ajustes ▸ Voz.
+  // A ativação contínua usa o detector próprio (reconhecimento do Android + regras de
+  // fonética locais), sem chave e sem SDK de terceiro; o microfone manual funciona igual.
 }
+/* ---------- Visão: câmera, reconhecimento de objetos e balões ---------- */
+// A câmera é do usuário e continua sendo dele: o quadro fica no aparelho até ele tocar em
+// "analisar". Só então UM quadro é enviado ao provedor que enxerga (escolhido pelo roteador
+// do núcleo) e a resposta volta como balão sobre a própria imagem — nome do objeto,
+// informação curta e, ao tocar no balão, a leitura em voz alta. Nada de vídeo contínuo e
+// nada em segundo plano: fechar o painel desliga a câmera na hora.
+let visaoStream = null, visaoAnalisando = false, visaoObjetos = [], visaoResumo = '', visaoProvedor = '';
+const VIS_VIDEO = () => document.getElementById('visao-video');
+const VIS_CANVAS = () => document.getElementById('visao-canvas');
+
+function visaoStatus(texto, estado) {
+  const el = document.getElementById('visao-status');
+  if (!el) return;
+  el.textContent = texto;
+  el.dataset.estado = estado || '';
+}
+
+/** Estado da câmera para o diagnóstico integrado (permissão, aparelho e caminho de visão). */
+async function estadoCamera() {
+  if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+    return { estado: ehAndroid ? 'warn' : 'fail', detalhe: ehAndroid
+      ? 'O WebView não expôs a câmera. Reinstale/atualize o APK para habilitar o reconhecimento de objetos.'
+      : 'Este ambiente não oferece câmera ao aplicativo.' };
+  }
+  let permissao = '';
+  if (navigator.permissions && navigator.permissions.query) {
+    try { const r = await navigator.permissions.query({ name: 'camera' }); permissao = r.state; } catch (e) { permissao = ''; }
+  }
+  if (permissao === 'denied') return { estado: 'fail', detalhe: 'Permissão de câmera negada. Autorize em Configurações ▸ Apps ▸ J.A.R.V.I.S. ▸ Permissões.' };
+  let temDispositivo = false;
+  try {
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    temDispositivo = devs.some((d) => d.kind === 'videoinput');
+  } catch (e) { temDispositivo = false; }
+  if (!temDispositivo && plataforma === 'web') return { estado: 'warn', detalhe: 'Nenhuma câmera detectada neste dispositivo.' };
+  return { estado: 'ok', detalhe: 'Câmera disponível' + (permissao ? ' (permissão: ' + permissao + ')' : '. A permissão é pedida na primeira abertura') +
+    '. Abra “Visão” para o reconhecimento de objetos: a imagem só sai do aparelho quando você toca em analisar.' };
+}
+
+async function ligarCamera() {
+  if (visaoStream) return true;
+  const v = VIS_VIDEO();
+  if (!v) return false;
+  if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+    visaoStatus('Esta versão não tem acesso à câmera neste ambiente.', 'fail');
+    return false;
+  }
+  visaoStatus('Abrindo a câmera…');
+  try {
+    visaoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+  } catch (e) {
+    const negado = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
+    visaoStatus(negado
+      ? 'Permissão de câmera negada. Autorize em Configurações ▸ Apps ▸ J.A.R.V.I.S. ▸ Permissões.'
+      : 'Não consegui abrir a câmera: ' + ((e && e.message) || 'erro do sistema'), 'fail');
+    registrar('erro', 'câmera: ' + ((e && e.message) || e));
+    return false;
+  }
+  try {
+    v.srcObject = visaoStream;
+    await v.play();
+  } catch (e) {
+    // Autoplay bloqueado: a prévia fica parada, mas a captura do quadro continua funcionando.
+    registrar('erro', 'prévia da câmera: ' + ((e && e.message) || e));
+  }
+  visaoStatus('Câmera ao vivo, ' + trat() + '. Aponte para o objeto e toque em analisar.', 'ok');
+  return true;
+}
+
+function pararCamera() {
+  if (visaoStream) {
+    try { visaoStream.getTracks().forEach((t) => t.stop()); } catch (e) { /* já parada */ }
+  }
+  visaoStream = null;
+  const v = VIS_VIDEO();
+  if (v) { try { v.srcObject = null; } catch (e) { /* ok */ } }
+  visaoAnalisando = false;
+}
+
+function abrirVisao() {
+  abrirPainel('#painel-visao');
+  const painel = document.getElementById('painel-visao');
+  if (!painel) return;
+  limparBaloes();
+  const ch = VIS_CANVAS();
+  if (ch) ch.hidden = true;
+  if (VIS_VIDEO()) VIS_VIDEO().hidden = false;
+  const painelConfig = document.getElementById('painel-config');
+  if (painelConfig) painelConfig.hidden = true;
+  ligarCamera();
+}
+
+function capturarQuadro() {
+  const v = VIS_VIDEO(), ch = VIS_CANVAS();
+  if (!v || !ch || !v.videoWidth) return '';
+  // Lado maior limitado a 1024 px: suficiente para o modelo e leve para a rede do celular.
+  const escala = Math.min(1, 1024 / Math.max(v.videoWidth, v.videoHeight));
+  ch.width = Math.max(1, Math.round(v.videoWidth * escala));
+  ch.height = Math.max(1, Math.round(v.videoHeight * escala));
+  const ctx = ch.getContext('2d');
+  if (!ctx) return '';
+  ctx.drawImage(v, 0, 0, ch.width, ch.height);
+  let dados = '';
+  try { dados = ch.toDataURL('image/jpeg', 0.8); } catch (e) { dados = ''; }
+  return dados;
+}
+
+function limparBaloes() {
+  const caixa = document.getElementById('visao-baloes');
+  if (caixa) caixa.textContent = '';
+  const lista = document.getElementById('visao-lista');
+  if (lista) lista.textContent = '';
+  const detalhe = document.getElementById('visao-detalhe');
+  if (detalhe) { detalhe.textContent = ''; detalhe.hidden = true; }
+  visaoObjetos = [];
+  visaoResumo = '';
+}
+
+/** Um balão por objeto, posicionado pela caixa normalizada devolvida pelo modelo. */
+function desenharBaloes(objetos) {
+  limparBaloes();
+  visaoObjetos = Array.isArray(objetos) ? objetos : [];
+  const caixa = document.getElementById('visao-baloes');
+  const lista = document.getElementById('visao-lista');
+  visaoObjetos.forEach((o, i) => {
+    const botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = 'balao' + (o.caixa ? '' : ' balao-lista');
+    botao.textContent = (i + 1) + '. ' + o.nome;
+    botao.title = o.info || o.nome;
+    if (o.caixa && caixa) {
+      // Centro do objeto, dentro da área visível (o balão nunca sai da tela).
+      const cx = Math.min(92, Math.max(8, (o.caixa.x + o.caixa.w / 2) * 100));
+      const cy = Math.min(90, Math.max(8, (o.caixa.y + o.caixa.h / 2) * 100));
+      botao.style.left = cx + '%';
+      botao.style.top = cy + '%';
+      caixa.appendChild(botao);
+    } else if (lista) {
+      lista.appendChild(botao);
+    }
+    botao.addEventListener('click', () => selecionarObjeto(i));
+  });
+  const semCaixa = visaoObjetos.filter((o) => !o.caixa).length;
+  if (lista && semCaixa) {
+    const aviso = document.createElement('p');
+    aviso.className = 'dica';
+    aviso.textContent = 'Estes não vieram com posição na imagem: toque para ouvir a informação.';
+    lista.appendChild(aviso);
+  }
+}
+
+function selecionarObjeto(i) {
+  const o = visaoObjetos[i];
+  if (!o) return;
+  const detalhe = document.getElementById('visao-detalhe');
+  if (detalhe) {
+    detalhe.hidden = false;
+    detalhe.textContent = o.nome + (o.info ? ' — ' + o.info : ' — sem detalhes além do nome.');
+  }
+  const fala = o.nome + (o.info ? '. ' + o.info : '.');
+  falar(fala, true);
+}
+
+/** Envia UM quadro ao provedor que enxerga, na ordem que o roteador do núcleo definiu. */
+async function pedirVisaoIA(dataUrl, pergunta) {
+  if (store.get('offline', '0') === '1') throw new Error('O modo offline está ativo e a leitura de imagem precisa de internet.');
+  const ids = provedoresComChave().map((p) => p.id);
+  const plano = Hermes.planejarIA({
+    tarefa: 'visao', visao: true, provedores: ids,
+    latencias: Hermes.metricas().latencias, erros: errosIA
+  });
+  if (!plano.ordem.length) {
+    throw new Error('Nenhum provedor com chave reconhece imagens. Cadastre a chave do Groq ou do Gemini em Ajustes ▸ IA.');
+  }
+  Hermes.anotarEscolha(plano.motivo, 'visao');
+  registrar('ia', 'visão · ' + plano.motivo);
+  const falhas = [];
+  for (const id of plano.ordem) {
+    const prov = PROVEDORES.find((x) => x.id === id);
+    if (!prov) continue;
+    const modelo = plano.modelo[id];
+    const t0 = Date.now();
+    try {
+      const corpo = {
+        model: modelo, temperature: 0.2, max_tokens: 900,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: Hermes.visao.prompt(pergunta, { tratamento: trat() }) },
+            { type: 'image_url', image_url: { url: dataUrl } }
+          ]
+        }]
+      };
+      const res = await fetchCancelavel(prov.url + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + CHAVES[id] },
+        body: JSON.stringify(corpo)
+      }, plano.timeoutMs);
+      if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + msgErro(await res.text()).slice(0, 140));
+      const j = await res.json();
+      const raw = String((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '').trim();
+      const obj = lerJson(raw);
+      if (!obj) throw new Error('a resposta não veio em JSON');
+      Hermes.registrarLatencia(id, Date.now() - t0);
+      errosIA[id] = 0;
+      return {
+        objetos: Hermes.visao.normalizar(obj.objetos),
+        resumo: String(obj.resumo || '').trim().slice(0, 300),
+        provedor: prov.nome,
+        ms: Date.now() - t0
+      };
+    } catch (e) {
+      errosIA[id] = (errosIA[id] || 0) + 1;
+      falhas.push(prov.nome + ': ' + ((e && e.message) || e));
+      registrar('erro', 'visão ' + prov.nome + ': ' + ((e && e.message) || e));
+    }
+  }
+  throw new Error(falhas.join(' · ') || 'nenhum provedor respondeu');
+}
+
+/** Captura, analisa e desenha. Devolve {fala, objetos} sem falar — quem chama decide. */
+async function analisarQuadro(pergunta) {
+  if (visaoAnalisando) return null;
+  const dataUrl = capturarQuadro();
+  if (!dataUrl) {
+    visaoStatus('Não consegui capturar a imagem. Abra a câmera e tente de novo.', 'fail');
+    return null;
+  }
+  visaoAnalisando = true;
+  const v = VIS_VIDEO(), ch = VIS_CANVAS();
+  if (ch) ch.hidden = false;
+  if (v) v.hidden = true;
+  visaoStatus('Analisando a imagem…', 'carregando');
+  try {
+    const r = await pedirVisaoIA(dataUrl, pergunta || '');
+    const tom = Hermes.tom(perguntaAtual);
+    const fala = Hermes.visao.descrever(r.objetos, {
+      tratamento: trat(), resumo: r.resumo,
+      humor: Number(store.get('humor', '40')) >= 40, serio: tom.serio, pressa: tom.pressa
+    });
+    visaoResumo = r.resumo;
+    visaoProvedor = r.provedor;
+    desenharBaloes(r.objetos);
+    visaoStatus('Análise de ' + r.provedor + ' em ' + (r.ms / 1000).toFixed(1).replace('.', ',') + ' s · ' +
+      (r.objetos.length ? r.objetos.length + ' objeto(s) identificado(s)' : 'nenhum objeto identificado') +
+      '. Toque em um balão para ouvir os detalhes.', r.objetos.length ? 'ok' : 'warn');
+    registrar('visão', r.objetos.length + ' objeto(s) por ' + r.provedor + ' em ' + r.ms + ' ms');
+    return { fala, objetos: r.objetos, resumo: r.resumo, provedor: r.provedor };
+  } catch (e) {
+    visaoStatus('Não consegui analisar agora: ' + ((e && e.message) || e), 'fail');
+    registrar('erro', 'visão: ' + ((e && e.message) || e));
+    return null;
+  } finally {
+    visaoAnalisando = false;
+  }
+}
+
+/** Habilidade do núcleo: abre a câmera e, se estiver pronta, já analisa o que está à frente. */
+async function analisarVisao(opcoes) {
+  const o = opcoes || {};
+  abrirVisao();
+  const pronta = await ligarCamera();
+  if (!pronta) return { fala: 'Não consegui abrir a câmera, ' + trat() + '. Autorize a câmera nas permissões do aplicativo e me chame de novo.' };
+  const r = await analisarQuadro(o.texto || '');
+  if (!r) return { fala: 'Aponte a câmera para o objeto, ' + trat() + ', que eu analiso e digo o que estou vendo.' };
+  return { fala: r.fala, objetos: r.objetos };
+}
+
+/* Botões do painel de visão */
+const btnVisaoAnalisar = document.getElementById('visao-botao-analisar');
+if (btnVisaoAnalisar) btnVisaoAnalisar.onclick = async () => {
+  if (visaoAnalisando) return;
+  btnVisaoAnalisar.disabled = true;
+  try {
+    const r = await analisarQuadro('');
+    if (r) await falar(r.fala);
+  } catch (e) {
+    visaoStatus('Não consegui analisar: ' + ((e && e.message) || e), 'fail');
+  } finally { btnVisaoAnalisar.disabled = false; }
+};
+const btnVisaoNova = document.getElementById('visao-botao-nova');
+if (btnVisaoNova) btnVisaoNova.onclick = async () => {
+  limparBaloes();
+  const ch = VIS_CANVAS();
+  if (ch) ch.hidden = true;
+  if (VIS_VIDEO()) VIS_VIDEO().hidden = false;
+  await ligarCamera();
+};
+const btnVisaoFechar = document.getElementById('visao-fechar');
+if (btnVisaoFechar) btnVisaoFechar.onclick = () => { pararCamera(); fecharPaineis(); };
+const btnVisaoNasConfig = document.getElementById('visao-abrir-ajustes');
+if (btnVisaoNasConfig) btnVisaoNasConfig.onclick = () => { pararCamera(); abrirConfig(); mudarCategoriaConfig('ia'); };
+// Câmera nunca fica ligada com o app fora da tela.
+document.addEventListener('visibilitychange', () => { if (document.hidden) pararCamera(); });
+window.addEventListener('pagehide', pararCamera);
+
 /* ---------- Núcleo Hermes: capacidades do aplicativo e abertura ---------- */
 // O núcleo não conhece o aplicativo: recebe aqui exatamente o que precisa para decidir,
 // falar e gravar preferências. Nenhuma chave de API passa por ele.
@@ -4597,7 +5071,8 @@ Hermes.instalar({
   clima: (dia) => clima(dia),
   noticias: noticiasDeHoje,
   frase: (chave, vars) => fraseApp(chave, vars),
-  diagnosticoSistema: diagnosticoSistemaFalado
+  diagnosticoSistema: diagnosticoSistemaFalado,
+  analisarVisao: (o) => analisarVisao(o)
 });
 
 /* ---------- Abertura: animação, reconhecimento da voz e liberação do app ---------- */
