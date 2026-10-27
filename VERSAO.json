@@ -9,9 +9,12 @@
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
   "notas": "Revisão 1.15.0 (2026-10-27). (1) Estilo do núcleo: aplicarNucleo lê 'nucleo_estilo' (hud por padrão), grava body.dataset.nucleo e reflete em todos os pontos — seletor c-nucleo-estilo, pílula c-nucleo-pill e texto c-nucleo-status, além da prévia do cartão. A escolha é persistida em salvarConfig e relida em carregarConfig, de modo que a preferência sobrevive ao reinício. (2) Núcleo em plasma: bloco .plas dentro do HUD com quatro filamentos (.f1-.f4), névoa, miolo e ponto central; no estilo plasma os elementos técnicos (anéis, marcas, grades, rótulos e halo) saem de cena por opacidade e ficam a marca e os chips de estado. (3) Animação em camadas: plas-gira (giro em velocidades diferentes por filamento, um no sentido inverso), plas-forma (deformação do contorno irregular, que é o que dá a cara de plasma), plas-respira (névoa e miolo fora de fase) e plas-pulsa (ponto central); o nível real do microfone entra por --nv no próprio HUD, então o anel cresce e os filamentos ficam mais vivos quando o usuário fala — a mesma medida que alimenta as ondas de voz. (4) Custo e acessibilidade: com a tela oculta a animação pausa (body.oculto) e prefers-reduced-motion reduz tudo. (5) A abertura (splash) usa o mesmo estilo, evitando a troca visual brusca entre o boot e a interface.",
   "build": {
-    "resultado": "pendente",
+    "resultado": "success",
+    "sha256": "41d504ef2d9d229568a12365e9b92e07fbdea20c00604c2a61027c6203d62977",
+    "bytes": 70666175,
+    "arquivo": "jarvis-nova-1.15.0-10150.apk",
     "data": "2026-10-27",
-    "observacao": "APK da 1.15.0 ainda não compilado neste momento: o build sai do workflow de release, disparado pela tag v1.15.0, com o ci/debug.keystore — a mesma assinatura de 1.10.1 a 1.14.0, que é o que faz o atualizador interno instalar por cima sem apagar os ajustes do usuário. O último build conferido em uso é o da 1.14.0 (jarvis-nova-1.14.0-10140.apk, sha256 d90123faced110a234fb9de80ace9d898a2d25af6d45f4329933a80e8697f01a)."
+    "observacao": "APK do release v1.15.0 (jarvis-nova-1.15.0-10150.apk), compilado pelo workflow de release com ci/debug.keystore — mesma assinatura de 1.10.1 a 1.14.0, então o app instalado se atualiza por cima pelo próprio atualizador interno. Checksum conferido depois de baixar o arquivo do próprio release."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"
