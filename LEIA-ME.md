@@ -1,4 +1,11 @@
-# J.A.R.V.I.S. Nova 1.14.0
+# J.A.R.V.I.S. Nova 1.15.0
+
+Esta versão (1.15.0) acrescenta o **estilo de núcleo em plasma** — um anel de energia irregular com
+animação própria, no desenho da imagem de referência — escolhido em **Ajustes ▸ Voz ▸ Aparência do
+núcleo**, ao lado do HUD técnico que continua sendo o padrão. A troca vale na hora, fica salva e a
+abertura nasce com o mesmo estilo. A animação reage ao nível do microfone (como as ondas de voz),
+pausa com a tela fora de vista e respeita “reduzir movimento” do sistema.
+
 
 Esta versão (1.14.0) acrescenta a **escuta contínua pela transcrição da Groq** (opcional, com o app
 aberto) ao detector próprio que já funcionava em segundo plano, o **menu Informações** com dados do

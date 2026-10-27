@@ -131,6 +131,12 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
+            **Novidades da 1.15.0:** o Núcleo ganhou um segundo estilo — o **plasma**, um anel de
+            energia irregular no desenho da referência — escolhido em Ajustes ▸ Voz ▸ Aparência do
+            núcleo, com prévia na própria tela; a troca vale na hora, fica salva e a abertura nasce
+            com o mesmo estilo. A animação tem giro, deformação do contorno, respiração e pulso em
+            camadas e reage ao nível do microfone, com pausa quando a tela sai de vista.
+
             **Novidades da 1.14.0:** escuta contínua pela transcrição da Groq (além do detector próprio),
             com variações de pronúncia, porteiro de ruído e mensagens claras para limite de uso, chave
             recusada, falha de rede e permissão de microfone; menu Informações (aparelho, clima e

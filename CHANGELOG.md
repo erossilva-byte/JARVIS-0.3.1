@@ -12,6 +12,25 @@ O detector de ativação passou a ser nosso, as respostas passaram a ser roteada
 - **Personalidade.** O prompt de sistema descreve o humor como “sarcasmo seco, irônico e levemente debochado, sempre educado no fundo”, com limites explícitos (nunca rude, nunca sobre pessoas/aparência/religião/tragédia, nunca duas piadas seguidas, suspenso por completo em assunto sensível) e duas frases próprias novas (`visaoSemObjeto`, `roteadorTroca`), que passam pelo mesmo portão de humor.
 - **Versão 1.13.0 (versionCode 10130)**, mesmo pacote e mesma assinatura: instalável por cima da 1.12.0 e atualizável pelo próprio app.
 
+## 1.15.0
+
+- **Núcleo em plasma, opcional.** Ajustes ▸ Voz ganhou “Aparência do núcleo”, com dois estilos: o
+  **HUD técnico** de sempre (anéis, marcas e grades do painel) e o **plasma**, um anel de energia
+  irregular esverdeado girando devagar em volta de um miolo pequeno — o desenho pedido na imagem de
+  referência. A escolha vale na hora, fica salva no aparelho e a abertura (splash) nasce com o
+  mesmo estilo, para não piscar entre as telas. No estilo plasma os rótulos técnicos do HUD saem de
+  cena e sobra o núcleo com a marca.
+- **Animação própria do núcleo, em camadas.** Quatro filamentos giram em velocidades diferentes
+  enquanto a forma de cada um se deforma (é isso que dá o contorno irregular, com cara de plasma, e
+  não um círculo perfeito), uma névoa e o miolo respiram fora de fase e um ponto central pulsa. O
+  conjunto reage ao **nível real do microfone**, pela mesma medida que alimenta as ondas de voz:
+  quando você fala, o anel cresce e os filamentos ficam mais vivos; no silêncio ele volta ao
+  repouso. Com a tela fora de vista a animação pausa (bateria) e, com `prefers-reduced-motion`, o
+  CSS reduz tudo a uma fração de milissegundo.
+- **Prévia na própria tela de ajustes.** Ao lado do seletor há uma miniatura que muda junto com a
+  escolha, para conferir o estilo antes de sair da configuração.
+
+
 ## 1.14.0
 
 - **Escuta contínua pela transcrição da Groq.** Além do detector próprio, o app pode ouvir com o

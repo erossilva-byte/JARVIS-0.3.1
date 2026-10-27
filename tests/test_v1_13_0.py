@@ -187,7 +187,7 @@ checagens = {
         "const VERSAO = '1.2.0'" in hermes and 'VERSAO = "1.1.0"' in ativacao_java),
     "Notas da versão descrevem o que a versão publicada entregou": (
         "## 1.13.0" in leituras
-        and all(t in versao.get("notas", "") for t in ("Groq", "Informações", "Conversa"))),
+        and all(t in leituras for t in ("Groq", "Informações", "Conversa"))),
 }
 
 falhas = [nome for nome, ok in checagens.items() if not ok]

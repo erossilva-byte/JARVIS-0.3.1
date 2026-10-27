@@ -118,17 +118,20 @@ checagens = {
         '@media(prefers-reduced-motion:reduce)' in css),
 
     # 6. Versão, documentação e suíte
-    "Versão 1.14.0 com versionCode 10140": (
-        versao.get('version') == '1.14.0' and versao.get('versionCode') == 10140
-        and pacote.get('version') == '1.14.0' and "const VERSAO_APP = '1.14.0';" in app),
+    "Versão a partir da 1.14.0 com versionCode >= 10140": (
+        [int(x) for x in str(versao.get('version', '0')).split('.')] >= [1, 14, 0]
+        and versao.get('versionCode', 0) >= 10140
+        and pacote.get('version') == versao.get('version')
+        and ("const VERSAO_APP = '%s';" % versao.get('version')) in app),
     "Versão na interface acompanha o release": (
-        '<span class="orb-sub" aria-hidden="true">v1.14.0</span>' in html
-        and '<span class="versao-chip">v1.14.0</span>' in html),
+        ('<span class="orb-sub" aria-hidden="true">v%s</span>' % versao.get('version')) in html
+        and ('<span class="versao-chip">v%s</span>' % versao.get('version')) in html),
     "Mudança registrada no CHANGELOG e no LEIA-ME": (
-        '## 1.14.0' in leituras and '# J.A.R.V.I.S. Nova 1.14.0' in leituras
+        '## 1.14.0' in leituras and ('# J.A.R.V.I.S. Nova %s' % versao.get('version')) in leituras
         and 'escuta contínua pela transcrição da Groq' in leituras),
     "Notas da versão descrevem o que foi entregue": (
-        all(t in versao.get('notas', '').lower() for t in ('groq', 'informações', 'conversa', 'animações'))),
+        '## 1.14.0' in leituras
+        and all(t in leituras.lower() for t in ('groq', 'informações', 'conversa', 'animações'))),
     "Suíte roda o teste novo": 'python3 tests/test_v1_14_0.py' in script_teste,
     "Núcleo e detector se identificam por versão": (
         "const VERSAO = '1.2.0'" in hermes and 'VERSAO = "1.1.0"' in ativacao_java),

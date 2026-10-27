@@ -1,19 +1,17 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.14.0",
-  "versionCode": 10140,
+  "version": "1.15.0",
+  "versionCode": 10150,
   "androidAppId": "com.jarvis.nova",
   "base": "código-fonte na raiz do repositório",
   "gerado": "2026-10-27",
-  "status": "1.14.0: a escuta contínua pela transcrição da Groq entrou como segundo motor (ademais do detector próprio, que segue no segundo plano sem chave e sem enviar áudio), com variações de pronúncia ampliadas, porteiro de ruído e mensagens claras para limite de uso, chave recusada, falha de rede e permissão de microfone; o menu Informações reúne dados do aparelho, clima e manchetes e abre por voz; a conversa passou a ter tela própria, com o histórico inteiro, e mensagens e falas duplicadas acabaram; e as animações formam um conjunto coeso (verificação do sistema, ondas de voz e transições).",
+  "status": "1.15.0: o núcleo ganhou um segundo estilo — o plasma, um anel de energia irregular no desenho da imagem de referência — escolhido em Ajustes ▸ Voz ▸ Aparência do núcleo, com prévia na própria tela; a troca vale na hora (inclusive na abertura), fica salva no aparelho e o HUD técnico continua sendo o padrão.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.14.0 (2026-10-27). (1) Escuta pela Groq: cicloEscutaGroq/capturarTrechoGroq no app.js gravam pedaços de 2,5 s e transcrevem com o Whisper da Groq; Hermes.ativacao (as mesmas 33 variantes do Java) decide a palavra de ativação — incluindo 'jerves', 'gerves', 'garves', 'jaive', 'jaives' e 'jaivi', as palavras extras do usuário e a tolerância de sotaque da sensibilidade. Hermes.transcricaoGroq.erro traduz 429 (limite), 401/403 (chave), 413 (áudio), 5xx (fora) e falha de rede, com espera entre tentativas; permissão de microfone negada tem mensagem própria. Limites: roda com o app aberto, exige chave, consome cota e envia áudio para fora — por isso é desligado por padrão e o detector do Android continua sendo o caminho de segundo plano. (2) Menu Informações: bateria, memória, armazenamento, conexão, aparelho, temperatura da bateria, clima da cidade e manchetes com fontes; abre pelo card da central, pela barra lateral e por voz ('informações', 'manchetes', 'dados do celular'). (3) Conversa em tela própria: o chat saiu do menu (onde o espaço era curto e o fim das mensagens ficava cortado); acabaram o clip de pintura e os limites em dvh na área de conversa, e a rolagem ganhou segunda passada após o layout. (4) Eco único: Hermes.eco.unico bloqueia balão e fala repetidos em sequência, com registro do descarte. (5) Animações: verificação do sistema compartilhada por diagnóstico, menu Informações e abertura; ondas de voz alimentadas pelo nível real do microfone; entrada animada ao trocar de categoria; destaque do HUD por estado.",
+  "notas": "Revisão 1.15.0 (2026-10-27). (1) Estilo do núcleo: aplicarNucleo lê 'nucleo_estilo' (hud por padrão), grava body.dataset.nucleo e reflete em todos os pontos — seletor c-nucleo-estilo, pílula c-nucleo-pill e texto c-nucleo-status, além da prévia do cartão. A escolha é persistida em salvarConfig e relida em carregarConfig, de modo que a preferência sobrevive ao reinício. (2) Núcleo em plasma: bloco .plas dentro do HUD com quatro filamentos (.f1-.f4), névoa, miolo e ponto central; no estilo plasma os elementos técnicos (anéis, marcas, grades, rótulos e halo) saem de cena por opacidade e ficam a marca e os chips de estado. (3) Animação em camadas: plas-gira (giro em velocidades diferentes por filamento, um no sentido inverso), plas-forma (deformação do contorno irregular, que é o que dá a cara de plasma), plas-respira (névoa e miolo fora de fase) e plas-pulsa (ponto central); o nível real do microfone entra por --nv no próprio HUD, então o anel cresce e os filamentos ficam mais vivos quando o usuário fala — a mesma medida que alimenta as ondas de voz. (4) Custo e acessibilidade: com a tela oculta a animação pausa (body.oculto) e prefers-reduced-motion reduz tudo. (5) A abertura (splash) usa o mesmo estilo, evitando a troca visual brusca entre o boot e a interface.",
   "build": {
-    "resultado": "success",
-    "sha256": "d90123faced110a234fb9de80ace9d898a2d25af6d45f4329933a80e8697f01a",
-    "bytes": 70663239,
+    "resultado": "pendente",
     "data": "2026-10-27",
-    "observacao": "APK do release v1.14.0 (jarvis-nova-1.14.0-10140.apk), compilado pelo workflow de release com ci/debug.keystore — mesma assinatura de 1.10.1/1.12.0/1.13.0, então o app instalado se atualiza por cima pelo próprio atualizador interno. Checksum conferido depois de baixar o arquivo do próprio release."
+    "observacao": "APK da 1.15.0 ainda não compilado neste momento: o build sai do workflow de release, disparado pela tag v1.15.0, com o ci/debug.keystore — a mesma assinatura de 1.10.1 a 1.14.0, que é o que faz o atualizador interno instalar por cima sem apagar os ajustes do usuário. O último build conferido em uso é o da 1.14.0 (jarvis-nova-1.14.0-10140.apk, sha256 d90123faced110a234fb9de80ace9d898a2d25af6d45f4329933a80e8697f01a)."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"

@@ -12,7 +12,7 @@ const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.14.0';
+const VERSAO_APP = '1.15.0';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -191,6 +191,9 @@ function setNivel(l) {
       ondas.style.setProperty('--nv', nivelPend.toFixed(3));
       ondas.classList.toggle('com-sinal', nivelPend > 0.06);
     }
+    // Núcleo: o mesmo nível do microfone alimenta o anel em plasma (--nv chega pelo HUD).
+    const hud = document.getElementById('hud');
+    if (hud) hud.style.setProperty('--nv', nivelPend.toFixed(3));
   });
 }
 let ocupado = false, abortar = false, recAtual = null, confirmacao = null, ultimaCritica = 0, wakeAtivo = false, paradaAtiva = false;
@@ -4032,6 +4035,8 @@ function abrirConfig() {
   $('#c-wake').checked = store.get('wake', '0') === '1';
   const chkGroqCfg = document.getElementById('c-escuta-groq');
   if (chkGroqCfg) chkGroqCfg.checked = escutaGroqLigada();
+  const selNucleoCfg = document.getElementById('c-nucleo-estilo');
+  if (selNucleoCfg) selNucleoCfg.value = aplicarNucleo(nucleoEstiloAtual());
   $('#c-wake-pausa-musica').checked = store.get('wake_pausa_musica', '1') === '1';
   $('#c-wake-perfil').checked = store.get('wake_perfil', lerPerfilAcustico() ? '1' : '0') === '1';
   if ($('#c-wake-perfil-modo')) $('#c-wake-perfil-modo').value = store.get('wake_perfil_modo', 'sessao');
@@ -4094,6 +4099,8 @@ async function salvarConfig() {
   store.set('wake', (WAKE_WORD_DISPONIVEL && $('#c-wake').checked) ? '1' : '0');
   const chkGroqSalvar = document.getElementById('c-escuta-groq');
   if (chkGroqSalvar) store.set('escuta_groq', chkGroqSalvar.checked ? '1' : '0');
+  const selNucleoSalvar = document.getElementById('c-nucleo-estilo');
+  if (selNucleoSalvar) store.set('nucleo_estilo', aplicarNucleo(selNucleoSalvar.value));
   if (!WAKE_WORD_DISPONIVEL) $('#c-wake').checked = false;
   store.set('wake_pausa_musica', $('#c-wake-pausa-musica').checked ? '1' : '0');
   if (pausaMusicaAnterior !== store.get('wake_pausa_musica', '1')) await pararWake();
@@ -4262,6 +4269,12 @@ if (chkGroqEscuta) chkGroqEscuta.addEventListener('change', () => {
 });
 const btnGroqTeste = $('#c-escuta-groq-testar');
 if (btnGroqTeste) btnGroqTeste.onclick = () => testarTranscricaoGroq();
+// Aparência do núcleo: troca na hora, fica salva e o cartão de ajustes acompanha.
+const selNucleo = $('#c-nucleo-estilo');
+if (selNucleo) selNucleo.addEventListener('change', () => {
+  store.set('nucleo_estilo', aplicarNucleo(selNucleo.value));
+  registrar('interface', 'núcleo no estilo ' + store.get('nucleo_estilo'));
+});
 $('#btn-status-celular').onclick = () => { fecharPaineis(); abrirConfig(); mudarCategoriaConfig('celular'); atualizarStatusCelular(); };
 $('#btn-tarefas').onclick = abrirTarefas;
 $('#tarefas-fechar').onclick = () => fecharPaineis();
@@ -5462,6 +5475,32 @@ function animarEntrada(el) {
   void el.offsetWidth;   // força o navegador a reiniciar a animação
   el.classList.add('entrando');
 }
+
+/* ---------- Aparência do Núcleo (Ajustes ▸ Voz) ----------
+ * Dois desenhos para o mesmo núcleo: o HUD técnico de sempre (anéis, marcas e grades do painel) e
+ * o plasma, um anel de energia irregular com animação própria em camadas. A escolha vive em
+ * body[data-nucleo], de onde o CSS da interface e o da abertura leem; o nível do microfone chega
+ * por --nv, a mesma medida que alimenta as ondas de voz.
+ */
+const NUCLEO_ESTILOS = { hud: 'HUD técnico: anéis, marcas e grades do painel, reagindo ao nível do microfone.', plasma: 'Plasma: anel de energia irregular girando devagar, reagindo ao nível do microfone.' };
+function nucleoEstiloAtual() {
+  const v = store.get('nucleo_estilo', 'hud');
+  return NUCLEO_ESTILOS[v] ? v : 'hud';
+}
+/** Aplica o estilo do núcleo (sem argumento, usa o salvo) e devolve o nome válido aplicado. */
+function aplicarNucleo(valor) {
+  const pedido = (valor === undefined) ? nucleoEstiloAtual() : valor;
+  const v = NUCLEO_ESTILOS[pedido] ? pedido : 'hud';
+  document.body.dataset.nucleo = v;
+  const sel = document.getElementById('c-nucleo-estilo');
+  if (sel && sel.value !== v) sel.value = v;
+  const pill = document.getElementById('c-nucleo-pill');
+  if (pill) pill.textContent = (v === 'plasma') ? 'Plasma' : 'HUD';
+  const txt = document.getElementById('c-nucleo-status');
+  if (txt) txt.textContent = 'Núcleo em ' + NUCLEO_ESTILOS[v];
+  return v;
+}
+aplicarNucleo();
 
 // Diagnóstico por voz ("verifique o sistema"): abre a aba, roda as mesmas checagens do
 // botão e devolve a lista que o núcleo transforma em resumo falado.

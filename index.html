@@ -69,6 +69,15 @@
     <div class="hud" id="hud" role="button" tabindex="0" aria-label="Falar com o Jarvis. Toque para falar ou parar.">
       <div class="halo"></div>
       <div class="hud-grade" aria-hidden="true"></div>
+      <div class="plas" aria-hidden="true">
+        <span class="fil f1"><i></i></span>
+        <span class="fil f2"><i></i></span>
+        <span class="fil f3"><i></i></span>
+        <span class="fil f4"><i></i></span>
+        <span class="plas-haze"></span>
+        <span class="plas-core"></span>
+        <span class="plas-ponto"></span>
+      </div>
       <svg class="cam eixos" viewBox="0 0 400 400" aria-hidden="true">
         <path class="eixo" d="M200 10V58M200 342V390M10 200H58M342 200H390"/>
         <path class="eixo-arco" d="M200 8a192 192 0 0 1 135 55"/>
@@ -96,7 +105,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.14.0</span>
+      <span class="orb-sub" aria-hidden="true">v1.15.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -180,7 +189,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.14.0</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.15.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -220,6 +229,13 @@
     <label>Perfil de voz<select id="c-voz-perfil"><option value="padrao">Padrão</option><option value="filme">JARVIS do filme (grave e cadenciado)</option><option value="jarvis">Jarvis completo (mais grave e formal)</option><option value="ultra">Ultra grave</option></select></label>
     <p class="dica">O perfil ajusta tom e velocidade de uma vez; os controles abaixo continuam livres para o ajuste fino. O timbre depende das vozes instaladas no aparelho: se não houver uma voz masculina em português, o app usa a melhor voz pt-BR e compensa no tom.</p>
     <label class="linha"><input id="c-voz-chime" type="checkbox"><span>Sinal do HUD antes de responder<small>Duas notas curtas, como no filme, antes de cada resposta falada. Fica junto do áudio do app; em modo silencioso o Android pode abaixar o volume.</small></span></label>
+    <div class="nucleo-card">
+      <div class="nucleo-card-cabecalho"><div><span class="eyebrow">APARÊNCIA DO NÚCLEO</span><b>Estilo do núcleo central</b></div><span class="status-pill" id="c-nucleo-pill">HUD</span></div>
+      <p class="dica">O núcleo é o círculo do topo da tela: ele gira, respira e reage ao nível do seu microfone. Escolha o estilo que combina com o seu aparelho — a troca vale na hora e fica salva.</p>
+      <label>Estilo do núcleo<select id="c-nucleo-estilo"><option value="hud">HUD técnico — anéis, marcas e grades do painel</option><option value="plasma">Plasma — anel de energia irregular (como na referência)</option></select></label>
+      <div class="nucleo-preview" aria-hidden="true"><span class="np np-plas"></span><span class="np np-hud"></span></div>
+      <p id="c-nucleo-status" class="dica" role="status" aria-live="polite">Núcleo em HUD técnico: anéis e grades do painel, reagindo ao nível do microfone.</p>
+    </div>
     <label>Voz de resposta<select id="c-voz"></select></label>
     <button id="c-voz-masculina" type="button" class="secundario">Usar voz masculina preferencial</button>
     <p id="c-voz-status" class="dica" role="status" aria-live="polite">O JARVIS tentará priorizar uma voz masculina em português; se o motor do aparelho não oferecer uma, usará a melhor voz pt-BR disponível e um tom mais grave.</p>
