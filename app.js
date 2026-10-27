@@ -12,7 +12,7 @@ const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.13.0';
+const VERSAO_APP = '1.14.0';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -185,6 +185,12 @@ function setNivel(l) {
   nivelRaf = requestAnimationFrame(() => {
     nivelRaf = 0;
     if (NUCLEO) NUCLEO.style.transform = 'scale(' + (1 + nivelPend * 0.35).toFixed(3) + ')';
+    // Ondas de voz: reagem ao microfone enquanto ele ouve e enquanto o assistente fala.
+    const ondas = document.getElementById('ondas-voz');
+    if (ondas) {
+      ondas.style.setProperty('--nv', nivelPend.toFixed(3));
+      ondas.classList.toggle('com-sinal', nivelPend > 0.06);
+    }
   });
 }
 let ocupado = false, abortar = false, recAtual = null, confirmacao = null, ultimaCritica = 0, wakeAtivo = false, paradaAtiva = false;
@@ -255,8 +261,13 @@ function cartaoLink(l) {
   a.onclick = (e) => { e.preventDefault(); abrirLink(l.url); };
   return a;
 }
+// Eco único do balão: o mesmo balão (tipo + texto) não entra duas vezes seguidas. Mensagem
+// repetida é sintoma de dois caminhos disparando o mesmo turno; o usuário não deve ver a
+// resposta duplicada. Avisos de sistema ('sis') ficam de fora: eles são deliberados.
+const ecoBalao = { texto: '', em: 0 };
 function msg(tipo, texto, links) {
   const chat = $('#chat');
+  if (tipo !== 'sis' && Hermes.eco.unico(ecoBalao, tipo + '|' + String(texto == null ? '' : texto), Hermes.eco.janelaMs)) return;
   // Só acompanha a conversa se você já estiver no fim (ou for mensagem sua): não puxa a tela enquanto você lê acima.
   const perto = tipo === 'eu' || (chat.scrollHeight - chat.scrollTop - chat.clientHeight) < 120;
   const d = document.createElement('div');
@@ -271,6 +282,9 @@ function msg(tipo, texto, links) {
   chat.appendChild(d);
   while (chat.children && chat.children.length > 80 && chat.firstChild) chat.removeChild(chat.firstChild);
   if (perto) chat.scrollTop = chat.scrollHeight || 1e9;
+  // Segunda passada depois do layout: link, fonte ou bloco que ganha altura em seguida
+  // deixava a última mensagem cortada na borda da área de conversa.
+  if (perto) requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight || 1e9; });
 }
 /* ---------- Área de mensagens: estado de carregamento e rolagem ---------- */
 // O balão de “formulando” é o estado explícito de carregamento da conversa: três pontos
@@ -2492,7 +2506,17 @@ function dividirFala(t, max) {
   if (cur.trim()) out.push(cur.trim());
   return out.filter(Boolean);
 }
+// A mesma fala não sai duas vezes em sequência: evita ouvir a resposta repetida quando dois
+// caminhos disparam o mesmo turno (o balão passa pelo mesmo portão em msg()).
+const ecoFala = { texto: '', em: 0 };
+function falaRepetida(texto) {
+  if (!Hermes.eco.unico(ecoFala, texto, Hermes.eco.janelaMs)) return false;
+  removerPensando();
+  registrar('eco', 'fala repetida ignorada: ' + String(texto == null ? '' : texto).slice(0, 80));
+  return true;
+}
 async function falar(texto, semMsg, opcoes, links) {
+  if (falaRepetida(texto)) return;
   removerPensando();
   if (!semMsg) msg('jv', texto, links);
   const partes = dividirFala(limparParaFala(texto));
@@ -2682,7 +2706,7 @@ async function transcrever(blob) {
   const key = CHAVES.groq;
   const modelo = store.get('precisa', '1') === '1' ? 'whisper-large-v3' : 'whisper-large-v3-turbo';
   const dica = dicaWhisper();
-  let erroOnline = '';
+  let erroOnline = '', erroStatus = 0;
   if (key) {
     try {
       const enviar = (verbose) => {
@@ -2698,6 +2722,7 @@ async function transcrever(blob) {
       let r = await enviar(true);
       if (!r.ok && r.status === 400) r = await enviar(false);
       if (!r.ok) {
+        erroStatus = r.status;
         const det = msgErro(await r.text()).slice(0, 160);
         erroOnline = r.status === 429
           ? 'A Groq atingiu o limite de uso (HTTP 429). Não vou repetir a chamada automaticamente.'
@@ -2708,14 +2733,16 @@ async function transcrever(blob) {
         erroOnline = 'A transcrição online não encontrou fala confiável.';
       }
     } catch (e) {
+      erroStatus = 0;
       erroOnline = e && e.name === 'AbortError' ? 'pedido cancelado ou expirado' : (e && e.message ? e.message : 'falha de rede');
       if (abortar) throw new Error('Cancelado.');
     }
-  } else erroOnline = 'A chave da Groq não está configurada.';
+  } else { erroOnline = 'A chave da Groq não está configurada.'; erroStatus = 401; }
 
   // A alternativa Android começa uma nova escuta; a pessoa precisa repetir a frase.
   const P = plug('JarvisBackground');
-  if (ehAndroid && P && typeof P.transcreverNativo === 'function' && !abortar) {
+  // No teste da transcrição da Groq não vale abrir o reconhecedor do Android: o teste é da nuvem.
+  if (ehAndroid && !testandoTranscricaoGroq && P && typeof P.transcreverNativo === 'function' && !abortar) {
     msg('sis', 'A transcrição online falhou (' + erroOnline.slice(0, 100) + '). Repita o comando; vou tentar o reconhecimento do Android.');
     setEstado('listening');
     try {
@@ -2729,10 +2756,11 @@ async function transcrever(blob) {
       throw new Error('A transcrição online falhou e o reconhecimento do Android não está disponível. ' + (e && e.message ? e.message : 'Digite o comando ou tente novamente.'));
     }
   }
+  const falha = (msg) => { const e = new Error(msg); e.status = erroStatus; return e; };
   if (/429/.test(erroOnline) || /limite de uso \(HTTP 429\)/.test(erroOnline)) {
-    throw new Error(erroOnline + ' Se o reconhecimento Android não estiver disponível, digite “ligar para NOME” para executar o comando local sem chamar a IA.');
+    throw falha(erroOnline + ' Se o reconhecimento Android não estiver disponível, digite “ligar para NOME” para executar o comando local sem chamar a IA.');
   }
-  throw new Error(erroOnline + ' Configure a chave da Groq ou digite o comando.');
+  throw falha(erroOnline + ' Configure a chave da Groq ou digite o comando.');
 }
 async function ouvirUmaVez() {
   setEstado('listening');
@@ -2768,6 +2796,191 @@ async function ouvirUmaVez() {
 const WAKE_WORD_DISPONIVEL = true;
 const wakeLigado = () => WAKE_WORD_DISPONIVEL && ehAndroid && store.get('wake', '0') === '1';
 const conversaLigada = () => store.get('conversa', '1') === '1';
+/* ---------- Motor de escuta contínua pela Groq ----------
+ * Segundo motor de escuta: em vez do reconhecedor do Android, o microfone fica aberto no
+ * aplicativo, o áudio é cortado em pedaços curtos (2,5 s) e cada pedaço vai para a transcrição
+ * da Groq (Whisper). O texto volta e as MESMAS regras de fonética do núcleo (Hermes.ativacao)
+ * decidem se a palavra de ativação foi dita — incluindo as variações que o usuário dita
+ * ("jarves", "gervis", "jerves", "jaive"), as palavras extras cadastradas e a tolerância a
+ * sotaque da sensibilidade escolhida. Um porteiro de ruído medido no microfone descarta trecho
+ * sem voz dirigida ao aparelho antes de gastar cota.
+ *
+ * Limites ditos com franqueza (aparecem na própria tela de ajustes): roda com o app aberto — o
+ * WebView não grava em segundo plano —, exige a chave da Groq, consome cota de transcrição,
+ * envia o áudio para fora e precisa de internet. Por isso é opcional e desligado por padrão: o
+ * detector do Android continua sendo o caminho de segundo plano, sem chave, sem custo e sem
+ * enviar áudio. Falha de rede, limite de uso (HTTP 429), chave recusada (401/403) e permissão
+ * de microfone negada viram mensagem clara (Hermes.transcricaoGroq.erro) e nunca travam a tela.
+ */
+const escutaGroqLigada = () => store.get('escuta_groq', '0') === '1';
+let escutaGroqAtiva = false, escutaGroqStream = null, escutaGroqCtx = null, escutaGroqRec = null;
+let escutaGroqParar = false, escutaGroqFalhas = 0, testandoTranscricaoGroq = false;
+const esperaMs = (ms) => new Promise((r) => setTimeout(r, ms));
+function escutaGroqStatus(texto, tipo, logar) {
+  const el = document.getElementById('c-escuta-groq-status');
+  if (el) el.textContent = texto;
+  if (tipo) document.body.dataset.escutaGroq = tipo;
+  if (logar) registrar('voz', 'escuta Groq: ' + texto);
+}
+function escutaGroqDisponivel() {
+  return !!(navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function' && typeof window.MediaRecorder === 'function');
+}
+/** Grava um trecho curto do microfone e mede o nível, para o porteiro de ruído. */
+function capturarTrechoGroq() {
+  return new Promise((resolve) => {
+    const pedacos = [];
+    let pico = -120, medidor = null, relogio = null, resolvido = false, rec = null;
+    const concluir = (v) => {
+      if (resolvido) return;
+      resolvido = true;
+      if (medidor) clearInterval(medidor);
+      if (relogio) clearTimeout(relogio);
+      resolve(v);
+    };
+    try { rec = new MediaRecorder(escutaGroqStream, { audioBitsPerSecond: 48000 }); } catch (e) { concluir(null); return; }
+    escutaGroqRec = rec;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      escutaGroqCtx = escutaGroqCtx || new AC();
+      if (escutaGroqCtx.state === 'suspended') escutaGroqCtx.resume();
+      const an = escutaGroqCtx.createAnalyser();
+      an.fftSize = 512;
+      escutaGroqCtx.createMediaStreamSource(escutaGroqStream).connect(an);
+      const dados = new Uint8Array(an.fftSize);
+      medidor = setInterval(() => {
+        an.getByteTimeDomainData(dados);
+        let soma = 0;
+        for (const v of dados) { const x = (v - 128) / 128; soma += x * x; }
+        const db = 20 * Math.log10(Math.max(1e-6, Math.sqrt(soma / dados.length)));
+        if (db > pico) pico = db;
+        setNivel(Math.min(1, Math.max(0, (db + 60) / 60)));   // ondas de voz reagindo ao microfone
+      }, 60);
+    } catch (e) { medidor = null; }
+    rec.ondataavailable = (ev) => { if (ev.data && ev.data.size) pedacos.push(ev.data); };
+    rec.onerror = () => concluir(null);
+    rec.onstop = () => {
+      const blob = pedacos.length ? new Blob(pedacos, { type: pedacos[0].type || 'audio/webm' }) : null;
+      const cfg = configAtivacaoAtual();
+      // Mesmo porteiro de ruído do detector próprio: som baixo demais não é voz dirigida ao app.
+      const voz = !!(blob && blob.size > 1200 && pico >= (cfg.ruidoDb || -40));
+      concluir({ blob, voz, pico });
+    };
+    relogio = setTimeout(() => { try { rec.stop(); } catch (e) { concluir(null); } }, 2500);
+    try { rec.start(); } catch (e) { concluir(null); }
+  });
+}
+async function iniciarEscutaGroq() {
+  if (escutaGroqAtiva || !escutaGroqLigada()) return;
+  if (!escutaGroqDisponivel()) {
+    escutaGroqStatus('Este ambiente não oferece microfone ao aplicativo. Use o detector do Android.', 'erro', true);
+    return;
+  }
+  await chavesProntas;
+  if (!CHAVES.groq) {
+    escutaGroqStatus('A escuta pela Groq precisa da chave da Groq (Ajustes ▸ IA). Enquanto isso, o detector do Android continua ouvindo.', 'erro', true);
+    return;
+  }
+  escutaGroqParar = false;
+  escutaGroqAtiva = true;
+  atualizarWakeControles();
+  try {
+    escutaGroqStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+  } catch (e) {
+    escutaGroqAtiva = false;
+    const negado = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
+    const aviso = negado
+      ? 'Permissão de microfone negada. Autorize o microfone para o J.A.R.V.I.S. e ligue a escuta de novo.'
+      : 'Não consegui abrir o microfone: ' + ((e && e.message) || 'dispositivo indisponível') + '.';
+    escutaGroqStatus(aviso, 'erro', true);
+    msg('sis', aviso);
+    atualizarWakeControles();
+    return;
+  }
+  escutaGroqStatus('Escuta pela Groq ativa: transcrição na nuvem, com o aplicativo aberto.', 'ok', true);
+  cicloEscutaGroq();
+}
+async function pararEscutaGroq(silencioso) {
+  escutaGroqParar = true;
+  const estavaAtiva = escutaGroqAtiva;
+  escutaGroqAtiva = false;
+  try { if (escutaGroqRec && escutaGroqRec.state === 'recording') escutaGroqRec.stop(); } catch (e) { /* já parado */ }
+  escutaGroqRec = null;
+  if (escutaGroqStream) { try { escutaGroqStream.getTracks().forEach((t) => t.stop()); } catch (e) { /* faixas já paradas */ } escutaGroqStream = null; }
+  if (escutaGroqCtx) { try { await escutaGroqCtx.close(); } catch (e) { /* contexto já fechado */ } escutaGroqCtx = null; }
+  setNivel(0);
+  if (estavaAtiva && !silencioso) escutaGroqStatus('Escuta pela Groq desligada. O detector do Android continua disponível.', '', true);
+  atualizarWakeControles();
+}
+/** Laço da escuta pela Groq: grava, transcreve, confere a palavra e acorda o assistente. */
+async function cicloEscutaGroq() {
+  while (escutaGroqAtiva && !escutaGroqParar) {
+    // Não ouvir a própria resposta e não gravar com o app fora da tela (privacidade e bateria).
+    if (ocupado || document.hidden || paradaAtiva) { await esperaMs(400); continue; }
+    const trecho = await capturarTrechoGroq();
+    if (!escutaGroqAtiva) return;
+    if (!trecho) { await esperaMs(300); continue; }
+    if (!trecho.voz) continue;   // porteiro de ruído: não manda silêncio para a nuvem
+    let texto = '';
+    try {
+      texto = await transcrever(trecho.blob);
+      escutaGroqFalhas = 0;
+      escutaGroqStatus('Ouvindo pela Groq. Última transcrição: “' + String(texto).slice(0, 80) + '”.', 'ok', false);
+    } catch (e) {
+      if (abortar) return;
+      escutaGroqFalhas++;
+      const info = Hermes.transcricaoGroq.erro(Number(e && e.status) || 0, (e && e.message) || '');
+      escutaGroqStatus(info.aviso + (info.tipo === 'chave' ? '' : ' (tentativa ' + escutaGroqFalhas + ')'), info.tipo, escutaGroqFalhas === 1);
+      if (info.tipo === 'chave') msg('sis', info.aviso);
+      await esperaMs(info.esperaMs);
+      continue;
+    }
+    if (!texto) continue;
+    if (!Hermes.ativacao.presente(texto, configAtivacaoAtual())) continue;
+    registrar('acordou', 'palavra de ativação pela Groq: ' + texto.slice(0, 80));
+    await pararEscutaGroq(true);
+    setEstado('idle');
+    aoAcordar(texto);
+    return;
+  }
+}
+/** Retoma a escuta certa depois de um turno: nuvem ou detector do Android. */
+function retomarEscuta() {
+  if (escutaGroqLigada()) { if (!escutaGroqAtiva) iniciarEscutaGroq(); return; }
+  if (wakeLigado()) iniciarWake();
+}
+/** Teste da transcrição da Groq pelo painel: grava um trecho e diz o que foi reconhecido. */
+async function testarTranscricaoGroq() {
+  const btn = $('#c-escuta-groq-testar');
+  if (escutaGroqAtiva) { escutaGroqStatus('A escuta pela Groq já está ativa — ela mesma está transcrevendo o que você diz.', 'ok'); return; }
+  if (!escutaGroqDisponivel()) { escutaGroqStatus('Este ambiente não oferece microfone ao aplicativo.', 'erro'); return; }
+  await chavesProntas;
+  if (!CHAVES.groq) { escutaGroqStatus('Cadastre a chave da Groq em Ajustes ▸ IA para testar a transcrição.', 'erro'); return; }
+  if (btn) btn.disabled = true;
+  let stream = null;
+  testandoTranscricaoGroq = true;
+  try {
+    escutaGroqStatus('Gravando 2,5 s: diga “Jarvis” perto do aparelho.', 'carregando');
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+    escutaGroqStream = stream;
+    const trecho = await capturarTrechoGroq();
+    escutaGroqStream = null;
+    if (!trecho || !trecho.blob) { escutaGroqStatus('Não consegui gravar o trecho. Confira a permissão do microfone.', 'erro'); return; }
+    if (!trecho.voz) { escutaGroqStatus('O microfone quase não registrou som (pico ' + Math.round(trecho.pico) + ' dB): fale mais perto ou aumente a sensibilidade da ativação.', 'erro'); return; }
+    const texto = await transcrever(trecho.blob);
+    const achou = Hermes.ativacao.presente(texto, configAtivacaoAtual());
+    escutaGroqStatus('A Groq transcreveu: “' + String(texto).slice(0, 120) + '”. ' + (achou
+      ? 'A palavra de ativação foi reconhecida — a escuta pela Groq vai funcionar.'
+      : 'A palavra de ativação NÃO foi reconhecida nesta transcrição. Tente dizendo “Jarvis” de novo ou aumente a sensibilidade da ativação.'), achou ? 'ok' : 'warn', true);
+  } catch (e) {
+    const info = Hermes.transcricaoGroq.erro(Number(e && e.status) || 0, (e && e.message) || '');
+    escutaGroqStatus(info.aviso, info.tipo, true);
+  } finally {
+    testandoTranscricaoGroq = false;
+    if (stream) { try { stream.getTracks().forEach((t) => t.stop()); } catch (e) { /* ok */ } }
+    escutaGroqStream = null;
+    if (btn) btn.disabled = false;
+  }
+}
 /* ---------- Calibragem do detector de ativação ---------- */
 // Sensibilidade e palavras extras ficam no app e vão para o serviço nativo a cada
 // startWake: o número que o usuário mexe é o mesmo que o Java usa para decidir.
@@ -2829,6 +3042,9 @@ function bipe() {
 let iniciandoWake = false;
 async function iniciarWake() {
   const p = plug('JarvisBackground');
+  // Com a escuta pela Groq ligada, quem ouve é ela: dois motores disputando microfone só
+  // gastariam bateria e produziriam detecção dobrada.
+  if (escutaGroqLigada()) { iniciarEscutaGroq(); return; }
   if (!p || !wakeLigado() || ocupado || wakeAtivo || iniciandoWake) return;
   iniciandoWake = true;
   let servicoPronto = false;
@@ -2881,11 +3097,17 @@ async function pararWake(desligar) {
   atualizarWakeControles();
 }
 function atualizarWake() {
+  // Dois motores possíveis: o detector próprio do Android (segundo plano, sem chave e sem
+  // enviar áudio para fora) e a escuta pela Groq (transcrição na nuvem, com o app aberto).
+  // Os dois usam as MESMAS regras de fonética do núcleo, então as variações valem nos dois.
+  if (escutaGroqLigada()) { pararWake(true).then(() => iniciarEscutaGroq()); return; }
+  pararEscutaGroq(true);
   if (wakeLigado()) iniciarWake();
   else { pararWake(true).then(() => { if (!ocupado) setEstado('idle'); }); }
 }
 async function aoAcordar(texto) {
   liberarApp();                       // o comando por voz tem prioridade sobre a animação de abertura
+  entrarConversa();
   mostrarWakeMini('Ativação detectada · preparando o microfone…');
   if (paradaAtiva) { // o detector identifica Jarvis; o reconhecimento completo só então procura o comando de parada
     paradaAtiva = false;
@@ -2894,8 +3116,8 @@ async function aoAcordar(texto) {
       const p = plug('JarvisBackground');
       const r = p && typeof p.transcreverNativo === 'function' ? await p.transcreverNativo({ idioma: 'pt-BR', somenteLocal: store.get('offline', '0') === '1' }) : { texto: '' };
       if (/\b(para|pare|parar|chega|silencio|cala|calma|cancela|cancelar)\b/.test(norm(r && r.texto))) { registrar('parar', 'por voz'); parar(); }
-      else setTimeout(iniciarWake, 500);
-    } catch (e) { setTimeout(iniciarWake, 500); }
+      else setTimeout(retomarEscuta, 500);
+    } catch (e) { setTimeout(retomarEscuta, 500); }
     return;
   }
   wakeAtivo = false; // o lado nativo já parou de ouvir
@@ -2940,13 +3162,16 @@ function parar() {
     if (ocupado && geracao === g) { registrar('config', 'liberado à força depois de Parar'); geracao++; liberar(); religarMic(); }
   }, 3000);
 }
-function liberar() { ocupado = false; setEstado('idle'); setTimeout(iniciarWake, 500); }
+function liberar() { ocupado = false; setEstado('idle'); setTimeout(retomarEscuta, 500); }
 function religarMic() { if (reabrir) { reabrir = false; setTimeout(ciclo, 250); } }
 async function executar(fn) {
   if (ocupado) return;
   ocupado = true; abortar = false;
   const minha = ++geracao;
   try {
+    // Um microfone por vez: os dois motores de escuta saem da frente durante o turno, senão o
+    // assistente ouviria a própria fala e poderia reativar por engano.
+    if (escutaGroqAtiva) await pararEscutaGroq(true);
     if (wakeAtivo) { await pararWake(); await new Promise((r) => setTimeout(r, 150)); }
     await fn();
   } catch (e) {
@@ -2957,6 +3182,7 @@ async function executar(fn) {
 }
 function ciclo() {
   vibrar(12);
+  entrarConversa();
   if (ocupado) {
     if (document.body.dataset.state === 'listening' && recAtual) recAtual.stop();
     else { reabrir = true; parar(); }   // tocar no microfone enquanto ele fala: para e já te escuta
@@ -2974,6 +3200,7 @@ function ciclo() {
 function enviarComando(t) {
   t = String(t || '').trim();
   if (!t || ocupado) return;
+  entrarConversa();   // a resposta aparece na tela de conversa, não no menu
   msg('eu', t);
   aquecer();
   executar(async () => { setEstado('thinking'); await turno(t); });
@@ -3288,16 +3515,18 @@ function mudarCategoriaConfig(cat) {
   document.querySelectorAll('#painel-config [data-category]').forEach((sec) => { sec.hidden = sec.dataset.category !== cat; });
   const painel = $('#painel-config');
   if (painel) painel.scrollTop = 0;
+  // Animação de entrada a cada troca de categoria: a tela responde ao toque.
+  animarEntrada(document.querySelector('#painel-config [data-category="' + cat + '"]'));
 }
 function atualizarWakeControles() {
   const ligado = store.get('wake', '0') === '1';
   const btn = $('#btn-wake-toggle');
   if (btn) {
-    btn.hidden = !ehAndroid;
+    btn.hidden = !(ehAndroid || escutaGroqLigada());
     btn.setAttribute('aria-pressed', ligado ? 'false' : 'true');
     btn.setAttribute('aria-label', ligado ? 'Pausar ativação por voz' : 'Ativar ativação por voz');
     btn.title = ligado ? 'Pausar ativação por voz' : 'Ativar ativação por voz';
-    $('#wake-toggle-text').textContent = !ligado ? 'Escuta pausada' : (wakeAtivo ? 'Ouvindo “Jarvis” · detector próprio' : 'Ativação ligada');
+    $('#wake-toggle-text').textContent = !ligado ? 'Escuta pausada' : (escutaGroqAtiva ? 'Ouvindo pela Groq' : (wakeAtivo ? 'Ouvindo “Jarvis” · detector próprio' : 'Ativação ligada'));
   }
   const c = $('#c-wake-toggle');
   if (c) {
@@ -3640,7 +3869,7 @@ async function executarDiagnostico() {
   return { itens, resumo: Hermes.resumoDiagnostico(itens, { tratamento: trat() }) };
 }
 const H = (typeof history !== 'undefined') ? history : null;
-const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas', '#painel-visao'];
+const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas', '#painel-visao', '#painel-info'];
 const estadoPainelJarvis = (estado) => Boolean(estado && estado.jarvisPainel === true);
 function algumPainelAberto() {
   return PAINEIS.some((sel) => { const el = $(sel); return Boolean(el && !el.hidden); });
@@ -3801,6 +4030,8 @@ function abrirConfig() {
   $('#c-pin').value = '';
   if (ehAndroid) setTimeout(() => diagnosticoSegundoPlano(true), 500);
   $('#c-wake').checked = store.get('wake', '0') === '1';
+  const chkGroqCfg = document.getElementById('c-escuta-groq');
+  if (chkGroqCfg) chkGroqCfg.checked = escutaGroqLigada();
   $('#c-wake-pausa-musica').checked = store.get('wake_pausa_musica', '1') === '1';
   $('#c-wake-perfil').checked = store.get('wake_perfil', lerPerfilAcustico() ? '1' : '0') === '1';
   if ($('#c-wake-perfil-modo')) $('#c-wake-perfil-modo').value = store.get('wake_perfil_modo', 'sessao');
@@ -3861,6 +4092,8 @@ async function salvarConfig() {
   } catch (e) { alert('Não foi possível validar as rotinas: ' + e.message); mudarCategoriaConfig('rotinas'); return; }
   persistirHistorico();
   store.set('wake', (WAKE_WORD_DISPONIVEL && $('#c-wake').checked) ? '1' : '0');
+  const chkGroqSalvar = document.getElementById('c-escuta-groq');
+  if (chkGroqSalvar) store.set('escuta_groq', chkGroqSalvar.checked ? '1' : '0');
   if (!WAKE_WORD_DISPONIVEL) $('#c-wake').checked = false;
   store.set('wake_pausa_musica', $('#c-wake-pausa-musica').checked ? '1' : '0');
   if (pausaMusicaAnterior !== store.get('wake_pausa_musica', '1')) await pararWake();
@@ -3957,6 +4190,7 @@ document.querySelectorAll('[data-lat]').forEach((b) => {
     if (alvo === 'central') { fecharPaineis(); return; }
     if (alvo === 'tarefas') { abrirTarefas(); return; }
     // Visão tem painel próprio (câmera ao vivo), não uma aba de configuração.
+    if (alvo === 'info') { abrirInformacoesUI(); return; }
     if (alvo === 'visao') { abrirVisao(); return; }
     abrirConfig();
     mudarCategoriaConfig(alvo);
@@ -4010,6 +4244,24 @@ $('#btn-chat-ampliado').onclick = () => {
   registrar('interface', ligado ? 'modo conversa ampliada ativado' : 'modo conversa ampliada desativado');
 };
 $('#btn-config').onclick = abrirConfig;
+// Central de comando: conversa (tela própria) e menu de informações.
+$('#btn-conversa').onclick = alternarTelaConversa;
+const cardConversa = $('#dash-conversa');
+if (cardConversa) cardConversa.onclick = () => entrarConversa();
+const cardInfo = $('#dash-info');
+if (cardInfo) cardInfo.onclick = abrirInformacoesUI;
+$('#info-atualizar').onclick = abrirInformacoesUI;
+$('#info-fechar').onclick = () => fecharPaineis();
+$('#info-config-celular').onclick = () => { abrirConfig(); mudarCategoriaConfig('celular'); atualizarStatusCelular(); };
+const chkGroqEscuta = $('#c-escuta-groq');
+if (chkGroqEscuta) chkGroqEscuta.addEventListener('change', () => {
+  store.set('escuta_groq', chkGroqEscuta.checked ? '1' : '0');
+  registrar('voz', chkGroqEscuta.checked ? 'escuta pela Groq ligada' : 'escuta pela Groq desligada');
+  escutaGroqStatus(chkGroqEscuta.checked ? 'Ligando a escuta pela Groq…' : 'Escuta pela Groq desligada.', '', false);
+  atualizarWake();
+});
+const btnGroqTeste = $('#c-escuta-groq-testar');
+if (btnGroqTeste) btnGroqTeste.onclick = () => testarTranscricaoGroq();
 $('#btn-status-celular').onclick = () => { fecharPaineis(); abrirConfig(); mudarCategoriaConfig('celular'); atualizarStatusCelular(); };
 $('#btn-tarefas').onclick = abrirTarefas;
 $('#tarefas-fechar').onclick = () => fecharPaineis();
@@ -5049,6 +5301,168 @@ async function noticiasDeHoje() {
   const r = await pesquisarWeb('principais manchetes de hoje no Brasil');
   return { fala: r.fala, links: r.links || [] };
 }
+/* ---------- Informações: dados do aparelho, clima e manchetes ----------
+ * O menu Informações junta, em um lugar só, o que o assistente sabe do momento: estado real do
+ * aparelho, clima da cidade configurada e as manchetes do dia. Abre pelo botão da central, pela
+ * barra lateral e por voz ("Jarvis, informações"). Ao abrir mostra um estado de carregamento com
+ * a mesma animação de verificação do diagnóstico e depois os dados — cada linha vem de uma
+ * consulta de verdade, sem inventar "tudo certo"; o que falhou aparece dito com franqueza.
+ */
+const INFO_CAMPOS = ['cel-info-bateria', 'cel-info-ram', 'cel-info-arm', 'cel-info-conexao', 'cel-info-aparelho', 'cel-info-temp'];
+async function dadosDoAparelho() {
+  if (plataforma !== 'android') return null;
+  try { return await nativo('statusDispositivo', {}); }
+  catch (e) { registrar('erro', 'informações: ' + (e && e.message ? e.message : e)); return null; }
+}
+function infoSet(id, valor) { const el = document.getElementById(id); if (el) el.textContent = valor; }
+function infoStatus(texto, estado) {
+  const st = document.getElementById('info-status');
+  if (st) { st.textContent = texto; st.dataset.estado = estado || ''; }
+}
+async function renderInformacoes() {
+  infoStatus('Consultando o aparelho, o clima e as manchetes…', 'carregando');
+  animarVerificacao(true);
+  let aparelho = null, c = null, n = null;
+  try {
+    const r = await Promise.allSettled([dadosDoAparelho(), clima(0), noticiasDeHoje()]);
+    aparelho = r[0]; c = r[1]; n = r[2];
+    if (aparelho.status === 'rejected' && aparelho.reason) registrar('erro', 'informações (aparelho): ' + aparelho.reason.message);
+    if (c.status === 'rejected' && c.reason) registrar('erro', 'informações (clima): ' + c.reason.message);
+    if (n.status === 'rejected' && n.reason) registrar('erro', 'informações (notícias): ' + n.reason.message);
+  } finally { animarVerificacao(false); }
+  const d = aparelho && aparelho.status === 'fulfilled' ? aparelho.value : null;
+  const climaV = c && c.status === 'fulfilled' ? c.value : null;
+  const notV = n && n.status === 'fulfilled' ? n.value : null;
+  if (d) {
+    const pct = Number(d.bateria);
+    infoSet('cel-info-bateria', (pct >= 0 ? pct + '%' : 'indisponível') + (d.carregando ? ' · carregando' : ''));
+    const rt = Number(d.ramTotal), rl = Number(d.ramLivre);
+    infoSet('cel-info-ram', rt > 0 ? bytesLegiveis(rl) + ' livres de ' + bytesLegiveis(rt) : 'indisponível');
+    const total = Number(d.armazenamentoTotal), livre = Number(d.armazenamentoLivre), usado = Number(d.armazenamentoUsadoPct);
+    infoSet('cel-info-arm', total > 0 ? usado + '% usado · ' + bytesLegiveis(livre) + ' livres' : 'indisponível');
+    infoSet('cel-info-conexao', d.conexao || 'desconhecida');
+    infoSet('cel-info-aparelho', ((d.fabricante || 'Android') + ' ' + (d.modelo || '')).trim() + ' · Android ' + (d.android || '?'));
+    const tc = Number(d.temperaturaC);
+    infoSet('cel-info-temp', tc >= 0 ? tc.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' °C' : 'sensor indisponível');
+  } else {
+    INFO_CAMPOS.forEach((id) => infoSet(id, plataforma === 'android' ? 'não consegui consultar agora' : 'disponível no app Android'));
+  }
+  if (climaV && Number.isFinite(Number(climaV.temp))) {
+    let txt = climaV.temp + ' °C em ' + (climaV.cidade || 'sua cidade') + ' · ' + (climaV.ceu || 'tempo indefinido');
+    if (Number.isFinite(Number(climaV.max)) && Number.isFinite(Number(climaV.min))) txt += ' · máxima ' + climaV.max + ' / mínima ' + climaV.min;
+    if (Number.isFinite(Number(climaV.chuvaProx)) && Number(climaV.chuvaProx) >= 40) txt += ' · ' + climaV.chuvaProx + '% de chance de chuva';
+    infoSet('cel-info-clima', txt);
+  } else infoSet('cel-info-clima', 'não consegui confirmar o clima agora — confira a conexão e a cidade em Ajustes.');
+  const caixa = document.getElementById('cel-info-manchetes');
+  const fontes = document.getElementById('cel-info-fontes');
+  if (caixa) caixa.textContent = '';
+  if (fontes) fontes.textContent = '';
+  if (notV && notV.fala) {
+    const frases = Hermes.primeirasFrases(notV.fala, 3).match(/[^.!?]+[.!?]*/g) || [];
+    frases.map((f) => String(f).trim()).filter(Boolean).forEach((frase) => {
+      if (!caixa) return;
+      const p = document.createElement('p');
+      p.className = 'info-frase';
+      p.textContent = frase;
+      caixa.appendChild(p);
+    });
+    (notV.links || []).slice(0, 4).forEach((l) => { if (fontes) fontes.appendChild(cartaoLink(l)); });
+  } else if (caixa) {
+    const p = document.createElement('p');
+    p.className = 'dica';
+    p.textContent = store.get('offline', '0') === '1'
+      ? 'Modo offline ativo: não busquei manchetes de agora.'
+      : 'Não consegui confirmar as manchetes de agora. O restante do painel continua válido.';
+    caixa.appendChild(p);
+  }
+  infoStatus('Atualizado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '. Dados de ' + (plataforma === 'android' ? 'consulta real ao aparelho' : 'ambiente atual') + '.', '');
+  const partes = [];
+  if (climaV && Number.isFinite(Number(climaV.temp))) partes.push('estão ' + climaV.temp + ' graus em ' + (climaV.cidade || 'sua cidade'));
+  if (d && Number.isFinite(Number(d.bateria)) && Number(d.bateria) >= 0) partes.push('a bateria está em ' + Math.round(Number(d.bateria)) + ' por cento');
+  if (notV && notV.fala) partes.push('nas manchetes, ' + Hermes.primeirasFrases(notV.fala, 2));
+  const fala = partes.length
+    ? 'Aqui está o painel de informações, ' + trat() + ': ' + partes.join('; ') + '.'
+    : 'Abri o painel de informações, ' + trat() + ', mas não consegui reunir os dados agora — confira a conexão?';
+  registrar('informações', 'painel atualizado');
+  return { fala, dados: { aparelho: d, clima: climaV, noticias: notV } };
+}
+/** Abre o painel pelo botão/barra lateral (sem falar: quem fala é o comando de voz). */
+function abrirInformacoesUI() {
+  abrirPainel('#painel-info');
+  renderInformacoes().catch((e) => infoStatus('Falhou ao consultar: ' + ((e && e.message) || 'erro'), 'erro'));
+}
+/** Versão para o núcleo Hermes ("Jarvis, informações"): abre, atualiza e devolve a fala. */
+function abrirInformacoes() {
+  abrirPainel('#painel-info');
+  return renderInformacoes().catch((e) => ({ fala: 'Não consegui abrir o painel de informações: ' + ((e && e.message) || 'erro') + '.' }));
+}
+
+/* ---------- Conversa em tela própria ----------
+ * O menu principal é a central de comando: cards, status, comandos rápidos. A conversa ganhou a
+ * tela dela, com altura cheia — o histórico saiu do menu porque ali o espaço era curto demais e o
+ * fim das mensagens ficava cortado. O histórico continua inteiro e rolável nessa tela.
+ */
+function definirConversa(ativo, ampliado) {
+  const ligado = Boolean(ativo);
+  document.body.classList.toggle('modo-conversa', ligado);
+  if (ligado) definirChatAmpliado(Boolean(ampliado));
+  const b = $('#btn-conversa');
+  if (b) {
+    b.setAttribute('aria-pressed', String(ligado));
+    b.textContent = ligado ? 'Central' : 'Conversa';
+    b.title = ligado ? 'Voltar à central de comando' : 'Abrir a conversa';
+    b.setAttribute('aria-label', b.title);
+  }
+  const card = $('#dash-conversa');
+  if (card) card.classList.toggle('ativo', ligado);
+  if (ligado) {
+    const chat = $('#chat');
+    if (chat) requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight || 0; });
+    const entrada = $('#entrada');
+    if (entrada && !ehAndroid) { try { entrada.focus(); } catch (e) { /* teclado indisponível */ } }
+    registrar('interface', 'tela de conversa aberta');
+  } else atualizarUltimaConversa();
+}
+function entrarConversa(ampliado) { definirConversa(true, ampliado); }
+function alternarTelaConversa() { definirConversa(!document.body.classList.contains('modo-conversa')); }
+/** Prévia da última fala no card do menu: conferir sem abrir a conversa. */
+function atualizarUltimaConversa() {
+  const el = document.getElementById('dash-ultima');
+  if (!el) return;
+  const ultimo = hist.slice().reverse().find((x) => x && x.role === 'assistant');
+  let texto = '';
+  if (ultimo) {
+    try { const o = JSON.parse(ultimo.content); texto = String((o && o.fala) || ''); }
+    catch (e) { texto = String(ultimo.content || ''); }
+  }
+  el.textContent = texto
+    ? texto.replace(/\s+/g, ' ').slice(0, 110) + (texto.length > 110 ? '…' : '')
+    : 'O histórico completo fica na tela de conversa.';
+}
+
+/* ---------- Animações: um conjunto coeso entre as telas ----------
+ * Três animações se combinam: (1) a verificação do sistema, que aparece durante o diagnóstico, no
+ * menu Informações e na abertura; (2) as ondas de voz, que reagem ao microfone enquanto ele ouve e
+ * enquanto o assistente fala; (3) as transições de tela, painel e seção, todas com a mesma
+ * linguagem visual. Nada disso é obrigatório: com prefers-reduced-motion o CSS reduz tudo a uma
+ * fração de milissegundo e a interface continua idêntica em função.
+ */
+let verificacoesEmCurso = 0;
+function animarVerificacao(ativo) {
+  verificacoesEmCurso = Math.max(0, verificacoesEmCurso + (ativo ? 1 : -1));
+  const ligado = verificacoesEmCurso > 0;
+  document.body.classList.toggle('verificando', ligado);
+  const caixa = document.getElementById('verifica-anim');
+  if (caixa) caixa.hidden = !ligado;
+}
+/** Reacende a animação de entrada de uma seção (usada ao abrir/trocar de categoria). */
+function animarEntrada(el) {
+  if (!el) return;
+  el.classList.remove('entrando');
+  void el.offsetWidth;   // força o navegador a reiniciar a animação
+  el.classList.add('entrando');
+}
+
 // Diagnóstico por voz ("verifique o sistema"): abre a aba, roda as mesmas checagens do
 // botão e devolve a lista que o núcleo transforma em resumo falado.
 async function diagnosticoSistemaFalado() {
@@ -5072,7 +5486,9 @@ Hermes.instalar({
   noticias: noticiasDeHoje,
   frase: (chave, vars) => fraseApp(chave, vars),
   diagnosticoSistema: diagnosticoSistemaFalado,
-  analisarVisao: (o) => analisarVisao(o)
+  analisarVisao: (o) => analisarVisao(o),
+  abrirInformacoes: () => abrirInformacoes(),
+  dadosDispositivo: () => dadosDoAparelho()
 });
 
 /* ---------- Abertura: animação, reconhecimento da voz e liberação do app ---------- */

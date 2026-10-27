@@ -31,6 +31,7 @@
     <button id="btn-parar" class="parar" title="Parar tudo (Esc)" aria-label="Parar tudo">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3"/></svg><span>Parar</span>
     </button>
+    <button id="btn-conversa" class="wake-toggle" type="button" title="Abrir a conversa" aria-label="Abrir a conversa" aria-pressed="false">Conversa</button>
     <button id="btn-wake-toggle" class="wake-toggle" type="button" title="Pausar ativação por voz" aria-label="Pausar ativação por voz" aria-pressed="false" hidden><span class="wake-dot"></span><span id="wake-toggle-text">Escuta ativa</span></button>
     <button id="btn-chat-ampliado" class="icone" type="button" title="Ampliar a conversa" aria-label="Ampliar a conversa" aria-pressed="false">
       <svg class="ic-expandir" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/><path d="M3 3l6 6M21 3l-6 6M3 21l6-6M21 21l-6-6"/></svg>
@@ -57,6 +58,7 @@
   <button type="button" class="lat-btn" data-lat="tarefas" title="Lista de tarefas"><span aria-hidden="true">▤</span>Tarefas</button>
   <button type="button" class="lat-btn" data-lat="rotinas" title="Rotinas automáticas"><span aria-hidden="true">⚡</span>Rotinas</button>
   <button type="button" class="lat-btn" data-lat="celular" title="Status do celular"><span aria-hidden="true">▰</span>Celular</button>
+  <button type="button" class="lat-btn" data-lat="info" title="Aparelho, clima e manchetes do momento"><span aria-hidden="true">ⓘ</span>Informações</button>
   <button type="button" class="lat-btn" data-lat="atualizacao" title="Atualização pelo GitHub"><span aria-hidden="true">⇪</span>Atualizar</button>
   <button type="button" class="lat-btn" data-lat="diagnostico" title="Diagnóstico do sistema"><span aria-hidden="true">⌘</span>Diagnóstico</button>
   <div class="lat-rodape"><span class="lat-dot" aria-hidden="true"></span><small>SYSTEM STATUS</small><b id="lat-estado">ONLINE</b></div>
@@ -94,7 +96,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.13.0</span>
+      <span class="orb-sub" aria-hidden="true">v1.14.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -108,6 +110,7 @@
       <span class="chip" id="chip-chuva">chuva --%</span>
       <span class="chip seguro" id="chip-seg">proteção ativa</span>
     </div>
+    <div id="ondas-voz" class="ondas-voz" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
     <button id="btn-status-celular" class="atalho-status-celular" type="button" aria-label="Abrir status do celular" title="Bateria, armazenamento, RAM e conexões"><span class="atalho-status-icone" aria-hidden="true">▯</span><span><b>Status do celular</b><small>Bateria · RAM · Wi-Fi · dados móveis</small></span><span class="atalho-status-seta" aria-hidden="true">›</span></button>
   </section>
 
@@ -141,6 +144,11 @@
         <button type="button" class="cmd" data-cmd="o que você está vendo">Visão</button>
       </div>
     </div>
+    <div class="dash-card atalhos">
+      <div class="dash-head"><span class="dash-eyebrow">CONVERSA E INFORMAÇÕES</span></div>
+      <button id="dash-conversa" class="atalho-dash" type="button"><b>Conversa</b><small id="dash-ultima">O histórico completo fica na tela de conversa.</small></button>
+      <button id="dash-info" class="atalho-dash" type="button"><b>Informações</b><small>Bateria · memória · armazenamento · conexões · clima · manchetes</small></button>
+    </div>
   </section>
 
   <div class="chat-area"><div class="fade"></div><section id="chat" aria-live="polite"></section></div>
@@ -165,10 +173,14 @@
 </footer>
 
 <div id="scrim" hidden></div>
+<div id="verifica-anim" class="verifica-anim" hidden aria-hidden="true">
+  <div class="va-nucleo"><span></span><span></span><span></span></div>
+  <p>Verificando o sistema…</p>
+</div>
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.13.0</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.14.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -216,6 +228,7 @@
     <div class="botoes"><button id="c-voz-grave" type="button" class="secundario">Mais grave</button><button id="c-voz-rapida" type="button" class="secundario">Mais rápida</button></div>
     <button id="c-testar" type="button" class="secundario">Testar voz</button>
     <div class="info-card neural-card"><span class="info-icon">◈</span><div><div class="neural-cabecalho"><div><span class="eyebrow">VOZ NEURAL OFFLINE</span><b>Vozes no próprio aparelho (sherpa-onnx)</b></div><span class="status-pill" id="c-neural-status">verificando</span></div><p>Baixe uma voz uma única vez e o J.A.R.V.I.S. passa a sintetizar no próprio aparelho, sem internet e sem chave de API. Os modelos não vêm dentro do APK (somaríamos centenas de MB): cada voz é baixada para o armazenamento privado do app e pode ser apagada quando quiser.</p><div id="c-neural-lista" class="neural-lista" aria-live="polite">Consultando o motor de voz do aparelho…</div></div></div><label>Voz neural de resposta<select id="c-neural-voz"><option value="">Desligada — usar a voz do Android</option></select></label><label id="c-neural-falante-row" hidden>Timbre<select id="c-neural-falante"></select></label><label>Profundidade da voz neural <output id="c-neural-tom-valor">0,90</output><input id="c-neural-tom" type="range" min="0.7" max="1.1" step="0.01" value="0.9"></label><p class="dica">Abaixo de 1,00 a fala fica mais grave e mais lenta, como no filme; acima de 1,00, mais aguda e mais rápida.</p><div class="botoes"><button id="c-neural-testar" type="button">Testar voz neural</button><button id="c-neural-parar" type="button" class="secundario">Parar</button><button id="c-neural-liberar" type="button" class="secundario perigo">Liberar memória</button></div><p id="c-neural-msg" class="dica" role="status" aria-live="polite">Nenhuma voz neural baixada: o J.A.R.V.I.S. usa a voz instalada no Android.</p><p class="dica">O detector de palavra-chave do sherpa-onnx continua fora: o único modelo público de palavra-chave é em inglês e erraria “Jarvis” em português. Para ativar por voz, o app usa o detector próprio (reconhecimento do Android + regras de fonética locais).</p>
+    <div class="info-card"><span class="info-icon">☁</span><div><b>Escuta contínua pela Groq (transcrição na nuvem)</b><p class="dica">Além do detector próprio, o app pode ouvir transcrevendo pela Groq: o microfone fica aberto no aplicativo, o áudio é cortado em pedaços curtos de 2,5 s e cada pedaço vai para a transcrição (Whisper). O texto volta e as mesmas regras de fonética do núcleo decidem se a palavra de ativação foi dita — “jarvis”, “jarves”, “gervis”, “jerves”, “jaive”, as demais variações conhecidas, suas palavras extras e a tolerância de sotaque da sensibilidade escolhida. Trecho sem voz dirigida ao aparelho é descartado antes de qualquer envio.</p><label class="linha"><input id="c-escuta-groq" type="checkbox"><span>Ouvir pela transcrição da Groq<small>Funciona com o aplicativo aberto. Em segundo plano quem continua ouvindo é o detector do Android, que não usa chave e não envia áudio. O áudio transcrito pela Groq sai do aparelho, consome cota e exige internet; desligado por padrão.</small></span></label><p id="c-escuta-groq-status" class="dica" role="status" aria-live="polite">Escuta pela Groq desligada. O detector próprio do Android continua sendo o caminho de segundo plano.</p><div class="botoes"><button id="c-escuta-groq-testar" type="button" class="secundario">Testar a transcrição da Groq</button></div></div></div>
     <div class="info-card"><span class="info-icon">◈</span><div><b>Voz mais parecida com o JARVIS do filme</b><p>O timbre depende das vozes instaladas no Android — o app não inventa um timbre que o motor não tenha. Para uma voz masculina brasileira, grave e offline, instale um motor de voz Piper/SherpaTTS e adicione a voz <code>pt_BR-faber</code> ou <code>pt_BR-cadu</code>: o J.A.R.V.I.S. passa a oferecê-la sozinho em “Voz de resposta” e você só escolhe o perfil “Jarvis completo”. Em inglês britânico, a voz <code>bm_george</code> do Kokoro é a mais próxima do tom do filme. Todas falam no aparelho, sem internet.</p><div class="botoes"><a class="secundario link-botao" href="https://f-droid.org/en/packages/org.woheller69.ttsengine/" target="_blank" rel="noreferrer">Instalar motor de voz offline</a></div></div></div>
     <p class="dica">O tom e a velocidade dependem da voz instalada no Android ou no sistema do computador. Algumas vozes podem ignorar parte dos ajustes.</p>
     <label>Sensibilidade do microfone <output id="c-sensibilidade-valor">100%</output><input id="c-sensibilidade" type="range" min="0.7" max="1.6" step="0.1" value="1"></label>
@@ -414,6 +427,29 @@
     <p class="dica">Um único quadro é enviado ao provedor que reconhece imagens — escolhido pelo roteador entre os que têm chave (Gemini, Groq ou Mistral). Nada de vídeo contínuo e nada em segundo plano: fechar este painel desliga a câmera. Cada objeto reconhecido ganha um balão sobre a imagem; toque no balão para ouvir o detalhe. Por voz: “Jarvis, o que você está vendo?” ou “Jarvis, analise isso”.</p>
   </section>
   <div class="botoes barra"><button id="visao-fechar" type="button">Fechar</button></div>
+</aside>
+
+<aside id="painel-info" class="painel painel-info" hidden aria-label="Informações do J.A.R.V.I.S. Nova: aparelho, clima e manchetes">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · INFORMAÇÕES</p><h2>Informações</h2></div><span class="versao-chip">aparelho · clima · manchetes</span></div>
+  <section class="grupo">
+    <p class="dica">Cada linha abaixo vem de uma consulta real ao aparelho; o clima usa a cidade configurada e as manchetes vêm da pesquisa do momento. Por voz: “Jarvis, informações”.</p>
+    <div class="info-grid">
+      <div class="info-linha"><span>Bateria</span><b id="cel-info-bateria">consultando…</b></div>
+      <div class="info-linha"><span>Memória</span><b id="cel-info-ram">consultando…</b></div>
+      <div class="info-linha"><span>Armazenamento</span><b id="cel-info-arm">consultando…</b></div>
+      <div class="info-linha"><span>Conexão</span><b id="cel-info-conexao">consultando…</b></div>
+      <div class="info-linha"><span>Aparelho</span><b id="cel-info-aparelho">consultando…</b></div>
+      <div class="info-linha"><span>Temperatura da bateria</span><b id="cel-info-temp">consultando…</b></div>
+    </div>
+    <h3>Tempo agora</h3>
+    <p id="cel-info-clima" class="dica">consultando…</p>
+    <h3>Manchetes do momento</h3>
+    <div id="cel-info-manchetes" class="info-manchetes"><p class="dica">consultando…</p></div>
+    <div id="cel-info-fontes" class="links"></div>
+    <p id="info-status" class="dica" role="status" aria-live="polite">Abra pelo botão da central ou diga “Jarvis, informações”.</p>
+    <div class="botoes"><button id="info-atualizar" type="button" class="primario">Atualizar informações</button><button id="info-config-celular" type="button" class="secundario">Status completo do celular</button></div>
+  </section>
+  <div class="botoes barra"><button id="info-fechar" type="button">Fechar</button></div>
 </aside>
 
 <div id="modal" hidden>

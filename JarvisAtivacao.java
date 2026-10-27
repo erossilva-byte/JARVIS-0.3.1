@@ -27,14 +27,20 @@ import java.util.Locale;
  */
 final class JarvisAtivacao {
 
-    static final String VERSAO = "1.0.0";
+    static final String VERSAO = "1.1.0";
     static final String CANONICO = "jarvis";
 
-    /** Variantes medidas com voz brasileira — todas já vistas em transcrições reais. */
+    /**
+     * Variantes medidas com voz brasileira — todas já vistas em transcrições reais, incluindo
+     * as formas curtas que o usuário dita rápido ("jaive"). As formas sem o "v" só funcionam
+     * porque estão nesta lista exata: a tolerância por fonética exige a letra "v" na palavra.
+     * Esta lista precisa ser idêntica à de Hermes.ativacao (hermes.js) — há teste comparando.
+     */
     static final String[] VARIANTES = {
         "jarvis", "jarvi", "jarvys", "jarvs", "jarves", "jarvez", "jarvy", "jarviz", "jarvisz",
-        "javi", "javis", "javy", "javiz", "jervis", "jervys", "jervi", "gervis", "garvis", "garvys",
-        "charvis", "charves", "sharvis", "xarvis", "jarbis", "jarbys", "jorvis"
+        "javi", "javis", "javy", "javiz", "jervis", "jervys", "jervi", "jerves", "jervesz",
+        "gervis", "gerves", "garvis", "garvys", "garves", "charvis", "charves", "sharvis", "xarvis",
+        "jarbis", "jarbys", "jorvis", "jaive", "jaives", "jaivi"
     };
 
     private JarvisAtivacao() { }

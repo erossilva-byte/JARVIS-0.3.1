@@ -1,19 +1,16 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.13.0",
-  "versionCode": 10130,
+  "version": "1.14.0",
+  "versionCode": 10140,
   "androidAppId": "com.jarvis.nova",
   "base": "código-fonte na raiz do repositório",
   "gerado": "2026-10-27",
-  "status": "1.13.0: o Picovoice saiu por completo e a palavra de ativação passou a ser um detector próprio (reconhecimento do Android + regras de fonética locais, com sensibilidade ajustável e porteiro de ruído); o núcleo Hermes roteia as respostas entre Groq, Cerebras, Mistral e Gemini por tipo de tarefa, latência medida e disponibilidade; a câmera reconhece objetos e mostra balões informativos sobre a imagem; o diagnóstico cobre câmera, chaves e motores de IA; e a conversa ganhou estado de carregamento e legibilidade.",
+  "status": "1.14.0: a escuta contínua pela transcrição da Groq entrou como segundo motor (ademais do detector próprio, que segue no segundo plano sem chave e sem enviar áudio), com variações de pronúncia ampliadas, porteiro de ruído e mensagens claras para limite de uso, chave recusada, falha de rede e permissão de microfone; o menu Informações reúne dados do aparelho, clima e manchetes e abre por voz; a conversa passou a ter tela própria, com o histórico inteiro, e mensagens e falas duplicadas acabaram; e as animações formam um conjunto coeso (verificação do sistema, ondas de voz e transições).",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.13.0 (2026-10-27). (1) Detector de ativação próprio: nenhum SDK de palavra de ativação e nenhuma chave de terceiro — JarvisAtivacao.java (serviço) e Hermes.ativacao (WebView) usam as mesmas 26 variantes fonéticas, tolerância a sotaque por distância de edição, esqueleto consonantal, resultado parcial (responde antes de a frase terminar) e porteiro de ruído por nível de áudio; os descartes aparecem no diagnóstico. (2) Roteador de motores: Hermes.planejarIA ordena os provedores por qualidade esperada para a tarefa, latência medida no aparelho (média móvel), falhas recentes e disponibilidade, com tempo-limite por tipo de tarefa e fallback automático. (3) Visão: painel de câmera que envia UM quadro ao provedor que enxerga imagens, desenha balões sobre a foto e fala o detalhe do objeto tocado; nada de vídeo contínuo nem câmera em segundo plano. (4) Diagnóstico ampliado (câmera, chaves, motores e calibragem da ativação), por voz em \"verifique o sistema\". (5) Área de mensagens: balão de carregamento animado, espaçamento, rolagem e legibilidade. (6) Personalidade: humor seco e irônico documentado no prompt, com limites explícitos e frases próprias novas.",
+  "notas": "Revisão 1.14.0 (2026-10-27). (1) Escuta pela Groq: cicloEscutaGroq/capturarTrechoGroq no app.js gravam pedaços de 2,5 s e transcrevem com o Whisper da Groq; Hermes.ativacao (as mesmas 33 variantes do Java) decide a palavra de ativação — incluindo 'jerves', 'gerves', 'garves', 'jaive', 'jaives' e 'jaivi', as palavras extras do usuário e a tolerância de sotaque da sensibilidade. Hermes.transcricaoGroq.erro traduz 429 (limite), 401/403 (chave), 413 (áudio), 5xx (fora) e falha de rede, com espera entre tentativas; permissão de microfone negada tem mensagem própria. Limites: roda com o app aberto, exige chave, consome cota e envia áudio para fora — por isso é desligado por padrão e o detector do Android continua sendo o caminho de segundo plano. (2) Menu Informações: bateria, memória, armazenamento, conexão, aparelho, temperatura da bateria, clima da cidade e manchetes com fontes; abre pelo card da central, pela barra lateral e por voz ('informações', 'manchetes', 'dados do celular'). (3) Conversa em tela própria: o chat saiu do menu (onde o espaço era curto e o fim das mensagens ficava cortado); acabaram o clip de pintura e os limites em dvh na área de conversa, e a rolagem ganhou segunda passada após o layout. (4) Eco único: Hermes.eco.unico bloqueia balão e fala repetidos em sequência, com registro do descarte. (5) Animações: verificação do sistema compartilhada por diagnóstico, menu Informações e abertura; ondas de voz alimentadas pelo nível real do microfone; entrada animada ao trocar de categoria; destaque do HUD por estado.",
   "build": {
-    "resultado": "success",
-    "sha256": "c60920ac719f5ebdc8b3adb8ab12466274ce9d73d079543c7bbab4a4919bb7b5",
-    "bytes": 70650447,
-    "data": "2026-10-27",
-    "observacao": "APK do release v1.13.0 (jarvis-nova-1.13.0-10130.apk), compilado pelo workflow de release com ci/debug.keystore — mesma assinatura de 1.10.1/1.12.0, então o app instalado se atualiza por cima pelo próprio atualizador interno. Checksum conferido depois de baixar o arquivo do próprio release."
+    "resultado": "pendente",
+    "observacao": "A compilação do APK 1.14.0 é feita pelo workflow de release (GitHub Actions) com ci/debug.keystore — a mesma assinatura de 1.10.1/1.12.0/1.13.0, para o atualizador interno instalar por cima. O checksum e o tamanho entram aqui depois que a compilação terminar."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"

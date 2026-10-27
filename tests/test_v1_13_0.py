@@ -170,22 +170,24 @@ checagens = {
     "Teste do Picovoice foi substituído": not (raiz / "tests/test_porcupine_personality.py").exists(),
 
     # 9. Versão e documentação
-    "Versão 1.13.0 com versionCode 10130": (
-        versao.get("version") == "1.13.0"
-        and versao.get("versionCode") == 10130
-        and pacote.get("version") == "1.13.0"
-        and "const VERSAO_APP = '1.13.0';" in app
-        and (not gradle or ("versionCode 10130" in gradle and 'versionName "1.13.0"' in gradle))),
+    "Versão a partir da 1.14.0 com versionCode >= 10140": (
+        [int(x) for x in str(versao.get("version", "0")).split(".")] >= [1, 14, 0]
+        and versao.get("versionCode", 0) >= 10140
+        and pacote.get("version") == versao.get("version")
+        and ("const VERSAO_APP = '%s';" % versao.get("version")) in app
+        and (not gradle or ("versionCode %d" % versao.get("versionCode") in gradle
+                            and 'versionName "%s"' % versao.get("version") in gradle))),
     "Versão na interface acompanha o release": (
-        '<span class="orb-sub" aria-hidden="true">v1.13.0</span>' in html
-        and '<span class="versao-chip">v1.13.0</span>' in html),
+        ('<span class="orb-sub" aria-hidden="true">v%s</span>' % versao.get("version")) in html
+        and ('<span class="versao-chip">v%s</span>' % versao.get("version")) in html),
     "Mudança registrada no CHANGELOG e no LEIA-ME": (
-        "## 1.13.0" in leituras and "# J.A.R.V.I.S. Nova 1.13.0" in leituras
-        and "1.12.0" in leituras),
+        "## 1.14.0" in leituras and ("# J.A.R.V.I.S. Nova %s" % versao.get("version")) in leituras
+        and "1.13.0" in leituras),
     "Núcleo Hermes e detector próprios se identificam por versão": (
-        "const VERSAO = '1.1.0'" in hermes and 'VERSAO = "1.0.0"' in ativacao_java),
-    "Notas da versão descrevem o que foi entregue": (
-        all(t in versao.get("notas", "") for t in ("Detector de ativação próprio", "Roteador de motores", "Visão"))),
+        "const VERSAO = '1.2.0'" in hermes and 'VERSAO = "1.1.0"' in ativacao_java),
+    "Notas da versão descrevem o que a versão publicada entregou": (
+        "## 1.13.0" in leituras
+        and all(t in versao.get("notas", "") for t in ("Groq", "Informações", "Conversa"))),
 }
 
 falhas = [nome for nome, ok in checagens.items() if not ok]

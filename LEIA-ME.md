@@ -1,4 +1,18 @@
-# J.A.R.V.I.S. Nova 1.13.0
+# J.A.R.V.I.S. Nova 1.14.0
+
+Esta versão (1.14.0) acrescenta a **escuta contínua pela transcrição da Groq** (opcional, com o app
+aberto) ao detector próprio que já funcionava em segundo plano, o **menu Informações** com dados do
+aparelho, clima e manchetes, a **conversa em tela própria** com o histórico inteiro e rolagem
+correta, o fim das **mensagens e falas duplicadas** (portão de eco único no núcleo) e um **conjunto
+de animações** que se combina entre as telas (verificação do sistema, ondas de voz e transições).
+
+A escuta pela Groq exige a chave da Groq (Ajustes ▸ IA), roda com o aplicativo aberto, consome cota
+de transcrição e envia o áudio para fora — ela é desligada por padrão. Em segundo plano quem ouve é
+o detector do Android, sem chave e sem enviar áudio. Para ligá-la: Ajustes ▸ Voz ▸ “Ouvir pela
+transcrição da Groq”. O botão “Testar a transcrição da Groq” grava 2,5 s, transcreve e diz se a
+palavra de ativação foi reconhecida, sem executar nenhum comando.
+
+
 
 ## Novidades da 1.13.0 — detector próprio, motor roteado e visão pela câmera
 - **Picovoice saiu do projeto.** Não há mais SDK de palavra de ativação, AccessKey nem

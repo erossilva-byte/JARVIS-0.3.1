@@ -24,7 +24,7 @@
 })(typeof window !== 'undefined' ? window : null, function () {
   'use strict';
 
-  const VERSAO = '1.1.0';
+  const VERSAO = '1.2.0';
   const NOME = 'Hermes Agent';
 
   /* ---------- Texto ---------- */
@@ -110,8 +110,12 @@
   const ATIVACAO_CANONICO = 'jarvis';
   const ATIVACAO_VARIANTES = [
     'jarvis', 'jarvi', 'jarvys', 'jarvs', 'jarves', 'jarvez', 'jarvy', 'jarviz', 'jarvisz',
-    'javi', 'javis', 'javy', 'javiz', 'jervis', 'jervys', 'jervi', 'gervis', 'garvis', 'garvys',
-    'charvis', 'charves', 'sharvis', 'xarvis', 'jarbis', 'jarbys', 'jorvis'
+    'javi', 'javis', 'javy', 'javiz', 'jervis', 'jervys', 'jervi', 'jerves', 'jervesz',
+    'gervis', 'gerves', 'garvis', 'garvys', 'garves', 'charvis', 'charves', 'sharvis', 'xarvis',
+    'jarbis', 'jarbys', 'jorvis',
+    // Formas curtas pedidas pelo usuário (ditas rápido, como "Jaive"): entram na lista
+    // exata justamente porque não têm o "v" que a tolerância por fonética exige.
+    'jaive', 'jaives', 'jaivi'
   ];
   const esqueletoFonetico = (t) => semAcento(t).toLowerCase()
     .replace(/ch|sh|x/g, 'j')
@@ -191,6 +195,37 @@
     if (!n) return '';
     const partes = n.split(/\s+/);
     return partes.filter((p) => !casaToken(p, cfg || configAtivacao())).join(' ').trim();
+  }
+
+  /* ---------- Fala única e erros da transcrição em nuvem (Groq) ----------
+   * Duas garantias de comportamento, ambas verificadas por teste:
+   *  1. eco único — a mesma fala (e o mesmo balão) não sai duas vezes. Fala repetida é
+   *     sintoma de dois caminhos disparando o mesmo turno, e o usuário não deve pagar por isso;
+   *  2. tradução dos erros da API de transcrição em uma orientação clara, separando chave
+   *     recusada, limite de uso (cota), áudio grande demais, serviço fora do ar e falta de rede.
+   */
+  function ecoUnico(registro, texto, ms, agora) {
+    const t = String(texto == null ? '' : texto).trim();
+    if (!t) return false;
+    const janela = Number.isFinite(Number(ms)) ? Number(ms) : 3000;
+    const agoraMs = Number.isFinite(Number(agora)) ? Number(agora) : Date.now();
+    if (registro && registro.texto === t && (agoraMs - Number(registro.em || 0)) < janela) return true;
+    if (registro) { registro.texto = t; registro.em = agoraMs; }
+    return false;
+  }
+  function erroTranscricao(status, corpo) {
+    const s = Number(status) || 0;
+    let detalhe = '';
+    try {
+      const j = typeof corpo === 'string' ? JSON.parse(corpo) : corpo;
+      detalhe = String((j && j.error && (j.error.message || j.error.code)) || '').slice(0, 160);
+    } catch (e) { detalhe = String(corpo == null ? '' : corpo).slice(0, 160); }
+    if (s === 401 || s === 403) return { tipo: 'chave', esperaMs: 3600000, aviso: 'A Groq recusou a chave da transcrição. Confira a chave em Ajustes ▸ IA; a ativação pelo Android continua funcionando sem ela.', detalhe };
+    if (s === 429) return { tipo: 'limite', esperaMs: 20000, aviso: 'A Groq atingiu o limite de uso da transcrição. Eu tento de novo em instantes; se insistir, espere alguns minutos ou desligue a escuta pela Groq.', detalhe };
+    if (s === 413) return { tipo: 'audio', esperaMs: 800, aviso: 'O trecho de áudio ficou grande demais para transcrição. Envio pedaços menores e continuo ouvindo.', detalhe };
+    if (s === 0) return { tipo: 'rede', esperaMs: 4000, aviso: 'Sem conexão para transcrever pela Groq. Continuo tentando: a ativação pelo Android não depende da nuvem.', detalhe };
+    if (s >= 500) return { tipo: 'fora', esperaMs: 8000, aviso: 'A transcrição da Groq está fora do ar agora. Continuo tentando.', detalhe };
+    return { tipo: 'erro', esperaMs: 4000, aviso: 'A transcrição pela Groq falhou (HTTP ' + s + ').' + (detalhe ? ' Detalhe: ' + detalhe : ''), detalhe };
   }
 
   /* ---------- Roteador de motores de IA ----------
@@ -383,6 +418,8 @@
   const RX_DIAG_ESPECIFICO = /\b(segundo plano|escuta|ativacao por voz|microfone)\b/;
   const RX_DIAGNOSTICO = /^(?:(?:jarvis|por favor|pf) )?(?:(?:faca|faz|executa|execute|executar|roda|rodar|inicia|iniciar|pode (?:fazer|rodar|executar)) (?:um |o )?)?(?:autodiagnostico|diagnostico(?: completo| geral| do sistema)?|checagem(?: geral)?|verificacao(?: geral)?|teste dos sistemas|verificar o sistema|verifique o sistema|checar o sistema|checa o sistema|como (?:esta|estao) os sistemas|status dos sistemas|tudo funcionando)$/;
   const RX_NUCLEO = /^(?:status|estado) (?:do )?(?:nucleo|hermes|agente|jarvis)$|^como (?:esta|ta|vai) (?:o )?(?:nucleo|hermes)$|^qual (?:e )?(?:o )?(?:motor|nucleo) (?:de )?(?:voce|do jarvis)$|^relatorio do nucleo$|^(?:status|estado) d(?:os|o) (?:motores|provedores|ia)$/;
+  // "Informações": o menu com os dados do aparelho, o clima e as manchetes do momento.
+  const RX_INFO = /^(?:informacao|informacoes|menu de informacao(?:es)?|meus dados|dados do (?:celular|aparelho)|como (?:esta|ta) o (?:celular|aparelho)|resumo do dia|o que (?:esta|ta) acontecendo|novidades(?: de agora)?|manchetes(?: de agora)?)$/;
   const RX_VISAO = /\b(o que (?:voce )?(?:esta|ta) vendo|o que e isso|que objeto e esse|analis(e|a) (?:isso|esta imagem|essa imagem|esta foto|essa foto)|reconhec(er|a) (?:esse objeto|isso|o objeto)|descreva (?:o que|a i?magem|a cena|esta imagem|essa imagem)|o que tem (?:na|nessa) (?:mesa|foto|imagem|prateleira)|leia (?:isso|este texto|esse texto)|traduza (?:isso|esse texto|esta placa)|olhe (?:isso|para isso|ao redor)|abra a camera|abrir camera|ligar a camera|use a camera|visao)\b/;
 
   const habilidades = [
@@ -481,6 +518,22 @@
         await cap.falar(fala);
         return { falado: fala, fala, relatorio: rel, tratamento: t };
       }
+    },
+    {
+      id: 'informacoes',
+      nome: 'Menu de informações',
+      ajuda: 'Abre o menu Informações com bateria, memória, armazenamento, conexões, clima e manchetes do momento.',
+      quando: (n) => RX_INFO.test(n),
+      async executar(texto, H) {
+        const cap = H.cap;
+        const t = cap.trat ? cap.trat() : 'senhor';
+        if (typeof cap.abrirInformacoes !== 'function') throw new Error('O menu de informações não está disponível nesta plataforma.');
+        const r = await cap.abrirInformacoes();
+        const fala = (r && r.fala) || ('Abri o menu de informações, ' + t + '.');
+        await cap.falar(fala);
+        if (cap.registrar) cap.registrar('hermes', 'menu de informações apresentado');
+        return { falado: fala, fala, dados: (r && r.dados) || null };
+      }
     }
   ];
 
@@ -534,7 +587,7 @@
       return this;
     },
     norm, semAcento, primeirasFrases, periodo, diaDeHoje, resumoDiagnostico, tempoFalado,
-    distanciaEdicao, esqueletoFonetico,
+    distanciaEdicao, esqueletoFonetico, ecoUnico, erroTranscricao,
 
     // Detector de ativação: o app (WebView) e o serviço Android usam as mesmas regras.
     ativacao: {
@@ -547,6 +600,10 @@
       esqueleto: esqueletoFonetico,
       distancia: distanciaEdicao
     },
+
+    // Eco único (fala/bolha não se repetem) e tradução dos erros da transcrição Groq.
+    eco: { unico: ecoUnico, janelaMs: 3000 },
+    transcricaoGroq: { erro: erroTranscricao },
 
     // Roteador de motores de IA: escolha explicável + fila de fallback.
     planejarIA,

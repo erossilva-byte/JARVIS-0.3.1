@@ -12,6 +12,38 @@ O detector de ativação passou a ser nosso, as respostas passaram a ser roteada
 - **Personalidade.** O prompt de sistema descreve o humor como “sarcasmo seco, irônico e levemente debochado, sempre educado no fundo”, com limites explícitos (nunca rude, nunca sobre pessoas/aparência/religião/tragédia, nunca duas piadas seguidas, suspenso por completo em assunto sensível) e duas frases próprias novas (`visaoSemObjeto`, `roteadorTroca`), que passam pelo mesmo portão de humor.
 - **Versão 1.13.0 (versionCode 10130)**, mesmo pacote e mesma assinatura: instalável por cima da 1.12.0 e atualizável pelo próprio app.
 
+## 1.14.0
+
+- **Escuta contínua pela transcrição da Groq.** Além do detector próprio, o app pode ouvir com o
+  microfone aberto: o áudio é cortado em pedaços de 2,5 s e cada pedaço vai para a transcrição da
+  Groq (Whisper); o texto volta e **as mesmas regras de fonética do núcleo** decidem se a palavra de
+  ativação foi dita. Um porteiro de ruído medido no microfone descarta trecho sem voz dirigida ao
+  aparelho antes de gastar cota. `Hermes.transcricaoGroq.erro` traduz o que a API responde em
+  mensagem clara: limite de uso (HTTP 429) espera e tenta de novo, chave recusada (401/403) avisa e
+  não insiste, áudio grande demais, serviço fora do ar, falta de rede e permissão de microfone negada
+  também têm texto próprio. Limites ditos na própria tela: roda com o app aberto, exige chave,
+  consome cota e envia áudio para fora — por isso é opcional e desligado por padrão, e o detector do
+  Android continua sendo o caminho de segundo plano, sem chave e sem áudio saindo do aparelho.
+- **Variações de pronúncia ampliadas.** A lista de variantes ganhou as formas curtas que o usuário
+  dita rápido — “jerves”, “gerves”, “garves”, “jaive”, “jaives”, “jaivi” — e continua idêntica no
+  Java (`JarvisAtivacao`) e no JavaScript (`Hermes.ativacao`), com teste comparando as duas.
+- **Menu Informações.** Nova tela com bateria, memória, armazenamento, conexão, aparelho, temperatura
+  da bateria, clima da cidade configurada e as manchetes do momento (com os links das fontes). Abre
+  pelo card da central, pela barra lateral e por voz (“Jarvis, informações”). Cada linha é consulta
+  real ao aparelho; o que falhou aparece dito, sem “tudo certo” inventado.
+- **Conversa em tela própria e histórico inteiro.** O chat saiu do menu principal, onde o espaço era
+  curto e o fim das mensagens ficava cortado: a conversa tem a tela dela, com altura cheia e rolagem
+  completa. Junto disso, a área de mensagens deixou de usar clip de pintura e limite de altura em
+  `dvh`, e a rolagem ganhou uma segunda passada depois do layout (link e fonte que mudam a altura
+  não cortam mais a última fala).
+- **Mensagens e falas não se repetem.** `Hermes.eco.unico` é o portão único: a mesma fala e o mesmo
+  balão não saem duas vezes em sequência (com registro do descarte). Era o sintoma de dois caminhos
+  disparando o mesmo turno — o usuário via a resposta duas vezes e ouvia a fala repetida.
+- **Conjunto de animações coeso.** Verificação do sistema (usada no diagnóstico, no menu Informações
+  e na abertura), ondas de voz que reagem ao microfone enquanto ele ouve e enquanto o assistente
+  fala, entrada animada ao trocar de categoria do painel, destaque do HUD por estado e transições
+  entre central e conversa. Tudo com `prefers-reduced-motion` respeitado.
+
 ## 1.12.0 — 2026-10-26
 O núcleo Hermes Agent entra como motor único de linguagem e decisão, e o assistente ganhou a rotina de abertura do dia.
 - **Núcleo Hermes (hermes.js).** Todo turno passa por um só lugar, com as rotas declaradas em ordem: habilidade própria do núcleo → comando resolvido no aparelho → IA. O arquivo não toca no DOM nem conhece o aplicativo: `Hermes.instalar()` recebe falar, ler/gravar preferências, clima, notícias, diagnóstico e o resolvedor de comandos locais. Consequência prática: "bom dia" deixou de gastar uma chamada de IA e resposta local não depende mais da nuvem.

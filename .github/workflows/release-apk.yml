@@ -131,6 +131,13 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
+            **Novidades da 1.14.0:** escuta contínua pela transcrição da Groq (além do detector próprio),
+            com variações de pronúncia, porteiro de ruído e mensagens claras para limite de uso, chave
+            recusada, falha de rede e permissão de microfone; menu Informações (aparelho, clima e
+            manchetes) aberto por botão, barra lateral e por voz; conversa em tela própria, com o
+            histórico inteiro e sem mensagens ou falas duplicadas; e conjunto coeso de animações
+            (verificação do sistema, ondas de voz, transições de tela e de status).
+
             **Novidades da 1.13.0:** o Picovoice saiu do projeto e a palavra de ativação passou a ser
             um detector próprio (reconhecimento do Android + regras de fonética locais), sem chave e
             sem SDK de terceiro, com sensibilidade ajustável, tolerância a sotaque e porteiro de ruído;
