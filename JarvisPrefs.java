@@ -42,6 +42,18 @@ final class JarvisPrefs {
     }
 
     /**
+     * Pedido feito pelo botão "Ouvir agora" da notificação. A interface consome o pedido
+     * e o zera; se o processo morrer no meio, o pedido não fica ligado para sempre.
+     */
+    static boolean pedidoOuvir(Context c) {
+        return sp(c).getBoolean("pedido_ouvir", false);
+    }
+
+    static void pedidoOuvir(Context c, boolean v) {
+        sp(c).edit().putBoolean("pedido_ouvir", v).apply();
+    }
+
+    /**
      * Sensibilidade do detector próprio (0 a 100, padrão 55). Mais alto aceita a palavra
      * dita mais torta, aceita resultado parcial (responde antes) e tolera mais ruído.
      */

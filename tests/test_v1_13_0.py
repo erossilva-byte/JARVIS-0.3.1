@@ -165,6 +165,7 @@ checagens = {
     "Suíte roda os testes novos": (
         "node tests/test_ativacao.js" in script_teste
         and "python3 tests/test_ativacao_propria.py" in script_teste
+        and "python3 tests/test_java_refs.py" in script_teste
         and "python3 tests/test_v1_13_0.py" in script_teste),
     "Teste do Picovoice foi substituído": not (raiz / "tests/test_porcupine_personality.py").exists(),
 
