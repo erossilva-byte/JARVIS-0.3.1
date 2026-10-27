@@ -232,9 +232,9 @@ desinstale uma vez (perde os ajustes salvos) e, a partir da 1.7.1, as próximas 
 Faça push na `main` com os fontes na raiz (ou envie `JARVIS-NOVA-*-fonte.zip` na raiz). O workflow
 `.github/workflows/build-apk.yml` fixa a assinatura de CI, executa `npm run test:all`, configura a
 API mínima 26, baixa o AAR do sherpa-onnx (`baixar_sherpa.py`), aplica permissões/versão e compila o
-APK debug (artefato `JARVIS-Nova-1.11.0-APK`).
+APK debug (artefato `JARVIS-Nova-1.13.0-APK`).
 
-Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.11.0`: o workflow
+Para **publicar um release** (o que o atualizador procura), crie uma tag `v1.13.0`: o workflow
 `.github/workflows/release-apk.yml` compila, testa e publica o APK com checksum. Também é possível
 executar o workflow manualmente pelo painel de Actions.
 
@@ -242,8 +242,8 @@ Passo a passo do build também em `TESTES.md` e `GUIA-ACESSOS-ANDROID.md` (permi
 
 ## Instalar e atualizar pelo próprio aparelho
 
-1. Abra o release **v1.11.0** no GitHub pelo navegador do celular e baixe
-   `jarvis-nova-1.11.0-10110.apk` (e, se quiser conferir, o `.sha256` ao lado).
+1. Abra o release **v1.13.0** no GitHub pelo navegador do celular e baixe
+   `jarvis-nova-1.13.0-10130.apk` (e, se quiser conferir, o `.sha256` ao lado).
 2. Toque no arquivo baixado. O Android pede para permitir “instalar apps desconhecidos” para o
    navegador — autorize só para ele, instale e depois pode revogar.
 3. Na primeira instalação ele pede microfone, notificações e contatos; a permissão **Telefone**

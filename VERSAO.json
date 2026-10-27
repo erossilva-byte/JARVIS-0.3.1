@@ -9,8 +9,11 @@
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
   "notas": "Revisão 1.13.0 (2026-10-27). (1) Detector de ativação próprio: nenhum SDK de palavra de ativação e nenhuma chave de terceiro — JarvisAtivacao.java (serviço) e Hermes.ativacao (WebView) usam as mesmas 26 variantes fonéticas, tolerância a sotaque por distância de edição, esqueleto consonantal, resultado parcial (responde antes de a frase terminar) e porteiro de ruído por nível de áudio; os descartes aparecem no diagnóstico. (2) Roteador de motores: Hermes.planejarIA ordena os provedores por qualidade esperada para a tarefa, latência medida no aparelho (média móvel), falhas recentes e disponibilidade, com tempo-limite por tipo de tarefa e fallback automático. (3) Visão: painel de câmera que envia UM quadro ao provedor que enxerga imagens, desenha balões sobre a foto e fala o detalhe do objeto tocado; nada de vídeo contínuo nem câmera em segundo plano. (4) Diagnóstico ampliado (câmera, chaves, motores e calibragem da ativação), por voz em \"verifique o sistema\". (5) Área de mensagens: balão de carregamento animado, espaçamento, rolagem e legibilidade. (6) Personalidade: humor seco e irônico documentado no prompt, com limites explícitos e frases próprias novas.",
   "build": {
-    "resultado": "pendente",
-    "observacao": "O APK da 1.13.0 é gerado pelo workflow de release com ci/debug.keystore (mesma assinatura de 1.10.1/1.12.0), então o app instalado se atualiza por cima pelo próprio atualizador interno."
+    "resultado": "success",
+    "sha256": "c60920ac719f5ebdc8b3adb8ab12466274ce9d73d079543c7bbab4a4919bb7b5",
+    "bytes": 70650447,
+    "data": "2026-10-27",
+    "observacao": "APK do release v1.13.0 (jarvis-nova-1.13.0-10130.apk), compilado pelo workflow de release com ci/debug.keystore — mesma assinatura de 1.10.1/1.12.0, então o app instalado se atualiza por cima pelo próprio atualizador interno. Checksum conferido depois de baixar o arquivo do próprio release."
   },
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"
