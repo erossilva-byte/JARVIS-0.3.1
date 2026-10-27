@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   build:
-    name: Testar e compilar APK debug 1.13.0
+    name: Testar e compilar APK debug 1.14.0
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -127,7 +127,7 @@ jobs:
       - name: Publicar APK e checksum
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-Nova-1.13.0-APK
+          name: JARVIS-Nova-1.14.0-APK
           if-no-files-found: error
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk
