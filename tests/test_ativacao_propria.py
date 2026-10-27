@@ -16,7 +16,10 @@ ativacao = (ROOT / 'JarvisAtivacao.java').read_text(encoding='utf-8')
 prefs = (ROOT / 'JarvisPrefs.java').read_text(encoding='utf-8')
 plugin = (ROOT / 'JarvisBackgroundPlugin.java').read_text(encoding='utf-8')
 patch_gradle = (ROOT / 'patch_gradle.py').read_text(encoding='utf-8')
-gradle = (ROOT / 'android/app/build.gradle').read_text(encoding='utf-8')
+# A pasta android/ é gerada pelo Capacitor no CI e só existe depois dos testes:
+# aqui o build.gradle é opcional, e o que vale de verdade é o patch_gradle.py.
+_gradle = ROOT / 'android/app/build.gradle'
+gradle = _gradle.read_text(encoding='utf-8') if _gradle.exists() else ''
 main_js = (ROOT / 'main.js').read_text(encoding='utf-8')
 css = (ROOT / 'style.css').read_text(encoding='utf-8')
 
