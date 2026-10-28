@@ -53,7 +53,7 @@ jobs:
           mkdir -p www
           # Todo recurso web do app precisa estar aqui: sem hermes.js o app.js recusa
           # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
-          cp index.html style.css app.js apps.js hermes.js www/
+          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js www/
 
       - name: Gerar estrutura nativa do Android
         run: |
@@ -131,7 +131,7 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
-            **Novidades da 1.15.0:** o Núcleo ganhou um segundo estilo — o **plasma**, um anel de
+            **Novidades da 1.16.0:** o Núcleo ganhou um segundo estilo — o **plasma**, um anel de
             energia irregular no desenho da referência — escolhido em Ajustes ▸ Voz ▸ Aparência do
             núcleo, com prévia na própria tela; a troca vale na hora, fica salva e a abertura nasce
             com o mesmo estilo. A animação tem giro, deformação do contorno, respiração e pulso em

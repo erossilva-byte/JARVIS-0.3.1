@@ -60,6 +60,8 @@ public class JarvisService extends Service {
     private boolean pausarDuranteMusica = true;
     private boolean querEscuta = false;
     private String estadoNotificacao = "Escuta em espera";
+    /** true depois que startForeground() foi aceito nesta instância. */
+    private boolean emPrimeiroPlano = false;
 
     /**
      * true quando a própria interface pediu a pausa (para gravar um comando).
@@ -226,10 +228,19 @@ public class JarvisService extends Service {
     public void onCreate() {
         super.onCreate();
         instancia = this;
+        // O serviço pode nascer de startForegroundService() (vigia, alarme, notificação ou
+        // interface). O Android dá 5 s para startForeground() e mata o processo com
+        // ForegroundServiceDidNotStartInTimeException se isso não acontecer. Promover aqui,
+        // antes de qualquer trabalho, é a única forma de o prazo valer em TODOS os caminhos.
+        promoverPrimeiroPlano();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Mesma garantia do onCreate: inclusive "parar", "pausar" e "sem permissão" precisam
+        // cumprir o contrato do primeiro plano antes de sair. Era aqui que o app caía com
+        // "Context.startForegroundService() did not then call Service.startForeground()".
+        promoverPrimeiroPlano();
         String acao = intent == null ? null : intent.getAction();
 
         // Reinício pelo Android (START_STICKY) ou pelo vigia sem ação: retoma o estado salvo.
@@ -257,20 +268,6 @@ public class JarvisService extends Service {
             notificar();
             return START_NOT_STICKY;
         }
-        criarCanal();
-        try {
-            Notification n = montarNotificacao();
-            if (Build.VERSION.SDK_INT >= 29) {
-                startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
-            } else {
-                startForeground(ID, n);
-            }
-        } catch (Exception e) {
-            JarvisPrefs.ultimoErro(this, "serviço em primeiro plano recusado: " + e.getMessage());
-            stopSelf();
-            return START_NOT_STICKY;
-        }
-
         if (ACAO_TESTE_OFF.equals(acao)) {
             testeAte = 0;
             main.removeCallbacks(testeFim);
@@ -747,6 +744,39 @@ public class JarvisService extends Service {
         } catch (Exception ignored) { }
     }
 
+    /**
+     * Cumpre o contrato do primeiro plano uma única vez por instância.
+     *
+     * O tipo do serviço é escolhido pelo que está realmente disponível: com RECORD_AUDIO
+     * concedida, "microphone"; sem ela, "dataSync" (permissão normal, declarada no
+     * manifesto). Sem essa escolha, o Android 14 recusa startForeground() com
+     * SecurityException quando o microfone não foi autorizado — e a recusa virava o mesmo
+     * crash de serviço que não subiu. Qualquer falha inesperada é registrada e o serviço
+     * sai de cena sozinho, sem deixar o processo pendurado.
+     */
+    private void promoverPrimeiroPlano() {
+        if (emPrimeiroPlano) { notificar(); return; }
+        try {
+            criarCanal();
+            Notification n = montarNotificacao();
+            if (Build.VERSION.SDK_INT >= 29) {
+                boolean podeMicrofone = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                    == PackageManager.PERMISSION_GRANTED;
+                int tipo = podeMicrofone
+                    ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                    : ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
+                startForeground(ID, n, tipo);
+            } else {
+                startForeground(ID, n);
+            }
+            emPrimeiroPlano = true;
+        } catch (Throwable e) {
+            JarvisPrefs.ultimoErro(this, "serviço em primeiro plano recusado: " + e.getMessage());
+            try { stopForeground(true); } catch (Throwable ignored) { }
+            stopSelf();
+        }
+    }
+
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         // O usuário fechou pelos recentes: se a escuta deve continuar, o serviço volta a
@@ -778,6 +808,7 @@ public class JarvisService extends Service {
         pausarMotor();
         escutando = false;
         instancia = null;
+        emPrimeiroPlano = false;
         // Se o sistema derrubou o serviço com a escuta ligada, o vigia tenta de novo em
         // 20 s (alarme rápido, separado do periódico de 15 min).
         if (JarvisPrefs.desejaOuvir(this)) JarvisWatchdog.agendarRapido(this, 20000L);

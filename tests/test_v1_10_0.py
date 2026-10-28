@@ -47,8 +47,8 @@ checagens = {
     "Tratamento ao usuário vem de PERSONALIDADE, sem duplicar no prompt": (
         prompt.count('Chame o usuário de') == 0
         and app.count('Chame o usuário de') == 1),
-    "Personalidade é formal, espirituosa e leal": (
-        "formal, espirituosa e leal" in app),
+    "Personalidade é brasileira, confiante e leal": (
+        "brasileira, confiante, leal" in app),
     # 2. Inteligência preservada
     "Regras de conversa e pesquisa continuam no prompt": (
         "Inteligência de conversa" in prompt

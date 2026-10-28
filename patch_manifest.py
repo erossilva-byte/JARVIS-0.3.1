@@ -20,6 +20,10 @@ permissoes = [
     "android.permission.READ_MEDIA_AUDIO",
     # Serviço de música em primeiro plano (obrigatório a partir do Android 14).
     "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+    # Serviço de escuta sem microfone autorizado: o Android 14 recusa o tipo "microphone"
+    # sem RECORD_AUDIO e o app morria com ForegroundServiceDidNotStartInTimeException.
+    # Com dataSync declarado, o serviço sobe em espera e a interface pede a permissão.
+    "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
 ]
 linhas = "".join(f'    <uses-permission android:name="{p}" />\n' for p in permissoes if f'name="{p}"' not in m)
 # Armazenamento antigo: só vale até o Android 12; do 13 em diante a permissão é READ_MEDIA_AUDIO.
@@ -56,10 +60,14 @@ else:
         m = m[:app_idx] + q + m[app_idx:]
 
 service = ('    <service android:name=".JarvisService" android:exported="false"\n'
-           '        android:foregroundServiceType="microphone"\n'
+           '        android:foregroundServiceType="microphone|dataSync"\n'
            '        android:stopWithTask="false" />\n')
 if '.JarvisService' in m:
     m = re.sub(r'(<service\b[^>]*android:name="\.JarvisService"[^>]*android:stopWithTask=")[^"]*(")', r'\g<1>false\2', m, count=1)
+    # Tipo declarado: sem dataSync, o serviço não pode subir em espera quando o microfone
+    # ainda não foi autorizado (SecurityException no Android 14).
+    m = re.sub(r'(<service\b[^>]*android:name="\.JarvisService"[^>]*android:foregroundServiceType=")[^"]*(")',
+               r'\g<1>microphone|dataSync\2', m, count=1)
 if '.JarvisService' not in m:
     j = m.rindex('</application>')
     m = m[:j] + service + m[j:]

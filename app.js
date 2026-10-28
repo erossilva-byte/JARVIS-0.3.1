@@ -12,28 +12,41 @@ const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.15.0';
+const VERSAO_APP = '1.16.0';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
  * nem nos comandos. Para mudar o jeito dele, edite os textos abaixo.
  */
 const PERSONALIDADE = {
-  identidade: 'J.A.R.V.I.S., assistente pessoal de IA',
-  papel: 'mordomo digital e engenheiro de confiança do usuário',
+  identidade: 'J.A.R.V.I.S. Nova, assistente pessoal de IA',
+  papel: 'assistente pessoal e engenheiro de confiança do usuário, com voz masculina brasileira',
   // Traços que devem aparecer em TODA resposta.
-  personalidade: 'Sua personalidade é formal, espirituosa e leal, no espírito do mordomo-engenheiro de ficção científica (sem copiar falas do cinema): educado, sereno, preciso, observador, proativo e com senso de humor sutil.',
+  personalidade: 'Sua personalidade é brasileira, confiante, leal, espirituosa e prestativa, com voz masculina marcante e a elegância de um assistente tecnológico sofisticado: educado, sereno, preciso, observador e proativo. Você fala português do Brasil natural, sem sotaque artificial e sem tradução literal do inglês.',
   // Lealdade: o que ele protege e como trata o usuário.
   lealdade: 'Sua lealdade é ao usuário: antecipe o próximo passo útil, proteja os interesses dele, nunca o exponha nem o constranja e diga a verdade mesmo quando a resposta não for a que ele esperava.',
   // Tratamento respeitoso. {tratamento} é substituído pela preferência salva (padrão "senhor").
-  tratamento: 'Chame o usuário de "{tratamento}" com respeito formal e natural, sem servilismo, sem bajulação e sem repetir o tratamento em cada frase.',
+  tratamento: 'Chame o usuário de "{tratamento}" por padrão, com respeito natural, sem servilismo, sem bajulação e sem repetir o tratamento em cada frase.',
   // Inteligência de conversa: como ele pensa e responde.
   conversa: 'Converse como uma pessoa muito competente e bem-humorada: acompanhe o fio da conversa, retome o que já foi dito, explique causa e efeito e entregue o próximo passo concreto. Se o pedido for ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar.',
   // Humor: a intensidade vem do controle de humor; aqui fica o caráter do humor.
-  humor: 'Seu humor é sarcasmo seco, irônico e levemente debochado, sempre educado no fundo: uma observação afiada, elegante e curta, e o assunto volta. Nunca rude, nunca ofensivo, nunca humilhante. Você não debocha do usuário, de terceiros, de aparência, de religião, de política, de doença nem de tragédia, e nunca repete o mesmo comentário espirituoso na mesma conversa. Em saúde, segurança, sofrimento, emergência, conflito, dinheiro perdido ou qualquer assunto urgente, o humor desaparece por completo: resposta direta, respeitosa e útil primeiro. Humor nunca atrasa a informação nem é a resposta inteira.',
+  humor: 'Seu humor é o de um companheiro tecnológico brasileiro: sarcasmo seco e inteligente, ironia elegante, deboche leve e expressões brasileiras naturais, no espírito do J.A.R.V.I.S. Nunca rude, nunca ofensivo, nunca humilhante; nunca repete o mesmo comentário na mesma conversa. O timing é espontâneo: uma observação afiada e curta, e o assunto volta. A tarefa vem primeiro; a graça, depois, e só se couber. Exemplos do tom (adapte ao contexto e nunca repita o mesmo comentário): ao corrigir um erro do usuário, "Interessante, senhor. Não era exatamente o plano, mas admiro sua capacidade de improvisar."; numa tarefa difícil, "Perfeitamente, senhor. Porque aparentemente facilitar as coisas seria simples demais."; numa falha, "Temos uma pequena complicação, senhor. Pequena no sentido técnico; inconveniente no sentido humano."; ao ser elogiado, "Fico satisfeito. Finalmente o reconhecimento chegou à pessoa certa." Em saúde, segurança, sofrimento, emergência, conflito, dinheiro perdido ou qualquer assunto urgente, o humor desaparece por completo: resposta direta, respeitosa e útil primeiro. Humor nunca atrasa a informação nem é a resposta inteira.',
   // O que ele nunca faz.
   limites: 'Nunca finja ter executado algo, nem alegue acesso ao aparelho que as ferramentas não oferecem. Nunca faça piada de uma pessoa específica nem use o humor para esconder um erro. Ao errar, reconheça em uma frase, sem drama, e ofereça a correção.'
 };
+// Níveis de humor: o mesmo controle de 0–100%, agora com nomes e exemplos próprios.
+// Discreto quase nunca brinca; Equilibrado é o padrão do dia a dia; Avançado é o Jarvis
+// de sempre, com ironia frequente — e todos eles silenciam o humor em assunto sério.
+const HUMOR_NIVEIS = {
+  discreto: { nome: 'Discreto', valor: 20, exemplo: 'Sem piadas: resposta curta, cordial e objetiva.' },
+  equilibrado: { nome: 'Equilibrado', valor: 55, exemplo: 'Uma ironia fina de vez em quando, e o assunto volta ao que importa.' },
+  avancado: { nome: 'Avançado', valor: 85, exemplo: 'Deboche leve e sarcasmo elegante com frequência — nunca em emergência.' }
+};
+function nivelHumor(valor) {
+  const v = Number(valor);
+  return v < 40 ? 'discreto' : v < 70 ? 'equilibrado' : 'avancado';
+}
+function nivelHumorNome(valor) { return HUMOR_NIVEIS[nivelHumor(valor)].nome; }
  // espelho da VERSAO.json; no Android a versão instalada é lida do PackageManager.
 const MODELOS_RESERVA = ['openai/gpt-oss-20b', 'openai/gpt-oss-120b'];
 // Plugins nativos do Capacitor (voz e serviço em segundo plano). Só existem no Android.
@@ -191,9 +204,11 @@ function setNivel(l) {
       ondas.style.setProperty('--nv', nivelPend.toFixed(3));
       ondas.classList.toggle('com-sinal', nivelPend > 0.06);
     }
-    // Núcleo: o mesmo nível do microfone alimenta o anel em plasma (--nv chega pelo HUD).
+    // Núcleo: o mesmo nível do microfone alimenta o anel em plasma (--nv chega pelo HUD)
+    // e a esfera de partículas do estilo órbita.
     const hud = document.getElementById('hud');
     if (hud) hud.style.setProperty('--nv', nivelPend.toFixed(3));
+    if (window.NucleoOrbita) window.NucleoOrbita.nivel(nivelPend);
   });
 }
 let ocupado = false, abortar = false, recAtual = null, confirmacao = null, ultimaCritica = 0, wakeAtivo = false, paradaAtiva = false;
@@ -207,6 +222,7 @@ function setEstado(e) {
   const txt = (e === 'idle' && wakeAtivo) ? 'aguardando “Jarvis” · detector próprio' : ROTULOS[e];
   $('#estado-txt').textContent = txt;
   $('#chip-estado').textContent = txt;
+  if (window.NucleoOrbita) window.NucleoOrbita.estado(e);
   if (e !== 'listening' && e !== 'speaking') setNivel(0);
 }
 function criarLink(url, rotulo) {
@@ -1935,7 +1951,7 @@ function promptSistema() {
   const memoria = store.get('memoria_ativa', '0') === '1' && usarMemoriaNestaConversa ? String(store.get('memoria', '')).slice(0, 1200).trim() : '';
   const ferr = disponiveis().map((k) => `- ${k}: ${ACOES[k].ajuda || ''}`).join('\n');
   const nomePerfil = nomeUsuario();
-  return `Você é ${PERSONALIDADE.identidade}${nomePerfil ? ' de ' + nomePerfil : ' do usuário'} e trabalha como ${PERSONALIDADE.papel}. ${nomePerfil ? 'O nome cadastrado do usuário é ' + nomePerfil + '. ' : ''}${PERSONALIDADE.personalidade} ${PERSONALIDADE.lealdade} ${PERSONALIDADE.tratamento.replace('{tratamento}', t)} ${PERSONALIDADE.conversa} Você conversa com opinião própria, curioso pelo assunto do usuário, capaz de discordar com respeito e de explicar o porquê das coisas, nunca um formulário que devolve perguntas. ${PERSONALIDADE.humor} ${PERSONALIDADE.limites} Aplique de forma perceptível e consistente o estilo selecionado (${estiloTexto}) em toda a resposta, não apenas mencionando-o. Intensidade de humor configurada: ${humor}%. ${humorTexto}${tomTurno} A configuração de humor é uma preferência de tom, não uma obrigação de inserir piadas. Seja espirituoso sem ser debochado, arrogante ou repetitivo. Mantenha a calma diante de problemas e antecipe o próximo passo útil. Inspire-se apenas no arquétipo geral do assistente de ficção científica: não copie falas, bordões ou diálogos dos filmes. Demonstre competência explicando limites com honestidade, propondo o próximo passo útil e distinguindo fatos confirmados de suposições. Não finja ter executado ações nem alegue acesso ao aparelho que as ferramentas disponíveis não oferecem. Inteligência de conversa: acompanhe o fio da conversa e retome o que já foi dito quando fizer sentido, em vez de tratar cada mensagem como se fosse a primeira. Se o pedido estiver ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar; se estiver claro, responda direto. Ao explicar um assunto, mostre a causa e o efeito em linguagem simples e, quando ajudar, uma analogia de uma frase. Ao resolver um problema, entregue o próximo passo concreto. Em pesquisa, diga o que confirmou, o que continua incerto e de onde veio, sem inventar datas, números ou links. Em conversa fiada, seja presente e interessado, com opinião própria e humor leve — não devolva a pergunta de forma vazia. Responda em português do Brasil, em ${curtas ? '1 ou 2 frases bem curtas (até 30 palavras)' : '2 a 4 frases naturais (até 70 palavras), podendo passar disso quando o assunto exigir explicação'}, pois suas respostas são faladas em voz alta: sem markdown, sem emojis, sem listas.
+  return `Você é ${PERSONALIDADE.identidade}${nomePerfil ? ' de ' + nomePerfil : ' do usuário'} e trabalha como ${PERSONALIDADE.papel}. ${nomePerfil ? 'O nome cadastrado do usuário é ' + nomePerfil + '. ' : ''}${PERSONALIDADE.personalidade} ${PERSONALIDADE.lealdade} ${PERSONALIDADE.tratamento.replace('{tratamento}', t)} ${PERSONALIDADE.conversa} Você conversa com opinião própria, curioso pelo assunto do usuário, capaz de discordar com respeito e de explicar o porquê das coisas, nunca um formulário que devolve perguntas. ${PERSONALIDADE.humor} ${PERSONALIDADE.limites} Aplique de forma perceptível e consistente o estilo selecionado (${estiloTexto}) em toda a resposta, não apenas mencionando-o. Nível de humor configurado: ${nivelHumorNome(humor)} (${humor}%). ${humorTexto}${tomTurno} A configuração de humor é uma preferência de tom, não uma obrigação de inserir piadas. Seja espirituoso sem ser debochado, arrogante ou repetitivo. Mantenha a calma diante de problemas e antecipe o próximo passo útil. Inspire-se apenas no arquétipo geral do assistente de ficção científica: não copie falas, bordões ou diálogos dos filmes. Demonstre competência explicando limites com honestidade, propondo o próximo passo útil e distinguindo fatos confirmados de suposições. Não finja ter executado ações nem alegue acesso ao aparelho que as ferramentas disponíveis não oferecem. Inteligência de conversa: acompanhe o fio da conversa e retome o que já foi dito quando fizer sentido, em vez de tratar cada mensagem como se fosse a primeira. Se o pedido estiver ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar; se estiver claro, responda direto. Ao explicar um assunto, mostre a causa e o efeito em linguagem simples e, quando ajudar, uma analogia de uma frase. Ao resolver um problema, entregue o próximo passo concreto. Em pesquisa, diga o que confirmou, o que continua incerto e de onde veio, sem inventar datas, números ou links. Em conversa fiada, seja presente e interessado, com opinião própria e humor leve — não devolva a pergunta de forma vazia. Responda em português do Brasil, em ${curtas ? '1 ou 2 frases bem curtas (até 30 palavras)' : '2 a 4 frases naturais (até 70 palavras), podendo passar disso quando o assunto exigir explicação'}, pois suas respostas são faladas em voz alta: sem markdown, sem emojis, sem listas.
 Agora: ${new Date().toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' })}. Plataforma: ${plataforma}.
 Ações disponíveis (nomes válidos para o campo "acao" do JSON; NÃO são funções: nunca use function calling nem chame ferramentas, responda apenas com o JSON):
 ${ferr}
@@ -3872,7 +3888,7 @@ async function executarDiagnostico() {
   return { itens, resumo: Hermes.resumoDiagnostico(itens, { tratamento: trat() }) };
 }
 const H = (typeof history !== 'undefined') ? history : null;
-const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas', '#painel-visao', '#painel-info'];
+const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas', '#painel-visao', '#painel-info', '#painel-memoria'];
 const estadoPainelJarvis = (estado) => Boolean(estado && estado.jarvisPainel === true);
 function algumPainelAberto() {
   return PAINEIS.some((sel) => { const el = $(sel); return Boolean(el && !el.hidden); });
@@ -3989,6 +4005,8 @@ function abrirConfig() {
   $('#c-trat').value = store.get('trat', 'senhor');
   $('#c-cidade').value = store.get('cidade', 'São Paulo');
   $('#c-humor').value = store.get('humor', '40');
+  const selHumorCfg = document.getElementById('c-humor-nivel');
+  if (selHumorCfg) selHumorCfg.value = store.get('humor_nivel', nivelHumor($('#c-humor').value));
   $('#c-estilo').value = store.get('estilo_resposta', 'equilibrado');
   $('#c-humor-valor').textContent = $('#c-humor').value + '%';
   atualizarPreviaPersonalidade();
@@ -4058,6 +4076,13 @@ async function salvarConfig() {
   store.set('nome_usuario', $('#c-nome').value.trim().slice(0, 60));
   store.set('trat', $('#c-trat').value.trim().slice(0, 40) || 'senhor');
   store.set('cidade', $('#c-cidade').value.trim() || 'São Paulo');
+  const nivelHumorSalvar = document.getElementById('c-humor-nivel');
+  if (nivelHumorSalvar && HUMOR_NIVEIS[nivelHumorSalvar.value]) {
+    $('#c-humor').value = String(HUMOR_NIVEIS[nivelHumorSalvar.value].valor);
+    store.set('humor_nivel', nivelHumorSalvar.value);
+  } else {
+    store.set('humor_nivel', nivelHumor(Number($('#c-humor').value) || 0));
+  }
   store.set('humor', String(Math.max(0, Math.min(100, Number($('#c-humor').value) || 0))));
   store.set('estilo_resposta', $('#c-estilo').value || 'equilibrado');
   atualizarPreviaPersonalidade();
@@ -4199,6 +4224,7 @@ document.querySelectorAll('[data-lat]').forEach((b) => {
     // Visão tem painel próprio (câmera ao vivo), não uma aba de configuração.
     if (alvo === 'info') { abrirInformacoesUI(); return; }
     if (alvo === 'visao') { abrirVisao(); return; }
+    if (alvo === 'memoria') { abrirMemoria(); return; }
     abrirConfig();
     mudarCategoriaConfig(alvo);
     if (alvo === 'celular') atualizarStatusCelular();
@@ -5482,7 +5508,11 @@ function animarEntrada(el) {
  * body[data-nucleo], de onde o CSS da interface e o da abertura leem; o nível do microfone chega
  * por --nv, a mesma medida que alimenta as ondas de voz.
  */
-const NUCLEO_ESTILOS = { hud: 'HUD técnico: anéis, marcas e grades do painel, reagindo ao nível do microfone.', plasma: 'Plasma: anel de energia irregular girando devagar, reagindo ao nível do microfone.' };
+const NUCLEO_ESTILOS = { hud: 'HUD técnico: anéis, marcas e grades do painel, reagindo ao nível do microfone.',
+  plasma: 'Plasma: anel de energia irregular girando devagar, reagindo ao nível do microfone.',
+  orbita: 'Órbita: esfera de partículas com três anéis holográficos, girando e reagindo ao nível do microfone.'
+};
+const NUCLEO_ROTULOS = { hud: 'HUD', plasma: 'Plasma', orbita: 'Órbita' };
 function nucleoEstiloAtual() {
   const v = store.get('nucleo_estilo', 'hud');
   return NUCLEO_ESTILOS[v] ? v : 'hud';
@@ -5495,12 +5525,56 @@ function aplicarNucleo(valor) {
   const sel = document.getElementById('c-nucleo-estilo');
   if (sel && sel.value !== v) sel.value = v;
   const pill = document.getElementById('c-nucleo-pill');
-  if (pill) pill.textContent = (v === 'plasma') ? 'Plasma' : 'HUD';
+  if (pill) pill.textContent = NUCLEO_ROTULOS[v] || 'HUD';
   const txt = document.getElementById('c-nucleo-status');
   if (txt) txt.textContent = 'Núcleo em ' + NUCLEO_ESTILOS[v];
+  // A esfera de partículas só roda quando é o estilo escolhido: nada de animação
+  // escondida consumindo bateria. O desenho é opcional — sem orbita.js, o estilo
+  // continua válido e a interface apenas não mostra a esfera.
+  const canvasOrb = document.getElementById('nucleo-orbita');
+  if (canvasOrb && window.NucleoOrbita) {
+    if (v === 'orbita') window.NucleoOrbita.iniciar(canvasOrb);
+    else window.NucleoOrbita.parar();
+  }
   return v;
 }
 aplicarNucleo();
+
+/* ---------- Memória conectada, computador e níveis de humor: ligações da interface ---------- */
+if (window.Plataforma) Plataforma.observarTela();
+const selHumorNivel = $('#c-humor-nivel');
+if (selHumorNivel) {
+  selHumorNivel.addEventListener('change', () => {
+    const n = HUMOR_NIVEIS[selHumorNivel.value];
+    if (!n) return;
+    $('#c-humor').value = String(n.valor);
+    $('#c-humor-valor').textContent = n.valor + '%';
+    atualizarPreviaPersonalidade();
+  });
+}
+document.querySelectorAll('[data-mem-tema]').forEach((b) => {
+  b.addEventListener('click', () => {
+    store.set('memoria_tema', b.dataset.memTema);
+    if ($('#mem-tema')) $('#mem-tema').value = b.dataset.memTema;
+    renderMemoria();
+  });
+});
+const memBusca = $('#mem-busca');
+if (memBusca) memBusca.addEventListener('input', () => renderMemoria());
+['#mem-criar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => criarNotaMemoria(); });
+['#mem-apagar-tema'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => apagarTemaMemoria(); });
+['#mem-exportar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => exportarMemoria(); });
+['#mem-esvaziar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => esvaziarMemoria(); });
+['#mem-liberar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => liberarEspacoMemoria(); });
+const memFechar = $('#mem-fechar');
+if (memFechar) memFechar.onclick = () => fecharPaineis();
+const memTemaSel = $('#mem-tema');
+if (memTemaSel) { memTemaSel.value = memTemaAtual(); memTemaSel.addEventListener('change', () => { store.set('memoria_tema', memTemaSel.value); renderMemoria(); }); }
+const pcAtualizar = $('#pc-atualizar'); if (pcAtualizar) pcAtualizar.onclick = () => atualizarPC().catch(() => {});
+const pcListar = $('#pc-listar'); if (pcListar) pcListar.onclick = () => listarPC();
+const pcAbrir = $('#pc-abrir'); if (pcAbrir) pcAbrir.onclick = () => abrirPastaPC();
+const pcCriar = $('#pc-criar'); if (pcCriar) pcCriar.onclick = () => criarArquivoPC();
+const pcBloco = $('#pc-bloco'); if (pcBloco && !PC) pcBloco.hidden = true;
 
 // Diagnóstico por voz ("verifique o sistema"): abre a aba, roda as mesmas checagens do
 // botão e devolve a lista que o núcleo transforma em resumo falado.
@@ -5511,6 +5585,230 @@ async function diagnosticoSistemaFalado() {
   if (painelAtual && painelAtual.hidden) abrirPainel('#painel-config');
   return executarDiagnostico();
 }
+
+/* ---------- Memória conectada (estilo Obsidian) ----------
+ * O cofre fica no aparelho (memoria.js), organizado por tema. Aqui está a interface:
+ * criar, buscar, ver, apagar e acompanhar o espaço. Toda exclusão passa pela confirmação
+ * do app (com PIN quando cadastrado) e o texto das notas entra na tela só por textContent,
+ * nunca como HTML — nota não é código.
+ */
+const MEM = window.MemoriaJarvis || null;
+const PC = (plataforma === 'desktop' && nativoDesk) ? {
+  status: async () => {
+    const s = await nativo('status_pc', {});
+    const gb = (n) => (Number(n) / (1024 ** 3)).toFixed(1).replace('.', ',') + ' GB';
+    const resumo = 'processador em ' + s.cpu + '% de uso, ' + gb(s.ramLivre) + ' de RAM livre de ' + gb(s.ramTotal) +
+      ', ' + gb(s.discoLivre) + ' livres em disco' + (s.bateria ? ', bateria em ' + s.bateria + '%' : '');
+    return Object.assign({}, s, { resumo });
+  },
+  listar: (p) => nativo('listar_arquivos', { caminho: p || '~' }),
+  criar: (nome, texto) => nativo('criar_arquivo', { nome, texto }),
+  abrir: (p) => nativo('abrir_pasta', { caminho: p || '~' })
+} : null;
+
+function memTemaAtual() {
+  const t = store.get('memoria_tema', 'gostos');
+  return MEM && MEM.TEMAS.some((x) => x.id === t) ? t : 'gostos';
+}
+function memTamanho(n) {
+  const b = Number(n) || 0;
+  return b < 1024 ? b + ' B' : (b / 1024).toFixed(1).replace('.', ',') + ' kB';
+}
+function memStatus(texto, erro) {
+  const el = $('#mem-status');
+  if (!el) return;
+  el.textContent = texto;
+  el.classList.toggle('erro', !!erro);
+}
+function renderMemoria() {
+  if (!MEM) { memStatus('A memória conectada não carregou neste dispositivo.', true); return; }
+  const esp = MEM.espaco();
+  const espacoTxt = $('#mem-espaco');
+  if (espacoTxt) espacoTxt.textContent = esp.notas + (esp.notas === 1 ? ' nota' : ' notas') + ' · ' + memTamanho(esp.bytes) +
+    ' de ' + memTamanho(esp.limiteBytes) + ' (' + esp.percentual + '%)';
+  const barra = $('#mem-barra');
+  if (barra) {
+    barra.style.width = Math.max(2, esp.percentual) + '%';
+    barra.classList.toggle('cheio', esp.percentual >= 80);
+  }
+  document.querySelectorAll('[data-mem-tema]').forEach((b) => b.classList.toggle('ativo', b.dataset.memTema === memTemaAtual()));
+  const lista = $('#mem-lista');
+  if (!lista) return;
+  lista.textContent = '';
+  const busca = String($('#mem-busca') ? $('#mem-busca').value : '').trim();
+  const notas = busca ? MEM.buscar(busca) : MEM.listar(memTemaAtual());
+  const contagem = $('#mem-contagem');
+  if (contagem) contagem.textContent = notas.length + (notas.length === 1 ? ' nota' : ' notas') + (busca ? ' para “' + busca + '”' : ' em ' + MEM.temaNome(memTemaAtual()));
+  if (!notas.length) {
+    const vazio = document.createElement('p');
+    vazio.className = 'dica mem-vazio';
+    vazio.textContent = busca ? 'Nada encontrado com esse termo.' : 'Nenhuma nota neste tema ainda. Crie uma abaixo ou diga “Jarvis, anote que…”.';
+    lista.appendChild(vazio);
+    return;
+  }
+  notas.slice(0, 100).forEach((n) => {
+    const item = document.createElement('article');
+    item.className = 'mem-nota';
+    const cab = document.createElement('div');
+    cab.className = 'mem-nota-cab';
+    const tema = document.createElement('span');
+    tema.className = 'mem-nota-tema';
+    tema.textContent = MEM.temaNome(n.tema);
+    const titulo = document.createElement('b');
+    titulo.textContent = n.titulo;
+    const apagar = document.createElement('button');
+    apagar.type = 'button';
+    apagar.className = 'mini perigo';
+    apagar.textContent = 'apagar';
+    apagar.setAttribute('aria-label', 'Apagar a nota ' + n.titulo);
+    apagar.onclick = () => apagarNotaMemoria(n.id);
+    cab.append(tema, titulo, apagar);
+    const texto = document.createElement('p');
+    texto.textContent = n.texto;
+    const meta = document.createElement('small');
+    meta.textContent = new Date(n.atualizado).toLocaleString('pt-BR') + (n.tags.length ? ' · ' + n.tags.join(', ') : '') + ' · ' + (n.origem === 'voz' ? 'anotada por voz' : 'anotada no painel');
+    item.append(cab, texto, meta);
+    lista.appendChild(item);
+  });
+}
+function abrirMemoria() {
+  renderMemoria();
+  abrirPainel('#painel-memoria');
+  if (PC) atualizarPC().catch(() => {});
+}
+function criarNotaMemoria() {
+  if (!MEM) return;
+  const tema = $('#mem-tema') ? $('#mem-tema').value : 'contextos';
+  const titulo = $('#mem-titulo') ? $('#mem-titulo').value : '';
+  const texto = $('#mem-texto') ? $('#mem-texto').value : '';
+  const r = MEM.criar({ tema, titulo, texto, origem: 'painel' });
+  if (!r.ok) { memStatus(r.erro || 'Não foi possível anotar.', true); return; }
+  if ($('#mem-titulo')) $('#mem-titulo').value = '';
+  if ($('#mem-texto')) $('#mem-texto').value = '';
+  store.set('memoria_tema', r.nota.tema);
+  memStatus(r.duplicada ? 'Essa nota já existia; reaproveitei a original.' : 'Nota criada em ' + MEM.temaNome(r.nota.tema) + '.');
+  registrar('memoria', 'nota criada em ' + r.nota.tema);
+  renderMemoria();
+}
+async function apagarNotaMemoria(id) {
+  if (!MEM) return;
+  const nota = MEM.carregar().filter((n) => n.id === id)[0];
+  if (!nota) return;
+  const ok = await confirmar('Apagar a nota “' + nota.titulo + '” da memória? Isso não pode ser desfeito.', true);
+  if (!ok) return;
+  const r = MEM.apagar(id);
+  memStatus(r.ok ? 'Nota apagada. Espaço liberado.' : (r.erro || 'Não foi possível apagar.'), !r.ok);
+  if (r.ok) registrar('memoria', 'nota apagada');
+  renderMemoria();
+}
+async function apagarTemaMemoria() {
+  if (!MEM) return;
+  const tema = memTemaAtual();
+  const quantas = MEM.listar(tema).length;
+  if (!quantas) { memStatus('Esse tema já está vazio.'); return; }
+  const ok = await confirmar('Apagar as ' + quantas + ' nota(s) do tema ' + MEM.temaNome(tema) + '? Isso libera espaço e não pode ser desfeito.', true);
+  if (!ok) return;
+  const r = MEM.apagarTema(tema);
+  memStatus(r.ok ? 'Tema ' + MEM.temaNome(tema) + ' esvaziado: ' + r.removidas + ' nota(s) removida(s).' : (r.erro || 'Falha ao apagar.'), !r.ok);
+  if (r.ok) registrar('memoria', 'tema apagado: ' + tema);
+  renderMemoria();
+}
+async function esvaziarMemoria() {
+  if (!MEM) return;
+  const ok = await confirmar('Esvaziar todo o cofre de memória? Todas as notas serão apagadas e não há como recuperar.', true);
+  if (!ok) return;
+  const r = MEM.apagarTudo();
+  memStatus(r.ok ? 'Cofre esvaziado.' : (r.erro || 'Falha ao esvaziar.'), !r.ok);
+  if (r.ok) registrar('memoria', 'cofre esvaziado');
+  renderMemoria();
+}
+function exportarMemoria() {
+  if (!MEM) return;
+  const txt = MEM.exportar();
+  try {
+    const blob = new Blob([txt], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'jarvis-memoria.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    memStatus('Backup exportado com ' + MEM.carregar().length + ' nota(s).');
+  } catch (e) {
+    memStatus('Não foi possível exportar neste dispositivo: ' + (e && e.message ? e.message : 'erro'), true);
+  }
+}
+function liberarEspacoMemoria() {
+  if (!MEM) return;
+  const r = MEM.podar(memTemaAtual(), Math.round(MEM.LIMITE_BYTES * 0.4));
+  memStatus(r.ok ? (r.removidas ? 'Liberei espaço: ' + r.removidas + ' nota(s) antigas removidas.' : 'Nada precisou ser removido.') : (r.erro || 'Falha.'), !r.ok);
+  renderMemoria();
+}
+async function atualizarPC() {
+  if (!PC) return;
+  const alvo = $('#pc-status');
+  if (alvo) alvo.textContent = 'Consultando o computador…';
+  try {
+    const s = await PC.status();
+    if (alvo) alvo.textContent = s.resumo + ' · ' + s.aparelho + ' · ligado há ' + s.uptime;
+    const lista = $('#pc-lista');
+    if (lista && !lista.childElementCount) await listarPC('~');
+  } catch (e) {
+    if (alvo) alvo.textContent = 'Não consegui ler o computador: ' + (e && e.message ? e.message : 'erro');
+  }
+}
+async function listarPC(caminho) {
+  if (!PC) return;
+  const campo = $('#pc-caminho');
+  const alvo = $('#pc-lista');
+  const msg = $('#pc-msg');
+  const p = caminho || (campo ? campo.value : '~');
+  try {
+    const r = await PC.listar(p);
+    if (campo) campo.value = r.caminho;
+    if (msg) msg.textContent = r.itens.length + ' item(ns) em ' + r.caminho;
+    if (!alvo) return;
+    alvo.textContent = '';
+    if (!r.itens.length) { alvo.textContent = 'Pasta vazia.'; return; }
+    r.itens.slice(0, 200).forEach((nome) => {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = nome;
+      b.onclick = () => { if (campo) campo.value = r.caminho.replace(/[\\/]$/, '') + '/' + nome; listarPC(campo ? campo.value : p); };
+      li.appendChild(b);
+      alvo.appendChild(li);
+    });
+  } catch (e) {
+    if (msg) msg.textContent = 'Não consegui listar: ' + (e && e.message ? e.message : 'erro');
+  }
+}
+async function criarArquivoPC() {
+  if (!PC) return;
+  const nome = $('#pc-criar-nome') ? $('#pc-criar-nome').value : '';
+  const texto = $('#pc-criar-texto') ? $('#pc-criar-texto').value : '';
+  const msg = $('#pc-msg');
+  try {
+    const r = await PC.criar(nome || 'nota.txt', texto);
+    if (msg) msg.textContent = 'Arquivo criado em ' + r.caminho;
+    if ($('#pc-criar-nome')) $('#pc-criar-nome').value = '';
+    if ($('#pc-criar-texto')) $('#pc-criar-texto').value = '';
+    registrar('pc', 'arquivo criado em ' + r.caminho);
+  } catch (e) {
+    if (msg) msg.textContent = 'Não consegui criar: ' + (e && e.message ? e.message : 'erro');
+  }
+}
+async function abrirPastaPC() {
+  if (!PC) return;
+  const caminho = $('#pc-caminho') ? $('#pc-caminho').value : '~';
+  const msg = $('#pc-msg');
+  try {
+    const r = await PC.abrir(caminho || '~');
+    if (msg) msg.textContent = 'Aberto: ' + r.caminho;
+  } catch (e) {
+    if (msg) msg.textContent = 'Não consegui abrir: ' + (e && e.message ? e.message : 'erro');
+  }
+}
+
 Hermes.instalar({
   registrar: (tipo, detalhe) => registrar(tipo, detalhe),
   falar: (texto, semMsg, opcoes, links) => falar(texto, semMsg, opcoes, links),
@@ -5527,7 +5825,18 @@ Hermes.instalar({
   diagnosticoSistema: diagnosticoSistemaFalado,
   analisarVisao: (o) => analisarVisao(o),
   abrirInformacoes: () => abrirInformacoes(),
-  dadosDispositivo: () => dadosDoAparelho()
+  dadosDispositivo: () => dadosDoAparelho(),
+  memoria: MEM ? {
+    criar: (o) => MEM.criar(o),
+    listar: (t) => MEM.listar(t),
+    buscar: (q) => MEM.buscar(q),
+    espaco: () => MEM.espaco(),
+    resumo: () => MEM.resumo(),
+    temaNome: (t) => MEM.temaNome(t),
+    temaPorPalavras: (t) => MEM.temaPorPalavras(t)
+  } : null,
+  abrirMemoria: () => abrirMemoria(),
+  pc: PC
 });
 
 /* ---------- Abertura: animação, reconhecimento da voz e liberação do app ---------- */

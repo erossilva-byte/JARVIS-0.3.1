@@ -422,7 +422,110 @@
   const RX_INFO = /^(?:informacao|informacoes|menu de informacao(?:es)?|meus dados|dados do (?:celular|aparelho)|como (?:esta|ta) o (?:celular|aparelho)|resumo do dia|o que (?:esta|ta) acontecendo|novidades(?: de agora)?|manchetes(?: de agora)?)$/;
   const RX_VISAO = /\b(o que (?:voce )?(?:esta|ta) vendo|o que e isso|que objeto e esse|analis(e|a) (?:isso|esta imagem|essa imagem|esta foto|essa foto)|reconhec(er|a) (?:esse objeto|isso|o objeto)|descreva (?:o que|a i?magem|a cena|esta imagem|essa imagem)|o que tem (?:na|nessa) (?:mesa|foto|imagem|prateleira)|leia (?:isso|este texto|esse texto)|traduza (?:isso|esse texto|esta placa)|olhe (?:isso|para isso|ao redor)|abra a camera|abrir camera|ligar a camera|use a camera|visao)\b/;
 
+  /**
+   * Memória conectada (estilo Obsidian). Só existe quando o aplicativo injeta
+   * cap.memoria; em teste ou no navegador sem cofre, a habilidade não intervém.
+   */
+  const RX_MEM_ANOTAR = /^(?:(?:jarvis|nova|por favor|pf) )?(?:anote|anota|anotar|registre|registra|registrar|guarde|guarda|guardar|memorize|memoriza|memorizar|salve|salva|salvar)(?: (?:que|isso|isto|ai|aí|essa informacao|essa informação))?(?: (?:em|no|na|de|sobre) (?:gostos|pesquisas|projetos|contextos|rotinas|mensagens))?[ ,:]*(.+)$/;
+  const RX_MEM_VER = /^(?:o que (?:voce|vc) (?:sabe|lembra|anotou|tem anotado)|o que (?:esta|ta|tem) (?:na|no) (?:minha |sua )?memoria|consult(?:e|ar|a) (?:a )?memoria|minhas notas|memoria conectada|mostre (?:a|as) (?:minhas )?notas|resumo da memoria)$/;
+  const RX_MEM_ESPACO = /\b(?:quanto|qual) (?:de )?(?:espaco|espaço|armazenamento) (?:a |o )?memoria\b|\bmemoria (?:esta|ta) (?:cheia|pesada)\b|\blimpar (?:a )?memoria\b/;
+  const RX_MEM_APAGAR = /^(?:apague|apagar|exclua|excluir|remova|remover|delete|deletar) (?:a |o )?(?:nota|anotacao|anotação|memoria|memória)(?: (?:sobre|de|do|da|que fala de) )?(.*)$/;
+
+  /**
+   * Computador (desktop). As mesmas frases existem no celular, mas sem cap.pc a
+   * habilidade não assume o turno — quem responde é a IA, com honestidade.
+   */
+  const RX_PC_STATUS = /^(?:(?:jarvis|por favor|pf) )?(?:status|estado|como (?:esta|ta)) (?:do |de )?(?:computador|pc|maquina|máquina)$|^quanto (?:de )?(?:ram|memoria ram|memória ram|processador|cpu|disco|espaco em disco|armazenamento) (?:o |no )?(?:computador|pc|maquina|máquina)?\s*(?:tem|esta usando|está usando)?$/;
+  const RX_PC_LISTAR = /^(?:(?:jarvis|por favor|pf) )?(?:liste|listar|mostre|mostrar) (?:os |as )?(?:arquivos|pastas|conteudo|conteúdo) (?:de |da |do |em )(.+)$/;
+  const RX_PC_CRIAR = /^(?:(?:jarvis|por favor|pf) )?(?:crie|criar|gere|gerar) (?:um |o )?arquivo (?:chamado |de nome )?(.+?) (?:com |contendo |com o texto )(.+)$/;
+  const RX_PC_ABRIR = /^(?:(?:jarvis|por favor|pf) )?(?:abra|abrir) (?:a |o )?(?:pasta|diretorio|diretório|arquivo) (.+)$/;
+
   const habilidades = [
+    {
+      id: 'memoria',
+      nome: 'Memória conectada (estilo Obsidian)',
+      ajuda: 'Anota, consulta, mostra o espaço e apaga notas por tema — gostos, pesquisas, projetos, contextos, rotinas e mensagens.',
+      quando: (n) => !!Hermes.cap.memoria && (RX_MEM_ANOTAR.test(n) || RX_MEM_VER.test(n) || RX_MEM_ESPACO.test(n)),
+      async executar(texto, H) {
+        const cap = H.cap;
+        const n = norm(texto);
+        const m = cap.memoria;
+        if (RX_MEM_ESPACO.test(n)) {
+          const e = m.espaco();
+          const fala = 'A memória ocupa ' + Math.max(1, Math.round(e.bytes / 1024)) + ' quilobytes em ' + e.notas +
+            (e.notas === 1 ? ' nota' : ' notas') + ', ' + e.percentual + '% do limite. ' +
+            (e.percentual >= 80 ? 'Está ficando apertado; posso apagar um tema se o senhor mandar.' : 'Há espaço de sobra.');
+          await cap.falar(fala);
+          if (typeof cap.abrirMemoria === 'function') cap.abrirMemoria();
+          return { falado: fala, espaco: e };
+        }
+        if (RX_MEM_VER.test(n)) {
+          const fala = m.resumo();
+          await cap.falar(fala);
+          if (typeof cap.abrirMemoria === 'function') cap.abrirMemoria();
+          return { falado: fala };
+        }
+        const achado = texto.match(/^(?:jarvis |nova |por favor |pf )?(?:anote|anota|anotar|registre|registra|registrar|guarde|guarda|guardar|memorize|memoriza|memorizar|salve|salva|salvar)(?: (?:que|isso|isto|ai|aí|essa informacao|essa informação))?(?: (?:em|no|na|de|sobre) (gostos|pesquisas|projetos|contextos|rotinas|mensagens))?[ ,:]*(.+)$/i);
+        const corpo = achado ? achado[2].trim() : '';
+        if (!corpo) throw new Error('Não entendi o que anotar.');
+        const temaDitado = achado && achado[1] ? norm(achado[1]) : '';
+        const tema = temaDitado || m.temaPorPalavras(corpo);
+        const r = m.criar({ tema: tema, texto: corpo, origem: 'voz' });
+        if (!r.ok) throw new Error(r.erro || 'não foi possível anotar.');
+        const fala = r.duplicada
+          ? 'Isso já estava anotado em ' + m.temaNome(r.nota.tema) + '. Repetir não melhora a memória, mas confirma o padrão.'
+          : 'Anotado em ' + m.temaNome(r.nota.tema) + '. Vou lembrar disso quando for útil.';
+        await cap.falar(fala);
+        if (typeof cap.abrirMemoria === 'function') cap.abrirMemoria();
+        return { falado: fala, nota: r.nota, duplicada: !!r.duplicada };
+      }
+    },
+    {
+      id: 'computador',
+      nome: 'Controle do computador',
+      ajuda: 'No desktop: status de CPU, memória e disco, listar e abrir pastas e criar arquivos — sempre dentro da pasta do usuário.',
+      quando: (n) => !!Hermes.cap.pc && (RX_PC_STATUS.test(n) || RX_PC_LISTAR.test(n) || RX_PC_CRIAR.test(n) || RX_PC_ABRIR.test(n)),
+      async executar(texto, H) {
+        const cap = H.cap;
+        const pc = cap.pc;
+        const t = cap.trat ? cap.trat() : 'senhor';
+        const n = norm(texto);
+        try {
+          if (RX_PC_STATUS.test(n)) {
+            const s = await pc.status();
+            const fala = 'Neste computador: ' + s.resumo + '.';
+            await cap.falar(fala);
+            return { falado: fala, status: s };
+          }
+          if (RX_PC_LISTAR.test(n)) {
+            const alvo = texto.match(/^(?:jarvis |por favor |pf )?(?:liste|listar|mostre|mostrar) (?:os |as )?(?:arquivos|pastas|conteudo|conteúdo) (?:de |da |do |em )(.+)$/i);
+            const pasta = alvo ? alvo[1].trim() : '~';
+            const r = await pc.listar(pasta);
+            const fala = r.itens.length
+              ? 'Encontrei ' + r.itens.length + (r.itens.length === 1 ? ' item' : ' itens') + ' em ' + r.caminho + ': ' + r.itens.slice(0, 8).join(', ') + (r.itens.length > 8 ? ' e mais alguns.' : '.')
+              : 'A pasta ' + r.caminho + ' está vazia, ' + t + '.';
+            await cap.falar(fala);
+            return { falado: fala, itens: r.itens, caminho: r.caminho };
+          }
+          if (RX_PC_CRIAR.test(n)) {
+            const m = texto.match(/^(?:jarvis |por favor |pf )?(?:crie|criar|gere|gerar) (?:um |o )?arquivo (?:chamado |de nome )?(.+?) (?:com |contendo |com o texto )(.+)$/i);
+            const r = await pc.criar(m ? m[1].trim() : 'nota.txt', m ? m[2].trim() : '');
+            const fala = 'Arquivo criado em ' + r.caminho + '. Se o conteúdo estiver errado, a culpa é do ditado, não do teclado.';
+            await cap.falar(fala);
+            return { falado: fala, caminho: r.caminho };
+          }
+          const m = texto.match(/^(?:jarvis |por favor |pf )?(?:abra|abrir) (?:a |o )?(?:pasta|diretorio|diretório|arquivo) (.+)$/i);
+          const r = await pc.abrir(m ? m[1].trim() : '~');
+          const fala = 'Aberto: ' + r.caminho + '.';
+          await cap.falar(fala);
+          return { falado: fala, caminho: r.caminho };
+        } catch (e) {
+          const fala = 'Não consegui concluir no computador, ' + t + ': ' + ((e && e.message) || 'falha desconhecida') + '.';
+          await cap.falar(fala);
+          return { falado: fala, erro: true };
+        }
+      }
+    },
     {
       id: 'saudacao',
       nome: 'Saudação e briefing diário',

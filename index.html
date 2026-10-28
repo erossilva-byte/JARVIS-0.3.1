@@ -59,6 +59,7 @@
   <button type="button" class="lat-btn" data-lat="rotinas" title="Rotinas automáticas"><span aria-hidden="true">⚡</span>Rotinas</button>
   <button type="button" class="lat-btn" data-lat="celular" title="Status do celular"><span aria-hidden="true">▰</span>Celular</button>
   <button type="button" class="lat-btn" data-lat="info" title="Aparelho, clima e manchetes do momento"><span aria-hidden="true">ⓘ</span>Informações</button>
+  <button type="button" class="lat-btn" data-lat="memoria" title="Memória conectada: notas por tema"><span aria-hidden="true">◫</span>Memória</button>
   <button type="button" class="lat-btn" data-lat="atualizacao" title="Atualização pelo GitHub"><span aria-hidden="true">⇪</span>Atualizar</button>
   <button type="button" class="lat-btn" data-lat="diagnostico" title="Diagnóstico do sistema"><span aria-hidden="true">⌘</span>Diagnóstico</button>
   <div class="lat-rodape"><span class="lat-dot" aria-hidden="true"></span><small>SYSTEM STATUS</small><b id="lat-estado">ONLINE</b></div>
@@ -69,6 +70,7 @@
     <div class="hud" id="hud" role="button" tabindex="0" aria-label="Falar com o Jarvis. Toque para falar ou parar.">
       <div class="halo"></div>
       <div class="hud-grade" aria-hidden="true"></div>
+      <canvas id="nucleo-orbita" class="nucleo-orbita" aria-hidden="true"></canvas>
       <div class="plas" aria-hidden="true">
         <span class="fil f1"><i></i></span>
         <span class="fil f2"><i></i></span>
@@ -105,7 +107,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.15.0</span>
+      <span class="orb-sub" aria-hidden="true">v1.16.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -189,7 +191,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.15.0</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.16.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -217,6 +219,7 @@
     <label>Seu nome<input id="c-nome" type="text" maxlength="60" autocomplete="name" placeholder="Ex.: Eros"></label>
     <label>Como o JARVIS deve te chamar<input id="c-trat" type="text" maxlength="40" placeholder="senhor"></label>
     <p class="dica">O nome identifica seu perfil nas respostas; o tratamento é independente e pode continuar como “senhor”, ou ser alterado quando quiser.</p>
+    <label>Nível de humor<select id="c-humor-nivel"><option value="discreto">Discreto — quase sempre sério, cordial e direto</option><option value="equilibrado">Equilibrado — ironia fina de vez em quando</option><option value="avancado">Avançado — sarcasmo elegante e deboche leve sempre que couber</option></select></label>
     <label>Humor do JARVIS <output id="c-humor-valor">40%</output><input id="c-humor" type="range" min="0" max="100" step="10" value="40"></label>
     <p class="dica">0% = profissional e sério; 40% ou mais já rende ironia fina no dia a dia; 100% = humor afiado e frequente. O humor é suspenso em assuntos sensíveis.</p>
     <div id="c-personalidade-preview" class="personalidade-preview" aria-live="polite"><b>Prévia da personalidade</b><p>Altere o humor ou o estilo para ver como o J.A.R.V.I.S. deve responder.</p></div>
@@ -232,8 +235,8 @@
     <div class="nucleo-card">
       <div class="nucleo-card-cabecalho"><div><span class="eyebrow">APARÊNCIA DO NÚCLEO</span><b>Estilo do núcleo central</b></div><span class="status-pill" id="c-nucleo-pill">HUD</span></div>
       <p class="dica">O núcleo é o círculo do topo da tela: ele gira, respira e reage ao nível do seu microfone. Escolha o estilo que combina com o seu aparelho — a troca vale na hora e fica salva.</p>
-      <label>Estilo do núcleo<select id="c-nucleo-estilo"><option value="hud">HUD técnico — anéis, marcas e grades do painel</option><option value="plasma">Plasma — anel de energia irregular (como na referência)</option></select></label>
-      <div class="nucleo-preview" aria-hidden="true"><span class="np np-plas"></span><span class="np np-hud"></span></div>
+      <label>Estilo do núcleo<select id="c-nucleo-estilo"><option value="hud">HUD técnico — anéis, marcas e grades do painel</option><option value="plasma">Plasma — anel de energia irregular (como na referência)</option><option value="orbita">Órbita — esfera de partículas com anéis holográficos (nova)</option></select></label>
+      <div class="nucleo-preview" aria-hidden="true"><span class="np np-plas"></span><span class="np np-hud"></span><span class="np np-orb"></span></div>
       <p id="c-nucleo-status" class="dica" role="status" aria-live="polite">Núcleo em HUD técnico: anéis e grades do painel, reagindo ao nível do microfone.</p>
     </div>
     <label>Voz de resposta<select id="c-voz"></select></label>
@@ -468,6 +471,62 @@
   <div class="botoes barra"><button id="info-fechar" type="button">Fechar</button></div>
 </aside>
 
+
+<aside id="painel-memoria" class="painel painel-memoria" hidden aria-label="Memória conectada do J.A.R.V.I.S. Nova">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · MEMÓRIA CONECTADA</p><h2>Memória</h2></div><span class="versao-chip">estilo Obsidian · local</span></div>
+  <section class="grupo">
+    <p class="dica">Seu cofre de notas no próprio aparelho: gostos, pesquisas, projetos, contextos, rotinas e mensagens. O assistente usa as notas como memória de conversa quando você pede, e nada é criado sem você mandar. As notas não saem do aparelho.</p>
+    <div class="mem-espaco-linha">
+      <div class="audio-head"><b id="mem-espaco">calculando…</b><output id="mem-contagem">—</output></div>
+      <div class="mem-barra-trilho" role="meter" aria-label="Espaço usado pela memória" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="mem-barra"></span></div>
+    </div>
+    <div class="botoes">
+      <button id="mem-liberar" type="button" class="secundario">Liberar espaço</button>
+      <button id="mem-exportar" type="button" class="secundario">Exportar backup</button>
+      <button id="mem-apagar-tema" type="button" class="secundario perigo">Apagar tema</button>
+      <button id="mem-esvaziar" type="button" class="secundario perigo">Esvaziar cofre</button>
+    </div>
+    <div class="mem-temas" role="tablist" aria-label="Temas da memória">
+      <button type="button" data-mem-tema="gostos">Gostos</button>
+      <button type="button" data-mem-tema="pesquisas">Pesquisas</button>
+      <button type="button" data-mem-tema="projetos">Projetos</button>
+      <button type="button" data-mem-tema="contextos">Contextos</button>
+      <button type="button" data-mem-tema="rotinas">Rotinas</button>
+      <button type="button" data-mem-tema="mensagens">Mensagens</button>
+    </div>
+    <label>Buscar na memória<input id="mem-busca" type="text" autocomplete="off" placeholder="palavra, projeto, assunto…"></label>
+    <div id="mem-lista" class="mem-lista" aria-live="polite"></div>
+    <div class="divider-small"></div>
+    <h3>Nova nota</h3>
+    <label>Tema<select id="mem-tema">
+      <option value="gostos">Gostos</option>
+      <option value="pesquisas">Pesquisas</option>
+      <option value="projetos">Projetos</option>
+      <option value="contextos">Contextos</option>
+      <option value="rotinas">Rotinas</option>
+      <option value="mensagens">Mensagens</option>
+    </select></label>
+    <label>Título (opcional)<input id="mem-titulo" type="text" maxlength="120" autocomplete="off" placeholder="Ex.: preferências de voz"></label>
+    <label>Anotação<textarea id="mem-texto" rows="4" maxlength="4000" placeholder="Escreva o que o JARVIS deve lembrar. Por voz: “Jarvis, anote que prefiro respostas curtas.”"></textarea></label>
+    <button id="mem-criar" type="button" class="primario">Criar nota</button>
+    <p id="mem-status" class="dica" role="status" aria-live="polite">Limite de 240 notas e 512 kB. Apagar pede confirmação (e PIN, se cadastrado).</p>
+  </section>
+  <section class="grupo" id="pc-bloco" hidden>
+    <h3>Computador</h3>
+    <p class="dica">Só aparece no aplicativo desktop. As ações ficam dentro da sua pasta de usuário: listar, abrir e criar arquivos com autorização explícita. Nada de comando de shell solto vindo da conversa.</p>
+    <div class="audio-head"><b>Estado do PC</b><output id="pc-status">ainda não consultado</output></div>
+    <div class="botoes"><button id="pc-atualizar" type="button" class="secundario">Atualizar estado</button></div>
+    <label>Caminho<input id="pc-caminho" type="text" autocomplete="off" placeholder="~ ou ~/Documentos"></label>
+    <div class="botoes"><button id="pc-listar" type="button" class="secundario">Listar</button><button id="pc-abrir" type="button" class="secundario">Abrir pasta</button></div>
+    <ul id="pc-lista" class="pc-lista"></ul>
+    <label>Nome do arquivo<input id="pc-criar-nome" type="text" autocomplete="off" placeholder="nota.txt"></label>
+    <label>Conteúdo<textarea id="pc-criar-texto" rows="3" placeholder="texto do arquivo"></textarea></label>
+    <button id="pc-criar" type="button" class="primario">Criar arquivo</button>
+    <p id="pc-msg" class="dica" role="status" aria-live="polite">Arquivos criados por aqui ficam em ~/Jarvis.</p>
+  </section>
+  <div class="botoes barra"><button id="mem-fechar" type="button" class="primario">Fechar</button></div>
+</aside>
+
 <div id="modal" hidden>
   <div class="caixa" role="alertdialog" aria-labelledby="m-titulo">
     <h3 id="m-titulo">Confirmação necessária</h3>
@@ -479,6 +538,9 @@
   </div>
 </div>
 
+<script src="plataforma.js"></script>
+<script src="memoria.js"></script>
+<script src="orbita.js"></script>
 <script src="apps.js"></script>
 <!-- Núcleo de linguagem e decisão: precisa vir antes de app.js. -->
 <script src="hermes.js"></script>

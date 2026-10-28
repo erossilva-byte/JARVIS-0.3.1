@@ -1,4 +1,6 @@
-# J.A.R.V.I.S. Nova 1.15.0
+# J.A.R.V.I.S. Nova 1.16.0
+
+Esta versão (1.16.0) corrige o crash do serviço em primeiro plano, acrescenta o núcleo Órbita, a memória conectada estilo Obsidian, o humor brasileiro em três níveis e o adaptador multiplataforma com controle do computador.
 
 Esta versão (1.15.0) acrescenta o **estilo de núcleo em plasma** — um anel de energia irregular com
 animação própria, no desenho da imagem de referência — escolhido em **Ajustes ▸ Voz ▸ Aparência do

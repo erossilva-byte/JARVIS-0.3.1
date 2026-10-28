@@ -1,3 +1,24 @@
+## 1.16.0
+
+- **Crash do serviço em primeiro plano corrigido.** O Android encerrava o processo com
+  `ForegroundServiceDidNotStartInTimeException` (`com.jarvis.nova/.JarvisService`) porque os caminhos
+  de parar, pausar e de microfone não autorizado retornavam de `onStartCommand` sem chamar
+  `startForeground()`. Agora o serviço se promove no `onCreate` e no topo do `onStartCommand`, e o tipo
+  é `microphone` só com RECORD_AUDIO concedida (senão `dataSync`, declarado no manifesto).
+- **Núcleo Órbita.** Adaptação do visualizador enviado para o app: esfera de partículas com três anéis,
+  núcleo pulsante e paletas por estado, em Canvas 2D — sem Three.js, sem CDN, dentro da CSP. Convive com
+  HUD e plasma em Ajustes ▸ Voz, com prévia e troca imediata; pausa com a tela oculta.
+- **Memória conectada (estilo Obsidian).** Cofre local com temas (gostos, pesquisas, projetos,
+  contextos, rotinas, mensagens), busca, criação por voz ou painel, edição, exclusão com PIN, backup e
+  importação, deduplicação e controle de espaço (240 notas / 512 kB, liberar espaço, esvaziar).
+- **Humor brasileiro com níveis.** Personalidade, tratamento e exemplos de referência; níveis Discreto,
+  Equilibrado e Avançado; humor suspenso em assunto sério e nunca antes da tarefa.
+- **Multiplataforma.** `plataforma.js` centraliza detecção, capacidades e chamadas nativas; layout
+  adapta celular e computador; no desktop, status do PC e arquivos (listar, ler, criar, apagar para a
+  lixeira, abrir pastas) restritos à pasta do usuário.
+- **Testes.** `tests/test_v1_16_0.py` roda os módulos de verdade e cobre crash, órbita, memória, humor e
+  desktop.
+
 ## 1.13.0 — 2026-10-27
 O detector de ativação passou a ser nosso, as respostas passaram a ser roteadas e o assistente ganhou olhos.
 

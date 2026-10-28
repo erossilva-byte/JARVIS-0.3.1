@@ -1,22 +1,18 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.15.0",
-  "versionCode": 10150,
+  "version": "1.16.0",
+  "versionCode": 10160,
   "androidAppId": "com.jarvis.nova",
   "base": "código-fonte na raiz do repositório",
-  "gerado": "2026-10-27",
-  "status": "1.15.0: o núcleo ganhou um segundo estilo — o plasma, um anel de energia irregular no desenho da imagem de referência — escolhido em Ajustes ▸ Voz ▸ Aparência do núcleo, com prévia na própria tela; a troca vale na hora (inclusive na abertura), fica salva no aparelho e o HUD técnico continua sendo o padrão.",
+  "gerado": "2026-10-28",
+  "status": "1.16.0: o crash ForegroundServiceDidNotStartInTimeException foi corrigido — o serviço promove a primeiro plano no onCreate e no início do onStartCommand, antes de qualquer caminho, e usa o tipo dataSync quando o microfone ainda não foi autorizado; o núcleo ganhou o estilo Órbita (esfera de partículas com anéis, adaptado do visualizador enviado, em Canvas 2D e sem CDN); a memória conectada estilo Obsidian organiza notas por tema com controle de espaço e exclusão confirmada; o humor brasileiro tem três níveis; e o PlatformAdapter abre caminho para desktop, iOS e PWA, com controle de arquivos e status do PC no Electron.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.15.0 (2026-10-27). (1) Estilo do núcleo: aplicarNucleo lê 'nucleo_estilo' (hud por padrão), grava body.dataset.nucleo e reflete em todos os pontos — seletor c-nucleo-estilo, pílula c-nucleo-pill e texto c-nucleo-status, além da prévia do cartão. A escolha é persistida em salvarConfig e relida em carregarConfig, de modo que a preferência sobrevive ao reinício. (2) Núcleo em plasma: bloco .plas dentro do HUD com quatro filamentos (.f1-.f4), névoa, miolo e ponto central; no estilo plasma os elementos técnicos (anéis, marcas, grades, rótulos e halo) saem de cena por opacidade e ficam a marca e os chips de estado. (3) Animação em camadas: plas-gira (giro em velocidades diferentes por filamento, um no sentido inverso), plas-forma (deformação do contorno irregular, que é o que dá a cara de plasma), plas-respira (névoa e miolo fora de fase) e plas-pulsa (ponto central); o nível real do microfone entra por --nv no próprio HUD, então o anel cresce e os filamentos ficam mais vivos quando o usuário fala — a mesma medida que alimenta as ondas de voz. (4) Custo e acessibilidade: com a tela oculta a animação pausa (body.oculto) e prefers-reduced-motion reduz tudo. (5) A abertura (splash) usa o mesmo estilo, evitando a troca visual brusca entre o boot e a interface.",
-  "build": {
-    "resultado": "success",
-    "sha256": "41d504ef2d9d229568a12365e9b92e07fbdea20c00604c2a61027c6203d62977",
-    "bytes": 70666175,
-    "arquivo": "jarvis-nova-1.15.0-10150.apk",
-    "data": "2026-10-27",
-    "observacao": "APK do release v1.15.0 (jarvis-nova-1.15.0-10150.apk), compilado pelo workflow de release com ci/debug.keystore — mesma assinatura de 1.10.1 a 1.14.0, então o app instalado se atualiza por cima pelo próprio atualizador interno. Checksum conferido depois de baixar o arquivo do próprio release."
-  },
+  "notas": "Revisão 1.16.0 (2026-10-28). (1) Crash do serviço: o Android exige startForeground() em até 5 s depois de startForegroundService(); os caminhos de parar, pausar e de microfone não autorizado voltavam sem chamar, e o processo morria com ForegroundServiceDidNotStartInTimeException. Agora promoverPrimeiroPlano() roda no onCreate e no topo do onStartCommand, escolhe o tipo microphone somente com RECORD_AUDIO concedida e cai para dataSync (permissão normal, declarada no manifesto) quando não há autorização. (2) Núcleo Órbita: adaptação do visualizador enviado, em Canvas 2D, com esfera de partículas, três anéis e núcleo pulsante; paletas por estado, reação ao microfone, pausa com a tela oculta e prefers-reduced-motion. A opção convive com o HUD técnico e com o plasma (com animação própria), com prévia e troca imediata. (3) Memória conectada: cofre local por tema (gostos, pesquisas, projetos, contextos, rotinas, mensagens), com criação, busca, atualização, exclusão confirmada por PIN, exportação, importação, deduplicação e controle de espaço (240 notas/512 kB, liberar espaço e esvaziar). O texto é saneado e renderizado só por textContent. (4) Humor: personalidade brasileira, tratamento senhor e níveis Discreto, Equilibrado e Avançado, com exemplos de referência e suspensão total em assunto sério. (5) Multiplataforma: plataforma.js centraliza detecção, capacidades e chamadas; o layout adapta celular e PC; no Electron, status_pc, listar/ler/criar/apagar arquivos e abrir pastas ficam restritos à pasta do usuário, com lixeira do sistema. (6) Testes: tests/test_v1_16_0.py executa memoria.js e o Hermes com capacidades simuladas, além de conferir o crash, o núcleo, o humor e o desktop.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"
-  ]
+  ],
+  "build": {
+    "resultado": "pendente",
+    "observacao": "Aguardando a compilação do workflow de release v1.16.0."
+  }
 }

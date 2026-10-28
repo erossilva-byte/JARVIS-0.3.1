@@ -70,7 +70,7 @@ checagens = {
         and "const pill = document.getElementById('c-nucleo-pill');" in app),
 
     # 3. Versão, documentação e suíte
-    "Versão 1.15.0 com versionCode 10150 (a partir da 1.14.0)": (
+    "Versão corrente com versionCode >= 10150 (a partir da 1.14.0)": (
         [int(x) for x in str(versao.get("version", "0")).split(".")] >= [1, 15, 0]
         and versao.get("versionCode", 0) >= 10150
         and pacote.get("version") == versao.get("version")
@@ -79,13 +79,13 @@ checagens = {
         ('<span class="orb-sub" aria-hidden="true">v%s</span>' % versao.get("version")) in html
         and ('<span class="versao-chip">v%s</span>' % versao.get("version")) in html),
     "Mudança registrada no CHANGELOG e no LEIA-ME": (
-        "## 1.15.0" in leituras and ("# J.A.R.V.I.S. Nova %s" % versao.get("version")) in leituras
+        ("## %s" % versao.get("version")) in leituras and ("# J.A.R.V.I.S. Nova %s" % versao.get("version")) in leituras
         and "plasma" in leituras.lower()),
     "Notas da versão descrevem o que foi entregue": (
         all(t in versao.get("notas", "").lower() for t in ("plasma", "núcleo", "animação"))),
     "Suíte roda o teste novo": "python3 tests/test_v1_15_0.py" in script_teste,
     "Workflows carregam a versão atual": (
-        "1.15.0" in build_wf and "1.15.0" in release_wf
+        versao.get("version") in build_wf and versao.get("version") in release_wf
         and "1.14.0" not in build_wf and "1.14.0" not in release_wf.split("Novidades")[0]),
 }
 

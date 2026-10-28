@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, shell, clipboard, safeStorage } = require('electron');
 const { spawn } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const APPS = require('./apps.js');
 
@@ -9,7 +10,7 @@ const chave = plat === 'win32' ? 'win' : plat === 'darwin' ? 'mac' : 'linux';
 
 function criarJanela() {
   const win = new BrowserWindow({
-    width: 1100, height: 780, minWidth: 420, minHeight: 600,
+    width: 1280, height: 860, minWidth: 460, minHeight: 620,
     backgroundColor: '#04070d', title: 'J.A.R.V.I.S.', autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -108,6 +109,95 @@ const acoes = {
   guardar_chave_segura: async (dados) => guardarChaveDesktop(dados || {}),
   ler_chave_segura: async (dados) => ({ valor: lerChaveDesktop(dados || {}) })
 };
+
+
+// ---------- Computador: arquivos e estado, com limites explícitos ----------
+// O renderer também NÃO escolhe caminho arbitrário: tudo é resolvido dentro da pasta do
+// usuário (app.getPath('home')). Fora dela, a ação falha. Nada aqui executa shell livre.
+function dentroDaCasa(p) {
+  const casa = app.getPath('home');
+  const bruto = String(p == null ? '~' : p).trim() || '~';
+  const alvo = bruto === '~' ? casa : path.resolve(casa, bruto.replace(/^~(?=$|[\\/])/, casa));
+  const rel = path.relative(casa, alvo);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error('Caminho fora da pasta do usuário.');
+  return alvo;
+}
+function nomeSeguro(nome) {
+  const limpo = String(nome || 'nota.txt').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').trim().slice(0, 120);
+  return limpo || 'nota.txt';
+}
+function gb(n) { return Math.round((Number(n) || 0) / 1024 / 1024 / 1024 * 10) / 10; }
+
+const acoesPC = {
+  status_pc: async () => {
+    const cpus = os.cpus() || [];
+    let idle = 0, total = 0;
+    cpus.forEach((c) => {
+      const t = c.times || {};
+      idle += Number(t.idle) || 0;
+      total += (Number(t.user) || 0) + (Number(t.nice) || 0) + (Number(t.sys) || 0) + (Number(t.idle) || 0) + (Number(t.irq) || 0);
+    });
+    let discoLivre = 0, discoTotal = 0;
+    try {
+      const st = fs.statfsSync(app.getPath('home'));
+      discoLivre = st.bavail * st.bsize;
+      discoTotal = st.blocks * st.bsize;
+    } catch (e) { /* sistema sem statfs */ }
+    const horas = Math.floor(os.uptime() / 3600);
+    return {
+      cpu: total ? Math.max(0, Math.min(100, Math.round(100 - (idle / total) * 100))) : 0,
+      ramLivre: os.freemem(),
+      ramTotal: os.totalmem(),
+      discoLivre: discoLivre,
+      discoTotal: discoTotal,
+      aparelho: os.type() + ' ' + os.release() + ' · ' + os.arch(),
+      uptime: horas >= 24 ? Math.floor(horas / 24) + ' dia(s) e ' + (horas % 24) + ' h' : horas + ' h',
+      carregado: Date.now()
+    };
+  },
+  listar_arquivos: async ({ caminho }) => {
+    const alvo = dentroDaCasa(caminho);
+    const itens = fs.readdirSync(alvo, { withFileTypes: true })
+      .filter((d) => !d.name.startsWith('.'))
+      .sort((a, b) => (b.isDirectory() - a.isDirectory()) || a.name.localeCompare(b.name))
+      .slice(0, 200)
+      .map((d) => d.name + (d.isDirectory() ? '/' : ''));
+    return { caminho: alvo, itens };
+  },
+  ler_arquivo: async ({ caminho }) => {
+    const alvo = dentroDaCasa(caminho);
+    const st = fs.statSync(alvo);
+    if (!st.isFile()) throw new Error('Isso não é um arquivo.');
+    if (st.size > 200 * 1024) throw new Error('Arquivo grande demais para leitura (limite de 200 kB).');
+    return { caminho: alvo, texto: fs.readFileSync(alvo, 'utf8').slice(0, 200000) };
+  },
+  criar_arquivo: async ({ nome, texto, pasta }) => {
+    const base = dentroDaCasa(pasta || '~/Jarvis');
+    fs.mkdirSync(base, { recursive: true });
+    const alvo = path.join(base, nomeSeguro(nome));
+    if (!dentroDaCasa(alvo)) throw new Error('Caminho fora da pasta do usuário.');
+    fs.writeFileSync(alvo, String(texto == null ? '' : texto).slice(0, 200000), 'utf8');
+    return { caminho: alvo };
+  },
+  apagar_arquivo: async ({ caminho }) => {
+    const alvo = dentroDaCasa(caminho);
+    // Lixeira do sistema, não exclusão definitiva: dá para recuperar.
+    await shell.trashItem(alvo);
+    return { caminho: alvo, lixeira: true };
+  },
+  abrir_pasta: async ({ caminho }) => {
+    const alvo = dentroDaCasa(caminho);
+    const erro = await shell.openPath(alvo);
+    if (erro) throw new Error(erro);
+    return { caminho: alvo };
+  },
+  pesquisar_web: async ({ consulta }) => {
+    const q = String(consulta || '').slice(0, 300);
+    if (!q.trim()) throw new Error('Consulta vazia.');
+    return shell.openExternal('https://www.google.com/search?q=' + encodeURIComponent(q));
+  }
+};
+Object.assign(acoes, acoesPC);
 
 ipcMain.handle('jarvis:run', async (_e, nome, args) => {
   if (!Object.prototype.hasOwnProperty.call(acoes, nome)) throw new Error('Ação desconhecida');

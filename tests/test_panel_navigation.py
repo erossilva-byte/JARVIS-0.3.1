@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 app = (ROOT / "app.js").read_text(encoding="utf-8")
 checks = {
     "painéis centralizados numa lista": (
-        "const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas', '#painel-visao', '#painel-info']" in app),
+        "const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas', '#painel-visao', '#painel-info', '#painel-memoria']" in app),
     "marcador próprio no histórico": "jarvisPainel === true" in app,
     "não cria histórico ao alternar painéis": "if (!jaHaviaPainel && !estadoPainelJarvis(H.state))" in app,
     "substitui o estado quando o painel já está aberto": "H.replaceState({ ...H.state, jarvisPainel: true, painel: sel }, '')" in app,
