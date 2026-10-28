@@ -17,6 +17,21 @@
  *    aparece); contexto liberado ao trocar de estilo (forceContextLoss).
  *  - Fallback em Canvas 2D se WebGL não existir ou falhar: o estilo nunca fica vazio.
  *
+ * 1.18.0 — mesmo desenho no celular e no PC:
+ *  - BUG CORRIGIDO: o tamanho do ponto era `aSize * (250 / profundidade)`. Com a câmera a
+ *    5,4 unidades isso dava ~46x, ou seja, sprites de até ~150 px cada. Com milhares de
+ *    partículas em blending aditivo, a esfera virava um quadrado branco estourado (o que
+ *    aparecia na tela) e o custo de preenchimento travava o aparelho. Agora o tamanho é
+ *    `aSize * pixelRatio * (3.2 / profundidade)`, limitado a 22 px, com brilho menor.
+ *  - O teste de WebGL não usa mais o canvas real: pedir o contexto antes do Three.js
+ *    fixava os atributos (alpha desligado) e deixava a esfera num quadro preto/opaco.
+ *  - Contexto WebGL perdido (memória apertada no Android, driver reiniciado no PC) é
+ *    recuperado em vez de congelar a animação.
+ *  - ResizeObserver: abrir o painel, girar o aparelho ou mudar a janela recalcula o
+ *    tamanho sem esperar o evento `resize` da janela.
+ *  - Vigia de visibilidade: se o IntersectionObserver não acusar visibilidade (layout
+ *    tardio, navegador embutido), a animação começa mesmo assim.
+ *
  * API pública (inalterada): iniciar(canvas), parar(), estado(nome), nivel(v), ativo(),
  * tipo(), diagnostico().
  */
@@ -37,6 +52,7 @@
     'uniform float uTime;',
     'uniform float uAudio;',
     'uniform float uEscala;',
+    'uniform float uPixelRatio;',
     'attribute float aSize;',
     'attribute float aSeed;',
     'varying float vSeed;',
@@ -51,7 +67,8 @@
     '  vec4 mv = modelViewMatrix * vec4(p, 1.0);',
     '  vSeed = aSeed;',
     '  vDepth = -mv.z;',
-    '  gl_PointSize = aSize * uEscala * (250.0 / max(1.0, vDepth)) * (1.0 + uAudio * 0.7);',
+    '  float tamanho = aSize * uEscala * uPixelRatio * (3.2 / max(0.9, vDepth));',
+    '  gl_PointSize = clamp(tamanho * (1.0 + uAudio * 0.55), 1.0, 22.0);',
     '  gl_Position = projectionMatrix * mv;',
     '}'
   ].join('\n');
@@ -73,10 +90,26 @@
     '}'
   ].join('\n');
 
-  function suportaWebGL(canvas) {
+  /**
+   * Teste de WebGL em um canvas descartável.
+   *
+   * Antes o teste pedia o contexto no próprio canvas do HUD. O navegador devolve SEMPRE o
+   * mesmo contexto para o mesmo canvas, então o WebGLRenderer do Three.js herdava os
+   * atributos do teste (alpha desligado, antialias ligado) e o resultado era um quadro
+   * opaco — no celular, o quadrado branco da captura. Além disso, cada tentativa gastava
+   * um dos poucos contextos que o navegador permite.
+   */
+  function suportaWebGL() {
     try {
-      var ctx = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      return !!ctx;
+      var c = raiz.document.createElement('canvas');
+      c.width = c.height = 2;
+      var ctx = c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl');
+      if (!ctx) return false;
+      try {
+        var perca = ctx.getExtension('WEBGL_lose_context');
+        if (perca) perca.loseContext(); // devolve o contexto na hora
+      } catch (e) { /* extensão opcional */ }
+      return true;
     } catch (e) { return false; }
   }
 
@@ -112,6 +145,8 @@
     this.largura = 0;
     this.altura = 0;
     this.compacto = false;
+    this.contextoPerdido = false;
+    this.observadorTamanho = null;
 
     var dprBase = Math.min(raiz.devicePixelRatio || 1, 2);
     this.renderer = new T.WebGLRenderer({
@@ -144,6 +179,35 @@
     this.aoRedimensionar = function () { self.medir(); };
     raiz.addEventListener('resize', this.aoRedimensionar, false);
     raiz.addEventListener('orientationchange', this.aoRedimensionar, false);
+
+    // Perda de contexto: no Android acontece sob pressão de memória; no PC, quando o
+    // driver reinicia. Sem estes tratadores a cena ficava parada para sempre.
+    this.aoPerderContexto = function (e) {
+      try { if (e && e.preventDefault) e.preventDefault(); } catch (x) { /* sem evento */ }
+      self.contextoPerdido = true;
+      self.rodando = false;
+      if (self.raf) { try { raiz.cancelAnimationFrame(self.raf); } catch (x) { /* sem raf */ } self.raf = 0; }
+    };
+    this.aoRecuperarContexto = function () {
+      self.contextoPerdido = false;
+      if (!self.desejado) return;
+      self.largura = 0; self.altura = 0;
+      try { self.medir(); } catch (x) { /* ainda sem tamanho */ }
+      self.rodando = false;
+      self.iniciar();
+    };
+    try {
+      canvas.addEventListener('webglcontextlost', this.aoPerderContexto, false);
+      canvas.addEventListener('webglcontextrestored', this.aoRecuperarContexto, false);
+    } catch (e) { /* listeners opcionais */ }
+
+    // O tamanho do HUD muda sem `resize` da janela (painel abrindo, fonte carregando).
+    if (typeof raiz.ResizeObserver === 'function') {
+      try {
+        this.observadorTamanho = new raiz.ResizeObserver(function () { self.medir(); });
+        this.observadorTamanho.observe(canvas);
+      } catch (e) { this.observadorTamanho = null; }
+    }
     this.medir();
   }
 
@@ -166,7 +230,7 @@
       pos[i * 3] = Math.cos(theta) * r * raio;
       pos[i * 3 + 1] = u * raio;
       pos[i * 3 + 2] = Math.sin(theta) * r * raio;
-      tam[i] = 1.1 + Math.random() * 2.2;
+      tam[i] = 1.0 + Math.random() * 1.7;
       seed[i] = Math.random();
     }
     geo.setAttribute('position', new T.BufferAttribute(pos, 3));
@@ -178,9 +242,10 @@
       uTime: { value: 0 },
       uAudio: { value: 0 },
       uEscala: { value: this.compacto ? 0.8 : 1.0 },
+      uPixelRatio: { value: Math.min(raiz.devicePixelRatio || 1, 2) },
       uColorA: { value: this.corA },
       uColorB: { value: this.corB },
-      uOpacity: { value: 0.92 }
+      uOpacity: { value: 0.78 }
     };
     var material = new T.ShaderMaterial({
       uniforms: this.uniformes,
@@ -214,24 +279,24 @@
       this.aneis.push(anel);
     }
 
-    var matMiolo = new T.MeshBasicMaterial({ wireframe: true, transparent: true, opacity: 0.55, depthWrite: false });
+    var matMiolo = new T.MeshBasicMaterial({ wireframe: true, transparent: true, opacity: 0.46, depthWrite: false });
     matMiolo.color = this.corNucleo;
     this.miolo = new T.Mesh(new T.IcosahedronGeometry(0.62, 1), matMiolo);
     this.grupo.add(this.miolo);
 
-    var matInterno = new T.MeshBasicMaterial({ transparent: true, opacity: 0.18, depthWrite: false });
+    var matInterno = new T.MeshBasicMaterial({ transparent: true, opacity: 0.14, depthWrite: false });
     matInterno.color = this.corNucleo;
     this.interno = new T.Mesh(new T.SphereGeometry(0.46, 32, 32), matInterno);
     this.grupo.add(this.interno);
 
     var tex = new T.CanvasTexture(texturaBrilho());
     var matBrilho = new T.SpriteMaterial({
-      map: tex, transparent: true, opacity: 0.55,
+      map: tex, transparent: true, opacity: 0.30,
       blending: T.AdditiveBlending, depthWrite: false
     });
     matBrilho.color = this.corNucleo;
     this.brilho = new T.Sprite(matBrilho);
-    this.brilho.scale.set(4.6, 4.6, 1);
+    this.brilho.scale.set(3.5, 3.5, 1);
     this.grupo.add(this.brilho);
 
     var matPonto = new T.MeshBasicMaterial({ color: 0xf2fffe, transparent: true, opacity: 0.95 });
@@ -253,6 +318,9 @@
     this.renderer.setSize(largura, altura, false);
     this.camera.aspect = largura / altura;
     this.camera.updateProjectionMatrix();
+    // O shader precisa do MESMO pixel ratio do renderer: era o que faltava para o sprite
+    // ter o mesmo tamanho relativo em telas 1x (PC) e 3x (celular).
+    if (this.uniformes && this.uniformes.uPixelRatio) this.uniformes.uPixelRatio.value = dpr;
   };
 
   Render3D.prototype.iniciar = function () {
@@ -345,11 +413,11 @@
 
     this.miolo.rotation.y -= dt * (0.35 + giro * 0.5);
     this.miolo.rotation.x += dt * 0.18;
-    this.miolo.material.opacity = 0.42 + this.audioNivel * 0.28;
+    this.miolo.material.opacity = 0.34 + this.audioNivel * 0.26;
     this.interno.scale.setScalar(1 + this.audioNivel * 0.22 + Math.sin(this.clock.elapsedTime * 1.6) * 0.02);
-    this.brilho.material.opacity = 0.38 + this.audioNivel * 0.34;
+    this.brilho.material.opacity = 0.24 + this.audioNivel * 0.26;
     var pulso = 1 + Math.sin(this.clock.elapsedTime * 1.8) * (reduzido ? 0 : 0.05) + this.audioNivel * 0.22;
-    this.brilho.scale.set(4.6 * pulso, 4.6 * pulso, 1);
+    this.brilho.scale.set(3.5 * pulso, 3.5 * pulso, 1);
     this.ponto.scale.setScalar(1 + this.audioNivel * 0.5);
 
     this.camera.position.x = Math.sin(this.clock.elapsedTime * 0.13) * 0.14;
@@ -364,6 +432,11 @@
     try {
       raiz.removeEventListener('resize', this.aoRedimensionar, false);
       raiz.removeEventListener('orientationchange', this.aoRedimensionar, false);
+      if (this.observadorTamanho) { this.observadorTamanho.disconnect(); this.observadorTamanho = null; }
+      if (this.canvas) {
+        this.canvas.removeEventListener('webglcontextlost', this.aoPerderContexto, false);
+        this.canvas.removeEventListener('webglcontextrestored', this.aoRecuperarContexto, false);
+      }
     } catch (e) { /* sem listeners */ }
     try {
       this.cena.traverse(function (o) {
@@ -398,8 +471,16 @@
     var self = this;
     this.aoRedimensionar = function () { self.medir(); };
     raiz.addEventListener('resize', this.aoRedimensionar, false);
+    raiz.addEventListener('orientationchange', this.aoRedimensionar, false);
+    this.observadorTamanho = null;
+    if (typeof raiz.ResizeObserver === 'function') {
+      try {
+        this.observadorTamanho = new raiz.ResizeObserver(function () { self.medir(); });
+        this.observadorTamanho.observe(canvas);
+      } catch (e) { this.observadorTamanho = null; }
+    }
     this.medir();
-  }
+  };
   Render2D.prototype.medir = function () {
     var r = this.canvas.getBoundingClientRect ? this.canvas.getBoundingClientRect() : { width: 300, height: 300 };
     this.w = Math.max(1, Math.round(r.width || 300));
@@ -407,6 +488,14 @@
     this.dpr = Math.min(raiz.devicePixelRatio || 1, 1.5);
     this.canvas.width = Math.round(this.w * this.dpr);
     this.canvas.height = Math.round(this.h * this.dpr);
+  };
+  Render2D.prototype.destruir = function () {
+    this.parar();
+    try {
+      raiz.removeEventListener('resize', this.aoRedimensionar, false);
+      raiz.removeEventListener('orientationchange', this.aoRedimensionar, false);
+      if (this.observadorTamanho) { this.observadorTamanho.disconnect(); this.observadorTamanho = null; }
+    } catch (e) { /* sem listeners */ }
   };
   Render2D.prototype.iniciar = function () {
     if (this.rodando) return;
@@ -472,10 +561,17 @@
   var observador = null;
 
   function criar(canvas) {
-    if (raiz.THREE && suportaWebGL(canvas)) {
+    if (raiz.THREE && suportaWebGL()) {
       try { return new Render3D(canvas); }
       catch (e) {
         try { if (raiz.console) raiz.console.warn('Núcleo órbita: WebGL falhou, usando Canvas 2D.', e && e.message); } catch (x) { /* sem console */ }
+        // A tentativa pode ter deixado um contexto quebrado no canvas: um clone limpo
+        // garante que o desenho 2D funcione em vez de ficar em branco.
+        try {
+          var limpo = canvas.cloneNode(false);
+          if (canvas.parentNode) canvas.parentNode.replaceChild(limpo, canvas);
+          canvas = limpo;
+        } catch (x) { /* segue com o canvas original */ }
       }
     }
     return new Render2D(canvas);
@@ -506,6 +602,8 @@
       canvasAtual = canvas;
       try { atual = criar(canvas); } catch (e) { atual = null; }
       if (!atual) return null;
+      // O fallback 2D pode trocar o canvas por um clone limpo: guarda o que está em uso.
+      canvasAtual = atual.canvas || canvas;
       // Observa a visibilidade do canvas: fora da tela, nada de renderizar.
       try {
         if (typeof raiz.IntersectionObserver === 'function') {
@@ -518,10 +616,23 @@
         }
       } catch (e) { /* observador opcional */ }
       atual.iniciar();
+      // Rede de segurança: se o observador não acusar visibilidade (layout tardio ou
+      // navegador embutido), anima depois de 1,5 s desde que o canvas tenha tamanho.
+      try {
+        if (api._vigia) raiz.clearTimeout(api._vigia);
+        api._vigia = raiz.setTimeout(function () {
+          if (!atual || atual.rodando || !atual.desejado) return;
+          if (raiz.document && raiz.document.hidden) return;
+          var c = atual.canvas || canvasAtual;
+          var r = c && c.getBoundingClientRect ? c.getBoundingClientRect() : { width: 0, height: 0 };
+          if (r.width > 1 && r.height > 1) { pausadoPorTela = false; atual.iniciar(); }
+        }, 1500);
+      } catch (e) { /* sem timers */ }
       return atual;
     },
     parar: function () { if (atual) atual.parar(); },
     destruir: function () {
+      try { if (api._vigia) { raiz.clearTimeout(api._vigia); api._vigia = 0; } } catch (e) { /* sem timers */ }
       try { if (observador) { observador.disconnect(); observador = null; } } catch (e) { /* já desconectado */ }
       if (atual && atual.destruir) atual.destruir(); else if (atual) atual.parar();
       atual = null; canvasAtual = null; pausadoPorTela = false;
@@ -544,6 +655,7 @@
         rodando: !!atual.rodando,
         fps: Math.round(atual.ultimoFps || 0),
         qualidadeBaixa: !!atual.qualidadeBaixa,
+        contextoPerdido: !!atual.contextoPerdido,
         particulas: atual.totalParticulas || atual.pontos.length
       };
     }

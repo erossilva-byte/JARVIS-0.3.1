@@ -165,6 +165,13 @@ app_match = re.search(r'<application\b[^>]*>', m)
 if app_match and 'android:allowBackup=' not in app_match.group(0):
     tag = app_match.group(0).replace('<application', '<application android:allowBackup="false"', 1)
     m = m[:app_match.start()] + tag + m[app_match.end():]
+# Nenhum endpoint do app usa HTTP: bloquear tráfego em texto puro fecha a porta para
+# interceptação mesmo se algum recurso futuro tentar http://.
+app_match = re.search(r'<application\b[^>]*>', m)
+if app_match and 'android:usesCleartextTraffic=' not in app_match.group(0):
+    tag = app_match.group(0).replace('<application', '<application android:usesCleartextTraffic="false"', 1)
+    m = m[:app_match.start()] + tag + m[app_match.end():]
+
 # Arquivo de caminhos do FileProvider do atualizador (resources do app).
 try:
     res_xml = path.parent / "res" / "xml"

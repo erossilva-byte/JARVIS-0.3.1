@@ -1,3 +1,22 @@
+## 1.18.0
+
+- **Núcleo 3D estourado em branco: corrigido no celular e no PC.** O shader calculava
+  `gl_PointSize = aSize * (250 / profundidade)`. Com a câmera a 5,4 unidades e até 2.100 partículas
+  em blending aditivo, cada sprite saía com ~150 px e o HUD virava um quadrado branco (o da captura),
+  com custo de preenchimento que travava o aparelho. O tamanho agora considera o pixel ratio real e
+  fica limitado a 22 px, com brilho aditivo menor.
+- **Contexto WebGL não é mais roubado pelo teste de suporte.** Pedir `getContext` no próprio canvas
+  fazia o Three.js herdar uma cena opaca (alpha desligado); o teste passou a usar um canvas descartável.
+- **Animação que não congelava mais:** perda de contexto tratada (`webglcontextlost`/`restored`),
+  `ResizeObserver` e orientação recalculam o tamanho, e um vigia de 1,5 s inicia a animação mesmo
+  quando o `IntersectionObserver` não acusa visibilidade.
+- **Borda quadrada do brilho:** o canvas ganhou máscara radial no CSS, então o brilho fica dentro do
+  círculo do HUD em telas pequenas e grandes.
+- **Auditoria do APK:** `startForeground()` com segunda tentativa mínima (fim do
+  `ForegroundServiceDidNotStartInTimeException`), estado estático do player limpo no `onDestroy`,
+  `minSdkVersion` 26 coerente com o `build.gradle` e `android:usesCleartextTraffic="false"`.
+- **Versão 1.18.0** (versionCode 10180).
+
 ## 1.17.0
 
 - **Crash do núcleo 3D corrigido.** O construtor gravava `this.nivel = 0` (número) por cima do método

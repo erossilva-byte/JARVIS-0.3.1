@@ -232,7 +232,14 @@ public class JarvisService extends Service {
         // interface). O Android dá 5 s para startForeground() e mata o processo com
         // ForegroundServiceDidNotStartInTimeException se isso não acontecer. Promover aqui,
         // antes de qualquer trabalho, é a única forma de o prazo valer em TODOS os caminhos.
-        promoverPrimeiroPlano();
+        try {
+            promoverPrimeiroPlano();
+        } catch (Throwable e) {
+            // Nada em onCreate pode escapar: uma exceção aqui também viraria o crash de
+            // "serviço em primeiro plano não iniciou a tempo".
+            registrarFalhaPrimeiroPlano(e);
+            stopSelf();
+        }
     }
 
     @Override
@@ -758,23 +765,52 @@ public class JarvisService extends Service {
         if (emPrimeiroPlano) { notificar(); return; }
         try {
             criarCanal();
-            Notification n = montarNotificacao();
-            if (Build.VERSION.SDK_INT >= 29) {
-                boolean podeMicrofone = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                    == PackageManager.PERMISSION_GRANTED;
-                int tipo = podeMicrofone
-                    ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                    : ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
-                startForeground(ID, n, tipo);
-            } else {
-                startForeground(ID, n);
-            }
+            subirPrimeiroPlano(montarNotificacao());
             emPrimeiroPlano = true;
+            return;
         } catch (Throwable e) {
-            JarvisPrefs.ultimoErro(this, "serviço em primeiro plano recusado: " + e.getMessage());
-            try { stopForeground(true); } catch (Throwable ignored) { }
-            stopSelf();
+            registrarFalhaPrimeiroPlano(e);
         }
+        // Segunda tentativa, mínima: sem PendingIntent, sem ações e sem depender de
+        // preferências. O prazo de 5 s do Android continua correndo; se a notificação
+        // completa falhar, esta ainda cumpre o contrato e evita o
+        // ForegroundServiceDidNotStartInTimeException que derrubava o app.
+        try {
+            Notification.Builder b = new Notification.Builder(this, CANAL);
+            b.setContentTitle("Jarvis ativo")
+                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true);
+            subirPrimeiroPlano(b.build());
+            emPrimeiroPlano = true;
+            return;
+        } catch (Throwable e2) {
+            registrarFalhaPrimeiroPlano(e2);
+        }
+        try { stopForeground(true); } catch (Throwable ignored) { }
+        stopSelf();
+    }
+
+    /** startForeground com o tipo exigido pelo Android 10+ (e sem tipo nas versões antigas). */
+    private void subirPrimeiroPlano(Notification n) {
+        if (Build.VERSION.SDK_INT >= 29) {
+            boolean podeMicrofone = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED;
+            int tipo = podeMicrofone
+                ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                : ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
+            startForeground(ID, n, tipo);
+        } else {
+            startForeground(ID, n);
+        }
+    }
+
+    /** Registra a recusa sem deixar uma exceção de SharedPreferences escapar do onCreate. */
+    private void registrarFalhaPrimeiroPlano(Throwable e) {
+        try {
+            String msg = e == null ? "erro desconhecido" : (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+            JarvisPrefs.ultimoErro(this, "serviço em primeiro plano recusado: " + msg);
+        } catch (Throwable ignored) { /* registro é opcional */ }
     }
 
     @Override

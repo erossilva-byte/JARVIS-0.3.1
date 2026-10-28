@@ -1,4 +1,8 @@
-# J.A.R.V.I.S. Nova 1.17.0
+# J.A.R.V.I.S. Nova 1.18.0
+
+Esta versão (1.18.0) conserta o Núcleo 3D no celular e no PC: o tamanho das partículas estava
+~46x maior do que devia e saturava a tela em branco; agora o desenho respeita o pixel ratio, tem máscara
+circular, recupera o contexto WebGL perdido e recalcula o tamanho quando o painel abre ou o aparelho gira.
 
 Esta versão também corrige o erro “instancia.nivel is not a function” no núcleo 3D e permite criar e analisar arquivos `.cad` do CadSimu (formato documentado, validação com mensagens claras e cofre local).
 
@@ -169,6 +173,26 @@ usa sessões de até 15 s, o que também acaba com o microfone abrindo e fechand
 Assistente pessoal para Android (Capacitor + WebView), com versão desktop Electron opcional.
 Aplicativo independente com `com.jarvis.nova`. O código-fonte fica **na raiz do repositório**
 (o workflow ainda aceita `JARVIS-NOVA-*-fonte.zip` por compatibilidade).
+
+## Instalar o J.A.R.V.I.S. no PC (Windows, macOS e Linux)
+
+Pré-requisitos: **Node.js 20 ou mais novo** (https://nodejs.org) e, no Linux, as bibliotecas do
+Electron (`libnss3`, `libgtk-3-0`, `libasound2`). O resto é baixado pelo npm.
+
+```bash
+git clone <url-do-repositório> jarvis-nova && cd jarvis-nova
+npm install          # dependências (Electron incluído)
+npm start            # abre o Jarvis no PC
+npm run dist:win     # gera o instalador NSIS (.exe) em dist/
+npm run dist:linux   # gera AppImage e .deb em dist/
+npm run dist:mac     # gera .dmg (precisa ser rodado no macOS)
+```
+
+No PC o app abre em janela própria (Electron), usa a mesma interface e as mesmas funções do APK,
+incluindo os estilos de núcleo HUD, plasma e órbita 3D. As chaves das IAs ficam no cofre do sistema
+(`safeStorage`: DPAPI no Windows, Keychain no macOS, libsecret no Linux) — se o cofre não estiver
+disponível, o app se recusa a gravar em texto puro. O microfone é liberado pelo Electron na primeira
+vez; sem ele, o restante do app continua funcionando por texto.
 
 ## Correção da 1.7.2 — atualizador instalando de novo
 

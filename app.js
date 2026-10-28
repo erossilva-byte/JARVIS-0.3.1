@@ -12,7 +12,7 @@ const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.17.0';
+const VERSAO_APP = '1.18.0';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz

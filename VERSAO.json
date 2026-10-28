@@ -1,22 +1,17 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.17.0",
-  "versionCode": 10170,
+  "version": "1.18.0",
+  "versionCode": 10180,
   "androidAppId": "com.jarvis.nova",
   "base": "código-fonte na raiz do repositório",
   "gerado": "2026-10-28",
-  "status": "1.17.0: o núcleo Órbita vira 3D real na GPU (partículas em shader, anéis e miolo, Three.js empacotado, sem CDN), com correção do crash “instancia.nivel is not a function”, animação por delta time, pausa fora da tela e qualidade adaptativa; o núcleo também cria, valida e analisa arquivos .cad do CadSimu, com cofre local e mensagens de erro claras.",
+  "status": "1.18.0: o Núcleo 3D volta a ser visível e fluido no celular e no PC — o tamanho das partículas foi corrigido (era ~46x maior, saturando a tela em branco), o teste de WebGL não consome mais o contexto do canvas real, a perda de contexto é recuperada e o canvas ganhou máscara circular; inclui a auditoria do APK (serviço em primeiro plano à prova de timeout, estado do player limpo, minSdk coerente e HTTP bloqueado).",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.17.0 (2026-10-28). (1) Núcleo Órbita 3D: vendor/three.min.js (r128, MIT) entra no pacote e a cena usa WebGLRenderer na própria canvas do HUD, com partículas em ShaderMaterial — ondas no vértice, expansão pelo microfone e brilho aditivo —, três anéis em planos distintos, icosaedro em arame, esfera interna e sprite de brilho. A câmera tem paralaxe suave. (2) Fluidez: animação por delta time com interpolação exponencial (não depende de 60 fps), transições de estado suaves, dpr limitado e reduzido automaticamente quando o quadro cai, menos partículas em telas pequenas, pausa com a tela oculta e respeito a prefers-reduced-motion. (3) Compatibilidade: se WebGL não existir ou falhar, um renderizador Canvas 2D mantém o estilo funcionando; a troca entre HUD, plasma e órbita continua imediata e o plasma segue com sua animação. (4) Empacotamento: o Three.js é copiado para www/vendor no build e entra no pacote do desktop; nada de CDN, a CSP continua script-src self. (5) Versão 1.17.0 (versionCode 10170) e testes atualizados. (6) Correção do runtime: o construtor gravava this.nivel (número) sobre o método nivel(v); o valor foi para audioNivel, a fachada confere o tipo e expõe NucleoOrbita.diagnostico(). (7) Arquivos .cad: cad.js define o formato “CadSimu CAD” v1, valida JSON, tipos, números e versão, analisa a caixa envolvente e guarda até 40 arquivos/256 kB, com download, exclusão confirmada e voz (“crie um arquivo cad…”, “analise o cad…”).",
+  "notas": "Revisão 1.18.0 (2026-10-28). (1) Núcleo 3D no celular e no PC: o shader calculava gl_PointSize como aSize * (250 / profundidade); com a câmera a 5,4 unidades isso dava ~46x, ou seja sprites de até ~150 px em milhares de partículas com blending aditivo — a esfera virava um quadrado branco estourado (o que aparecia na captura) e o preenchimento travava o aparelho. Agora o tamanho é aSize * pixelRatio * (3.2 / profundidade), limitado a 22 px, e o brilho aditivo foi reduzido. (2) O teste de suporte a WebGL passou a usar um canvas descartável: pedir o contexto no canvas do HUD fazia o Three.js herdar alpha desligado, o que deixava a cena opaca. (3) Perda de contexto WebGL (pressão de memória no Android, reinício de driver no PC) é tratada com webglcontextlost/webglcontextrestored em vez de congelar a animação. (4) ResizeObserver e recálculo por orientação: abrir o painel ou girar o aparelho reajusta o desenho sem depender do resize da janela, e um vigia de 1,5 s anima mesmo se o IntersectionObserver não acusar visibilidade. (5) CSS: máscara radial no canvas elimina a borda quadrada do brilho. (6) Auditoria do APK: startForeground com segunda tentativa mínima (fim do ForegroundServiceDidNotStartInTimeException), estado estático do player limpo no onDestroy, minSdkVersion 26 coerente e usesCleartextTraffic=false. (7) PC: instruções de instalação e alvos win/mac/linux no electron-builder. (8) Os estilos de núcleo seguem os mesmos (HUD, plasma e órbita): a animação de cada um foi preservada e a troca continua imediata em Ajustes ▸ Voz.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"
   ],
   "build": {
-    "resultado": "success",
-    "sha256": "d4182d22e1d7d71f255c8ceeaf7d8658e8c32a507f290f01cc392411f3ff5bb2",
-    "bytes": 70883708,
-    "arquivo": "jarvis-nova-1.17.0-10170.apk",
-    "data": "2026-10-28",
-    "observacao": "APK do release v1.17.0 compilado pelo workflow de release com ci/debug.keystore (mesma assinatura desde 1.10.1, então o app instalado se atualiza por cima). Checksum conferido depois de baixar o arquivo do próprio release; o pacote traz cad.js, orbita.js e vendor/three.min.js em assets/public."
+    "resultado": "pendente"
   }
 }

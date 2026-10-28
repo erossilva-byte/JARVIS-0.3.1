@@ -417,7 +417,16 @@ public class JarvisMusicaService extends Service {
     public void onDestroy() {
         soltarPlayer();
         soltarTrava();
+        // Limpa o estado estático: sem isso, depois de o sistema encerrar o serviço a
+        // interface continuava mostrando a última faixa como se estivesse tocando
+        // ("ativo" e "tocando" ficavam verdadeiros para um player que não existe mais).
         tocando = false;
+        tituloAtual = "";
+        artistaAtual = "";
+        posicaoAtual = 0;
+        duracaoAtual = 0;
+        indiceAtual = -1;
+        totalAtual = 0;
         try { if (sessao != null) { sessao.setActive(false); sessao.release(); } } catch (Throwable ignored) { }
         sessao = null;
         super.onDestroy();

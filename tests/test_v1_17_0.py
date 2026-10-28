@@ -162,20 +162,20 @@ assert 'cad.js' in _pacote['build']['files'] and 'vendor/**/*' in _pacote['build
 # ---------- 4. Versão, documentação e suíte ----------
 meta = json.loads(texto('VERSAO.json'))
 pkg = json.loads(texto('package.json'))
-assert meta['version'] == '1.17.0' and meta['versionCode'] == 10170, meta
-assert pkg['version'] == '1.17.0'
-assert "const VERSAO_APP = '1.17.0';" in app
-assert '<span class="orb-sub" aria-hidden="true">v1.17.0</span>' in html
+assert [int(x) for x in str(meta['version']).split('.')] >= [1, 17, 0] and meta['versionCode'] >= 10170, meta
+assert pkg['version'] == meta['version']
+assert ("const VERSAO_APP = '%s';" % meta['version']) in app
+assert ('<span class="orb-sub" aria-hidden="true">v%s</span>' % meta['version']) in html
 changelog = texto('CHANGELOG.md')
 assert '## 1.17.0' in changelog and '## 1.16.0' in changelog and '## 1.10.0' in changelog
 assert changelog.count('\n## ') >= 30, 'CHANGELOG perdeu seções antigas'
 assert '.cad' in changelog and 'instancia.nivel is not a function' in changelog
-assert '# J.A.R.V.I.S. Nova 1.17.0' in texto('LEIA-ME.md')
+assert ('# J.A.R.V.I.S. Nova %s' % meta['version']) in texto('LEIA-ME.md')
 assert 'python3 tests/test_v1_17_0.py' in pkg['scripts']['test:all']
 assert 'node --check cad.js' in pkg['scripts']['test:all']
 for wf in ('.github/workflows/build-apk.yml', '.github/workflows/release-apk.yml'):
     s = texto(wf)
-    assert 'cad.js www/' in s and '1.17.0' in s
+    assert 'cad.js www/' in s and meta['version'] in s and '1.17.0' in texto('CHANGELOG.md')
 
 # Ordem dos scripts: cad.js depois dos módulos base e antes do app.
 ordem = [html.index('src="%s"' % n) for n in ['plataforma.js', 'memoria.js', 'vendor/three.min.js', 'orbita.js', 'cad.js', 'apps.js', 'hermes.js', 'app.js']]
