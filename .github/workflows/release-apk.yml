@@ -53,7 +53,9 @@ jobs:
           mkdir -p www
           # Todo recurso web do app precisa estar aqui: sem hermes.js o app.js recusa
           # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
-          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js www/
+          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js www/
+          mkdir -p www/vendor
+          cp vendor/three.min.js www/vendor/three.min.js
 
       - name: Gerar estrutura nativa do Android
         run: |
@@ -130,6 +132,8 @@ jobs:
             “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
+
+            **Novidades da 1.17.0:** o núcleo **Órbita** virou uma cena 3D de verdade — partículas com shader próprio, três anéis em planos diferentes e miolo luminoso renderizados na GPU com Three.js empacotado no app (sem CDN) —, com animação por delta time, resolução adaptativa, pausa com a tela oculta e fallback em Canvas 2D quando não há WebGL.
 
             **Novidades da 1.16.0:** o Núcleo ganhou um segundo estilo — o **plasma**, um anel de
             energia irregular no desenho da referência — escolhido em Ajustes ▸ Voz ▸ Aparência do

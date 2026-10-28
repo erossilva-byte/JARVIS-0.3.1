@@ -1,3 +1,20 @@
+## 1.17.0
+
+- **Crash do núcleo 3D corrigido.** O construtor gravava `this.nivel = 0` (número) por cima do método
+  `nivel(v)` do protótipo; `NucleoOrbita.nivel()` estourava com `TypeError: instancia.nivel is not a function`. O valor passou a viver em `audioNivel`, a fachada confere o tipo antes de chamar e existe
+  `NucleoOrbita.diagnostico()` para Ajustes.
+- **Núcleo Órbita em 3D real.** Cena WebGL com Three.js empacotado (`vendor/`, sem CDN): partículas com
+  shader próprio, três anéis em planos diferentes, miolo em arame e brilho aditivo.
+- **Mais fluido, sem mudar a aparência.** Nada de alocação por quadro (cores compartilhadas com os
+  materiais), antialias desligado em telas 2x, `setDrawRange` e pixel ratio adaptativos quando o FPS
+  cai, pausa por `IntersectionObserver`/`visibilitychange`, contexto liberado ao trocar de estilo e
+  fallback Canvas 2D.
+- **Arquivos `.cad` do CadSimu.** O núcleo cria, valida e analisa arquivos `.cad` (formato documentado
+  `CadSimu CAD`, v1), com erros claros para JSON inválido, objeto/tipo/número errado e versão futura;
+  os arquivos ficam num cofre local com teto e podem ser baixados ou apagados. Por voz: “crie um
+  arquivo cad de uma caixa 100 por 60 por 20” e “analise o cad peça-1”.
+- **Versão 1.17.0** (versionCode 10170) com testes atualizados.
+
 ## 1.16.0
 
 - **Crash do serviço em primeiro plano corrigido.** O Android encerrava o processo com

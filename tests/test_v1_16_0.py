@@ -114,8 +114,12 @@ assert 'hermes ok' in r.stdout
 # ---------- 3. Núcleo órbita ----------
 orbita = texto('orbita.js')
 assert 'NucleoOrbita' in orbita
-assert 'THREE.' not in orbita and '<script' not in orbita.lower(), 'órbita precisa ser offline e sem CDN'
+assert 'WebGLRenderer' in orbita and 'ShaderMaterial' in orbita, 'órbita precisa ser 3D de verdade'
+assert 'vendor/three.min.js' in texto('index.html'), 'Three.js precisa ser local, nunca CDN'
+assert 'cdnjs' not in texto('index.html') and 'unpkg' not in texto('index.html')
 assert 'requestAnimationFrame' in orbita and 'prefers-reduced-motion' in orbita
+assert 'getDelta' in orbita and 'setPixelRatio' in orbita, 'fluidez por delta time e resolução adaptativa'
+assert 'Render2D' in orbita, 'fallback Canvas 2D obrigatório'
 assert 'visibilitychange' in orbita
 app = texto('app.js')
 assert "'orbita'" in app and 'NucleoOrbita' in app
@@ -160,25 +164,27 @@ assert 'Processamento' not in ma
 
 # ---------- 7. Versão e documentação ----------
 meta = json.loads(texto('VERSAO.json'))
-assert meta['version'] == '1.16.0' and meta['versionCode'] == 10160, meta
+meta_versao = [int(x) for x in str(meta.get('version', '0')).split('.')]
+assert meta_versao >= [1, 17, 0] and meta.get('versionCode', 0) >= 10170, meta
 pkg = json.loads(texto('package.json'))
-assert pkg['version'] == '1.16.0'
-assert "const VERSAO_APP = '1.16.0';" in app
+assert pkg['version'] == meta['version']
+assert ("const VERSAO_APP = '%s';" % meta['version']) in app
 gradle = RAIZ / 'android/app/build.gradle'
 if gradle.exists():
     g = gradle.read_text(encoding='utf-8')
-    assert 'versionCode 10160' in g and 'versionName "1.16.0"' in g
-assert '1.16.0' in texto('CHANGELOG.md').split('\n')[0:20][0] + texto('CHANGELOG.md')[:2000]
+    assert ('versionCode %d' % meta['versionCode']) in g and ('versionName "%s"' % meta['version']) in g
+assert ('## %s' % meta['version']) in texto('CHANGELOG.md')
+assert 'vendor/**/*' in pkg['build']['files'], 'Three.js local precisa ir no pacote desktop'
 for novo in ['plataforma.js', 'memoria.js', 'orbita.js']:
     assert novo in pkg['build']['files'], 'desktop precisa empacotar ' + novo
     assert novo in pkg['scripts']['test:all'], 'test:all precisa verificar ' + novo
 assert 'test_v1_16_0.py' in pkg['scripts']['test:all']
 
 # ---------- 8. Ordem dos scripts (CSP: sem CDN) ----------
-ordem = [html.index('src="%s"' % n) for n in ['plataforma.js', 'memoria.js', 'orbita.js', 'apps.js', 'hermes.js', 'app.js']]
+ordem = [html.index('src="%s"' % n) for n in ['plataforma.js', 'memoria.js', 'vendor/three.min.js', 'orbita.js', 'apps.js', 'hermes.js', 'app.js']]
 assert ordem == sorted(ordem), 'scripts fora de ordem'
 csp = re.search(r'Content-Security-Policy" content="([^"]+)"', html).group(1)
 assert "script-src 'self'" in csp and 'unsafe-eval' not in csp
-assert 'cdn.tailwindcss.com' not in html and 'three.min.js' not in html
+assert 'cdn.tailwindcss.com' not in html and 'cdnjs' not in html and 'vendor/three.min.js' in html
 
 print('1.16.0: crash do serviço, núcleo órbita, memória Obsidian, humor e desktop verificados')

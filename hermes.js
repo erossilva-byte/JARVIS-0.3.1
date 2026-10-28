@@ -442,6 +442,37 @@
 
   const habilidades = [
     {
+      id: 'arquivos',
+      nome: 'Arquivos e .cad do CadSimu',
+      ajuda: 'Cria, lista e analisa arquivos .cad do CadSimu, com validação e mensagens claras.',
+      quando: (n) => !!Hermes.cap.cad && (/(crie|criar|gere|gerar|monte|montar) (?:um |o )?(?:arquivo|modelo) (?:\.?cad|cadsimu)/.test(n)
+        || /(analise|analisar|abrir|leia|ler|ver) (?:o )?(?:arquivo )?(?:\.?cad|cadsimu)\b/.test(n)
+        || /^(?:quais|liste|listar|mostre) (?:os )?(?:meus )?(?:arquivos|arquivos cad|\.?cad)$/.test(n)),
+      async executar(texto, H) {
+        const cap = H.cap;
+        const t = cap.trat ? cap.trat() : 'senhor';
+        const n = norm(texto);
+        if (/^(?:quais|liste|listar|mostre)/.test(n)) {
+          const lista = await cap.cad.listar();
+          const fala = lista.length
+            ? 'Tenho ' + lista.length + (lista.length === 1 ? ' arquivo' : ' arquivos') + ': ' + lista.slice(0, 8).join(', ') + '.'
+            : 'Não tenho nenhum .cad salvo, ' + t + '. Posso criar um agora.';
+          await cap.falar(fala);
+          if (cap.abrirArquivos) cap.abrirArquivos();
+          return { falado: fala, arquivos: lista };
+        }
+        if (/(analise|analisar|abrir|leia|ler|ver)/.test(n)) {
+          const m = texto.match(/(?:analise|analisar|abrir|leia|ler|ver)\s+(?:o\s+)?(?:arquivo\s+)?(?:\.?cad|cadsimu)\s*(?:chamado\s+|de\s+|do\s+)?(.+)$/i);
+          const r = await cap.cad.analisar(m ? m[1].trim() : '');
+          await cap.falar(r.fala);
+          return r;
+        }
+        const r = await cap.cad.criar(texto);
+        await cap.falar(r.fala);
+        return r;
+      }
+    },
+    {
       id: 'memoria',
       nome: 'Memória conectada (estilo Obsidian)',
       ajuda: 'Anota, consulta, mostra o espaço e apaga notas por tema — gostos, pesquisas, projetos, contextos, rotinas e mensagens.',

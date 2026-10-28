@@ -1,4 +1,8 @@
-# J.A.R.V.I.S. Nova 1.16.0
+# J.A.R.V.I.S. Nova 1.17.0
+
+Esta versão também corrige o erro “instancia.nivel is not a function” no núcleo 3D e permite criar e analisar arquivos `.cad` do CadSimu (formato documentado, validação com mensagens claras e cofre local).
+
+Esta versão (1.17.0) leva o núcleo Órbita para 3D real, com partículas em shader e anéis na GPU, animação por delta time e fallback para Canvas 2D — mantendo a correção do crash do serviço em primeiro plano, a memória conectada, o humor brasileiro em três níveis e o adaptador multiplataforma.
 
 Esta versão (1.16.0) corrige o crash do serviço em primeiro plano, acrescenta o núcleo Órbita, a memória conectada estilo Obsidian, o humor brasileiro em três níveis e o adaptador multiplataforma com controle do computador.
 

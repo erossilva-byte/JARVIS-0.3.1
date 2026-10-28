@@ -12,7 +12,7 @@ const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.16.0';
+const VERSAO_APP = '1.17.0';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -3888,7 +3888,7 @@ async function executarDiagnostico() {
   return { itens, resumo: Hermes.resumoDiagnostico(itens, { tratamento: trat() }) };
 }
 const H = (typeof history !== 'undefined') ? history : null;
-const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas', '#painel-visao', '#painel-info', '#painel-memoria'];
+const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas', '#painel-visao', '#painel-info', '#painel-memoria', '#painel-arquivos'];
 const estadoPainelJarvis = (estado) => Boolean(estado && estado.jarvisPainel === true);
 function algumPainelAberto() {
   return PAINEIS.some((sel) => { const el = $(sel); return Boolean(el && !el.hidden); });
@@ -4225,6 +4225,7 @@ document.querySelectorAll('[data-lat]').forEach((b) => {
     if (alvo === 'info') { abrirInformacoesUI(); return; }
     if (alvo === 'visao') { abrirVisao(); return; }
     if (alvo === 'memoria') { abrirMemoria(); return; }
+    if (alvo === 'arquivos') { abrirArquivos(); return; }
     abrirConfig();
     mudarCategoriaConfig(alvo);
     if (alvo === 'celular') atualizarStatusCelular();
@@ -5533,12 +5534,34 @@ function aplicarNucleo(valor) {
   // continua válido e a interface apenas não mostra a esfera.
   const canvasOrb = document.getElementById('nucleo-orbita');
   if (canvasOrb && window.NucleoOrbita) {
-    if (v === 'orbita') window.NucleoOrbita.iniciar(canvasOrb);
+    if (v === 'orbita') {
+      try { window.NucleoOrbita.iniciar(canvasOrb); } catch (e) { registrar('erro', 'núcleo órbita: ' + ((e && e.message) || e)); }
+      if (!window.NucleoOrbita.tipo()) registrar('erro', 'núcleo órbita não iniciou; a interface continua no estilo ' + v);
+    }
     else window.NucleoOrbita.parar();
   }
   return v;
 }
 aplicarNucleo();
+
+/* ---------- Arquivos .cad: ligações da interface ---------- */
+['#cad-gerar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => gerarCadArquivo(); });
+['#cad-analisar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => analisarCadTexto($('#cad-texto') ? $('#cad-texto').value : '', 'colado'); });
+['#cad-exemplo'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => { if (!CAD) return; if ($('#cad-texto')) $('#cad-texto').value = CAD.serializar(CAD.exemplo('exemplo')); cadStatus('Exemplo carregado. Toque em Analisar.'); }; });
+['#cad-limpar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => { if ($('#cad-texto')) $('#cad-texto').value = ''; const r = $('#cad-resultado'); if (r) { r.hidden = true; r.textContent = ''; } cadStatus('Campo limpo.'); }; });
+['#cad-liberar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => liberarEspacoCad(); });
+['#cad-apagar-tudo'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => apagarTodosCad(); });
+['#cad-fechar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => fecharPaineis(); });
+const cadImportar = $('#cad-importar');
+if (cadImportar) cadImportar.addEventListener('change', () => {
+  const f = cadImportar.files && cadImportar.files[0];
+  if (!f) return;
+  if (f.size > 256 * 1024) { cadStatus('Arquivo grande demais (limite de 256 kB).', true); return; }
+  const leitor = new FileReader();
+  leitor.onload = () => { if ($('#cad-texto')) $('#cad-texto').value = String(leitor.result || ''); analisarCadTexto(String(leitor.result || ''), f.name); };
+  leitor.onerror = () => cadStatus('Não foi possível ler o arquivo escolhido.', true);
+  leitor.readAsText(f);
+});
 
 /* ---------- Memória conectada, computador e níveis de humor: ligações da interface ---------- */
 if (window.Plataforma) Plataforma.observarTela();
@@ -5592,6 +5615,221 @@ async function diagnosticoSistemaFalado() {
  * do app (com PIN quando cadastrado) e o texto das notas entra na tela só por textContent,
  * nunca como HTML — nota não é código.
  */
+
+/* ---------- Arquivos do núcleo e .cad do CadSimu ----------
+ * O CadSimu não existia no projeto: o formato foi documentado em cad.js e o parser é o
+ * único ponto de troca. Aqui ficam a interface, a voz e o diagnóstico. Nada é enviado para
+ * fora e toda entrada malformada vira mensagem clara, nunca exceção.
+ */
+const CAD = window.CadNucleo || null;
+function cadStatus(texto, erro) {
+  const el = $('#cad-status');
+  if (!el) return;
+  el.textContent = texto;
+  el.classList.toggle('erro', !!erro);
+}
+function cadKb(n) {
+  const b = Number(n) || 0;
+  return b < 1024 ? b + ' B' : (b / 1024).toFixed(1).replace('.', ',') + ' kB';
+}
+function abrirArquivos() {
+  renderArquivos();
+  abrirPainel('#painel-arquivos');
+}
+function renderArquivos() {
+  if (!CAD) { cadStatus('O módulo de arquivos não carregou neste dispositivo.', true); return; }
+  const esp = CAD.espaco();
+  const et = $('#cad-espaco');
+  if (et) et.textContent = esp.arquivos + (esp.arquivos === 1 ? ' arquivo' : ' arquivos') + ' · ' + cadKb(esp.bytes) + ' de ' + cadKb(esp.limiteBytes);
+  const ct = $('#cad-contagem');
+  if (ct) ct.textContent = esp.percentual + '% do cofre';
+  const barra = $('#cad-barra');
+  if (barra) { barra.style.width = Math.max(2, esp.percentual) + '%'; barra.classList.toggle('cheio', esp.percentual >= 80); }
+  const lista = $('#cad-lista');
+  if (!lista) return;
+  lista.textContent = '';
+  const arquivos = CAD.listar();
+  if (!arquivos.length) {
+    const p = document.createElement('p');
+    p.className = 'dica mem-vazio';
+    p.textContent = 'Nenhum .cad salvo ainda. Gere um abaixo ou diga “Jarvis, crie um arquivo cad de uma caixa”.';
+    lista.appendChild(p);
+    return;
+  }
+  arquivos.forEach((a) => {
+    const item = document.createElement('article');
+    item.className = 'mem-nota';
+    const cab = document.createElement('div');
+    cab.className = 'mem-nota-cab';
+    const tema = document.createElement('span');
+    tema.className = 'mem-nota-tema';
+    tema.textContent = '.cad';
+    const titulo = document.createElement('b');
+    titulo.textContent = a.nome;
+    cab.append(tema, titulo);
+    const meta = document.createElement('small');
+    meta.textContent = cadKb(a.bytes) + ' · ' + new Date(a.atualizado || a.criado).toLocaleString('pt-BR');
+    const acoes = document.createElement('div');
+    acoes.className = 'botoes';
+    const analisar = document.createElement('button');
+    analisar.type = 'button'; analisar.className = 'mini'; analisar.textContent = 'analisar';
+    analisar.onclick = () => analisarCadSalvo(a.nome);
+    const baixar = document.createElement('button');
+    baixar.type = 'button'; baixar.className = 'mini'; baixar.textContent = 'baixar';
+    baixar.onclick = () => baixarCad(a.nome);
+    const apagar = document.createElement('button');
+    apagar.type = 'button'; apagar.className = 'mini perigo'; apagar.textContent = 'apagar';
+    apagar.onclick = () => apagarCad(a.nome);
+    acoes.append(analisar, baixar, apagar);
+    item.append(cab, meta, acoes);
+    lista.appendChild(item);
+  });
+}
+function cadNumero(id, padrao) {
+  const el = $(id);
+  const v = el ? Number(String(el.value).replace(',', '.')) : NaN;
+  return Number.isFinite(v) && v > 0 ? v : padrao;
+}
+function gerarCadArquivo() {
+  if (!CAD) { cadStatus('O módulo de arquivos não carregou.', true); return; }
+  const nome = ($('#cad-nome') && $('#cad-nome').value.trim()) || 'modelo';
+  const tipo = ($('#cad-tipo') && $('#cad-tipo').value) || 'caixa';
+  const unidades = ($('#cad-unidades') && $('#cad-unidades').value) || 'mm';
+  const d1 = cadNumero('#cad-d1', 100), d2 = cadNumero('#cad-d2', 60), d3 = cadNumero('#cad-d3', 20);
+  const obj = CAD.objetoPadrao(tipo);
+  obj.nome = nome;
+  if (tipo === 'caixa') obj.dimensoes = [d1, d2, d3];
+  else if (tipo === 'plano') obj.dimensoes = [d1, d3];
+  else if (tipo === 'esfera') obj.raio = d1;
+  else { obj.raio = d1; obj.altura = d2; }
+  const doc = CAD.criar({ nome, unidades, objetos: [obj] });
+  const r = CAD.salvar(nome, doc);
+  if (!r.ok) {
+    cadStatus(r.erro || 'Não foi possível criar o .cad.', true);
+    registrar('erro', 'cad: ' + (r.erro || 'falha ao criar'));
+    return;
+  }
+  const texto = CAD.serializar(doc);
+  if (PC) { PC.criar(r.nome, texto).catch((e) => registrar('erro', 'cad no PC: ' + (e && e.message ? e.message : e))); }
+  cadStatus('Arquivo ' + r.nome + ' criado (' + cadKb(r.bytes) + ').');
+  registrar('arquivos', '.cad criado: ' + r.nome);
+  renderArquivos();
+}
+function analisarCadTexto(texto, nome) {
+  if (!CAD) { cadStatus('O módulo de arquivos não carregou.', true); return null; }
+  const r = CAD.analisar(texto);
+  const caixa = $('#cad-resultado');
+  if (!r.ok) {
+    if (caixa) {
+      caixa.hidden = false;
+      caixa.classList.add('erro');
+      caixa.textContent = '';
+      const b = document.createElement('b'); b.textContent = 'Não consegui ler esse .cad';
+      const p = document.createElement('p'); p.textContent = r.erro;
+      caixa.append(b, p);
+    }
+    cadStatus(r.erro || 'Arquivo inválido.', true);
+    registrar('erro', 'cad inválido: ' + (r.erro || '').slice(0, 120));
+    return r;
+  }
+  if (caixa) {
+    caixa.hidden = false;
+    caixa.classList.remove('erro');
+    caixa.textContent = '';
+    const b = document.createElement('b'); b.textContent = 'Análise concluída' + (nome ? ' — ' + nome : '');
+    const p = document.createElement('p'); p.textContent = r.resumo;
+    const pre = document.createElement('pre');
+    pre.textContent = Object.keys(r.contagem).map((t) => t + ': ' + r.contagem[t]).join(' · ');
+    caixa.append(b, p, pre);
+  }
+  cadStatus('Análise concluída.');
+  registrar('arquivos', '.cad analisado: ' + (nome || r.doc.nome));
+  return r;
+}
+function analisarCadSalvo(nome) {
+  if (!CAD) return;
+  const f = CAD.ler(nome);
+  if (!f.ok) { cadStatus(f.erro, true); return; }
+  if ($('#cad-texto')) $('#cad-texto').value = f.texto;
+  analisarCadTexto(f.texto, f.nome);
+}
+function baixarCad(nome) {
+  if (!CAD) return;
+  const f = CAD.ler(nome);
+  if (!f.ok) { cadStatus(f.erro, true); return; }
+  try {
+    const blob = new Blob([f.texto], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = f.nome;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    cadStatus('Download iniciado: ' + f.nome);
+  } catch (e) {
+    cadStatus('Não foi possível baixar neste dispositivo: ' + (e && e.message ? e.message : 'erro'), true);
+  }
+}
+async function apagarCad(nome) {
+  if (!CAD) return;
+  const ok = await confirmar('Apagar o arquivo ' + nome + '? Isso não pode ser desfeito.', true);
+  if (!ok) return;
+  const r = CAD.apagar(nome);
+  cadStatus(r.ok ? 'Arquivo apagado.' : (r.erro || 'Não foi possível apagar.'), !r.ok);
+  if (r.ok) registrar('arquivos', '.cad apagado: ' + nome);
+  renderArquivos();
+}
+async function apagarTodosCad() {
+  if (!CAD) return;
+  const ok = await confirmar('Apagar todos os arquivos .cad salvos? Isso não pode ser desfeito.', true);
+  if (!ok) return;
+  const r = CAD.apagarTudo();
+  cadStatus(r.ok ? 'Arquivos apagados.' : (r.erro || 'Falha ao apagar.'), !r.ok);
+  renderArquivos();
+}
+function liberarEspacoCad() {
+  if (!CAD) return;
+  const arquivos = CAD.listar();
+  if (arquivos.length <= 5) { cadStatus('Nada para liberar: há poucos arquivos.'); return; }
+  const remover = arquivos.slice(-Math.max(1, arquivos.length - 5));
+  remover.forEach((a) => CAD.apagar(a.nome));
+  cadStatus('Liberei espaço removendo ' + remover.length + ' arquivo(s) mais antigo(s).');
+  renderArquivos();
+}
+/** Voz: cria um .cad a partir de uma frase. */
+function cadCriarDoTexto(texto) {
+  if (!CAD) throw new Error('O módulo de arquivos não está disponível.');
+  const bruto = String(texto || '');
+  const nomeM = bruto.match(/(?:chamado|com o nome|de nome|nome)\s+([A-Za-zÀ-ÿ0-9 _-]{2,40})/i);
+  const nome = (nomeM ? nomeM[1] : 'modelo').trim().replace(/\s+/g, '-');
+  const tipo = /esfera/i.test(bruto) ? 'esfera' : /cilindro/i.test(bruto) ? 'cilindro' : /cone/i.test(bruto) ? 'cone' : /plano/i.test(bruto) ? 'plano' : 'caixa';
+  const nums = (bruto.match(/\d+(?:[.,]\d+)?/g) || []).map((x) => Number(x.replace(',', '.'))).filter((n) => n > 0);
+  const unidade = /\bcm\b/i.test(bruto) ? 'cm' : /\bmetros?\b/i.test(bruto) ? 'm' : /\bpolegadas?\b/i.test(bruto) ? 'pol' : 'mm';
+  const obj = CAD.objetoPadrao(tipo);
+  obj.nome = nome;
+  if (tipo === 'caixa') obj.dimensoes = [nums[0] || 100, nums[1] || 60, nums[2] || 20];
+  else if (tipo === 'plano') obj.dimensoes = [nums[0] || 100, nums[1] || 100];
+  else if (tipo === 'esfera') obj.raio = nums[0] || 10;
+  else { obj.raio = nums[0] || 5; obj.altura = nums[1] || 20; }
+  const doc = CAD.criar({ nome, unidades: unidade, objetos: [obj] });
+  const r = CAD.salvar(nome, doc);
+  if (!r.ok) throw new Error(r.erro || 'não foi possível criar o arquivo');
+  if (PC) PC.criar(r.nome, CAD.serializar(doc)).catch(() => {});
+  renderArquivos();
+  return { ok: true, nome: r.nome, doc, fala: 'Arquivo ' + r.nome + ' criado, ' + (obj.dimensoes ? 'com dimensões ' + obj.dimensoes.join(' por ') + ' ' + unidade : 'pronto para o CadSimu') + '.' };
+}
+function cadAnalisarPorNome(nome) {
+  if (!CAD) throw new Error('O módulo de arquivos não está disponível.');
+  const alvo = String(nome || '').trim();
+  if (!alvo) throw new Error('Diga o nome do arquivo .cad que devo analisar.');
+  const f = CAD.ler(alvo);
+  if (!f.ok) throw new Error(f.erro);
+  if ($('#cad-texto')) $('#cad-texto').value = f.texto;
+  const r = analisarCadTexto(f.texto, f.nome);
+  if (!r || !r.ok) throw new Error(r ? r.erro : 'arquivo inválido');
+  renderArquivos();
+  return { ok: true, nome: f.nome, resumo: r.resumo, doc: r.doc, fala: r.resumo };
+}
+
 const MEM = window.MemoriaJarvis || null;
 const PC = (plataforma === 'desktop' && nativoDesk) ? {
   status: async () => {
@@ -5836,6 +6074,13 @@ Hermes.instalar({
     temaPorPalavras: (t) => MEM.temaPorPalavras(t)
   } : null,
   abrirMemoria: () => abrirMemoria(),
+  cad: CAD ? {
+    criar: (texto) => cadCriarDoTexto(texto),
+    analisar: (nome) => cadAnalisarPorNome(nome),
+    listar: () => CAD.listar().map((a) => a.nome),
+    abrir: () => abrirArquivos()
+  } : null,
+  abrirArquivos: () => abrirArquivos(),
   pc: PC
 });
 

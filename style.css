@@ -1015,3 +1015,15 @@ body[data-nucleo=orbita] .nucleo-preview .np-orb{display:block;width:88px;height
   body[data-plataforma=desktop] .painel{width:min(560px,46vw)}
 }
 body[data-plataforma=desktop] .atalho-status-celular{display:none}
+
+
+/* ---------- Arquivos .cad ---------- */
+.cad-dim{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cad-dim label{margin:0}
+.cad-resultado{border:1px solid rgba(var(--rgb),.22);border-radius:12px;padding:10px 12px;margin:8px 0;background:rgba(var(--rgb),.05);font-size:13.5px;line-height:1.5;overflow-wrap:anywhere}
+.cad-resultado.erro{border-color:rgba(255,120,100,.5);background:rgba(255,90,70,.08);color:#ffb3a6}
+.cad-resultado b{display:block;margin-bottom:4px}
+.cad-resultado pre{margin:6px 0 0;white-space:pre-wrap;font-size:12px;opacity:.8}
+.cad-lista .mem-nota p{font-family:ui-monospace,monospace;font-size:12px}
+#cad-status.erro{color:#ff9a8a}
+@media(max-width:520px){.cad-dim{grid-template-columns:minmax(0,1fr)}}

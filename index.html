@@ -60,6 +60,7 @@
   <button type="button" class="lat-btn" data-lat="celular" title="Status do celular"><span aria-hidden="true">▰</span>Celular</button>
   <button type="button" class="lat-btn" data-lat="info" title="Aparelho, clima e manchetes do momento"><span aria-hidden="true">ⓘ</span>Informações</button>
   <button type="button" class="lat-btn" data-lat="memoria" title="Memória conectada: notas por tema"><span aria-hidden="true">◫</span>Memória</button>
+  <button type="button" class="lat-btn" data-lat="arquivos" title="Arquivos .cad do CadSimu"><span aria-hidden="true">▧</span>Arquivos</button>
   <button type="button" class="lat-btn" data-lat="atualizacao" title="Atualização pelo GitHub"><span aria-hidden="true">⇪</span>Atualizar</button>
   <button type="button" class="lat-btn" data-lat="diagnostico" title="Diagnóstico do sistema"><span aria-hidden="true">⌘</span>Diagnóstico</button>
   <div class="lat-rodape"><span class="lat-dot" aria-hidden="true"></span><small>SYSTEM STATUS</small><b id="lat-estado">ONLINE</b></div>
@@ -107,7 +108,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.16.0</span>
+      <span class="orb-sub" aria-hidden="true">v1.17.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -191,7 +192,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.16.0</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.17.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -235,7 +236,7 @@
     <div class="nucleo-card">
       <div class="nucleo-card-cabecalho"><div><span class="eyebrow">APARÊNCIA DO NÚCLEO</span><b>Estilo do núcleo central</b></div><span class="status-pill" id="c-nucleo-pill">HUD</span></div>
       <p class="dica">O núcleo é o círculo do topo da tela: ele gira, respira e reage ao nível do seu microfone. Escolha o estilo que combina com o seu aparelho — a troca vale na hora e fica salva.</p>
-      <label>Estilo do núcleo<select id="c-nucleo-estilo"><option value="hud">HUD técnico — anéis, marcas e grades do painel</option><option value="plasma">Plasma — anel de energia irregular (como na referência)</option><option value="orbita">Órbita — esfera de partículas com anéis holográficos (nova)</option></select></label>
+      <label>Estilo do núcleo<select id="c-nucleo-estilo"><option value="hud">HUD técnico — anéis, marcas e grades do painel</option><option value="plasma">Plasma — anel de energia irregular (como na referência)</option><option value="orbita">Órbita 3D — esfera de partículas com anéis holográficos (nova)</option></select></label>
       <div class="nucleo-preview" aria-hidden="true"><span class="np np-plas"></span><span class="np np-hud"></span><span class="np np-orb"></span></div>
       <p id="c-nucleo-status" class="dica" role="status" aria-live="polite">Núcleo em HUD técnico: anéis e grades do painel, reagindo ao nível do microfone.</p>
     </div>
@@ -527,6 +528,45 @@
   <div class="botoes barra"><button id="mem-fechar" type="button" class="primario">Fechar</button></div>
 </aside>
 
+
+<aside id="painel-arquivos" class="painel painel-arquivos" hidden aria-label="Arquivos do J.A.R.V.I.S. Nova, incluindo .cad do CadSimu">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · ARQUIVOS</p><h2>Arquivos e .cad</h2></div><span class="versao-chip">CadSimu · v1</span></div>
+  <section class="grupo">
+    <p class="dica">O núcleo cria, confere e analisa arquivos <code>.cad</code> do CadSimu (formato <code>CadSimu CAD</code>, versão 1). Nada é enviado para fora: os arquivos ficam no aparelho, com teto de 40 arquivos e 256 kB, e podem ser baixados ou apagados quando quiser.</p>
+    <div class="audio-head"><b id="cad-espaco">calculando…</b><output id="cad-contagem">—</output></div>
+    <div class="mem-barra-trilho" role="meter" aria-label="Espaço usado pelos arquivos" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="cad-barra"></span></div>
+    <div class="divider-small"></div>
+    <h3>Criar .cad</h3>
+    <label>Nome do arquivo<input id="cad-nome" type="text" maxlength="60" autocomplete="off" placeholder="peça-1"></label>
+    <label>Primitiva<select id="cad-tipo">
+      <option value="caixa">Caixa</option>
+      <option value="esfera">Esfera</option>
+      <option value="cilindro">Cilindro</option>
+      <option value="cone">Cone</option>
+      <option value="plano">Plano</option>
+    </select></label>
+    <div class="cad-dim">
+      <label>Largura / raio<input id="cad-d1" type="number" min="0.01" step="1" value="100"></label>
+      <label>Altura<input id="cad-d2" type="number" min="0.01" step="1" value="60"></label>
+      <label>Profundidade<input id="cad-d3" type="number" min="0.01" step="1" value="20"></label>
+    </div>
+    <label>Unidade<select id="cad-unidades"><option value="mm">milímetros</option><option value="cm">centímetros</option><option value="m">metros</option><option value="pol">polegadas</option></select></label>
+    <div class="botoes"><button id="cad-gerar" type="button" class="primario">Gerar .cad</button><button id="cad-exemplo" type="button" class="secundario">Usar exemplo</button></div>
+    <div class="divider-small"></div>
+    <h3>Analisar .cad</h3>
+    <label>Arquivo do aparelho<input id="cad-importar" type="file" accept=".cad,application/json"></label>
+    <label>Ou cole o conteúdo<textarea id="cad-texto" rows="5" spellcheck="false" placeholder='{"formato":"CadSimu CAD","versao":1,"unidades":"mm","objetos":[…]}'></textarea></label>
+    <div class="botoes"><button id="cad-analisar" type="button" class="primario">Analisar</button><button id="cad-limpar" type="button" class="secundario">Limpar</button></div>
+    <div id="cad-resultado" class="cad-resultado" aria-live="polite" hidden></div>
+    <div class="divider-small"></div>
+    <h3>Arquivos salvos</h3>
+    <div id="cad-lista" class="mem-lista cad-lista" aria-live="polite"></div>
+    <div class="botoes"><button id="cad-liberar" type="button" class="secundario">Liberar espaço</button><button id="cad-apagar-tudo" type="button" class="secundario perigo">Apagar todos</button></div>
+    <p id="cad-status" class="dica" role="status" aria-live="polite">Crie um arquivo ou analise um .cad do CadSimu.</p>
+  </section>
+  <div class="botoes barra"><button id="cad-fechar" type="button" class="primario">Fechar</button></div>
+</aside>
+
 <div id="modal" hidden>
   <div class="caixa" role="alertdialog" aria-labelledby="m-titulo">
     <h3 id="m-titulo">Confirmação necessária</h3>
@@ -540,7 +580,9 @@
 
 <script src="plataforma.js"></script>
 <script src="memoria.js"></script>
+<script src="vendor/three.min.js"></script>
 <script src="orbita.js"></script>
+<script src="cad.js"></script>
 <script src="apps.js"></script>
 <!-- Núcleo de linguagem e decisão: precisa vir antes de app.js. -->
 <script src="hermes.js"></script>

@@ -1,263 +1,552 @@
-/* J.A.R.V.I.S. Nova — Núcleo "Órbita".
+/* J.A.R.V.I.S. Nova — Núcleo "Órbita" 3D.
  *
- * Adaptação para o aplicativo do visualizador enviado (jarvis_ai_core_visualizer.html).
- * O original usa Three.js e shaders carregados por CDN; aqui a mesma ideia — esfera de
- * partículas com ruído, três anéis holográficos e núcleo luminoso — é desenhada em
- * Canvas 2D, sem dependência externa, sem CDN e sem WebGL obrigatório. Isso mantém o APK
- * funcionando offline, sob a Content-Security-Policy do app e em aparelhos modestos.
+ * Cena 3D real (Three.js local, sem CDN) com partículas em shader, três anéis em planos
+ * diferentes, miolo em arame e brilho aditivo. Reage ao nível do microfone.
  *
- * Paletas e intensidades vêm dos quatro estados do assistente (idle, listening, thinking,
- * speaking). O nível do microfone entra por NucleoOrbita.nivel() e expande a nuvem, como no
- * arquivo de referência. Tudo é opcional: se este arquivo não carregar, os outros dois
- * estilos de núcleo continuam funcionando.
+ * 1.17.0 — correção e fluidez:
+ *  - BUG CORRIGIDO: o construtor gravava `nivel` como número (0) por cima do método
+ *    `nivel(v)` do protótipo. Chamar NucleoOrbita.nivel() estourava com
+ *    "instancia.nivel is not a function". O valor agora vive em `audioNivel` e a fachada
+ *    confere o tipo antes de chamar, então uma instância parcial nunca derruba o app.
+ *  - Sem alocação por quadro: cores são instâncias compartilhadas com os materiais e os
+ *    uniformes apontam para os mesmos objetos; nada de `new` dentro do laço.
+ *  - Pausa quando o canvas sai da tela (IntersectionObserver) ou a aba fica oculta.
+ *  - Qualidade adaptativa: se o FPS cai, reduz o pixel ratio e o número de partículas
+ *    desenhadas (setDrawRange) uma única vez, sem tocar na aparência geral.
+ *  - Antialias só quando o pixel ratio é baixo (em telas 2x ele custa caro e quase não
+ *    aparece); contexto liberado ao trocar de estilo (forceContextLoss).
+ *  - Fallback em Canvas 2D se WebGL não existir ou falhar: o estilo nunca fica vazio.
+ *
+ * API pública (inalterada): iniciar(canvas), parar(), estado(nome), nivel(v), ativo(),
+ * tipo(), diagnostico().
  */
 (function (raiz) {
   'use strict';
 
   var PALETAS = {
-    idle: { prim: [6, 182, 212], sec: [2, 132, 199], nucleo: [34, 211, 238], giro: 0.30, ruido: 0.10, anel: 0.34 },
-    listening: { prim: [37, 99, 235], sec: [6, 182, 212], nucleo: [96, 165, 250], giro: 0.80, ruido: 0.42, anel: 0.62 },
-    thinking: { prim: [217, 119, 6], sec: [124, 58, 237], nucleo: [251, 191, 36], giro: 2.00, ruido: 0.74, anel: 1.10 },
-    speaking: { prim: [5, 150, 105], sec: [6, 182, 212], nucleo: [52, 211, 153], giro: 1.05, ruido: 0.52, anel: 0.80 }
+    idle: { prim: 0x06b6d4, sec: 0x0284c7, nucleo: 0x22d3ee, giro: 0.30, ruido: 0.10, anel: 0.34, pulso: 1.0 },
+    listening: { prim: 0x2563eb, sec: 0x06b6d4, nucleo: 0x60a5fa, giro: 0.80, ruido: 0.42, anel: 0.62, pulso: 1.5 },
+    thinking: { prim: 0xd97706, sec: 0x7c3aed, nucleo: 0xfbbf24, giro: 2.00, ruido: 0.74, anel: 1.10, pulso: 1.9 },
+    speaking: { prim: 0x059669, sec: 0x06b6d4, nucleo: 0x34d399, giro: 1.05, ruido: 0.52, anel: 0.80, pulso: 1.6 }
   };
 
   var reduzido = false;
   try { reduzido = !!(raiz.matchMedia && raiz.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { reduzido = false; }
 
-  function misturar(a, b, t) {
-    var k = Math.max(0, Math.min(1, t));
-    return [
-      Math.round(a[0] + (b[0] - a[0]) * k),
-      Math.round(a[1] + (b[1] - a[1]) * k),
-      Math.round(a[2] + (b[2] - a[2]) * k)
-    ];
-  }
-  function rgba(c, a) { return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a.toFixed(3) + ')'; }
+  var VERTEX = [
+    'uniform float uTime;',
+    'uniform float uAudio;',
+    'uniform float uEscala;',
+    'attribute float aSize;',
+    'attribute float aSeed;',
+    'varying float vSeed;',
+    'varying float vDepth;',
+    'void main() {',
+    '  vec3 p = position;',
+    '  float w = sin(p.x * 3.0 + uTime * 0.85 + aSeed * 6.2831) * 0.5',
+    '          + sin(p.y * 2.4 - uTime * 0.62 + aSeed * 3.1415) * 0.5',
+    '          + sin(p.z * 3.6 + uTime * 0.95) * 0.35;',
+    '  p *= 1.0 + w * (0.035 + uAudio * 0.16);',
+    '  p += normalize(p) * uAudio * (0.16 + 0.10 * sin(aSeed * 9.0 + uTime * 2.2));',
+    '  vec4 mv = modelViewMatrix * vec4(p, 1.0);',
+    '  vSeed = aSeed;',
+    '  vDepth = -mv.z;',
+    '  gl_PointSize = aSize * uEscala * (250.0 / max(1.0, vDepth)) * (1.0 + uAudio * 0.7);',
+    '  gl_Position = projectionMatrix * mv;',
+    '}'
+  ].join('\n');
 
-  function Renderizador(canvas) {
+  var FRAGMENT = [
+    'uniform vec3 uColorA;',
+    'uniform vec3 uColorB;',
+    'uniform float uOpacity;',
+    'varying float vSeed;',
+    'varying float vDepth;',
+    'void main() {',
+    '  vec2 d = gl_PointCoord - vec2(0.5);',
+    '  float r = length(d);',
+    '  if (r > 0.5) discard;',
+    '  float a = smoothstep(0.5, 0.04, r);',
+    '  float mistura = clamp(vSeed * 0.72 + (vDepth - 3.0) * 0.10, 0.0, 1.0);',
+    '  vec3 c = mix(uColorA, uColorB, mistura);',
+    '  gl_FragColor = vec4(c, a * uOpacity);',
+    '}'
+  ].join('\n');
+
+  function suportaWebGL(canvas) {
+    try {
+      var ctx = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      return !!ctx;
+    } catch (e) { return false; }
+  }
+
+  function texturaBrilho() {
+    var c = document.createElement('canvas');
+    c.width = c.height = 128;
+    var g = c.getContext('2d');
+    var grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grd.addColorStop(0, 'rgba(255,255,255,1)');
+    grd.addColorStop(0.25, 'rgba(180,255,252,.55)');
+    grd.addColorStop(0.6, 'rgba(60,220,220,.14)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 128, 128);
+    return c;
+  }
+
+  /* ---------- Renderizador 3D ---------- */
+  function Render3D(canvas) {
+    var T = raiz.THREE;
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d', { alpha: true });
-    this.estado = 'idle';
-    this.nivel = 0;
+    this.T = T;
+    this.estadoAtual = 'idle';
+    this.audioNivel = 0;       // valor atual do microfone (o método é nivel(v))
     this.nivelAlvo = 0;
-    this.atual = null;
-    this.alvo = PALETAS.idle;
-    this.giro = 0;
-    this.anel = { prim: 0.30 };
     this.rodando = false;
-    this.ultimo = 0;
-    this.pontos = [];
+    this.desejado = false;
+    this.quadros = 0;
+    this.ultimoFps = 0;
+    this.inicioFps = 0;
+    this.dprTravado = false;
+    this.qualidadeBaixa = false;
     this.largura = 0;
     this.altura = 0;
-    this.dpr = 1;
-    this.gerarPontos();
-    this.atual = JSON.parse(JSON.stringify(PALETAS.idle));
+    this.compacto = false;
+
+    var dprBase = Math.min(raiz.devicePixelRatio || 1, 2);
+    this.renderer = new T.WebGLRenderer({
+      canvas: canvas,
+      antialias: dprBase < 1.75,
+      alpha: true,
+      powerPreference: 'high-performance',
+      stencil: false
+    });
+    this.renderer.setClearColor(0x000000, 0);
+    this.renderer.info.autoReset = false;
+    this.cena = new T.Scene();
+    this.camera = new T.PerspectiveCamera(55, 1, 0.1, 100);
+    this.camera.position.set(0, 0, 5.4);
+
+    this.grupo = new T.Group();
+    this.cena.add(this.grupo);
+
+    this.alvo = Object.assign({}, PALETAS.idle);
+    this.corA = new T.Color(PALETAS.idle.prim);
+    this.corB = new T.Color(PALETAS.idle.sec);
+    this.corNucleo = new T.Color(PALETAS.idle.nucleo);
+    this.corAlvoA = new T.Color(PALETAS.idle.prim);
+    this.corAlvoB = new T.Color(PALETAS.idle.sec);
+    this.corAlvoN = new T.Color(PALETAS.idle.nucleo);
+
+    this.montar();
+    this.clock = new T.Clock();
     var self = this;
     this.aoRedimensionar = function () { self.medir(); };
     raiz.addEventListener('resize', this.aoRedimensionar, false);
     raiz.addEventListener('orientationchange', this.aoRedimensionar, false);
-    if (typeof raiz.addEventListener === 'function') {
-      this.aoVisibilidade = function () {
-        if (raiz.document && raiz.document.hidden) self.parar();
-        else if (self.desejado) self.iniciar();
-      };
-      raiz.document.addEventListener('visibilitychange', this.aoVisibilidade);
-    }
+    this.medir();
   }
 
-  Renderizador.prototype.gerarPontos = function () {
-    var compacto = this.largura && this.largura < 520;
-    var n = reduzido ? 260 : (compacto ? 430 : 820);
-    var pontos = [];
-    var ouro = Math.PI * (3 - Math.sqrt(5));
-    for (var i = 0; i < n; i++) {
-      var y = 1 - (i / (n - 1)) * 2;
-      var r = Math.sqrt(Math.max(0, 1 - y * y));
-      var t = ouro * i;
-      var raio = 1.02 + Math.random() * 1.28;
-      pontos.push({
-        x: Math.cos(t) * r * raio,
-        y: y * raio,
-        z: Math.sin(t) * r * raio,
-        camada: Math.random(),
-        tam: 0.8 + Math.random() * 1.5,
-        fase: Math.random() * Math.PI * 2
-      });
+  Render3D.prototype.montar = function () {
+    var T = this.T;
+    this.compacto = (raiz.innerWidth || 400) < 640;
+    var total = reduzido ? 620 : (this.compacto ? 1100 : 2100);
+    this.totalParticulas = total;
+
+    var geo = new T.BufferGeometry();
+    var pos = new Float32Array(total * 3);
+    var tam = new Float32Array(total);
+    var seed = new Float32Array(total);
+    var raioBase = 1.55;
+    for (var i = 0; i < total; i++) {
+      var u = Math.random() * 2 - 1;
+      var theta = Math.random() * Math.PI * 2;
+      var r = Math.sqrt(Math.max(0, 1 - u * u));
+      var raio = raioBase * (0.82 + Math.random() * 0.34);
+      pos[i * 3] = Math.cos(theta) * r * raio;
+      pos[i * 3 + 1] = u * raio;
+      pos[i * 3 + 2] = Math.sin(theta) * r * raio;
+      tam[i] = 1.1 + Math.random() * 2.2;
+      seed[i] = Math.random();
     }
-    this.pontos = pontos;
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3));
+    geo.setAttribute('aSize', new T.BufferAttribute(tam, 1));
+    geo.setAttribute('aSeed', new T.BufferAttribute(seed, 1));
+    geo.computeBoundingSphere();
+
+    this.uniformes = {
+      uTime: { value: 0 },
+      uAudio: { value: 0 },
+      uEscala: { value: this.compacto ? 0.8 : 1.0 },
+      uColorA: { value: this.corA },
+      uColorB: { value: this.corB },
+      uOpacity: { value: 0.92 }
+    };
+    var material = new T.ShaderMaterial({
+      uniforms: this.uniformes,
+      vertexShader: VERTEX,
+      fragmentShader: FRAGMENT,
+      transparent: true,
+      depthWrite: false,
+      blending: T.AdditiveBlending
+    });
+    this.particulas = new T.Points(geo, material);
+    this.particulas.frustumCulled = false; // a esfera está sempre no centro; evita cálculo por quadro
+    this.grupo.add(this.particulas);
+
+    this.aneis = [];
+    var raios = [2.05, 2.42, 2.78];
+    for (var a = 0; a < 3; a++) {
+      var rg = new T.RingGeometry(raios[a], raios[a] + (a === 1 ? 0.010 : 0.016), 160);
+      var mat = new T.MeshBasicMaterial({
+        transparent: true,
+        opacity: 0.30 - a * 0.06,
+        side: T.DoubleSide,
+        depthWrite: false,
+        blending: T.AdditiveBlending
+      });
+      // Cor compartilhada: um único Color por função, sem clone e sem copy por quadro.
+      mat.color = (a === 1) ? this.corNucleo : this.corA;
+      var anel = new T.Mesh(rg, mat);
+      anel.rotation.set(Math.PI / 2.6 + a * 0.34, a * 0.5, a * 0.2);
+      anel.matrixAutoUpdate = true;
+      this.grupo.add(anel);
+      this.aneis.push(anel);
+    }
+
+    var matMiolo = new T.MeshBasicMaterial({ wireframe: true, transparent: true, opacity: 0.55, depthWrite: false });
+    matMiolo.color = this.corNucleo;
+    this.miolo = new T.Mesh(new T.IcosahedronGeometry(0.62, 1), matMiolo);
+    this.grupo.add(this.miolo);
+
+    var matInterno = new T.MeshBasicMaterial({ transparent: true, opacity: 0.18, depthWrite: false });
+    matInterno.color = this.corNucleo;
+    this.interno = new T.Mesh(new T.SphereGeometry(0.46, 32, 32), matInterno);
+    this.grupo.add(this.interno);
+
+    var tex = new T.CanvasTexture(texturaBrilho());
+    var matBrilho = new T.SpriteMaterial({
+      map: tex, transparent: true, opacity: 0.55,
+      blending: T.AdditiveBlending, depthWrite: false
+    });
+    matBrilho.color = this.corNucleo;
+    this.brilho = new T.Sprite(matBrilho);
+    this.brilho.scale.set(4.6, 4.6, 1);
+    this.grupo.add(this.brilho);
+
+    var matPonto = new T.MeshBasicMaterial({ color: 0xf2fffe, transparent: true, opacity: 0.95 });
+    this.ponto = new T.Mesh(new T.SphereGeometry(0.075, 16, 16), matPonto);
+    this.grupo.add(this.ponto);
   };
 
-  Renderizador.prototype.medir = function () {
-    var canvas = this.canvas;
-    if (!canvas) return;
-    var r = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { width: 0, height: 0 };
-    var largura = Math.max(1, Math.round(r.width || canvas.clientWidth || 300));
-    var altura = Math.max(1, Math.round(r.height || canvas.clientHeight || 300));
-    var dpr = Math.min(raiz.devicePixelRatio || 1, largura < 520 ? 1.5 : 2);
-    if (largura === this.largura && altura === this.altura && dpr === this.dpr) return;
+  Render3D.prototype.medir = function () {
+    if (!this.renderer) return;
+    var r = this.canvas.getBoundingClientRect ? this.canvas.getBoundingClientRect() : { width: 0, height: 0 };
+    var largura = Math.max(1, Math.round(r.width || this.canvas.clientWidth || 300));
+    var altura = Math.max(1, Math.round(r.height || this.canvas.clientHeight || 300));
+    if (largura === this.largura && altura === this.altura) return;
     this.largura = largura;
     this.altura = altura;
-    this.dpr = dpr;
-    canvas.width = Math.round(largura * dpr);
-    canvas.height = Math.round(altura * dpr);
-    if (!this.pontos.length || Math.abs(this.pontos.length - (largura < 520 ? 430 : 820)) > 380) this.gerarPontos();
+    var dpr = Math.min(raiz.devicePixelRatio || 1, largura < 640 ? 1.5 : 2);
+    if (this.dprTravado) dpr = 1;
+    this.renderer.setPixelRatio(dpr);
+    this.renderer.setSize(largura, altura, false);
+    this.camera.aspect = largura / altura;
+    this.camera.updateProjectionMatrix();
   };
 
-  Renderizador.prototype.iniciar = function () {
-    if (this.rodando || !this.canvas) return;
+  Render3D.prototype.iniciar = function () {
+    if (this.rodando) return;
     this.desejado = true;
     this.rodando = true;
-    this.medir();
+    this.clock.start();
+    this.inicioFps = 0;
+    this.quadros = 0;
     var self = this;
-    this.ultimo = 0;
-    var passo = function (ts) {
+    var laco = function () {
       if (!self.rodando) return;
-      self.quadro(ts);
-      self.raf = raiz.requestAnimationFrame(passo);
+      self.raf = raiz.requestAnimationFrame(laco);
+      self.quadro();
     };
-    this.raf = raiz.requestAnimationFrame(passo);
+    this.raf = raiz.requestAnimationFrame(laco);
   };
 
-  Renderizador.prototype.parar = function () {
+  Render3D.prototype.parar = function () {
     this.desejado = false;
     this.rodando = false;
     if (this.raf) { raiz.cancelAnimationFrame(this.raf); this.raf = 0; }
   };
 
-  Renderizador.prototype.estado = function (nome) {
-    var p = PALETAS[nome];
-    if (!p) return;
-    this.estado = nome;
-    this.alvo = p;
+  /** Pausa sem perder o desejo de rodar (usada quando a tela sai de vista). */
+  Render3D.prototype.pausarVisivel = function () {
+    this.rodando = false;
+    if (this.raf) { raiz.cancelAnimationFrame(this.raf); this.raf = 0; }
   };
 
-  Renderizador.prototype.nivel = function (v) {
+  Render3D.prototype.estado = function (nome) {
+    var p = PALETAS[nome];
+    if (!p) return;
+    this.estadoAtual = nome;
+    this.alvo = p;
+    this.corAlvoA.setHex(p.prim);
+    this.corAlvoB.setHex(p.sec);
+    this.corAlvoN.setHex(p.nucleo);
+  };
+
+  Render3D.prototype.nivel = function (v) {
     var n = Number(v);
     if (Number.isFinite(n)) this.nivelAlvo = Math.max(0, Math.min(1, n));
   };
 
-  Renderizador.prototype.quadro = function (ts) {
-    var ctx = this.ctx;
-    if (!ctx) return;
-    var dt = this.ultimo ? Math.min(64, ts - this.ultimo) : 16;
-    this.ultimo = ts;
-    var passo = dt / 16.667;
-    var alvo = this.alvo || PALETAS.idle;
-    var at = this.atual;
-
-    at.prim = misturar(at.prim, alvo.prim, 0.06 * passo);
-    at.sec = misturar(at.sec, alvo.sec, 0.06 * passo);
-    at.nucleo = misturar(at.nucleo, alvo.nucleo, 0.06 * passo);
-    at.giro += (alvo.giro - at.giro) * 0.05 * passo;
-    at.ruido += (alvo.ruido - at.ruido) * 0.05 * passo;
-    at.anel += (alvo.anel - at.anel) * 0.05 * passo;
-    this.nivel += (this.nivelAlvo - this.nivel) * 0.12 * passo;
-
-    var lento = reduzido ? 0.25 : 1;
-    this.giro += (at.giro * 0.0025 + 0.0012) * passo * lento;
-
-    var w = this.largura, h = this.altura;
-    if (!w || !h) { this.medir(); return; }
-    var cx = w / 2, cy = h / 2;
-    var raio = Math.min(w, h) * 0.20;
-    var expansao = 1 + this.nivel * 0.14;
-
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-
-    // Halo de fundo: dá o "aquário" luminoso do visualizador sem custo de blur.
-    var halo = ctx.createRadialGradient(cx, cy, raio * 0.1, cx, cy, raio * 3.1);
-    halo.addColorStop(0, rgba(at.prim, 0.20 + this.nivel * 0.14));
-    halo.addColorStop(0.45, rgba(at.sec, 0.09));
-    halo.addColorStop(1, rgba(at.prim, 0));
-    ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(cx, cy, raio * 3.1, 0, Math.PI * 2); ctx.fill();
-
-    // Anéis holográficos (três elipses inclinadas, como no arquivo de referência).
-    var giroAnel = this.giro * 0.8;
-    var inclinacoes = [0.12, 0.42, 0.78];
-    for (var a = 0; a < inclinacoes.length; a++) {
-      var inc = inclinacoes[a];
-      var r = raio * (1.62 + a * 0.34) * expansao;
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(giroAnel * (a % 2 ? -1 : 1) + inc);
-      ctx.scale(1, 0.30 + inc * 0.16);
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.lineWidth = 1 + a * 0.25;
-      ctx.strokeStyle = rgba(a === 1 ? at.nucleo : at.prim, 0.16 + at.anel * 0.30 + this.nivel * 0.10);
-      ctx.stroke();
-      ctx.restore();
+  Render3D.prototype.quadro = function () {
+    if (!this.renderer) return;
+    var dt = Math.min(0.05, this.clock.getDelta() || 0.016);
+    var agora = raiz.performance ? raiz.performance.now() : Date.now();
+    if (!this.inicioFps) { this.inicioFps = agora; this.quadros = 0; }
+    this.quadros++;
+    if (agora - this.inicioFps > 1600) {
+      var fps = (this.quadros * 1000) / (agora - this.inicioFps);
+      this.ultimoFps = fps;
+      this.quadros = 0;
+      this.inicioFps = agora;
+      // Degrau único de qualidade: uma vez só, sem oscilar a cada segundo.
+      if (fps < 42 && !this.qualidadeBaixa) {
+        this.qualidadeBaixa = true;
+        this.dprTravado = true;
+        this.largura = 0;
+        this.medir();
+        var manter = Math.max(300, Math.floor(this.totalParticulas * 0.6));
+        this.particulas.geometry.setDrawRange(0, manter);
+      }
     }
 
-    // Esfera de partículas com rotação em Y e leve inclinação em X.
-    var rotY = this.giro;
-    var rotX = 0.32 + Math.sin(this.giro * 0.6) * 0.12;
-    var cyR = Math.cos(rotY), syR = Math.sin(rotY);
-    var cxR = Math.cos(rotX), sxR = Math.sin(rotX);
-    var dist = 3.4;
-    ctx.globalCompositeOperation = 'lighter';
-    for (var i = 0; i < this.pontos.length; i++) {
-      var p = this.pontos[i];
-      var ond = Math.sin(this.giro * 3 + p.fase) * at.ruido * 0.12;
-      var rr = 1 + ond + this.nivel * 0.22;
-      var px = p.x * rr, py = p.y * rr, pz = p.z * rr;
-      var x1 = px * cyR - pz * syR;
-      var z1 = px * syR + pz * cyR;
-      var y1 = py * cxR - z1 * sxR;
-      var z2 = py * sxR + z1 * cxR;
-      var esc = dist / (dist - z2);
-      var sx = cx + x1 * esc * raio * expansao;
-      var sy = cy + y1 * esc * raio * expansao;
-      var prof = Math.max(0, Math.min(1, (z2 + 2.4) / 4.8));
-      var cor = misturar(at.sec, at.prim, p.camada * 0.7 + prof * 0.3);
-      var alfa = 0.10 + prof * 0.55 + this.nivel * 0.14;
-      var tamanho = p.tam * esc * (0.7 + prof * 0.7);
-      ctx.fillStyle = rgba(cor, alfa);
-      ctx.fillRect(sx - tamanho / 2, sy - tamanho / 2, tamanho, tamanho);
+    var k = 1 - Math.exp(-dt * (reduzido ? 2.2 : 5.5));
+    this.audioNivel += (this.nivelAlvo - this.audioNivel) * Math.min(1, dt * 10);
+    this.corA.lerp(this.corAlvoA, k);
+    this.corB.lerp(this.corAlvoB, k);
+    this.corNucleo.lerp(this.corAlvoN, k);
+
+    var giro = reduzido ? this.alvo.giro * 0.35 : this.alvo.giro;
+    this.grupo.rotation.y += dt * (0.16 + giro * 0.22);
+    this.grupo.rotation.x = Math.sin(this.clock.elapsedTime * 0.22) * 0.10;
+
+    var audio = this.audioNivel * (reduzido ? 0.5 : 1);
+    this.uniformes.uTime.value = this.clock.elapsedTime;
+    this.uniformes.uAudio.value += (audio - this.uniformes.uAudio.value) * Math.min(1, dt * 8);
+    this.uniformes.uEscala.value = (this.compacto ? 0.8 : 1.0) * (1 + this.audioNivel * 0.10);
+    // uColorA/uColorB apontam para corA/corB: o lerp acima já atualiza o shader.
+
+    for (var i = 0; i < this.aneis.length; i++) {
+      var anel = this.aneis[i];
+      anel.rotation.z += dt * (0.10 + giro * 0.30) * (i % 2 ? -1 : 1);
+      anel.rotation.x = Math.PI / 2.6 + i * 0.34 + Math.sin(this.clock.elapsedTime * 0.35 + i) * 0.12;
+      anel.material.opacity = (0.22 + this.audioNivel * 0.16) * (1 - i * 0.18);
     }
-    ctx.globalCompositeOperation = 'source-over';
 
-    // Núcleo: miolo luminoso e ponto central, respirando com o microfone.
-    var pulso = 1 + Math.sin(ts / 900) * 0.04 + this.nivel * 0.20;
-    var rNucleo = raio * 0.34 * pulso;
-    var miolo = ctx.createRadialGradient(cx, cy, 0, cx, cy, rNucleo);
-    miolo.addColorStop(0, rgba(at.nucleo, 0.95));
-    miolo.addColorStop(0.35, rgba(at.nucleo, 0.40));
-    miolo.addColorStop(1, rgba(at.prim, 0));
-    ctx.fillStyle = miolo;
-    ctx.beginPath(); ctx.arc(cx, cy, rNucleo, 0, Math.PI * 2); ctx.fill();
+    this.miolo.rotation.y -= dt * (0.35 + giro * 0.5);
+    this.miolo.rotation.x += dt * 0.18;
+    this.miolo.material.opacity = 0.42 + this.audioNivel * 0.28;
+    this.interno.scale.setScalar(1 + this.audioNivel * 0.22 + Math.sin(this.clock.elapsedTime * 1.6) * 0.02);
+    this.brilho.material.opacity = 0.38 + this.audioNivel * 0.34;
+    var pulso = 1 + Math.sin(this.clock.elapsedTime * 1.8) * (reduzido ? 0 : 0.05) + this.audioNivel * 0.22;
+    this.brilho.scale.set(4.6 * pulso, 4.6 * pulso, 1);
+    this.ponto.scale.setScalar(1 + this.audioNivel * 0.5);
 
-    ctx.beginPath();
-    ctx.arc(cx, cy, raio * 0.055 * pulso, 0, Math.PI * 2);
-    ctx.fillStyle = rgba([240, 255, 254], 0.9);
-    ctx.fill();
+    this.camera.position.x = Math.sin(this.clock.elapsedTime * 0.13) * 0.14;
+    this.camera.position.y = Math.cos(this.clock.elapsedTime * 0.17) * 0.10;
+    this.camera.lookAt(0, 0, 0);
 
-    // Aro fino do miolo.
-    ctx.beginPath();
-    ctx.arc(cx, cy, raio * 0.52 * pulso, 0, Math.PI * 2);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = rgba(at.nucleo, 0.22 + this.nivel * 0.18);
-    ctx.stroke();
+    this.renderer.render(this.cena, this.camera);
   };
 
-  var instancia = null;
+  Render3D.prototype.destruir = function () {
+    this.parar();
+    try {
+      raiz.removeEventListener('resize', this.aoRedimensionar, false);
+      raiz.removeEventListener('orientationchange', this.aoRedimensionar, false);
+    } catch (e) { /* sem listeners */ }
+    try {
+      this.cena.traverse(function (o) {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) {
+          if (o.material.map) o.material.map.dispose();
+          o.material.dispose();
+        }
+      });
+      this.renderer.dispose();
+      this.renderer.forceContextLoss();
+    } catch (e) { /* contexto já perdido */ }
+  };
+
+  /* ---------- Fallback 2D (WebGL indisponível) ---------- */
+  function Render2D(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.rodando = false;
+    this.desejado = false;
+    this.audioNivel = 0;
+    this.nivelAlvo = 0;
+    this.giro = 0;
+    this.estadoAtual = 'idle';
+    this.paleta = PALETAS.idle;
+    this.pontos = [];
+    this.dpr = 1;
+    for (var i = 0; i < 560; i++) {
+      var u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = Math.sqrt(Math.max(0, 1 - u * u));
+      this.pontos.push({ x: Math.cos(th) * r, y: u, z: Math.sin(th) * r, s: Math.random() });
+    }
+    var self = this;
+    this.aoRedimensionar = function () { self.medir(); };
+    raiz.addEventListener('resize', this.aoRedimensionar, false);
+    this.medir();
+  }
+  Render2D.prototype.medir = function () {
+    var r = this.canvas.getBoundingClientRect ? this.canvas.getBoundingClientRect() : { width: 300, height: 300 };
+    this.w = Math.max(1, Math.round(r.width || 300));
+    this.h = Math.max(1, Math.round(r.height || 300));
+    this.dpr = Math.min(raiz.devicePixelRatio || 1, 1.5);
+    this.canvas.width = Math.round(this.w * this.dpr);
+    this.canvas.height = Math.round(this.h * this.dpr);
+  };
+  Render2D.prototype.iniciar = function () {
+    if (this.rodando) return;
+    this.desejado = true;
+    this.rodando = true;
+    this.ultimo = 0;
+    var self = this, laco = function (t) {
+      if (!self.rodando) return;
+      self.raf = raiz.requestAnimationFrame(laco);
+      self.quadro(t);
+    };
+    this.raf = raiz.requestAnimationFrame(laco);
+  };
+  Render2D.prototype.parar = function () {
+    this.desejado = false; this.rodando = false;
+    if (this.raf) { raiz.cancelAnimationFrame(this.raf); this.raf = 0; }
+  };
+  Render2D.prototype.pausarVisivel = function () {
+    this.rodando = false;
+    if (this.raf) { raiz.cancelAnimationFrame(this.raf); this.raf = 0; }
+  };
+  Render2D.prototype.estado = function (n) { if (PALETAS[n]) { this.estadoAtual = n; this.paleta = PALETAS[n]; } };
+  Render2D.prototype.nivel = function (v) { if (Number.isFinite(Number(v))) this.nivelAlvo = Math.max(0, Math.min(1, Number(v))); };
+  Render2D.prototype.quadro = function (t) {
+    var dt = this.ultimo ? Math.min(64, t - this.ultimo) : 16;
+    this.ultimo = t;
+    var passo = dt / 16.667;
+    this.giro += (reduzido ? 0.001 : this.paleta.giro * 0.0024 + 0.0015) * passo;
+    this.audioNivel += (this.nivelAlvo - this.audioNivel) * Math.min(1, passo * 0.14);
+    var ctx = this.ctx, w = this.w, h = this.h;
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    var cx = w / 2, cy = h / 2, raio = Math.min(w, h) * 0.2;
+    var c = this.paleta;
+    var prim = 'rgba(' + ((c.prim >> 16) & 255) + ',' + ((c.prim >> 8) & 255) + ',' + (c.prim & 255);
+    var nucleo = 'rgba(' + ((c.nucleo >> 16) & 255) + ',' + ((c.nucleo >> 8) & 255) + ',' + (c.nucleo & 255);
+    var halo = ctx.createRadialGradient(cx, cy, raio * 0.1, cx, cy, raio * 3);
+    halo.addColorStop(0, prim + ',0.2)');
+    halo.addColorStop(1, prim + ',0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(cx, cy, raio * 3, 0, Math.PI * 2); ctx.fill();
+    var cyr = Math.cos(this.giro), syr = Math.sin(this.giro), cch = Math.cos(0.32), sch = Math.sin(0.32);
+    for (var i = 0; i < this.pontos.length; i++) {
+      var p = this.pontos[i];
+      var x1 = p.x * cyr - p.z * syr, z1 = p.x * syr + p.z * cyr;
+      var y1 = p.y * cch - z1 * sch, z2 = p.y * sch + z1 * cch;
+      var esc = 3.4 / (3.4 - z2);
+      var alpha = 0.12 + ((z2 + 1) / 2) * 0.55;
+      ctx.fillStyle = nucleo + ',' + alpha.toFixed(2) + ')';
+      var t2 = (1.1 + p.s * 1.5) * esc * 0.75;
+      ctx.fillRect(cx + x1 * esc * raio * 1.6 - t2 / 2, cy + y1 * esc * raio * 1.6 - t2 / 2, t2, t2);
+    }
+    ctx.beginPath(); ctx.arc(cx, cy, raio * 0.36 * (1 + this.audioNivel * 0.2), 0, Math.PI * 2);
+    ctx.fillStyle = prim + ',0.25)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, raio * 0.06, 0, Math.PI * 2);
+    ctx.fillStyle = nucleo + ',0.95)'; ctx.fill();
+  };
+
+  /* ---------- Fachada ---------- */
+  var atual = null;
+  var canvasAtual = null;
+  var pausadoPorTela = false;
+  var observador = null;
+
+  function criar(canvas) {
+    if (raiz.THREE && suportaWebGL(canvas)) {
+      try { return new Render3D(canvas); }
+      catch (e) {
+        try { if (raiz.console) raiz.console.warn('Núcleo órbita: WebGL falhou, usando Canvas 2D.', e && e.message); } catch (x) { /* sem console */ }
+      }
+    }
+    return new Render2D(canvas);
+  }
+
+  function pausar() {
+    if (!atual) return;
+    if (atual.rodando) { pausadoPorTela = true; atual.pausarVisivel(); }
+  }
+  function retomar() {
+    if (!atual || !pausadoPorTela || !atual.desejado) return;
+    pausadoPorTela = false;
+    atual.iniciar();
+  }
+  function aoVisibilidade() {
+    if (raiz.document && raiz.document.hidden) pausar();
+    else retomar();
+  }
+  if (raiz.document && raiz.document.addEventListener) {
+    raiz.document.addEventListener('visibilitychange', aoVisibilidade, false);
+  }
+
   var api = {
-    /** Liga o desenho no canvas indicado (idempotente). */
     iniciar: function (canvas) {
-      if (!canvas || !canvas.getContext) return null;
-      if (instancia && instancia.canvas === canvas) { instancia.iniciar(); return instancia; }
-      if (instancia) instancia.parar();
-      instancia = new Renderizador(canvas);
-      instancia.iniciar();
-      return instancia;
+      if (!canvas) return null;
+      if (atual && canvasAtual === canvas) { atual.iniciar(); return atual; }
+      api.destruir();
+      canvasAtual = canvas;
+      try { atual = criar(canvas); } catch (e) { atual = null; }
+      if (!atual) return null;
+      // Observa a visibilidade do canvas: fora da tela, nada de renderizar.
+      try {
+        if (typeof raiz.IntersectionObserver === 'function') {
+          if (observador) observador.disconnect();
+          observador = new raiz.IntersectionObserver(function (entradas) {
+            var visivel = entradas.some(function (x) { return x.isIntersecting; });
+            if (visivel) retomar(); else pausar();
+          }, { threshold: 0.01 });
+          observador.observe(canvas);
+        }
+      } catch (e) { /* observador opcional */ }
+      atual.iniciar();
+      return atual;
     },
-    parar: function () { if (instancia) instancia.parar(); },
-    estado: function (nome) { if (instancia) instancia.estado(nome); },
-    nivel: function (v) { if (instancia) instancia.nivel(v); },
-    ativo: function () { return !!(instancia && instancia.rodando); },
-    paletas: PALETAS
+    parar: function () { if (atual) atual.parar(); },
+    destruir: function () {
+      try { if (observador) { observador.disconnect(); observador = null; } } catch (e) { /* já desconectado */ }
+      if (atual && atual.destruir) atual.destruir(); else if (atual) atual.parar();
+      atual = null; canvasAtual = null; pausadoPorTela = false;
+    },
+    estado: function (nome) { if (atual && typeof atual.estado === 'function') atual.estado(nome); },
+    nivel: function (v) {
+      // Guarda de tipo: se uma instância parcial existir, o app continua funcionando e o
+      // diagnóstico registra o problema em vez de estourar um TypeError a cada quadro.
+      if (atual && typeof atual.nivel === 'function') atual.nivel(v);
+    },
+    ativo: function () { return !!(atual && atual.rodando); },
+    tipo: function () { return !atual ? null : (atual.renderer ? 'webgl' : 'canvas2d'); },
+    paletas: PALETAS,
+    usaThree: function () { return !!(raiz.THREE && raiz.THREE.WebGLRenderer); },
+    /** Diagnóstico curto para Ajustes ▸ Diagnóstico e para o registro de erros. */
+    diagnostico: function () {
+      if (!atual) return { tipo: null, rodando: false, motivo: 'núcleo órbita não iniciado' };
+      return {
+        tipo: atual.renderer ? 'webgl' : 'canvas2d',
+        rodando: !!atual.rodando,
+        fps: Math.round(atual.ultimoFps || 0),
+        qualidadeBaixa: !!atual.qualidadeBaixa,
+        particulas: atual.totalParticulas || atual.pontos.length
+      };
+    }
   };
 
   raiz.NucleoOrbita = api;
