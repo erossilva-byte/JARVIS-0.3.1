@@ -12,7 +12,11 @@
     "GUIA-ACESSOS-ANDROID.md"
   ],
   "build": {
-    "resultado": "pendente",
-    "observacao": "Aguardando a compilação do release v1.17.0."
+    "resultado": "success",
+    "sha256": "d4182d22e1d7d71f255c8ceeaf7d8658e8c32a507f290f01cc392411f3ff5bb2",
+    "bytes": 70883708,
+    "arquivo": "jarvis-nova-1.17.0-10170.apk",
+    "data": "2026-10-28",
+    "observacao": "APK do release v1.17.0 compilado pelo workflow de release com ci/debug.keystore (mesma assinatura desde 1.10.1, então o app instalado se atualiza por cima). Checksum conferido depois de baixar o arquivo do próprio release; o pacote traz cad.js, orbita.js e vendor/three.min.js em assets/public."
   }
 }
