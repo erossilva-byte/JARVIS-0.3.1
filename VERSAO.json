@@ -12,6 +12,11 @@
     "GUIA-ACESSOS-ANDROID.md"
   ],
   "build": {
-    "resultado": "pendente"
+    "resultado": "success",
+    "sha256": "2ba513e525010ebcc5ca8b155a1fae04a06e9c25a6ed326fb53846002628be85",
+    "bytes": 70885992,
+    "arquivo": "jarvis-nova-1.18.0-10180.apk",
+    "data": "2026-10-28",
+    "observacao": "APK do release v1.18.0 compilado pelo workflow de release (run 40695360431) com ci/debug.keystore — mesma assinatura das versões anteriores, então o app instalado se atualiza por cima pelo atualizador interno. Checksum conferido depois de baixar o arquivo do release; assets/public/orbita.js do pacote contém a correção do tamanho das partículas (uPixelRatio) e assets/public/vendor/three.min.js está presente."
   }
 }
