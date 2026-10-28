@@ -38,7 +38,7 @@ script_teste = pacote.get("scripts", {}).get("test:all", "")
 # Fontes que rodam no aparelho: nenhuma pode citar o detector de terceiro que saiu,
 # nem sequer em comentário. Nos comentários de JarvisAtivacao/JarvisPrefs a citação existe
 # de propósito, para registrar que o detector de terceiro foi removido.
-fontes_ativas = " ".join([app, html, css, hermes, servico, plugin, patch_gradle, ler("main.js")]).lower()
+fontes_ativas = " ".join([app, html, css, hermes, servico, plugin, patch_gradle, ler("platforms/desktop/main.js")]).lower()
 
 checagens = {
     # 1. Picovoice saiu por completo do caminho ativo
@@ -53,7 +53,7 @@ checagens = {
         "guardarChave" not in prefs and "lerChave" not in prefs and "temChave" not in prefs
         and "AndroidKeyStore" not in prefs),
     "Nomes de chave do desktop sem picovoice": (
-        "groq|cerebras|mistral|gemini" in ler("main.js") and "picovoice" not in ler("main.js")),
+        "groq|cerebras|mistral|gemini" in ler("platforms/desktop/main.js") and "picovoice" not in ler("platforms/desktop/main.js")),
 
     # 2. Detector próprio, nos dois lados, com as mesmas regras
     "JarvisAtivacao.java existe e tem as três regras": (

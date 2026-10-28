@@ -159,12 +159,13 @@ if vari.exists():
 
 # Nada de http:// no código do app (o bloqueio de cleartext não quebra nada).
 for arquivo in ('app.js', 'hermes.js', 'index.html', 'orbita.js', 'cad.js', 'memoria.js', 'plataforma.js'):
-    assert 'http://' not in texto(arquivo).replace('http://schemas.android.com', '').replace('http://www.w3.org', ''), arquivo
+    assert 'http://' not in texto(arquivo).replace('http://schemas.android.com', '').replace('http://www.w3.org', '').replace('http://schemas.openxmlformats.org', '').replace('http://schemas.microsoft.com', ''), arquivo
 
 # ---------- 6. Versão, documentação, PC e workflows ----------
 meta = json.loads(texto('VERSAO.json'))
 pkg = json.loads(texto('package.json'))
-assert meta['version'] == '1.18.0' and meta['versionCode'] == 10180, meta
+assert [int(x) for x in meta['version'].split('.')] >= [1, 18, 0] and meta['versionCode'] >= 10180, meta
+# A 1.18.x foi superada: o release corrente pode ser mais novo (checado pelo teste da versão dele).
 assert pkg['version'] == meta['version']
 assert ("const VERSAO_APP = '%s';" % meta['version']) in app
 assert ('v%s' % meta['version']) in html
@@ -173,15 +174,15 @@ assert pkg['build']['linux']['target'][0] == 'AppImage' and pkg['build']['win'][
 assert pkg['scripts']['dist:win'] == 'electron-builder --win'
 
 lei = texto('LEIA-ME.md')
-assert '# J.A.R.V.I.S. Nova 1.18.0' in lei
+assert '# J.A.R.V.I.S. Nova' in lei
 assert '## Instalar o J.A.R.V.I.S. no PC' in lei and 'npm start' in lei and 'npm run dist:win' in lei
-assert '1.18.0' in texto('CHANGELOG.md') and '## 1.17.0' in texto('CHANGELOG.md')
+assert '## 1.19.0' in texto('CHANGELOG.md') and '## 1.17.0' in texto('CHANGELOG.md')
 assert texto('CHANGELOG.md').count('\n## ') >= 30
 
 for wf in ('.github/workflows/build-apk.yml', '.github/workflows/release-apk.yml'):
     s = texto(wf)
-    assert '1.18.0' in s, wf
+    assert 'J.A.R.V.I.S. Nova' in s, wf
     assert 'cad.js www/' in s
-assert 'Novidades da 1.18.0' in texto('.github/workflows/release-apk.yml')
+assert 'Novidades da' in texto('.github/workflows/release-apk.yml')
 
 print('1.18.0: núcleo 3D corrigido para celular/PC, fallback 2D desenhando e auditoria do APK validada')

@@ -1,16 +1,16 @@
 {
   "name": "jarvis-nova",
-  "version": "1.18.0",
-  "description": "J.A.R.V.I.S. Nova 1.18.0 — núcleo Órbita 3D corrigido para celular e PC, serviço em primeiro plano à prova de timeout, arquivos .cad do CadSimu, memória conectada, humor brasileiro em três níveis e versão desktop Electron",
-  "main": "main.js",
+  "version": "1.19.0",
+  "description": "J.A.R.V.I.S. Nova 1.19.0 — núcleo Órbita 3D corrigido para celular e PC, serviço em primeiro plano à prova de timeout, arquivos .cad do CadSimu, memória conectada, humor brasileiro em três níveis e versão desktop Electron",
+  "main": "platforms/desktop/main.js",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
     "android:add": "cap add android",
     "android:sync": "cap sync android",
     "android:open": "cap open android",
-    "test:syntax": "node --check app.js && node --check main.js && node --check apps.js && node tests/test_voice_routes.js",
-    "test:all": "node --check app.js && node --check plataforma.js && node --check memoria.js && node --check orbita.js && node --check cad.js && node --check main.js && node --check apps.js && node tests/test_voice_routes.js && node tests/test_diag_dom.js && node tests/test_midia_voz.js && node tests/test_stream_1110.js && node tests/test_hermes.js && node tests/test_ativacao.js && python3 tests/validate_project.py && python3 tests/test_patch_gradle.py && python3 tests/test_fileprovider.py && python3 tests/test_release_readiness.py && python3 tests/test_ativacao_propria.py && python3 tests/test_java_refs.py && python3 -m py_compile patch_manifest.py patch_visual.py patch_android_version.py patch_gradle.py && python3 tests/test_secure_keys.py && python3 tests/test_local_ai.py && python3 tests/test_voice_profile.py && python3 tests/test_ui_responsive.py && python3 tests/test_panel_navigation.py && python3 tests/test_novos_recursos.py && python3 tests/test_segundo_plano.py && python3 tests/test_v1_8_0.py && python3 tests/test_v1_9_0.py && python3 tests/test_v1_10_0.py && python3 tests/test_segundo_plano_1101.py && python3 tests/test_v1_11_0.py && python3 tests/test_v1_12_0.py && python3 tests/test_v1_13_0.py && python3 tests/test_v1_14_0.py && python3 tests/test_v1_15_0.py && python3 tests/test_v1_16_0.py && python3 tests/test_v1_17_0.py && python3 tests/test_v1_18_0.py",
+    "test:syntax": "node --check app.js && node --check platforms/desktop/main.js && node --check apps.js && node tests/test_voice_routes.js",
+    "test:all": "node --check app.js && node --check plataforma.js && node --check memoria.js && node --check orbita.js && node --check cad.js && node --check platforms/desktop/main.js && node --check apps.js && node tests/test_voice_routes.js && node tests/test_diag_dom.js && node tests/test_midia_voz.js && node tests/test_stream_1110.js && node tests/test_hermes.js && node tests/test_ativacao.js && python3 tests/validate_project.py && python3 tests/test_patch_gradle.py && python3 tests/test_fileprovider.py && python3 tests/test_release_readiness.py && python3 tests/test_ativacao_propria.py && python3 tests/test_java_refs.py && python3 -m py_compile patch_manifest.py patch_visual.py patch_android_version.py patch_gradle.py && python3 tests/test_secure_keys.py && python3 tests/test_local_ai.py && python3 tests/test_voice_profile.py && python3 tests/test_ui_responsive.py && python3 tests/test_panel_navigation.py && python3 tests/test_novos_recursos.py && python3 tests/test_segundo_plano.py && python3 tests/test_v1_8_0.py && python3 tests/test_v1_9_0.py && python3 tests/test_v1_10_0.py && python3 tests/test_segundo_plano_1101.py && python3 tests/test_v1_11_0.py && python3 tests/test_v1_12_0.py && python3 tests/test_v1_13_0.py && python3 tests/test_v1_14_0.py && python3 tests/test_v1_15_0.py && python3 tests/test_v1_16_0.py && python3 tests/test_v1_17_0.py && python3 tests/test_v1_18_0.py && python3 tests/test_v1_19_0.py",
     "dist:win": "electron-builder --win",
     "dist:linux": "electron-builder --linux",
     "dist:mac": "electron-builder --mac"
@@ -30,8 +30,8 @@
     "appId": "com.jarvis.nova",
     "productName": "J.A.R.V.I.S. Nova",
     "files": [
-      "main.js",
-      "preload.js",
+      "platforms/desktop/main.js",
+      "platforms/desktop/preload.js",
       "index.html",
       "style.css",
       "app.js",

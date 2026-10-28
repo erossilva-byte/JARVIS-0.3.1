@@ -1,9 +1,13 @@
-const { app, BrowserWindow, ipcMain, shell, clipboard, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, clipboard, safeStorage, desktopCapturer } = require('electron');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const APPS = require('./apps.js');
+// Este arquivo vive em platforms/desktop; o núcleo web compartilhado fica na raiz do projeto.
+// Nada de caminho relativo solto: com dois níveis fixos, o pacote empacotado e o modo dev
+// resolvem para os mesmos arquivos.
+const RAIZ = path.resolve(__dirname, '..', '..');
+const APPS = require(path.join(RAIZ, 'apps.js'));
 
 const plat = process.platform; // win32 | darwin | linux
 const chave = plat === 'win32' ? 'win' : plat === 'darwin' ? 'mac' : 'linux';
@@ -17,11 +21,11 @@ function criarJanela() {
       contextIsolation: true, nodeIntegration: false, sandbox: true
     }
   });
-  win.loadFile(path.join(__dirname, 'index.html'));
+  win.loadFile(path.join(RAIZ, 'index.html'));
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.webContents.session.setPermissionRequestHandler((_wc, perm, cb) =>
-    cb(['media', 'geolocation'].includes(perm)));
+    cb(['media', 'geolocation', 'display-capture'].includes(perm)));
 }
 
 function rodar(cmd, args) {
@@ -198,6 +202,115 @@ const acoesPC = {
   }
 };
 Object.assign(acoes, acoesPC);
+
+// ---------- Obsidian, captura de tela e exportação de arquivos (só desktop) ----------
+// O renderer pede "sincronize estas notas nesta pasta" e nada além disso: nome de arquivo é
+// validado aqui (sem caminho absoluto, sem ".."), a pasta tem de existir, e o app só escreve
+// dentro dela. Nada é apagado no cofre do usuário.
+function resolverCofre(caminho) {
+  const bruto = String(caminho || '').trim();
+  if (!bruto) throw new Error('Informe a pasta do cofre do Obsidian.');
+  const alvo = dentroDaCasa(bruto);
+  if (!fs.existsSync(alvo)) throw new Error('Essa pasta não existe: ' + alvo);
+  if (!fs.statSync(alvo).isDirectory()) throw new Error('O caminho não é uma pasta.');
+  return alvo;
+}
+function pastaJarvis(cofre) {
+  const alvo = path.join(cofre, 'Jarvis Nova');
+  fs.mkdirSync(alvo, { recursive: true });
+  return alvo;
+}
+function notasMd(base, limite) {
+  const achados = [];
+  const fila = [{ dir: base, nivel: 0 }];
+  while (fila.length && achados.length < limite) {
+    const atual = fila.shift();
+    let itens = [];
+    try { itens = fs.readdirSync(atual.dir, { withFileTypes: true }); } catch (e) { continue; }
+    for (let i = 0; i < itens.length && achados.length < limite; i++) {
+      const item = itens[i];
+      if (item.name.startsWith('.')) continue;
+      const completo = path.join(atual.dir, item.name);
+      if (item.isDirectory() && atual.nivel < 3) fila.push({ dir: completo, nivel: atual.nivel + 1 });
+      else if (/\.md$/i.test(item.name)) achados.push(completo);
+    }
+  }
+  return achados;
+}
+function nomeNotaSeguro(nome) {
+  const limpo = String(nome || 'nota.md').replace(/[\\:*?"<>|\u0000-\u001f]/g, '-').replace(/\.{2,}/g, '.').replace(/^[.\-\s]+/, '');
+  if (!/\.md$/i.test(limpo)) throw new Error('A nota precisa terminar em .md.');
+  return limpo.slice(0, 140);
+}
+
+const acoesExtras = {
+  vault_status: async ({ caminho }) => {
+    const cofre = resolverCofre(caminho);
+    const arquivos = notasMd(cofre, 400);
+    return { caminho: cofre, arquivos: arquivos.length, pasta: path.join(cofre, 'Jarvis Nova') };
+  },
+  vault_sync: async ({ caminho, notas }) => {
+    const cofre = resolverCofre(caminho);
+    const destino = pastaJarvis(cofre);
+    const lista = Array.isArray(notas) ? notas.slice(0, 400) : [];
+    if (!lista.length) throw new Error('Nada para sincronizar: o cofre de memória está vazio.');
+    let gravadas = 0, iguais = 0, bytes = 0;
+    lista.forEach((n) => {
+      const relativo = String((n && n.nome) || '').split('/').filter((p) => p && p !== '.' && p !== '..');
+      const nome = nomeNotaSeguro(relativo.pop() || 'nota.md');
+      const sub = path.join(destino, ...relativo.map((p) => String(p).replace(/[\\:*?"<>|]/g, '-').slice(0, 40)));
+      if (!dentroDaCasa(sub)) return;
+      fs.mkdirSync(sub, { recursive: true });
+      const alvo = path.join(sub, nome);
+      const texto = String((n && n.texto) || '').slice(0, 20000);
+      let atual = null;
+      try { atual = fs.readFileSync(alvo, 'utf8'); } catch (e) { atual = null; }
+      if (atual === texto) { iguais++; return; }
+      fs.writeFileSync(alvo, texto, 'utf8');
+      gravadas++; bytes += Buffer.byteLength(texto, 'utf8');
+    });
+    return { caminho: destino, gravadas, iguais, bytes };
+  },
+  vault_ler: async ({ caminho, limite }) => {
+    const cofre = resolverCofre(caminho);
+    const pasta = path.join(cofre, 'Jarvis Nova');
+    const base = fs.existsSync(pasta) ? pasta : cofre;
+    const arquivos = notasMd(base, Math.max(1, Math.min(200, Number(limite) || 100)));
+    const partes = [];
+    let bytes = 0;
+    for (const arquivo of arquivos) {
+      if (bytes > 400 * 1024) break;
+      try {
+        const texto = fs.readFileSync(arquivo, 'utf8');
+        partes.push(texto);
+        bytes += Buffer.byteLength(texto, 'utf8');
+      } catch (e) { /* arquivo sumiu no meio: segue */ }
+    }
+    return { arquivos: partes.length, texto: partes.join('\n'), bytes };
+  },
+  capturar_tela: async () => {
+    const fontes = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1280, height: 800 } });
+    if (!fontes || !fontes.length) throw new Error('Nenhuma tela disponível para captura.');
+    const imagem = fontes[0].thumbnail.toDataURL('image/jpeg', 80);
+    return { imagem, telas: fontes.length, nome: fontes[0].name || 'tela' };
+  },
+  salvar_arquivo: async ({ nome, texto, base64 }) => {
+    const base = dentroDaCasa('~/Jarvis');
+    fs.mkdirSync(base, { recursive: true });
+    const alvo = path.join(base, nomeSeguro(nome));
+    if (!dentroDaCasa(alvo)) throw new Error('Caminho fora da pasta do usuário.');
+    if (base64) {
+      const bruto = Buffer.from(String(base64), 'base64');
+      if (bruto.length > 20 * 1024 * 1024) throw new Error('Arquivo acima do limite de 20 MB.');
+      fs.writeFileSync(alvo, bruto);
+      return { caminho: alvo, bytes: bruto.length };
+    }
+    const conteudo = String(texto == null ? '' : texto);
+    fs.writeFileSync(alvo, conteudo.slice(0, 8 * 1024 * 1024), 'utf8');
+    return { caminho: alvo, bytes: Buffer.byteLength(conteudo, 'utf8') };
+  }
+};
+Object.assign(acoes, acoesExtras);
 
 ipcMain.handle('jarvis:run', async (_e, nome, args) => {
   if (!Object.prototype.hasOwnProperty.call(acoes, nome)) throw new Error('Ação desconhecida');

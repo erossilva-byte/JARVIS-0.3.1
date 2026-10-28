@@ -108,7 +108,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.18.0</span>
+      <span class="orb-sub" aria-hidden="true">v1.19.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -192,7 +192,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.18.0</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.19.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -437,11 +437,27 @@
       <div id="visao-baloes" class="visao-baloes"></div>
       <p id="visao-status" class="visao-status" role="status" aria-live="polite">Abrindo a câmera…</p>
     </div>
+    <img id="visao-tela" alt="Captura da tela do computador" hidden>
     <div class="botoes">
       <button id="visao-botao-analisar" type="button" class="primario">Analisar o que estou vendo</button>
       <button id="visao-botao-nova" type="button" class="secundario">Nova análise</button>
       <button id="visao-abrir-ajustes" type="button" class="secundario">Chaves de IA</button>
     </div>
+    <div class="divider-small"></div>
+    <h3>Sessão contínua</h3>
+    <p class="dica">A sessão analisa um quadro por vez na frequência escolhida, sempre com a câmera ligada só enquanto este painel está aberto. Pausar congela as análises sem desligar a câmera; encerrar desliga tudo. Nada é gravado: as imagens não ficam no aparelho.</p>
+    <div class="botoes">
+      <button id="visao-camera-virar" type="button" class="secundario">Virar câmera</button>
+      <button id="visao-tela-capturar" type="button" class="secundario">Capturar a tela do PC</button>
+    </div>
+    <div class="botoes">
+      <button id="visao-sessao-iniciar" type="button" class="secundario">Iniciar sessão</button>
+      <button id="visao-sessao-pausar" type="button" class="secundario">Pausar</button>
+      <button id="visao-sessao-parar" type="button" class="secundario">Encerrar</button>
+    </div>
+    <label>Frequência da sessão<select id="visao-frequencia"><option value="0">Manual</option><option value="4">A cada 4 s</option><option value="8">A cada 8 s</option><option value="15">A cada 15 s</option></select></label>
+    <div class="botoes"><button id="visao-salvar-memoria" type="button" class="secundario">Salvar resumo na memória</button></div>
+    <p id="visao-sessao-status" class="dica" role="status" aria-live="polite">Sessão parada.</p>
     <div id="visao-detalhe" class="visao-detalhe" hidden></div>
     <div id="visao-lista" class="visao-lista" aria-live="polite"></div>
     <p class="dica">Um único quadro é enviado ao provedor que reconhece imagens — escolhido pelo roteador entre os que têm chave (Gemini, Groq ou Mistral). Nada de vídeo contínuo e nada em segundo plano: fechar este painel desliga a câmera. Cada objeto reconhecido ganha um balão sobre a imagem; toque no balão para ouvir o detalhe. Por voz: “Jarvis, o que você está vendo?” ou “Jarvis, analise isso”.</p>
@@ -525,6 +541,22 @@
     <button id="pc-criar" type="button" class="primario">Criar arquivo</button>
     <p id="pc-msg" class="dica" role="status" aria-live="polite">Arquivos criados por aqui ficam em ~/Jarvis.</p>
   </section>
+  <section class="grupo" id="obs-bloco">
+    <h3>Obsidian</h3>
+    <p class="dica">Ligue esta memória a uma pasta de cofre do Obsidian. No computador o vínculo é direto: o J.A.R.V.I.S. escreve notas <code>.md</code> com frontmatter em uma subpasta <code>Jarvis Nova</code> dentro do cofre, sem apagar nada que já exista. No Android o Obsidian não abre pastas do aplicativo, então o caminho é exportar o pacote <code>.md</code> e importar de volta — o vínculo automático exige um plugin de armazenamento (SAF), que este aplicativo ainda não embarca.</p>
+    <label>Caminho do cofre (computador)<input id="obs-caminho" type="text" autocomplete="off" placeholder="~/Documentos/MeuCofre"></label>
+    <div class="botoes">
+      <button id="obs-testar" type="button" class="secundario">Testar vínculo</button>
+      <button id="obs-enviar" type="button" class="secundario">Enviar notas</button>
+      <button id="obs-receber" type="button" class="secundario">Trazer do cofre</button>
+    </div>
+    <div class="botoes">
+      <button id="obs-baixar" type="button" class="secundario">Baixar .md</button>
+      <button id="obs-importar-btn" type="button" class="secundario">Importar .md</button>
+    </div>
+    <input id="obs-importar" type="file" accept=".md,text/markdown" hidden>
+    <p id="obs-status" class="dica" role="status" aria-live="polite">Sem vínculo. No computador, informe a pasta do cofre e toque em “Testar vínculo”.</p>
+  </section>
   <div class="botoes barra"><button id="mem-fechar" type="button" class="primario">Fechar</button></div>
 </aside>
 
@@ -554,10 +586,16 @@
     <div class="botoes"><button id="cad-gerar" type="button" class="primario">Gerar .cad</button><button id="cad-exemplo" type="button" class="secundario">Usar exemplo</button></div>
     <div class="divider-small"></div>
     <h3>Analisar .cad</h3>
-    <label>Arquivo do aparelho<input id="cad-importar" type="file" accept=".cad,application/json"></label>
+    <label>Arquivo do aparelho<input id="cad-importar" type="file" accept=".cad,.dxf,.stl,.3mf,.step,.stp,.ifc,application/json,model/stl,model/3mf"></label>
     <label>Ou cole o conteúdo<textarea id="cad-texto" rows="5" spellcheck="false" placeholder='{"formato":"CadSimu CAD","versao":1,"unidades":"mm","objetos":[…]}'></textarea></label>
     <div class="botoes"><button id="cad-analisar" type="button" class="primario">Analisar</button><button id="cad-limpar" type="button" class="secundario">Limpar</button></div>
     <div id="cad-resultado" class="cad-resultado" aria-live="polite" hidden></div>
+    <div class="divider-small"></div>
+    <h3>Exportar para CAD / BIM</h3>
+    <p class="dica">Exporta o último modelo gerado ou analisado. DXF leva o desenho (planta em linhas + faces 3D); STL e 3MF servem para impressão 3D; STEP é sólido facetado; IFC é o modelo BIM. Cada exportação devolve o que se perde na conversão — e o arquivo é reaberto para conferência antes de ser entregue.</p>
+    <label>Formato<select id="cad-formato"><option value="dxf">DXF (2D/3D)</option><option value="stl">STL (impressão 3D)</option><option value="3mf">3MF (impressão 3D)</option><option value="step">STEP (AP203)</option><option value="ifc">IFC4 (BIM)</option><option value="cad">.cad (CadSimu)</option></select></label>
+    <div class="botoes"><button id="cad-exportar" type="button" class="primario">Exportar</button><button id="cad-malha" type="button" class="secundario">Ver malha e volume</button></div>
+    <p id="cad-exportar-status" class="dica" role="status" aria-live="polite">Gere ou analise um modelo para liberar a exportação.</p>
     <div class="divider-small"></div>
     <h3>Arquivos salvos</h3>
     <div id="cad-lista" class="mem-lista cad-lista" aria-live="polite"></div>

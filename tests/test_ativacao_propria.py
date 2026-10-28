@@ -20,7 +20,7 @@ patch_gradle = (ROOT / 'patch_gradle.py').read_text(encoding='utf-8')
 # aqui o build.gradle é opcional, e o que vale de verdade é o patch_gradle.py.
 _gradle = ROOT / 'android/app/build.gradle'
 gradle = _gradle.read_text(encoding='utf-8') if _gradle.exists() else ''
-main_js = (ROOT / 'main.js').read_text(encoding='utf-8')
+main_js = (ROOT / 'platforms/desktop/main.js').read_text(encoding='utf-8')
 css = (ROOT / 'style.css').read_text(encoding='utf-8')
 
 issues = []

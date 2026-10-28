@@ -302,6 +302,71 @@
     return { ok: true, criadas: criadas, repetidas: repetidas };
   }
 
+  /* ---------- Ponte com o Obsidian ----------
+   * O cofre do Obsidian é uma pasta de arquivos .md com frontmatter YAML. Aqui o cofre do
+   * aplicativo é convertido PARA esse formato (um arquivo por nota), para o usuário levar a
+   * memória a uma pasta de verdade no PC e trazê-la de volta. Regras:
+   *  - nada é apagado no Obsidian: a importação só acrescenta;
+   *  - o nome do arquivo é estável (título + fim do id), então a mesma nota não vira duas;
+   *  - nota repetida cai em `criar()`, que já reaproveita o original em vez de duplicar.
+   */
+  function escaparYaml(t) {
+    return String(t == null ? '' : t).replace(/\r?\n/g, ' ').replace(/"/g, '\\"').slice(0, 200);
+  }
+  function nomeMd(n) {
+    var base = normalizar(n.titulo).replace(/\s+/g, '-').slice(0, 60) || 'nota';
+    return n.tema + '/' + base + '-' + String(n.id).slice(-5) + '.md';
+  }
+  function notaMd(n) {
+    return '---\n' +
+      'title: "' + escaparYaml(n.titulo) + '"\n' +
+      'tema: ' + n.tema + '\n' +
+      'tags: [' + (n.tags || []).map(escaparYaml).join(', ') + ']\n' +
+      'criado: ' + new Date(n.criado).toISOString() + '\n' +
+      'atualizado: ' + new Date(n.atualizado).toISOString() + '\n' +
+      'origem: jarvis-nova\n' +
+      '---\n\n# ' + n.titulo + '\n\n' + n.texto + '\n';
+  }
+  function arquivosMarkdown() {
+    return carregar().map(function (n) { return { nome: nomeMd(n), texto: notaMd(n) }; });
+  }
+  function markdown() {
+    return arquivosMarkdown().map(function (a) { return a.texto; }).join('\n');
+  }
+  /** Lê notas vindas do Obsidian (frontmatter opcional). Devolve quantas entraram. */
+  function importarMarkdown(txt) {
+    var bruto = String(txt || '');
+    if (!bruto.trim()) return { ok: false, erro: 'O Markdown está vazio.' };
+    var blocos = [];
+    var re = /---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*?)(?=\n---\s*\n|$)/g;
+    var achado;
+    while ((achado = re.exec(bruto))) blocos.push({ meta: achado[1], corpo: achado[2] });
+    if (!blocos.length) blocos.push({ meta: '', corpo: bruto });
+    var criadas = 0, repetidas = 0, ignoradas = 0;
+    blocos.forEach(function (b) {
+      var meta = {};
+      String(b.meta || '').split('\n').forEach(function (linha) {
+        var m = linha.match(/^\s*([A-Za-z_]+)\s*:\s*(.*)$/);
+        if (!m) return;
+        meta[m[1].toLowerCase()] = m[2].replace(/^["']|[\"']$/g, '').trim();
+      });
+      var corpo = String(b.corpo || '').replace(/^\s*#\s+.*\n/, '').trim();
+      if (!corpo) { ignoradas++; return; }
+      var titulo = meta.title || corpo.split('\n')[0].slice(0, 80);
+      var tags = (meta.tags || '').replace(/[\[\]]/g, '').split(',')
+        .map(function (t) { return t.trim(); }).filter(Boolean);
+      var r = criar({
+        tema: meta.tema || temaPorPalavras(titulo + ' ' + corpo),
+        titulo: titulo, texto: corpo, tags: tags, origem: 'painel'
+      });
+      if (r.ok && r.duplicada) repetidas++;
+      else if (r.ok) criadas++;
+      else ignoradas++;
+    });
+    if (!criadas && !repetidas) return { ok: false, erro: 'Nenhuma nota legível encontrada no Markdown.' };
+    return { ok: true, criadas: criadas, repetidas: repetidas, ignoradas: ignoradas };
+  }
+
   return {
     CHAVE: CHAVE,
     TEMAS: TEMAS,
@@ -324,6 +389,9 @@
     contexto: contexto,
     resumo: resumo,
     exportar: exportar,
-    importar: importar
+    importar: importar,
+    arquivosMarkdown: arquivosMarkdown,
+    markdown: markdown,
+    importarMarkdown: importarMarkdown
   };
 });

@@ -1,3 +1,19 @@
+## 1.19.0
+
+- **Módulo CAD de intercâmbio (real, não simulado).** `cad.js` passou a ter uma malha única (`malha()`) e exportadores/leitores
+  para **DXF R12** (planta em linhas + faces 3D), **STL** binário e ASCII, **3MF** (ZIP+XML), **STEP AP203** (sólido facetado)
+  e **IFC4** (projeto, sítio, edifício, pavimento e elementos extrudados). Cada escritor **reabre o próprio arquivo** antes de
+  entregar e informa avisos e perdas da conversão; DWG, RVT, RFA e FCStd são recusados com motivo (binário proprietário ou
+  dependência do FreeCAD), em vez de produzir um arquivo que não abre.
+- **Visão com sessão.** Frequência de 4/8/15 s, pausar/retomar, encerrar ao sair da tela, troca de câmera frontal/traseira e
+  captura da tela do PC no computador. Um quadro por análise, nada gravado, nada em segundo plano; o resumo pode ser salvo na memória.
+- **Obsidian conectado.** Notas exportadas como `.md` com frontmatter (um arquivo por nota) e vínculo com uma pasta real de cofre
+  no computador — escrita idempotente, sem apagar nada. No Android o caminho é o pacote `.md`, porque o Obsidian não abre pastas do app.
+- **Organização por plataforma.** `main.js` e `preload.js` saíram da raiz para `platforms/desktop/`; o núcleo web continua
+  compartilhado na raiz e as fronteiras estão documentadas em `platforms/LEIA-ME.md`.
+- **Bugs achados pelos próprios testes numéricos:** faces laterais do cilindro/cone nasciam invertidas (volume 67% e 100% errado)
+  e os pólos da esfera/ápice do cone geravam vértices duplicados; a correção é orientação por volume assinado e fusão de coincidentes.
+
 ## 1.18.0
 
 - **Núcleo 3D estourado em branco: corrigido no celular e no PC.** O shader calculava

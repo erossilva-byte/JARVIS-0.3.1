@@ -12,7 +12,7 @@ const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.18.0';
+const VERSAO_APP = '1.19.0';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -5085,7 +5085,7 @@ async function ligarCamera() {
   visaoStatus('Abrindo a câmera…');
   try {
     visaoStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      video: { facingMode: visaoFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
     });
   } catch (e) {
@@ -5556,7 +5556,9 @@ const cadImportar = $('#cad-importar');
 if (cadImportar) cadImportar.addEventListener('change', () => {
   const f = cadImportar.files && cadImportar.files[0];
   if (!f) return;
-  if (f.size > 256 * 1024) { cadStatus('Arquivo grande demais (limite de 256 kB).', true); return; }
+  const tipoArq = (String(f.name || '').toLowerCase().match(/\.([a-z0-9]+)$/) || ['', ''])[1];
+  if (tipoArq && tipoArq !== 'cad' && tipoArq !== 'json') { analisarArquivoFormato(f); return; }
+  if (f.size > 256 * 1024) { cadStatus('Arquivo grande demais (limite de 256 kB para .cad).', true); return; }
   const leitor = new FileReader();
   leitor.onload = () => { if ($('#cad-texto')) $('#cad-texto').value = String(leitor.result || ''); analisarCadTexto(String(leitor.result || ''), f.name); };
   leitor.onerror = () => cadStatus('Não foi possível ler o arquivo escolhido.', true);
@@ -5703,6 +5705,7 @@ function gerarCadArquivo() {
   else if (tipo === 'esfera') obj.raio = d1;
   else { obj.raio = d1; obj.altura = d2; }
   const doc = CAD.criar({ nome, unidades, objetos: [obj] });
+  cadUltimoDoc = doc;
   const r = CAD.salvar(nome, doc);
   if (!r.ok) {
     cadStatus(r.erro || 'Não foi possível criar o .cad.', true);
@@ -5742,6 +5745,7 @@ function analisarCadTexto(texto, nome) {
     pre.textContent = Object.keys(r.contagem).map((t) => t + ': ' + r.contagem[t]).join(' · ');
     caixa.append(b, p, pre);
   }
+  cadUltimoDoc = r.doc;
   cadStatus('Análise concluída.');
   registrar('arquivos', '.cad analisado: ' + (nome || r.doc.nome));
   return r;
@@ -6163,6 +6167,285 @@ const btnBootPular = $('#boot-pular');
 if (btnBootPular) btnBootPular.onclick = () => { registrar('abertura', 'voz não confirmada pelo usuário'); liberarApp(); };
 const btnBootTentar = $('#boot-tentar');
 if (btnBootTentar) btnBootTentar.onclick = () => { const voz = $('#boot-voz'); if (voz) voz.textContent = 'Pode falar: estou analisando.'; };
+
+/* ---------- Visão: sessão, troca de câmera, tela do PC ----------
+ * Sessão explícita: só com o painel aberto, frequência escolhida, pausa e fim. Cada análise
+ * é um quadro único ao provedor que enxerga; nenhuma imagem é guardada. Conteúdo de imagem é
+ * informação, não instrução: o que estiver escrito na tela não vira comando.
+ */
+let visaoFacing = 'environment';
+let visaoSessao = { ativa: false, pausada: false, timer: 0, analises: 0 };
+let cadUltimoDoc = null;
+function vsStatus(t, e) {
+  const el = $('#visao-sessao-status');
+  if (!el) return;
+  el.textContent = t;
+  el.classList.toggle('erro', !!e);
+}
+function vsEncerrar(m) {
+  if (visaoSessao.timer) clearInterval(visaoSessao.timer);
+  visaoSessao = { ativa: false, pausada: false, timer: 0, analises: visaoSessao.analises };
+  vsStatus(m || 'Sessão parada.');
+}
+async function vsPasso() {
+  if (!visaoSessao.ativa || visaoSessao.pausada || visaoAnalisando) return;
+  const r = await analisarQuadro('');
+  if (!r) return;
+  visaoSessao.analises++;
+  vsStatus('Sessão ativa · ' + visaoSessao.analises + ' análise(s) · ' +
+    (r.objetos.length ? r.objetos.length + ' objeto(s) no último quadro' : 'nada identificado') + '.');
+}
+async function vsIniciar() {
+  const sel = $('#visao-frequencia');
+  const i = Math.max(0, Number(sel ? sel.value : 8) || 0);
+  if (!i) { vsEncerrar('Frequência manual: use “Analisar o que estou vendo” a cada quadro.'); return; }
+  if (!await ligarCamera()) { vsEncerrar('Sem câmera não há sessão: autorize a câmera nas permissões.'); return; }
+  visaoSessao = { ativa: true, pausada: false, timer: 0, analises: 0 };
+  visaoSessao.timer = setInterval(() => { vsPasso().catch(() => {}); }, i * 1000);
+  vsStatus('Sessão ativa a cada ' + i + ' s. A câmera fica ligada só com este painel aberto.');
+  registrar('visão', 'sessão a cada ' + i + ' s');
+  vsPasso().catch(() => {});
+}
+function vsPausar() {
+  if (!visaoSessao.ativa) { vsStatus('Nenhuma sessão ativa para pausar.'); return; }
+  visaoSessao.pausada = !visaoSessao.pausada;
+  vsStatus(visaoSessao.pausada ? 'Sessão pausada. A câmera segue ligada; retome quando quiser.' : 'Sessão retomada.');
+}
+async function vsVirar() {
+  if (!visaoStream) { visaoStatus('Abra a câmera antes de virar.', 'warn'); return; }
+  visaoFacing = visaoFacing === 'environment' ? 'user' : 'environment';
+  pararCamera();
+  if (await ligarCamera()) visaoStatus('Câmera ' + (visaoFacing === 'user' ? 'frontal' : 'traseira') + ' ativa, ' + trat() + '.', 'ok');
+}
+async function analisarDataUrl(d, q) {
+  if (visaoAnalisando) return null;
+  visaoAnalisando = true;
+  visaoStatus('Analisando a imagem…', 'carregando');
+  try {
+    const r = await pedirVisaoIA(d, q || '');
+    const tom = Hermes.tom(perguntaAtual);
+    const fala = Hermes.visao.descrever(r.objetos, {
+      tratamento: trat(), resumo: r.resumo,
+      humor: Number(store.get('humor', '40')) >= 40, serio: tom.serio, pressa: tom.pressa
+    });
+    visaoResumo = r.resumo;
+    visaoProvedor = r.provedor;
+    desenharBaloes(r.objetos);
+    visaoStatus('Análise de ' + r.provedor + ' · ' + (r.objetos.length ? r.objetos.length + ' objeto(s)' : 'nada identificado') + '.', 'ok');
+    return { fala: fala, objetos: r.objetos, resumo: r.resumo };
+  } catch (e) {
+    visaoStatus('Não consegui analisar: ' + ((e && e.message) || e), 'fail');
+    return null;
+  } finally { visaoAnalisando = false; }
+}
+async function vsTela() {
+  if (!Plataforma.desktop) { visaoStatus('Captura de tela existe só no aplicativo do computador.', 'warn'); return; }
+  visaoStatus('Capturando a tela…', 'carregando');
+  try {
+    const r = await Plataforma.desktopComando('capturar_tela', {});
+    if (!r || !r.imagem) throw new Error('captura vazia');
+    const img = $('#visao-tela');
+    if (img) { img.src = r.imagem; img.hidden = false; }
+    if (VIS_VIDEO()) VIS_VIDEO().hidden = true;
+    const a = await analisarDataUrl(r.imagem, 'Analise esta captura de tela do computador.');
+    if (a) await falar(a.fala);
+  } catch (e) { visaoStatus('Falha na captura: ' + ((e && e.message) || e), 'fail'); }
+}
+function vsMemoria() {
+  if (!MEM) { visaoStatus('A memória conectada não carregou.', 'fail'); return; }
+  const objs = (visaoObjetos || []).map((o) => o.nome).slice(0, 12);
+  const txt = (visaoResumo || 'Análise visual') + (objs.length ? ' Objetos: ' + objs.join(', ') + '.' : '') +
+    (visaoProvedor ? ' (modelo ' + visaoProvedor + ')' : '');
+  const r = MEM.criar({ tema: 'contextos', titulo: 'Visão · ' + new Date().toLocaleString('pt-BR'), texto: txt });
+  visaoStatus(r.ok ? (r.duplicada ? 'Esse resumo já estava na memória.' : 'Resumo salvo na memória.') : (r.erro || 'Falha'), !r.ok);
+  if (r.ok) registrar('memoria', 'resumo de visão salvo');
+}
+(function ligarVisaoExtra() {
+  const pares = [
+    ['#visao-sessao-iniciar', () => vsIniciar().catch(() => {})],
+    ['#visao-sessao-pausar', () => vsPausar()],
+    ['#visao-sessao-parar', () => { vsEncerrar(); pararCamera(); }],
+    ['#visao-camera-virar', () => vsVirar().catch(() => {})],
+    ['#visao-tela-capturar', () => vsTela().catch(() => {})],
+    ['#visao-salvar-memoria', () => vsMemoria()]
+  ];
+  pares.forEach(([sel, acao]) => { const el = $(sel); if (el) el.onclick = acao; });
+  const fechar = $('#visao-fechar');
+  if (fechar) fechar.addEventListener('click', () => vsEncerrar('Sessão encerrada com o painel.'));
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && visaoSessao.ativa) vsEncerrar('Sessão encerrada: o aplicativo saiu da tela.');
+  });
+})();
+/* fim-visao */
+/* ---------- CAD: exportação, malha e leitura de arquivos externos ---------- */
+function cadExportarStatus(t, e) {
+  const el = $('#cad-exportar-status');
+  if (!el) return;
+  el.textContent = t;
+  el.classList.toggle('erro', !!e);
+}
+function bytesBase64(bytes) {
+  let saida = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    saida += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(saida);
+}
+function baixarConteudo(nome, conteudo, tipo) {
+  const parte = conteudo instanceof Uint8Array ? [conteudo] : [String(conteudo)];
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(parte, { type: tipo || 'application/octet-stream' }));
+  a.download = nome;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+async function cadExportar() {
+  if (!CAD) { cadExportarStatus('O módulo de arquivos não carregou.', true); return; }
+  if (!cadUltimoDoc) { cadExportarStatus('Gere ou analise um modelo antes de exportar.', true); return; }
+  const formato = $('#cad-formato') ? $('#cad-formato').value : 'dxf';
+  const r = CAD.exportar(cadUltimoDoc, formato);
+  if (!r.ok) { cadExportarStatus(r.erro, true); return; }
+  const extras = [].concat(r.avisos || [], (r.perdas || []).map((x) => 'perda: ' + x));
+  const ok = !!(r.validacao && r.validacao.ok);
+  const resumo = r.formato.toUpperCase() + ' · ' + cadKb(r.bytes) +
+    (r.triangulos ? ' · ' + r.triangulos + ' triângulo(s)' : '') +
+    (ok ? ' · reaberto e conferido' : '') + (extras.length ? ' · ' + extras.join(' · ') : '');
+  try {
+    if (Plataforma.desktop) {
+      const salvo = await Plataforma.desktopComando('salvar_arquivo', {
+        nome: r.nome, texto: r.dados ? '' : (r.texto || ''),
+        base64: r.dados ? bytesBase64(r.dados) : ''
+      });
+      cadExportarStatus('Salvo em ' + salvo.caminho + ' · ' + resumo, !ok);
+    } else {
+      baixarConteudo(r.nome, r.dados || r.texto || '');
+      cadExportarStatus('Download iniciado · ' + resumo, !ok);
+    }
+    registrar('arquivos', 'exportado ' + r.nome);
+  } catch (e) { cadExportarStatus('Falha ao salvar: ' + ((e && e.message) || e), true); }
+}
+function cadMostrarMalha() {
+  if (!CAD || !cadUltimoDoc) { cadExportarStatus('Gere ou analise um modelo primeiro.', true); return; }
+  const m = CAD.malha(cadUltimoDoc);
+  const va = CAD.volumeArea(m);
+  const mf = CAD.manifold(m);
+  const cx = CAD.caixaMalha(m);
+  const uni = cadUltimoDoc.unidades || 'mm';
+  cadExportarStatus('Malha: ' + (m.vertices.length / 3) + ' vértices, ' + m.triangulos.length + ' triângulos · volume ' +
+    va.volume.toFixed(1).replace('.', ',') + ' ' + uni + '³ · área ' + va.area.toFixed(1).replace('.', ',') + ' ' + uni + '² · caixa ' +
+    cx.tamanho.map((n) => n.toFixed(1).replace('.', ',')).join(' × ') + ' ' + uni + ' · ' +
+    (mf.fechada ? 'malha fechada' : mf.arestasAbertas + ' aresta(s) aberta(s)'));
+}
+async function analisarArquivoFormato(arquivo) {
+  if (!CAD) { cadStatus('O módulo de arquivos não carregou.', true); return; }
+  if (arquivo.size > 20 * 1024 * 1024) { cadStatus('Arquivo acima do limite de 20 MB.', true); return; }
+  cadStatus('Lendo ' + arquivo.name + '…');
+  const binario = !/\.(dxf|step|stp|ifc|json)$/i.test(arquivo.name);
+  const leitor = new FileReader();
+  leitor.onerror = () => cadStatus('Não foi possível ler o arquivo escolhido.', true);
+  leitor.onload = async () => {
+    try {
+      const conteudo = binario ? new Uint8Array(leitor.result) : String(leitor.result || '');
+      const r = await CAD.analisarFormato(conteudo, arquivo.name);
+      const caixa = $('#cad-resultado');
+      if (!r.ok) {
+        cadStatus(r.erro || 'Arquivo inválido.', true);
+        if (caixa) { caixa.hidden = false; caixa.classList.add('erro'); caixa.textContent = r.erro || 'Arquivo inválido.'; }
+        return;
+      }
+      if (caixa) {
+        caixa.hidden = false;
+        caixa.classList.remove('erro');
+        caixa.textContent = '';
+        const b = document.createElement('b');
+        b.textContent = 'Arquivo ' + r.formato.toUpperCase() + ' lido — ' + arquivo.name;
+        const p = document.createElement('p');
+        p.textContent = r.resumo;
+        caixa.append(b, p);
+      }
+      cadStatus('Leitura concluída (' + r.formato.toUpperCase() + ').');
+      registrar('arquivos', arquivo.name + ' lido como ' + r.formato);
+    } catch (e) { cadStatus('Falha ao analisar: ' + ((e && e.message) || e), true); }
+  };
+  if (binario) leitor.readAsArrayBuffer(arquivo); else leitor.readAsText(arquivo);
+}
+/* ---------- Obsidian: pasta real no PC e pacote .md no celular ---------- */
+function obsStatus(t, e) {
+  const el = $('#obs-status');
+  if (!el) return;
+  el.textContent = t;
+  el.classList.toggle('erro', !!e);
+}
+function obsCaminho() { const el = $('#obs-caminho'); return el ? String(el.value || '').trim() : ''; }
+async function obsTestar() {
+  if (!Plataforma.desktop) { obsStatus('Vínculo automático só no computador. No celular: “Baixar .md” e “Importar .md”.', true); return; }
+  if (!obsCaminho()) { obsStatus('Informe a pasta do cofre do Obsidian.', true); return; }
+  try {
+    const r = await Plataforma.desktopComando('vault_status', { caminho: obsCaminho() });
+    obsStatus('Vínculo ok: ' + r.caminho + ' · ' + r.arquivos + ' arquivo(s) .md · notas vão para “' + r.pasta + '”.');
+    store.set('obs_caminho', obsCaminho());
+    registrar('memoria', 'cofre do Obsidian vinculado');
+  } catch (e) { obsStatus('Não consegui abrir essa pasta: ' + ((e && e.message) || e), true); }
+}
+async function obsEnviar() {
+  if (!MEM) { obsStatus('A memória conectada não carregou.', true); return; }
+  if (!Plataforma.desktop) { obsStatus('Sincronizar pasta é do computador. Use “Baixar .md”.', true); return; }
+  const notas = MEM.arquivosMarkdown();
+  if (!notas.length) { obsStatus('A memória está vazia: nada para enviar.', true); return; }
+  try {
+    const r = await Plataforma.desktopComando('vault_sync', { caminho: obsCaminho(), notas: notas });
+    obsStatus('Enviadas: ' + r.gravadas + ' gravada(s), ' + r.iguais + ' já idêntica(s) · ' + Math.round(r.bytes / 1024) + ' kB em ' + r.caminho);
+    registrar('memoria', 'notas enviadas ao Obsidian');
+  } catch (e) { obsStatus('Falha ao enviar: ' + ((e && e.message) || e), true); }
+}
+async function obsReceber() {
+  if (!MEM) { obsStatus('A memória conectada não carregou.', true); return; }
+  if (!Plataforma.desktop) { obsStatus('Trazer do cofre é do computador. Use “Importar .md”.', true); return; }
+  try {
+    const r = await Plataforma.desktopComando('vault_ler', { caminho: obsCaminho(), limite: 100 });
+    if (!r.arquivos) { obsStatus('Nenhum .md encontrado nessa pasta.', true); return; }
+    const imp = MEM.importarMarkdown(r.texto);
+    if (!imp.ok) { obsStatus(imp.erro, true); return; }
+    obsStatus('Lidos ' + r.arquivos + ' arquivo(s): ' + imp.criadas + ' nova(s), ' + imp.repetidas + ' já existente(s).');
+    renderMemoria();
+  } catch (e) { obsStatus('Falha ao ler o cofre: ' + ((e && e.message) || e), true); }
+}
+function obsBaixar() {
+  if (!MEM) { obsStatus('A memória conectada não carregou.', true); return; }
+  const notas = MEM.arquivosMarkdown();
+  if (!notas.length) { obsStatus('A memória está vazia.', true); return; }
+  try {
+    baixarConteudo('jarvis-obsidian.md', notas.map((n) => n.texto).join('\n'), 'text/markdown');
+    obsStatus('Pacote com ' + notas.length + ' nota(s) gerado.');
+  } catch (e) { obsStatus('Não foi possível gerar: ' + ((e && e.message) || e), true); }
+}
+(function ligarCadObsidian() {
+  const cadExp = $('#cad-exportar'); if (cadExp) cadExp.onclick = () => cadExportar().catch(() => {});
+  const cadMalha = $('#cad-malha'); if (cadMalha) cadMalha.onclick = () => cadMostrarMalha();
+  const t = $('#obs-testar'); if (t) t.onclick = () => obsTestar().catch(() => {});
+  const en = $('#obs-enviar'); if (en) en.onclick = () => obsEnviar().catch(() => {});
+  const re = $('#obs-receber'); if (re) re.onclick = () => obsReceber().catch(() => {});
+  const ba = $('#obs-baixar'); if (ba) ba.onclick = () => obsBaixar();
+  const campo = $('#obs-caminho'); if (campo) campo.value = store.get('obs_caminho', '');
+  const entrada = $('#obs-importar');
+  const btn = $('#obs-importar-btn');
+  if (entrada) entrada.addEventListener('change', () => {
+    const f = entrada.files && entrada.files[0];
+    if (!f || !MEM) return;
+    if (f.size > 2 * 1024 * 1024) { obsStatus('Arquivo acima de 2 MB.', true); return; }
+    const leitor = new FileReader();
+    leitor.onerror = () => obsStatus('Não foi possível ler o arquivo.', true);
+    leitor.onload = () => {
+      const imp = MEM.importarMarkdown(String(leitor.result || ''));
+      if (!imp.ok) { obsStatus(imp.erro, true); return; }
+      obsStatus('Importadas: ' + imp.criadas + ' nova(s), ' + imp.repetidas + ' repetida(s), ' + imp.ignoradas + ' ignorada(s).');
+      renderMemoria();
+    };
+    leitor.readAsText(f);
+  });
+  if (btn && entrada) btn.onclick = () => entrada.click();
+})();
+/* fim-obsidian */
 
 restaurarHistoricoUI();
 msg('sis', saudacaoInicial());

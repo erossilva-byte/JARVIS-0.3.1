@@ -1030,3 +1030,7 @@ body[data-plataforma=desktop] .atalho-status-celular{display:none}
 .cad-lista .mem-nota p{font-family:ui-monospace,monospace;font-size:12px}
 #cad-status.erro{color:#ff9a8a}
 @media(max-width:520px){.cad-dim{grid-template-columns:minmax(0,1fr)}}
+
+/* Captura de tela da visão (desktop): mesma moldura da prévia da câmera. */
+#visao-tela{display:block;width:100%;border-radius:14px;margin:0 0 12px;border:1px solid rgba(94,226,255,.28)}
+#visao-tela[hidden]{display:none}

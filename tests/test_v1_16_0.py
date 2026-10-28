@@ -155,7 +155,7 @@ for chave in ["tipo", "capacidades", "desktopComando", "layout", "observarTela"]
     assert chave in plat, 'faltou ' + chave + ' no adaptador'
 assert 'Plataforma.observarTela()' in app
 assert 'data-plataforma' in texto('style.css')
-ma = texto('main.js')
+ma = texto('platforms/desktop/main.js')
 for acao in ['status_pc', 'listar_arquivos', 'criar_arquivo', 'apagar_arquivo', 'abrir_pasta', 'ler_arquivo', 'pesquisar_web']:
     assert acao in ma, 'faltou ação ' + acao
 assert 'dentroDaCasa' in ma and 'trashItem' in ma, 'arquivos precisam ficar na pasta do usuário e ir para a lixeira'

@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 app = (ROOT / "app.js").read_text(encoding="utf-8")
-main = (ROOT / "main.js").read_text(encoding="utf-8")
+main = (ROOT / "platforms/desktop/main.js").read_text(encoding="utf-8")
 html = (ROOT / "index.html").read_text(encoding="utf-8")
 checks = {
     "Android usa o cofre nativo": "guardarSeguro({ nome: n, valor: v })" in app,
