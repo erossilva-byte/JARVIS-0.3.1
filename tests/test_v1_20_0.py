@@ -110,8 +110,13 @@ checar('Versão 1.20.0 com versionCode 10200',
       meta.get('version') == '1.20.0' and meta.get('versionCode') == 10200 and pkg.get('version') == '1.20.0')
 checar('app.js e interface com a versão corrente',
       "const VERSAO_APP = '1.20.0';" in app and html.count('v1.20.0') >= 2)
-checar('Gradle com 1.20.0/10200',
-      'versionCode 10200' in texto('android/app/build.gradle') and 'versionName "1.20.0"' in texto('android/app/build.gradle'))
+# O diretório android/ é gerado por `cap add android` no CI; quando existe, a versão tem de bater.
+gradle_local = RAIZ / 'android' / 'app' / 'build.gradle'
+gradle_txt = gradle_local.read_text(encoding='utf-8') if gradle_local.exists() else ''
+checar('Gradle coerente com 1.20.0/10200 (quando o projeto nativo existe)',
+      (not gradle_txt) or ('versionCode 10200' in gradle_txt and 'versionName "1.20.0"' in gradle_txt))
+checar('patch_android_version lê a versão do VERSAO.json',
+      'VERSAO.json' in texto('patch_android_version.py'))
 changelog = texto('CHANGELOG.md')
 leia = texto('LEIA-ME.md')
 checar('CHANGELOG registra a 1.20.0', '## 1.20.0' in changelog and 'MEM' in changelog)
