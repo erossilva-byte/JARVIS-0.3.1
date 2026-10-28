@@ -12,7 +12,11 @@
     "GUIA-ACESSOS-ANDROID.md"
   ],
   "build": {
-    "resultado": "pendente",
-    "observacao": "Aguardando a compilação do workflow de release v1.16.0."
+    "resultado": "success",
+    "sha256": "dfb281090389b7d01cb6ca0cd896888e1b0b042d607455809c5eb8a7fcecf15f",
+    "bytes": 70687779,
+    "arquivo": "jarvis-nova-1.16.0-10160.apk",
+    "data": "2026-10-28",
+    "observacao": "APK do release v1.16.0 compilado pelo workflow de release com ci/debug.keystore (mesma assinatura desde 1.10.1, então o app instalado se atualiza por cima pelo atualizador interno). Checksum conferido depois de baixar o arquivo do próprio release; o pacote inclui assets/public com orbita.js, memoria.js e plataforma.js."
   }
 }
