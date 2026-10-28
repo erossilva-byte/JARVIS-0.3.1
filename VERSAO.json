@@ -13,11 +13,11 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "fe0c92ead29be0a54da0d243b481b971141b1522b4277d88a1b6d65bd003a9bd",
-    "bytes": 70910936,
-    "arquivo": "jarvis-nova-1.19.1-10191.apk",
+    "sha256": "78d0db69855be1d5fbbe8a6c4e3e110b20723172c8fdc81fc4ed708ba20eec5c",
+    "bytes": 71050690,
+    "arquivo": "jarvis-nova-1.20.0-10200.apk",
     "data": "2026-10-28",
-    "run": "40714862185",
-    "observacao": "APK do release v1.19.1 compilado pelo workflow de release com ci/debug.keystore (mesma assinatura das versões anteriores, atualiza por cima). Checksum conferido depois de baixar o artefato publicado; o pacote contém a aba Visão em três pontos (barra lateral, ícone de cabeçalho e atalho do painel inicial) e as ligações no app.js."
+    "run": "40789717136",
+    "observacao": "APK do release v1.20.0 compilado pelo workflow de release com ci/debug.keystore; checksum conferido após o download. Dentro do APK: assets/public/app.js com 'const MEM = (() =>' antes de qualquer rotina de topo, 'Memória conectada (Obsidian local)' no diagnóstico e VERSAO_APP = '1.20.0'; index.html com o bloqueio opcional (bloqueio-pin); classes7.dex com JarvisSeguranca (biometria). O mesmo release traz o instalador NSIS e o portátil do PC gerados pelo workflow release-pc.yml (run 40789717487)."
   }
 }
