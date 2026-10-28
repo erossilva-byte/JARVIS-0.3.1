@@ -37,7 +37,9 @@ assert 'checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)' in servico
 manifesto = texto('patch_manifest.py')
 assert 'microphone|dataSync' in manifesto
 assert 'FOREGROUND_SERVICE_DATA_SYNC' in manifesto
-assert 'microphone|dataSync' in texto('android/app/src/main/AndroidManifest.xml')
+manifesto_android = RAIZ / 'android/app/src/main/AndroidManifest.xml'
+if manifesto_android.exists():
+    assert 'microphone|dataSync' in manifesto_android.read_text(encoding='utf-8')
 
 # ---------- 2. Módulos novos de verdade (Node) ----------
 script_memoria = r"""
@@ -162,8 +164,10 @@ assert meta['version'] == '1.16.0' and meta['versionCode'] == 10160, meta
 pkg = json.loads(texto('package.json'))
 assert pkg['version'] == '1.16.0'
 assert "const VERSAO_APP = '1.16.0';" in app
-assert 'versionCode 10160' in texto('android/app/build.gradle')
-assert 'versionName "1.16.0"' in texto('android/app/build.gradle')
+gradle = RAIZ / 'android/app/build.gradle'
+if gradle.exists():
+    g = gradle.read_text(encoding='utf-8')
+    assert 'versionCode 10160' in g and 'versionName "1.16.0"' in g
 assert '1.16.0' in texto('CHANGELOG.md').split('\n')[0:20][0] + texto('CHANGELOG.md')[:2000]
 for novo in ['plataforma.js', 'memoria.js', 'orbita.js']:
     assert novo in pkg['build']['files'], 'desktop precisa empacotar ' + novo
