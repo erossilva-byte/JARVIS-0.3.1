@@ -13,10 +13,11 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "2ba513e525010ebcc5ca8b155a1fae04a06e9c25a6ed326fb53846002628be85",
-    "bytes": 70885992,
-    "arquivo": "jarvis-nova-1.18.0-10180.apk",
+    "sha256": "60f334424169ce8b27de0cfcdc524ef4a7d3f51060bebc721114afad7a475260",
+    "bytes": 70910664,
+    "arquivo": "jarvis-nova-1.19.0-10190.apk",
     "data": "2026-10-28",
-    "observacao": "APK do release v1.18.0 compilado pelo workflow de release (run 40695360431) com ci/debug.keystore — mesma assinatura das versões anteriores, então o app instalado se atualiza por cima pelo atualizador interno. Checksum conferido depois de baixar o arquivo do release; assets/public/orbita.js do pacote contém a correção do tamanho das partículas (uPixelRatio) e assets/public/vendor/three.min.js está presente."
+    "run": "40711478213",
+    "observacao": "APK do release v1.19.0 compilado pelo workflow de release com ci/debug.keystore — mesma assinatura das versões anteriores, então o app instalado se atualiza por cima pelo atualizador interno. Checksum conferido depois de baixar o arquivo do release; o pacote contém assets/public/cad.js com os exportadores DXF/STL/3MF/STEP/IFC, app.js com a sessão de visão, o vínculo Obsidian e a exportação CAD, memoria.js com o Markdown do cofre e todos os recursos obrigatórios (hermes.js, orbita.js, plataforma.js, apps.js, style.css, vendor/three.min.js)."
   }
 }
