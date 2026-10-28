@@ -1,4 +1,4 @@
-# J.A.R.V.I.S. Nova 1.19.1
+# J.A.R.V.I.S. Nova 1.20.0
 
 ## O que mudou na 1.19.1
 
@@ -383,3 +383,49 @@ em segundo plano por fabricante (Xiaomi/Samsung/Motorola são os mais restritivo
 serviço depois de o app ser removido dos recentes e depois de reiniciar o aparelho, “Ouvir agora”
 na notificação e a instalação de atualização pelo FileProvider. O APK debug não substitui uma
 versão de produção assinada para distribuição.
+
+
+## 1.20.0 — correções críticas e bloqueio opcional
+
+### Erro "Cannot access 'MEM' before initialization"
+
+A causa era ordem de execução: o trecho que liga os botões do painel de Memória roda na carga do
+`app.js` e chamava `renderMemoria()` antes de `const MEM` existir (zona morta temporal). Isso
+interrompia o resto do arquivo — por isso Ajustes e Diagnóstico pareciam ter sumido. As declarações
+de `MEM` e `PC` agora ficam no topo, ao lado da detecção de plataforma. Nada precisa ser feito pelo
+usuário além de instalar esta versão.
+
+### IA local (MediaPipe)
+
+Antes de abrir o modelo, o app verifica tamanho e cabeçalho do `.task` (ZIP ou TFL3), impede duas
+gerações ao mesmo tempo e devolve a causa do erro. Modelo inválido não chega mais ao código nativo
+(que causava `SIGABRT`). Se a IA local falhar, os provedores em nuvem continuam atendendo.
+
+Requisitos para a IA local: modelo `.task` compatível com MediaPipe `tasks-genai` 0.10.14, aparelho
+`arm64-v8a` com RAM livre suficiente (o app exige ~256 MB além do tamanho do arquivo) e o modelo
+importado em Ajustes ▸ IA.
+
+### Bloqueio opcional (Ajustes ▸ Segurança)
+
+1. Cadastre um PIN de 4 a 8 dígitos.
+2. Marque "Pedir desbloqueio ao abrir o aplicativo".
+3. Guarde o código de recuperação mostrado na tela (ele fica fora do telefone).
+
+O bloqueio é do aplicativo, não do Android: não impede abrir outros apps e não substitui a tela de
+bloqueio do sistema. Esqueceu o PIN? Use "Esqueci o PIN" e o código de recuperação: o PIN é apagado,
+o bloqueio é desativado e você define outro. Sem o código, ainda é possível limpar os dados do app
+nas configurações do Android — nenhum caminho deixa o aplicativo permanentemente inutilizável.
+
+### Windows (PC)
+
+O mesmo código web é empacotado com Electron. O workflow `release-pc.yml` gera:
+
+- instalador NSIS (`J.A.R.V.I.S. Nova Setup <versão>.exe`);
+- versão portátil (`J.A.R.V.I.S. Nova <versão>.exe`).
+
+Para gerar localmente: `npm ci` e `npm run dist:win` (precisa de rede para baixar o Electron).
+
+Funções equivalentes no PC: IA (chaves e roteador), voz, memória/Obsidian por arquivos Markdown,
+tarefas/rotinas, arquivos, CAD, diagnóstico e bloqueio opcional. Câmera, biometria do aparelho,
+notificações e serviços em segundo plano do Android dependem de APIs que não existem no desktop;
+o app informa isso em vez de fingir que funcionam.

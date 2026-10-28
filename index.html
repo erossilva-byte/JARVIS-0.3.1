@@ -111,7 +111,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.19.1</span>
+      <span class="orb-sub" aria-hidden="true">v1.20.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -196,7 +196,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.19.1</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.20.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -363,6 +363,10 @@
     <h3>Proteção e permissões</h3>
     <label class="linha"><input id="c-seguro" type="checkbox"><span>Modo seguro<small>Quando ligado, bloqueia ligações e mensagens. Desligue para permitir essas ações; a confirmação continua obrigatória.</small></span></label>
     <label>Novo PIN de segurança (4 a 8 dígitos)<input id="c-pin" type="password" inputmode="numeric" placeholder="deixe vazio para manter" autocomplete="new-password"></label>
+    <label class="linha"><input id="c-bloqueio" type="checkbox"><span>Pedir desbloqueio ao abrir o aplicativo<small>Opcional e desligado por padrão. Não substitui o bloqueio do Android: protege só a abertura do J.A.R.V.I.S. Exige um PIN cadastrado e aceita biometria/credencial do aparelho quando existir.</small></span></label>
+    <div class="botoes"><button id="c-bloqueio-recuperacao" type="button" class="secundario">Gerar código de recuperação</button><button id="c-bloqueio-biometria" type="button" class="secundario" hidden>Testar biometria</button></div>
+    <output id="c-bloqueio-codigo" class="codigo-recuperacao" hidden></output>
+    <p id="c-bloqueio-status" class="dica" role="status" aria-live="polite">Desativado.</p>
     <div class="info-card"><span class="info-icon">⌁</span><div><b>Permissões do aparelho</b><p>O app solicita microfone quando necessário. Notificações, reconhecimento de voz, economia de bateria e permissões em segundo plano variam por Android e fabricante.</p></div></div>
   </section>
 
@@ -617,6 +621,24 @@
     <p id="m-erro" class="erro"></p>
     <div class="botoes"><button id="m-nao" type="button">Cancelar</button><button id="m-ok" type="button" class="primario">Confirmar</button></div>
     <small id="m-voz">Você também pode dizer "confirmo" ou "cancela".</small>
+  </div>
+</div>
+
+<div id="bloqueio" class="bloqueio" hidden role="dialog" aria-modal="true" aria-labelledby="bloqueio-titulo">
+  <div class="bloqueio-caixa">
+    <div class="bloq-nucleo" aria-hidden="true"><span></span><span></span><span></span></div>
+    <p class="eyebrow">J.A.R.V.I.S. NOVA · ACESSO</p>
+    <h2 id="bloqueio-titulo">Sistema bloqueado</h2>
+    <p class="dica" id="bloqueio-dica">Digite seu PIN para liberar o assistente.</p>
+    <label class="bloq-campo">PIN<input id="bloqueio-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="8" placeholder="••••"></label>
+    <p id="bloqueio-erro" class="erro" role="alert"></p>
+    <div class="botoes"><button id="bloqueio-entrar" type="button" class="primario">Desbloquear</button><button id="bloqueio-bio" type="button" class="secundario" hidden>Usar biometria</button></div>
+    <button id="bloqueio-esqueci" type="button" class="link-botao">Esqueci o PIN</button>
+    <div id="bloqueio-recuperacao" class="bloq-recuperacao" hidden>
+      <p class="dica">Use o código de recuperação gerado em Ajustes ▸ Segurança. Ele apaga o PIN e desativa o bloqueio; depois defina um novo PIN.</p>
+      <label class="bloq-campo">Código<input id="bloqueio-codigo" type="text" autocomplete="one-time-code" placeholder="XXXXX-XXXXX"></label>
+      <button id="bloqueio-recuperar" type="button" class="secundario">Recuperar acesso</button>
+    </div>
   </div>
 </div>
 

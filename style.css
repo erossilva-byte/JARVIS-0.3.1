@@ -1034,3 +1034,25 @@ body[data-plataforma=desktop] .atalho-status-celular{display:none}
 /* Captura de tela da visão (desktop): mesma moldura da prévia da câmera. */
 #visao-tela{display:block;width:100%;border-radius:14px;margin:0 0 12px;border:1px solid rgba(94,226,255,.28)}
 #visao-tela[hidden]{display:none}
+
+/* ---------- Bloqueio opcional do aplicativo (Ajustes ▸ Segurança) ----------
+ * Tela cheia, mas nunca uma armadilha: o PIN sempre funciona, a recuperação está na
+ * própria tela e o CSS respeita prefers-reduced-motion.
+ */
+body.bloqueado{overflow:hidden}
+.bloqueio{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:22px;background:radial-gradient(120% 90% at 50% 0%,rgba(0,214,255,.10),transparent 60%),rgba(4,8,15,.97);backdrop-filter:blur(18px)}
+.bloqueio[hidden]{display:none}
+.bloqueio-caixa{width:min(420px,100%);padding:26px 22px 22px;border-radius:22px;border:1px solid rgba(var(--rgb),.22);background:linear-gradient(160deg,rgba(10,20,32,.96),rgba(6,12,20,.99));box-shadow:0 24px 70px rgba(0,0,0,.55),0 0 40px rgba(var(--rgb),.08);text-align:center}
+.bloqueio-caixa h2{margin:6px 0 4px;font-size:1.35rem}
+.bloq-nucleo{position:relative;width:86px;height:86px;margin:2px auto 12px;border-radius:50%;border:1px solid rgba(var(--rgb),.28);display:grid;place-items:center}
+.bloq-nucleo span{position:absolute;inset:8px;border-radius:50%;border:1px solid rgba(var(--rgb),.42);animation:bloq-gira 9s linear infinite}
+.bloq-nucleo span:nth-child(2){inset:18px;border-style:dashed;animation-duration:6.5s;animation-direction:reverse}
+.bloq-nucleo span:nth-child(3){inset:28px;background:radial-gradient(circle,rgba(var(--rgb),.85),rgba(var(--rgb),.05) 70%);border:none;box-shadow:0 0 26px rgba(var(--rgb),.45);animation:bloq-pulsa 3.2s ease-in-out infinite}
+@keyframes bloq-gira{to{transform:rotate(360deg)}}
+@keyframes bloq-pulsa{0%,100%{opacity:.65;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}
+.bloq-campo{display:flex;flex-direction:column;gap:6px;text-align:left;margin:12px 0 4px;font-size:12px;color:var(--suave)}
+.bloq-campo input{min-height:46px;text-align:center;letter-spacing:.32em;font-size:1.1rem}
+.bloq-recuperacao{margin-top:12px;padding-top:12px;border-top:1px solid var(--linha);text-align:left}
+.link-botao{margin-top:10px;background:none;border:none;color:var(--suave);text-decoration:underline;font-size:12px;cursor:pointer}
+.codigo-recuperacao{display:block;margin-top:8px;padding:10px 12px;border-radius:12px;border:1px dashed rgba(var(--rgb),.4);background:rgba(var(--rgb),.06);font-family:ui-monospace,monospace;font-size:13px;letter-spacing:.08em;word-break:break-all}
+@media(prefers-reduced-motion:reduce){.bloq-nucleo span{animation:none}.bloq-nucleo span:nth-child(3){opacity:.9}}

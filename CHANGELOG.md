@@ -1,3 +1,41 @@
+## 1.20.0 — 2026-10-28
+
+### Corrigido na raiz
+
+- **`Cannot access 'MEM' before initialization`**: o bloco que monta o painel de Memória executava
+  `renderMemoria()` e `memTemaAtual()` em nível de topo **antes** de `const MEM`, declarada ~1.000 linhas
+  abaixo. O app.js inteiro abortava na zona morta temporal e as ligações seguintes (Ajustes, diagnóstico,
+  memória, arquivos) nunca aconteciam — o app seguia "funcionando" só com o que já tinha sido ligado.
+  As declarações de `MEM`/`PC` passaram para o topo, junto da detecção de plataforma, com `MEM_ESTADO`
+  explícito e verificação no diagnóstico.
+
+### IA local (MediaPipe) protegida
+
+- Pré-checagem antes de qualquer chamada nativa: arquivo presente, legível, tamanho plausível e cabeçalho
+  ZIP (`PK`) ou flatbuffer (`TFL3`). Modelo truncado ou que não é modelo deixa de chegar ao interpretador,
+  que morria com `interpreter_ != nullptr` / `LlmInferenceEngine_CreateSession`.
+- Trava de sessão única (`gerando`) e liberação no `finally`: duas gerações concorrentes criavam dois
+  interpretadores.
+- Erros distinguem memória esgotada, mensagem do modelo e falha nativa; a nuvem continua funcionando.
+
+### Diagnóstico real
+
+- Novas verificações: memória conectada (notas/temas/espaço), armazenamento do app, estado da abertura,
+  horário de início e duração. O diagnóstico deixa de esconder a causa quando um módulo não carrega.
+
+### Bloqueio opcional do aplicativo
+
+- Ajustes ▸ Segurança: ativar bloqueio ao abrir (desligado por padrão), PIN de 4 a 8 dígitos com hash,
+  biometria/credencial do aparelho pelo `BiometricPrompt`, teste de biometria, código de recuperação
+  mostrado uma vez e atraso progressivo após erros. Rebloqueia após 2 minutos fora.
+- Nunca substitui o bloqueio do Android e nunca inutiliza o app: o PIN sempre desbloqueia e a recuperação
+  apaga o PIN e desativa o bloqueio.
+
+### Windows
+
+- Workflow `release-pc.yml`: instala dependências, roda a suíte, empacota com electron-builder (NSIS +
+  portátil) e anexa ao release da tag. O mesmo código web dos dois pacotes.
+
 ## 1.19.1
 
 - **Modo Visão acessível de verdade.** O painel existia, mas a aba ficava na barra lateral, que é `display:none`

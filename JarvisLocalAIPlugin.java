@@ -17,6 +17,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.google.mediapipe.tasks.genai.llminference.LlmInference;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.concurrent.ExecutorService;
@@ -30,6 +31,8 @@ public class JarvisLocalAIPlugin extends Plugin {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private LlmInference engine;
     private final Object engineLock = new Object();
+    /** Uma sessão de inferência por vez: duas chamadas concorrentes criavam dois interpreters e o crash nativo. */
+    private volatile boolean gerando = false;
 
     private File modelFile() {
         File dir = new File(getContext().getFilesDir(), "jarvis-models");
@@ -41,9 +44,13 @@ public class JarvisLocalAIPlugin extends Plugin {
     public void status(PluginCall call) {
         File f = modelFile();
         JSObject out = new JSObject();
+        boolean existe = f.isFile() && f.length() > 0;
+        String motivo = existe ? validarModelo(f) : "Nenhum modelo importado.";
         out.put("supported", true);
-        out.put("installed", f.isFile() && f.length() > 0);
+        out.put("installed", existe && motivo.isEmpty());
         out.put("bytes", f.isFile() ? f.length() : 0);
+        out.put("valida", existe && motivo.isEmpty());
+        out.put("motivo", motivo);
         out.put("runtime", "MediaPipe LLM Inference experimental");
         out.put("note", "Importe um modelo .task compatível. O arquivo permanece no armazenamento privado do app.");
         call.resolve(out);
@@ -131,11 +138,18 @@ public class JarvisLocalAIPlugin extends Plugin {
         if (prompt.length() > 14000) prompt = prompt.substring(0, 14000);
         final String finalPrompt = prompt;
         worker.execute(() -> {
+            if (gerando) {
+                call.reject("Já existe uma geração local em andamento. Aguarde a resposta atual terminar.");
+                return;
+            }
+            gerando = true;
             try {
                 String response;
                 synchronized (engineLock) {
                     File f = modelFile();
                     if (!f.isFile() || f.length() == 0) throw new Exception("Nenhum modelo local foi importado.");
+                    String problema = validarModelo(f);
+                    if (!problema.isEmpty()) throw new Exception(problema);
                     if (engine == null) {
                         checarMemoria(f);
                         LlmInference.LlmInferenceOptions options = LlmInference.LlmInferenceOptions.builder()
@@ -152,7 +166,18 @@ public class JarvisLocalAIPlugin extends Plugin {
             } catch (Throwable e) {
                 Log.w(TAG, "Local inference failed", e);
                 synchronized (engineLock) { closeEngineLocked(); }
-                call.reject("A IA local não conseguiu carregar ou executar esse modelo. Confira se o .task é compatível com MediaPipe e se há memória disponível.");
+                String detalhe;
+                if (e instanceof OutOfMemoryError) {
+                    detalhe = "memória esgotada ao abrir o modelo";
+                } else if (e.getMessage() != null && !e.getMessage().isEmpty()) {
+                    detalhe = e.getMessage();
+                } else {
+                    detalhe = "falha nativa do MediaPipe (modelo incompatível com esta versão da biblioteca ou ABI)";
+                }
+                call.reject("A IA local não conseguiu carregar ou executar esse modelo: " + detalhe +
+                    ". O app continua funcionando com os provedores em nuvem.");
+            } finally {
+                gerando = false;
             }
         });
     }
@@ -167,6 +192,31 @@ public class JarvisLocalAIPlugin extends Plugin {
                 call.resolve();
             } catch (Exception e) { call.reject(e.getMessage() == null ? "Falha ao apagar modelo." : e.getMessage()); }
         });
+    }
+
+    /**
+     * Pré-checagem do arquivo antes de qualquer chamada nativa.
+     *
+     * O .task do MediaPipe é um pacote (ZIP) ou um flatbuffer TFLite. Abrir um arquivo
+     * truncado, vazio ou que não é um modelo fazia o interpretador nascer nulo e o processo
+     * morrer com SIGABRT ("interpreter_ != nullptr" / LlmInferenceEngine_CreateSession).
+     * Um try/catch Java não pega isso: o certo é nunca chamar o nativo nesse caso.
+     */
+    private String validarModelo(File f) {
+        if (!f.isFile() || f.length() == 0) return "Arquivo do modelo ausente ou vazio.";
+        if (f.length() < 1024L * 1024L) return "Arquivo pequeno demais para ser um modelo de linguagem.";
+        if (!f.canRead()) return "Sem permissão de leitura no arquivo do modelo.";
+        byte[] cabecalho = new byte[4];
+        try (FileInputStream in = new FileInputStream(f)) {
+            int lidos = in.read(cabecalho);
+            if (lidos < 4) return "Arquivo do modelo truncado.";
+        } catch (Exception e) {
+            return "Não foi possível ler o início do modelo: " + (e.getMessage() == null ? "erro de I/O" : e.getMessage());
+        }
+        boolean zip = cabecalho[0] == 0x50 && cabecalho[1] == 0x4B;                 // PK.. (pacote .task)
+        boolean flat = cabecalho[0] == 'T' && cabecalho[1] == 'F' && cabecalho[2] == 'L' && cabecalho[3] == '3';
+        if (!zip && !flat) return "O arquivo não parece um modelo MediaPipe (.task): o cabeçalho não é ZIP nem TFL3.";
+        return "";
     }
 
     /**

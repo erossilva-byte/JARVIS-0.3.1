@@ -9,10 +9,33 @@ const nativoDesk = window.jarvisNative || null;
 const Cap = window.Capacitor;
 const ehAndroid = !!(Cap && typeof Cap.isNativePlatform === 'function' && Cap.isNativePlatform());
 const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
+/* ---------- Memória conectada e acesso ao PC ----------
+ * Estas referências são resolvidas ANTES de qualquer rotina de topo. O bloco que liga os
+ * painéis roda na carga do script e chamava renderMemoria()/memTemaAtual() antes desta
+ * declaração, o que abortava o app.js inteiro com "Cannot access 'MEM' before initialization"
+ * (zona morta temporal do const). A declaração fica aqui, junto da detecção de plataforma.
+ * MEM pode ser null (memoria.js ausente/antigo): todo uso já checa isso e a interface avisa.
+ */
+const MEM = (() => {
+  try { return (typeof window !== 'undefined' && window.MemoriaJarvis) || null; } catch (e) { return null; }
+})();
+const MEM_ESTADO = MEM ? 'pronta' : 'indisponivel';
+const PC = (plataforma === 'desktop' && nativoDesk) ? {
+  status: async () => {
+    const s = await nativo('status_pc', {});
+    const gb = (n) => (Number(n) / (1024 ** 3)).toFixed(1).replace('.', ',') + ' GB';
+    const resumo = 'processador em ' + s.cpu + '% de uso, ' + gb(s.ramLivre) + ' de RAM livre de ' + gb(s.ramTotal) +
+      ', ' + gb(s.discoLivre) + ' livres em disco' + (s.bateria ? ', bateria em ' + s.bateria + '%' : '');
+    return Object.assign({}, s, { resumo });
+  },
+  listar: (p) => nativo('listar_arquivos', { caminho: p || '~' }),
+  criar: (nome, texto) => nativo('criar_arquivo', { nome, texto }),
+  abrir: (p) => nativo('abrir_pasta', { caminho: p || '~' })
+} : null;
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.19.1';
+const VERSAO_APP = '1.20.0';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -370,6 +393,174 @@ function atualizarSeguranca() {
 }
 
 /* ---------- Segurança ---------- */
+/* ---------- Bloqueio opcional do aplicativo (Ajustes ▸ Segurança) ----------
+ * Regras: é opcional, desligado por padrão e nunca pode inutilizar o app. Só liga com um
+ * PIN já cadastrado; o PIN sempre desbloqueia; biometria/credencial do aparelho é atalho,
+ * não requisito. Tentativas erradas apenas atrasam a próxima tentativa (até 30 s) e a
+ * recuperação por código fica na própria tela. Nada aqui substitui o bloqueio do Android.
+ */
+const BLOQ_TENT = 'bloqueio_tentativas';
+const BLOQ_ULTIMO = 'bloqueio_ultimo_plano';
+function bloqueioAtivo() {
+  return store.get('bloqueio', '0') === '1' && !!store.get('pin_hash', '');
+}
+function bloqStatus(txt, erro) {
+  const el = $('#c-bloqueio-status');
+  if (el) { el.textContent = txt; el.classList.toggle('erro', !!erro); }
+}
+function atualizarBloqueioUI() {
+  const chk = $('#c-bloqueio');
+  const ativo = bloqueioAtivo();
+  if (chk) chk.checked = ativo;
+  const temPin = !!store.get('pin_hash', '');
+  bloqStatus(ativo
+    ? 'Ativado: o app pede PIN ou biometria ao abrir. O bloqueio do sistema Android continua valendo por cima.'
+    : temPin
+      ? 'Desativado: o PIN está cadastrado e continua sendo exigido em ações que pedem confirmação.'
+      : 'Desativado: cadastre um PIN acima para poder ativar o bloqueio do aplicativo.');
+  const bio = $('#c-bloqueio-biometria');
+  if (bio && !bio.dataset.verificado) {
+    bio.dataset.verificado = '1';
+    const p = plug('JarvisSeguranca');
+    if (!p || typeof p.disponivel !== 'function') { bio.hidden = true; return; }
+    try {
+      const r = p.disponivel();
+      if (r && r.then) r.then((d) => { bio.hidden = !(d && d.biometria); bio.title = (d && d.motivo) || ''; }).catch(() => { bio.hidden = true; });
+    } catch (e) { bio.hidden = true; }
+  }
+}
+function abrirBloqueio() {
+  const tela = $('#bloqueio');
+  if (!tela || !bloqueioAtivo()) return;
+  tela.hidden = false;
+  document.body.classList.add('bloqueado');
+  const erro = $('#bloqueio-erro'); if (erro) erro.textContent = '';
+  const pin = $('#bloqueio-pin'); if (pin) { pin.value = ''; try { pin.focus(); } catch (e) { } }
+  const rec = $('#bloqueio-recuperacao'); if (rec) rec.hidden = true;
+  const dica = $('#bloqueio-dica');
+  if (dica) dica.textContent = 'Digite seu PIN para liberar o assistente, ' + trat() + '.';
+  const bio = $('#bloqueio-bio');
+  if (bio) {
+    const p = plug('JarvisSeguranca');
+    if (!p || typeof p.disponivel !== 'function') bio.hidden = true;
+    else {
+      try {
+        const r = p.disponivel();
+        if (r && r.then) r.then((d) => { bio.hidden = !(d && d.aparelho); }).catch(() => { bio.hidden = true; });
+        else bio.hidden = true;
+      } catch (e) { bio.hidden = true; }
+    }
+  }
+  try { animarEntrada(tela.querySelector('.bloqueio-caixa')); } catch (e) { }
+}
+function fecharBloqueio() {
+  const tela = $('#bloqueio');
+  if (tela) tela.hidden = true;
+  document.body.classList.remove('bloqueado');
+  store.set(BLOQ_TENT, '0');
+  store.set(BLOQ_ULTIMO, String(Date.now()));
+  registrar('segurança', 'aplicativo desbloqueado');
+}
+async function tentarDesbloquear() {
+  const campo = $('#bloqueio-pin'), erro = $('#bloqueio-erro');
+  const pin = campo ? String(campo.value || '').trim() : '';
+  if (!pin) { if (erro) erro.textContent = 'Digite o PIN.'; return; }
+  const esperado = store.get('pin_hash', '');
+  const tentativas = Number(store.get(BLOQ_TENT, '0')) || 0;
+  const hash = await hashPin(pin);
+  if (esperado && hash === esperado) { if (campo) campo.value = ''; if (erro) erro.textContent = ''; fecharBloqueio(); return; }
+  const n = tentativas + 1;
+  store.set(BLOQ_TENT, String(n));
+  if (campo) campo.value = '';
+  const espera = Math.min(30, Math.round(0.5 * Math.pow(2, Math.min(n, 6))));
+  registrar('segurança', 'tentativa de desbloqueio recusada (' + n + ')');
+  if (erro) erro.textContent = 'PIN incorreto. ' + (n >= 5 ? 'Use o código de recuperação se não lembrar.' : 'Tente de novo em ' + espera + ' s.');
+  const botao = $('#bloqueio-entrar');
+  if (botao) { botao.disabled = true; setTimeout(() => { botao.disabled = false; }, espera * 1000); }
+  const rec = $('#bloqueio-recuperacao'); if (rec) rec.hidden = false;
+}
+async function desbloquearComBiometria() {
+  const p = plug('JarvisSeguranca');
+  if (!p || typeof p.autenticar !== 'function') return;
+  try {
+    const r = await p.autenticar({ titulo: 'Desbloquear o J.A.R.V.I.S.', subtitulo: 'Confirme sua identidade, ' + trat() + '.' });
+    if (r && r.ok) fecharBloqueio();
+  } catch (e) {
+    const erro = $('#bloqueio-erro');
+    if (erro) erro.textContent = 'Biometria não concluída. Use o PIN do aplicativo.';
+  }
+}
+function gerarCodigoRecuperacao() {
+  const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = new Uint8Array(10);
+  if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(bytes);
+  else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  const codigo = Array.from(bytes).map((b) => letras[b % letras.length]).join('').replace(/(.{5})(?=.)/g, '$1-');
+  return hashPin('rec|' + codigo.replace(/-/g, '').toUpperCase()).then((h) => {
+    store.set('bloqueio_codigo_hash', h);
+    const out = $('#c-bloqueio-codigo');
+    if (out) { out.hidden = false; out.textContent = 'Código de recuperação (guarde fora do telefone): ' + codigo; }
+    registrar('segurança', 'código de recuperação gerado');
+    return codigo;
+  });
+}
+async function recuperarComCodigo() {
+  const campo = $('#bloqueio-codigo'), erro = $('#bloqueio-erro');
+  const codigo = campo ? String(campo.value || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : '';
+  const esperado = store.get('bloqueio_codigo_hash', '');
+  if (!codigo) { if (erro) erro.textContent = 'Digite o código de recuperação.'; return; }
+  if (!esperado) { if (erro) erro.textContent = 'Nenhum código foi gerado. Defina um novo PIN em Ajustes ▸ Segurança para gerar outro.'; return; }
+  if ((await hashPin('rec|' + codigo)) !== esperado) { if (erro) erro.textContent = 'Código de recuperação incorreto.'; return; }
+  store.set('pin_hash', '');
+  store.set('bloqueio', '0');
+  registrar('segurança', 'acesso recuperado por código; PIN apagado e bloqueio desativado');
+  if (campo) campo.value = '';
+  fecharBloqueio();
+  msg('sis', 'Acesso recuperado. O PIN foi apagado e o bloqueio do app foi desativado; defina um novo PIN em Ajustes ▸ Segurança.');
+}
+function iniciarBloqueioSeAtivo() {
+  atualizarBloqueioUI();
+  if (bloqueioAtivo()) abrirBloqueio();
+}
+(function ligarBloqueio() {
+  const entrar = $('#bloqueio-entrar'); if (entrar) entrar.onclick = () => tentarDesbloquear().catch(() => { });
+  const pin = $('#bloqueio-pin');
+  if (pin) pin.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tentarDesbloquear().catch(() => { }); } });
+  const bio = $('#bloqueio-bio'); if (bio) bio.onclick = () => desbloquearComBiometria();
+  const esqueci = $('#bloqueio-esqueci');
+  if (esqueci) esqueci.onclick = () => { const r = $('#bloqueio-recuperacao'); if (r) r.hidden = false; const c = $('#bloqueio-codigo'); if (c) c.focus(); };
+  const rec = $('#bloqueio-recuperar'); if (rec) rec.onclick = () => recuperarComCodigo().catch(() => { });
+  const gerar = $('#c-bloqueio-recuperacao'); if (gerar) gerar.onclick = () => gerarCodigoRecuperacao().catch(() => { });
+  const testar = $('#c-bloqueio-biometria');
+  if (testar) testar.onclick = async () => {
+    const p = plug('JarvisSeguranca');
+    if (!p) { bloqStatus('Biometria disponível apenas no aplicativo Android.', true); return; }
+    try {
+      const r = await p.autenticar({});
+      bloqStatus(r && r.ok ? 'Biometria confirmada neste aparelho.' : 'Biometria não confirmada.', !(r && r.ok));
+    } catch (e) { bloqStatus('Biometria não concluída: ' + ((e && e.message) || e), true); }
+  };
+  const chk = $('#c-bloqueio');
+  if (chk) chk.addEventListener('change', () => {
+    if (chk.checked && !store.get('pin_hash', '')) {
+      chk.checked = false;
+      bloqStatus('Cadastre um PIN antes de ativar o bloqueio do aplicativo.', true);
+      const campo = $('#c-pin'); if (campo) campo.focus();
+      return;
+    }
+    if (chk.checked && !store.get('bloqueio_codigo_hash', '')) gerarCodigoRecuperacao().catch(() => { });
+    store.set('bloqueio', chk.checked ? '1' : '0');
+    atualizarBloqueioUI();
+    registrar('segurança', chk.checked ? 'bloqueio do aplicativo ativado' : 'bloqueio do aplicativo desativado');
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { store.set(BLOQ_ULTIMO, String(Date.now())); return; }
+    const desde = Number(store.get(BLOQ_ULTIMO, '0')) || 0;
+    if (bloqueioAtivo() && desde && Date.now() - desde > 120000 && bootConcluido) abrirBloqueio();
+  });
+  atualizarBloqueioUI();
+})();
+
 async function hashPin(pin) {
   if (!(window.crypto && crypto.subtle)) return 'p:' + pin;
   const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('jarvis|' + pin));
@@ -3801,12 +3992,34 @@ async function executarDiagnostico() {
   btn.disabled = true; btn.textContent = 'Executando testes…'; box.textContent = '';
   diagColetor = [];
   let itens = diagColetor;
-  diagLinha('warn', 'Execução iniciada', 'Os resultados dependem das permissões e da rede deste aparelho.');
+  const inicioDiag = new Date();
+  diagLinha('warn', 'Execução iniciada', inicioDiag.toLocaleString('pt-BR') + ' · os resultados dependem das permissões e da rede deste aparelho.');
   try {
     await chavesProntas;
     diagLinha(ehAndroid ? 'ok' : (nativoDesk ? 'ok' : 'warn'), 'Plataforma', plataforma + (ehAndroid ? ' · Capacitor nativo detectado' : nativoDesk ? ' · integração desktop detectada' : ' · execução em navegador; recursos nativos não estão disponíveis'));
     const secure = !!window.isSecureContext || ehAndroid || !!nativoDesk;
     diagLinha(secure ? 'ok' : 'warn', 'Contexto seguro', secure ? 'Contexto considerado seguro para recursos de mídia.' : 'Microfone normalmente exige HTTPS ou origem local segura.');
+    // Memória conectada: era esta peça que derrubava a inicialização (TDZ do MEM).
+    try {
+      const esp = MEM && typeof MEM.espaco === 'function' ? MEM.espaco() : null;
+      diagLinha(MEM ? 'ok' : 'fail', 'Memória conectada (Obsidian local)', MEM
+        ? 'Módulo carregado (' + MEM_ESTADO + '); ' + (esp ? (esp.notas + ' nota(s) em ' + esp.temas + ' tema(s), ' + Math.round(Number(esp.bytes || 0) / 1024) + ' kB usados.') : 'consultando notas.')
+        : 'memoria.js não carregou: o painel de Memória fica indisponível, o resto do app continua. Reinstale o APK ou confira se o arquivo memoria.js está nos assets.');
+    } catch (e) {
+      diagLinha('warn', 'Memória conectada (Obsidian local)', 'Módulo presente, mas a consulta falhou: ' + String(e.message || e).slice(0, 120));
+    }
+    // Armazenamento disponível no aparelho, quando a plataforma informa.
+    try {
+      if (navigator.storage && navigator.storage.estimate) {
+        const est = await navigator.storage.estimate();
+        const livre = Math.max(0, Number(est.quota || 0) - Number(est.usage || 0));
+        const mb = (n) => (n / (1024 * 1024)).toFixed(0) + ' MB';
+        diagLinha(livre > 20 * 1024 * 1024 ? 'ok' : 'warn', 'Armazenamento do app', mb(Number(est.usage || 0)) + ' usados de ' + mb(Number(est.quota || 0)) + ' disponíveis; ' + mb(livre) + ' livres para memória, histórico e modelos.');
+      } else {
+        diagLinha('warn', 'Armazenamento do app', 'Esta plataforma não informa a cota de armazenamento; a escrita pode falhar com o aparelho cheio.');
+      }
+    } catch (e) { diagLinha('warn', 'Armazenamento do app', 'Não foi possível consultar: ' + String(e.message || e).slice(0, 100)); }
+    diagLinha(bootConcluido ? 'ok' : 'warn', 'Abertura do aplicativo', bootConcluido ? 'A sequência de abertura terminou e liberou a interface.' : 'A abertura ainda não foi concluída nesta sessão.');
     const mediaOk = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && (window.AudioContext || window.webkitAudioContext));
     diagLinha(mediaOk ? 'ok' : 'fail', 'Compatibilidade de áudio', mediaOk ? 'getUserMedia e AudioContext disponíveis.' : 'Falta getUserMedia ou AudioContext neste ambiente.');
     // Núcleo de linguagem e decisão: o motor que escolhe a rota de cada turno.
@@ -3877,6 +4090,7 @@ async function executarDiagnostico() {
     }
     if (ehAndroid) diagLinha('warn', 'Compatibilidade real do Android', 'O dispositivo não pode ser certificado aqui: teste wake word, tela bloqueada, microfone e serviço em segundo plano no aparelho-alvo.');
     diagLinha('ok', 'Privacidade', 'Os testes acima não incluem histórico de conversa; a chamada de pesquisa usa apenas a consulta de diagnóstico.');
+    diagLinha('ok', 'Conclusão', 'Verificação encerrada em ' + new Date().toLocaleString('pt-BR') + ' (' + Math.round((Date.now() - inicioDiag.getTime()) / 1000) + ' s).' );
     registrar('diagnóstico', 'teste integrado executado');
   } catch (e) {
     diagLinha('fail', 'Diagnóstico interrompido', String(e.message || e).slice(0, 200));
@@ -4135,9 +4349,19 @@ async function salvarConfig() {
     store.set('pin_hash', await hashPin(pin));
     registrar('config', 'PIN alterado');
   }
+  const querBloqueio = $('#c-bloqueio') ? $('#c-bloqueio').checked : store.get('bloqueio', '0') === '1';
+  if (querBloqueio && !store.get('pin_hash', '')) {
+    alert('Defina um PIN de 4 a 8 dígitos antes de ativar o bloqueio do aplicativo.');
+    mudarCategoriaConfig('seguranca');
+    return;
+  }
+  if (querBloqueio && !store.get('bloqueio_codigo_hash', '')) await gerarCodigoRecuperacao();
+  store.set('bloqueio', querBloqueio ? '1' : '0');
+  atualizarBloqueioUI();
   registrar('config', 'ajustes salvos');
   fecharPaineis();
   atualizarSeguranca();
+  atualizarBloqueioUI();
   atualizarChips();
   atualizarSegundoPlano();
   atualizarWake();
@@ -5838,20 +6062,6 @@ function cadAnalisarPorNome(nome) {
   return { ok: true, nome: f.nome, resumo: r.resumo, doc: r.doc, fala: r.resumo };
 }
 
-const MEM = window.MemoriaJarvis || null;
-const PC = (plataforma === 'desktop' && nativoDesk) ? {
-  status: async () => {
-    const s = await nativo('status_pc', {});
-    const gb = (n) => (Number(n) / (1024 ** 3)).toFixed(1).replace('.', ',') + ' GB';
-    const resumo = 'processador em ' + s.cpu + '% de uso, ' + gb(s.ramLivre) + ' de RAM livre de ' + gb(s.ramTotal) +
-      ', ' + gb(s.discoLivre) + ' livres em disco' + (s.bateria ? ', bateria em ' + s.bateria + '%' : '');
-    return Object.assign({}, s, { resumo });
-  },
-  listar: (p) => nativo('listar_arquivos', { caminho: p || '~' }),
-  criar: (nome, texto) => nativo('criar_arquivo', { nome, texto }),
-  abrir: (p) => nativo('abrir_pasta', { caminho: p || '~' })
-} : null;
-
 function memTemaAtual() {
   const t = store.get('memoria_tema', 'gostos');
   return MEM && MEM.TEMAS.some((x) => x.id === t) ? t : 'gostos';
@@ -6124,6 +6334,7 @@ function liberarApp() {
     tela.classList.add('saindo');
     setTimeout(() => { tela.hidden = true; tela.classList.remove('saindo'); }, 450);
   }
+  setTimeout(() => { try { iniciarBloqueioSeAtivo(); } catch (e) { registrar('erro', 'bloqueio: ' + ((e && e.message) || e)); } }, 520);
 }
 async function finalizarBoot(motivo) {
   bootProgresso(100, motivo || 'Sistemas prontos.');

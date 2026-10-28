@@ -58,6 +58,7 @@ else:
 
 sherpa_aar_dep = "implementation files('libs/sherpa-onnx-1.13.8.aar')"
 commons_dep = "implementation 'org.apache.commons:commons-compress:1.26.2'"
+biometric_dep = 'implementation "androidx.biometric:biometric:1.1.0"'
 
 
 def injetar_dependencia(texto, linha):
@@ -94,6 +95,12 @@ if mudou:
     print(f"Dependência commons-compress adicionada: {app_gradle}")
 else:
     print(f"Dependência commons-compress já presente: {app_gradle}")
+# Biometria do bloqueio opcional do app (BiometricPrompt com credencial do aparelho).
+app_text, mudou = injetar_dependencia(app_text, biometric_dep)
+if mudou:
+    print(f"Dependência androidx.biometric adicionada: {app_gradle}")
+else:
+    print(f"Dependência androidx.biometric já presente: {app_gradle}")
 
 # Só ARM: as bibliotecas nativas somam ~53 MB e nenhum aparelho x86 roda este APK.
 # Sem o filtro, o pacote carregaria também as ABIs de emulador sem uso.

@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.19.1",
-  "versionCode": 10191,
+  "version": "1.20.0",
+  "versionCode": 10200,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-10-28",
-  "status": "1.19.1: a Visão deixou de ser um painel escondido — ganhou aba na barra lateral, ícone no cabeçalho (mesmo padrão de Tarefas e Configurações) e atalho no painel inicial, porque a barra lateral só aparece a partir de 960 px e no celular o modo ficava inacessível.",
+  "status": "1.20.0: o app voltou a inicializar sem o erro \"Cannot access 'MEM' before initialization\" (a declaração da memória agora acontece antes do bloco que monta os painéis), a IA local valida o modelo antes de chamar o MediaPipe e não derruba mais o processo, o diagnóstico mostra memória/armazenamento/abertura e há bloqueio OPCIONAL do aplicativo com PIN e biometria.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.19.1 (2026-10-28). Correção de acesso: o painel de visão existia, mas as únicas entradas eram a aba da barra lateral (que fica display:none abaixo de 960 px) e o comando por voz — no celular ele ficava inacessível. Agora há três caminhos, todos chamando abrirVisao(): a aba \"Visão\" na barra lateral (telas largas), o ícone de olho no cabeçalho (mesmo componente de Tarefas e Configurações) e o atalho \"Visão\" no card CONVERSA E INFORMAÇÕES do painel inicial. Abrir por qualquer caminho marca a aba lateral como ativa. O teste da versão passou a exigir os três pontos, para a aba não desaparecer de novo. O Núcleo 3D mantém HUD, plasma e órbita com a animação preservada.",
+  "notas": "Revisão 1.20.0 (2026-10-28). CRÍTICO: o bloco de ligações da memória rodava na carga do app.js antes de \"const MEM\" — zona morta temporal — e abortava o arquivo inteiro; era por isso que diagnóstico, abas de Ajustes e memória pareciam ter desaparecido. A declaração foi movida para o topo, junto da detecção de plataforma, com estado explícito e diagnóstico próprio. IA local: pré-checagem de tamanho/cabeçalho (.task ZIP ou TFL3), trava de sessão única e mensagens de erro detalhadas, para não chamar o MediaPipe com modelo inválido (SIGABRT \"interpreter_ != nullptr\"). Diagnóstico: memória conectada, armazenamento, abertura e carimbo de hora. Bloqueio opcional em Ajustes ▸ Segurança: PIN (hash), biometria/credencial do aparelho via BiometricPrompt, código de recuperação e atraso progressivo; desligado por padrão e nunca impede o uso. Windows: workflow separado gera instalador NSIS e versão portátil com electron-builder. O núcleo mantém os três estilos (HUD, plasma e órbita) e a animação própria de cada um, agora dentro de um app.js que termina de carregar de verdade.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"
   ],

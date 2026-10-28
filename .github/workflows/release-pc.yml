@@ -1,0 +1,90 @@
+name: Publicar pacote do PC (Windows)
+
+# O mesmo código web do APK é empacotado com Electron. Este workflow é separado do
+# Android de propósito: são dois instaladores independentes e um não deve derrubar o outro.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jarvis-nova-pc
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    name: Instalador e portátil do J.A.R.V.I.S. Nova (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Conferir os fontes web obrigatórios
+        shell: bash
+        run: |
+          for f in index.html style.css app.js hermes.js plataforma.js memoria.js orbita.js cad.js vendor/three.min.js platforms/desktop/main.js; do
+            test -s "$f" || { echo "Falta $f: o pacote do PC sairia incompleto."; exit 1; }
+          done
+
+      - name: Instalar dependências
+        run: npm install --ignore-scripts --legacy-peer-deps
+
+      - name: Verificar sintaxe dos módulos do desktop
+        run: |
+          node --check platforms/desktop/main.js
+          node --check app.js
+
+      - name: Empacotar Windows (instalador NSIS + portátil)
+        run: npx electron-builder --win nsis portable --publish never
+
+      - name: Listar artefatos gerados
+        shell: bash
+        run: |
+          ls -lh dist || true
+          find dist -maxdepth 2 -type f \( -name '*.exe' -o -name '*.zip' \) -print
+          test -n "$(find dist -maxdepth 2 -type f -name '*.exe' -print -quit)" || {
+            echo 'Nenhum .exe foi gerado; confira o log do electron-builder.' >&2; exit 1; }
+
+      - name: Guardar artefatos do build
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-nova-pc
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.yml
+          if-no-files-found: error
+
+      - name: Anexar ao release da tag
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.yml
+          generate_release_notes: false
+          body: |
+            Pacote do **PC (Windows)** do J.A.R.V.I.S. Nova, gerado do mesmo código web do APK.
+
+            - `J.A.R.V.I.S. Nova Setup <versão>.exe` — instalador (NSIS).
+            - `J.A.R.V.I.S. Nova <versão>.exe` — executável portátil, sem instalação.
+
+            O Windows pode exibir aviso do SmartScreen porque o executável não é assinado
+            digitalmente. Instalar apenas a partir deste release.
+
+            Diferenças conhecidas em relação ao Android: câmera do celular, biometria do
+            aparelho, notificações e serviços em segundo plano não existem no desktop; o app
+            informa isso em vez de simular. Memória/Obsidian funciona por arquivos Markdown,
+            e o assistente tem acesso a arquivos, pastas e status do PC.

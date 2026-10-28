@@ -13,6 +13,8 @@ permissoes = [
     "android.permission.RECEIVE_BOOT_COMPLETED", "android.permission.ACCESS_NETWORK_STATE",
     "android.permission.SCHEDULE_EXACT_ALARM", "android.permission.READ_CONTACTS",
     "android.permission.CAMERA", "android.permission.REQUEST_INSTALL_PACKAGES",
+    # Bloqueio OPCIONAL do aplicativo com BiometricPrompt (não substitui o bloqueio do Android).
+    "android.permission.USE_BIOMETRIC", "android.permission.USE_FINGERPRINT",
     "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
     # Chamada completada de verdade: sem CALL_PHONE o app só abre o discador.
     "android.permission.CALL_PHONE",
