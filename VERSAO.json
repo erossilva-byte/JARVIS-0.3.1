@@ -13,11 +13,11 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "60f334424169ce8b27de0cfcdc524ef4a7d3f51060bebc721114afad7a475260",
-    "bytes": 70910664,
-    "arquivo": "jarvis-nova-1.19.0-10190.apk",
+    "sha256": "fe0c92ead29be0a54da0d243b481b971141b1522b4277d88a1b6d65bd003a9bd",
+    "bytes": 70910936,
+    "arquivo": "jarvis-nova-1.19.1-10191.apk",
     "data": "2026-10-28",
-    "run": "40711478213",
-    "observacao": "APK do release v1.19.0 compilado pelo workflow de release com ci/debug.keystore — mesma assinatura das versões anteriores, então o app instalado se atualiza por cima pelo atualizador interno. Checksum conferido depois de baixar o arquivo do release; o pacote contém assets/public/cad.js com os exportadores DXF/STL/3MF/STEP/IFC, app.js com a sessão de visão, o vínculo Obsidian e a exportação CAD, memoria.js com o Markdown do cofre e todos os recursos obrigatórios (hermes.js, orbita.js, plataforma.js, apps.js, style.css, vendor/three.min.js)."
+    "run": "40714862185",
+    "observacao": "APK do release v1.19.1 compilado pelo workflow de release com ci/debug.keystore (mesma assinatura das versões anteriores, atualiza por cima). Checksum conferido depois de baixar o artefato publicado; o pacote contém a aba Visão em três pontos (barra lateral, ícone de cabeçalho e atalho do painel inicial) e as ligações no app.js."
   }
 }
