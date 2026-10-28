@@ -121,9 +121,9 @@ checagens = {
         and html.index('hermes.js') < html.index('<script src="app.js"></script>')),
     "hermes.js entra na cópia da web (build e release) e no pacote do desktop": (
         (raiz / ".github/workflows/build-apk.yml").read_text(encoding="utf-8").count(
-            "cp index.html style.css app.js apps.js hermes.js www/") == 1
+            "cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js www/") == 1
         and (raiz / ".github/workflows/release-apk.yml").read_text(encoding="utf-8").count(
-            "cp index.html style.css app.js apps.js hermes.js www/") == 1
+            "cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js www/") == 1
         and "hermes.js" in pacote.get("build", {}).get("files", [])),
     "Suíte roda o teste do núcleo": (
         "node tests/test_hermes.js" in pacote.get("scripts", {}).get("test:all", "")
