@@ -1,4 +1,11 @@
-# J.A.R.V.I.S. Nova 1.19.0
+# J.A.R.V.I.S. Nova 1.19.1
+
+## O que mudou na 1.19.1
+
+- **Modo Visão acessível de verdade.** O painel existia, mas a aba ficava na barra lateral, que é `display:none`
+  abaixo de 960 px — no celular só dava para abrir por voz. Agora ele tem **aba na barra lateral**, **ícone de olho
+  no cabeçalho** (mesmo componente de Tarefas e Configurações) e **atalho no card CONVERSA E INFORMAÇÕES**; qualquer
+  caminho marca a aba como ativa. O teste da versão exige os três pontos.
 
 ## O que mudou na 1.19.0
 

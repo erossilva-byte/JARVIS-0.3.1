@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.19.0",
-  "versionCode": 10190,
+  "version": "1.19.1",
+  "versionCode": 10191,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-10-28",
-  "status": "1.19.0: organização em camadas (núcleo web compartilhado × platforms/desktop, android, ios, web), módulo CAD de intercâmbio real (DXF, STL binário/ASCII, 3MF, STEP AP203 e IFC4 gerados a partir da mesma malha, com validação por reabertura e perdas declaradas; DWG/RVT/RFA/FCStd recusados com motivo), sessão de visão com frequência, pausa, troca de câmera e captura de tela do PC, e vínculo do Obsidian (pasta real no computador, pacote .md no celular).",
+  "status": "1.19.1: a Visão deixou de ser um painel escondido — ganhou aba na barra lateral, ícone no cabeçalho (mesmo padrão de Tarefas e Configurações) e atalho no painel inicial, porque a barra lateral só aparece a partir de 960 px e no celular o modo ficava inacessível.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.19.0 (2026-10-28). (1) Núcleo CAD: cad.js ganhou malha() única (caixa, plano, esfera, cilindro, cone) com fusão de vértices coincidentes e orientação por volume assinado, e exportadores/leitores DXF R12, STL binário e ASCII, 3MF (ZIP store + XML), STEP ISO-10303-21 AP203 (sólido facetado) e IFC4 (projeto/sítio/edifício/pavimento + elementos extrudados). Todo escritor reabre o próprio arquivo antes de entregar e devolve avisos e perdas; formatos proprietários (DWG, RVT, RFA, FCStd) são recusados com explicação em vez de gerar arquivo inútil. (2) Vision: sessão explícita com frequência (4/8/15 s), pausa/retomada, encerramento ao sair da tela, troca de câmera frontal/traseira e captura de tela do PC no desktop; cada análise é um quadro único, sem gravação e sem segundo plano, e o resumo pode ir para a memória. (3) Memória: exportação/importação Markdown com frontmatter, um arquivo por nota, e vínculo com a pasta do Obsidian no desktop (escrita idempotente, nada é apagado); no Android o caminho é o pacote .md, porque o Obsidian não abre pastas do aplicativo sem plugin de armazenamento. (4) Organização: main.js/preload.js saíram da raiz para platforms/desktop (Electron), com o núcleo web compartilhado na raiz e documentação de fronteiras em platforms/LEIA-ME.md. (5) O Núcleo 3D segue com os três estilos — HUD, plasma e órbita — e a animação de cada um foi preservada; nenhum estilo foi removido ou substituído nesta versão.",
+  "notas": "Revisão 1.19.1 (2026-10-28). Correção de acesso: o painel de visão existia, mas as únicas entradas eram a aba da barra lateral (que fica display:none abaixo de 960 px) e o comando por voz — no celular ele ficava inacessível. Agora há três caminhos, todos chamando abrirVisao(): a aba \"Visão\" na barra lateral (telas largas), o ícone de olho no cabeçalho (mesmo componente de Tarefas e Configurações) e o atalho \"Visão\" no card CONVERSA E INFORMAÇÕES do painel inicial. Abrir por qualquer caminho marca a aba lateral como ativa. O teste da versão passou a exigir os três pontos, para a aba não desaparecer de novo. O Núcleo 3D mantém HUD, plasma e órbita com a animação preservada.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"
   ],

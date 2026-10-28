@@ -12,7 +12,7 @@ const plataforma = ehAndroid ? 'android' : nativoDesk ? 'desktop' : 'web';
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.19.0';
+const VERSAO_APP = '1.19.1';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -4278,6 +4278,9 @@ $('#btn-chat-ampliado').onclick = () => {
   registrar('interface', ligado ? 'modo conversa ampliada ativado' : 'modo conversa ampliada desativado');
 };
 $('#btn-config').onclick = abrirConfig;
+// Visão também pelo cabeçalho e pelo painel inicial: no celular a barra lateral não aparece.
+const btnVisaoTopo = $('#btn-visao'); if (btnVisaoTopo) btnVisaoTopo.onclick = () => abrirVisao();
+const cardVisao = $('#dash-visao'); if (cardVisao) cardVisao.onclick = () => abrirVisao();
 // Central de comando: conversa (tela própria) e menu de informações.
 $('#btn-conversa').onclick = alternarTelaConversa;
 const cardConversa = $('#dash-conversa');
@@ -5118,6 +5121,7 @@ function pararCamera() {
 }
 
 function abrirVisao() {
+  document.querySelectorAll('[data-lat]').forEach((x) => x.classList.toggle('ativo', x.dataset.lat === 'visao'));
   abrirPainel('#painel-visao');
   const painel = document.getElementById('painel-visao');
   if (!painel) return;

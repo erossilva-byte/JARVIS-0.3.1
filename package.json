@@ -1,6 +1,6 @@
 {
   "name": "jarvis-nova",
-  "version": "1.19.0",
+  "version": "1.19.1",
   "description": "J.A.R.V.I.S. Nova 1.19.0 — núcleo Órbita 3D corrigido para celular e PC, serviço em primeiro plano à prova de timeout, arquivos .cad do CadSimu, memória conectada, humor brasileiro em três níveis e versão desktop Electron",
   "main": "platforms/desktop/main.js",
   "scripts": {

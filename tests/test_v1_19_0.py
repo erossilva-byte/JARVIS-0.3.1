@@ -19,6 +19,7 @@ html = (raiz / "index.html").read_text(encoding="utf-8")
 app = (raiz / "app.js").read_text(encoding="utf-8")
 cad = (raiz / "cad.js").read_text(encoding="utf-8")
 mem = (raiz / "memoria.js").read_text(encoding="utf-8")
+css = (raiz / "style.css").read_text(encoding="utf-8")
 versao = json.loads((raiz / "VERSAO.json").read_text(encoding="utf-8"))
 pacote = json.loads((raiz / "package.json").read_text(encoding="utf-8"))
 docs = (raiz / "CHANGELOG.md").read_text(encoding="utf-8") + (raiz / "LEIA-ME.md").read_text(encoding="utf-8")
@@ -161,15 +162,30 @@ checks = {
 
     # 11. Versão, documentação e suíte
     "Versão 1.19.0 com versionCode 10190": (
-        versao.get("version") == "1.19.0" and versao.get("versionCode", 0) == 10190
-        and pacote.get("version") == "1.19.0" and "const VERSAO_APP = '1.19.0';" in app),
+        [int(x) for x in versao.get("version", "0").split(".")] >= [1, 19, 0] and versao.get("versionCode", 0) >= 10190
+        and pacote.get("version") == versao.get("version") and ("const VERSAO_APP = '%s';" % versao.get("version")) in app),
     "Interface mostra a versão nova": (
-        '<span class="versao-chip">v1.19.0</span>' in html and 'v1.19.0</span>' in html),
-    "Workflows citam a versão corrente": "1.19.0" in build_wf and "1.19.0" in release_wf,
-    "CHANGELOG e LEIA-ME registram a versão": "## 1.19.0" in docs and "# J.A.R.V.I.S. Nova 1.19.0" in docs,
+        ('<span class="versao-chip">v%s</span>' % versao.get("version")) in html
+        and ('<span class="orb-sub" aria-hidden="true">v%s</span>' % versao.get("version")) in html),
+    "Workflows citam a versão corrente": versao.get("version") in build_wf and versao.get("version") in release_wf,
+    "CHANGELOG e LEIA-ME registram a versão": ("## %s" % versao["version"]) in docs and ("# J.A.R.V.I.S. Nova %s" % versao["version"]) in docs,
     "Suíte roda o teste novo": (
         "python3 tests/test_v1_19_0.py" in suite and "node --check cad.js" in suite
         and "node tests/test_memoria_md.js" in suite),
+    # 12. A aba Visão precisa existir em TODO lugar que abre as outras abas
+    "Visão tem aba na barra lateral, ícone no cabeçalho e atalho no painel": (
+        'data-lat="visao"' in html and 'id="btn-visao"' in html and 'id="dash-visao"' in html),
+    "Ícone do cabeçalho é do mesmo tipo de Tarefas/Configurações": (
+        re.search(r'<button id="btn-visao" class="icone"[^>]*>', html) is not None
+        and 'aria-label="Abrir a visão"' in html),
+    "As três entradas chamam abrirVisao()": (
+        "btnVisaoTopo.onclick = () => abrirVisao()" in app
+        and "cardVisao.onclick = () => abrirVisao()" in app
+        and "if (alvo === 'visao') { abrirVisao(); return; }" in app),
+    "Abrir a Visão marca a aba lateral ativa": (
+        "x.dataset.lat === 'visao'" in app and "function abrirVisao()" in app),
+    "Barra lateral só aparece em tela larga (por isso o ícone e o atalho)": (
+        "@media(min-width:960px){#lateral{display:flex}" in css),
 }
 
 falhas = [nome for nome, ok in checks.items() if not ok]
