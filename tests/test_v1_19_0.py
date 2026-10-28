@@ -168,7 +168,8 @@ checks = {
     "Workflows citam a versão corrente": "1.19.0" in build_wf and "1.19.0" in release_wf,
     "CHANGELOG e LEIA-ME registram a versão": "## 1.19.0" in docs and "# J.A.R.V.I.S. Nova 1.19.0" in docs,
     "Suíte roda o teste novo": (
-        "python3 tests/test_v1_19_0.py" in suite and "node --check cad.js" in suite),
+        "python3 tests/test_v1_19_0.py" in suite and "node --check cad.js" in suite
+        and "node tests/test_memoria_md.js" in suite),
 }
 
 falhas = [nome for nome, ok in checks.items() if not ok]
