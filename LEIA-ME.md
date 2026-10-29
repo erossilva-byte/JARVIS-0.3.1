@@ -1,4 +1,15 @@
-# J.A.R.V.I.S. Nova 1.22.0
+# J.A.R.V.I.S. Nova 1.23.0
+
+## O que mudou na 1.23.0
+
+- **Visual holográfico com profundidade real**: o núcleo em HUD tem camadas em planos diferentes e inclina
+  com o ponteiro; painéis entram em perspectiva e os cartões compartilham o mesmo vidro com brilho e elevação.
+- **Transições e retorno ao toque consistentes**: entrada de painéis, dissolve do fundo, botões que afundam,
+  varredura no carregamento e confirmação/alerta no diagnóstico — sempre ligados ao estado real.
+- **Reduzir efeitos visuais**: opção em Ajustes ▸ Voz que desliga tilt, brilhos e animações longas, salva no
+  aparelho; o app também respeita a redução de movimento do sistema.
+- **Nada foi removido**: telas, funções, permissões e integrações continuam iguais; os três estilos de núcleo
+  (HUD, plasma e órbita 3D) seguem disponíveis.
 
 ## O que mudou na 1.22.0
 

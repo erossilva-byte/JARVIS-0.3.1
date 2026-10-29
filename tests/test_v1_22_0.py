@@ -25,10 +25,12 @@ def checar(nome, ok):
 
 
 # ---------- 1. Versão única em todos os lugares ----------
-checar('VERSAO.json em 1.22.0', meta.get('version') == '1.22.0' and meta.get('versionCode') == 10220)
-checar('package.json em 1.22.0', pkg.get('version') == '1.22.0')
-checar('app.js em 1.22.0', "const VERSAO_APP = '1.22.0';" in app)
-checar('interface sem a versão antiga', 'v1.21.5' not in html and 'v1.22.0' in html)
+checar('VERSAO.json em 1.22.0 ou posterior',
+      [int(x) for x in meta.get('version', '0').split('.')] >= [1, 22, 0]
+      and meta.get('versionCode', 0) >= 10220)
+checar('package.json acompanha o VERSAO.json', pkg.get('version') == meta.get('version'))
+checar('app.js acompanha o VERSAO.json', ("const VERSAO_APP = '%s';" % meta['version']) in app)
+checar('interface na versão corrente', ('v' + meta['version']) in html and 'v1.21.5' not in html)
 
 # ---------- 2. Módulos novos carregados antes do app ----------
 checar('visao.js no pacote', (RAIZ / 'visao.js').exists())

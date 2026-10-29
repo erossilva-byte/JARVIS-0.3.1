@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.22.0",
-  "versionCode": 10220,
+  "version": "1.23.0",
+  "versionCode": 10230,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-10-29",
-  "status": "1.22.0: Visão 2.0 (balões sem sobreposição com linhas-guia, texto copiável, imagem da galeria e análise de vídeo por quadros com timestamps e cancelamento), cadastro de pessoas persistente com busca e ambiguidade resolvida por pergunta, fala do balão interrompendo a análise, e perfis como contexto autorizado da IA.",
+  "status": "1.23.0: reformulação visual — núcleo com profundidade 3D real (camadas em translateZ e inclinação com o ponteiro), painéis entrando em perspectiva, superfícies de vidro padronizadas, transições e retorno ao toque consistentes, além da opção persistida \"Reduzir efeitos visuais\".",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.22.0 (2026-10-29). A Visão deixou de posicionar balões pelo centro do objeto: visao.js calcula posições com colisão, margem e linha-guia, e o teste prova que 10 objetos no mesmo ponto não geram balões sobrepostos. Tocar num balão agora corta a fala em curso (TTS nativo, navegador e voz neural) antes de falar o detalhe; o texto completo fica num painel próprio com rolagem, cópia e retorno à análise geral. Imagens da galeria/arquivo passam pelo mesmo caminho, com redução para 1024 px e limite de 16 MB. Vídeos MP4/WebM/MOV são pré-visualizados, têm até 9 quadros extraídos por canvas (sem carregar o arquivo inteiro na memória), cada quadro é analisado com timestamp, há progresso real, cancelamento e o áudio não é analisado. O cadastro de pessoas (pessoas.js) guarda perfis separados com nome obrigatório, apelido, relação, descrição, preferências, observações e contato opcional; busca por nome/apelido, ambiguidade nunca resolvida sozinha, exportação JSON e contexto opcional na IA (somente nome, apelido, relação e preferências). O diagnóstico lista os dois módulos novos entre os módulos do pacote. Nada disso foi validado em aparelho físico nesta revisão. O núcleo central mantém os três estilos (HUD, plasma e órbita 3D) e cada um segue com a sua animação: esta revisão não mexeu na identidade visual nem no sistema de animação da 1.21.5, apenas acrescentou transições curtas para balões, itens de vídeo e cartões de pessoas, todas desligadas em prefers-reduced-motion.",
+  "notas": "Revisão 1.23.0 (2026-10-29). A interface ganhou uma camada holográfica sem novas dependências: no estilo HUD o disco central usa preserve-3d e cada camada vive num plano diferente (halo atrás, aro à frente, marca e telemetria acima), então inclinar o conjunto com o ponteiro produz paralaxe real em vez de sombra falsa. Os painéis entram com rotateY e perspectiva a partir da borda direita, com brilho ciano projetado; o scrim passou a dissolver e, acima de 700 px, desfoca o fundo. Cartões de painel, diagnóstico, pessoas, memória, voz e arquivos compartilham o mesmo vidro em diagonal, filete de luz superior e elevação no hover. Botões afundam com escala em vez de pular; o balão \"formulando\" recebeu varredura de 1 px, o diagnóstico confirma em verde ou pulsa em vermelho conforme o resultado real. Em Ajustes ▸ Voz ▸ Aparência do núcleo há a opção \"Reduzir efeitos visuais\", persistida em efeitos_visuais, que desliga tilt, brilhos em movimento e animações longas; é independente de prefers-reduced-motion, que continua valendo para quem configurou no sistema. Desempenho: apenas transform/opacity/box-shadow, content-visibility nas listas longas, entrada mais curta abaixo de 420 px e desfoque desligado quando o navegador informa update:slow. Nenhuma lógica, tela, texto, permissão ou integração foi alterada; os três estilos de núcleo (HUD, plasma e órbita 3D) e o sistema de animação da 1.21.5 seguem intactos. Não houve validação visual em aparelho físico ou emulador nesta revisão.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,12 +16,12 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "40eca06a72032e2c28e8f53dbb319501d5dfdb412de10a3533fea57dd5191064",
-    "bytes": 71104421,
-    "arquivo": "jarvis-nova-1.22.0-10220.apk",
+    "sha256": "6b8813f8dbfd9d1edf2d68ea5720ab973c8c5ef6ed30ca55859285afe839a23b",
+    "bytes": 71107349,
+    "arquivo": "jarvis-nova-1.23.0-10230.apk",
     "data": "2026-10-29",
     "ambiente": "compilação local (JDK 17 + Android SDK 34; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.22.0: VERSAO_APP=1.22.0, versionCode 10220, pacote com pessoas.js, visao.js e cad.js conferidos por hash dentro de assets/public. Suíte completa com 1059 verificações aprovada antes do empacotamento. Sem teste em aparelho físico nem emulador neste ambiente."
+    "observacao": "APK 1.23.0: VERSAO_APP=1.23.0, versionCode 10230. style.css com a camada holográfica e index.html/app.js com a opção c-efeitos conferidos dentro de assets/public. Suíte completa com 1091 verificações aprovada antes do empacotamento. Sem teste em aparelho físico nem emulador neste ambiente."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

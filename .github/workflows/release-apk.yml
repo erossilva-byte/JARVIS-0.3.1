@@ -133,6 +133,15 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
+            **Novidades da 1.23.0:** reformulação visual holográfica. O núcleo em HUD ganhou camadas
+            reais em profundidade (halo atrás, aro à frente, marca e telemetria acima) e inclina com o
+            ponteiro, produzindo paralaxe de verdade; os painéis entram em perspectiva pela borda direita e
+            o scrim dissolve o fundo; cartões de ajustes, diagnóstico, pessoas, memória e arquivos passaram a
+            compartilhar o mesmo vidro com filete de luz e elevação; botões afundam ao toque; o balão de
+            carregamento tem varredura e o diagnóstico confirma ou alerta conforme o resultado real. Nova opção
+            **Reduzir efeitos visuais** em Ajustes ▸ Voz, persistida no aparelho, além do respeito a
+            `prefers-reduced-motion`. Nenhuma função, tela ou integração foi removida.
+
             **Novidades da 1.22.0:** o Núcleo 3D voltou a funcionar no celular e no PC — o tamanho
             das partículas estava ~46x maior do que devia e saturava a tela em branco; agora respeita o
             pixel ratio, tem máscara circular, recupera contexto WebGL perdido e se redimensiona com o

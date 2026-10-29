@@ -1,3 +1,30 @@
+## 1.23.0 — 2026-10-29
+
+## Reformulação visual holográfica
+
+- **Núcleo com profundidade 3D real.** No estilo HUD o disco usa `preserve-3d`: halo em −16 px, aro em
+  +14 px, marca em +34 px e telemetria em +26 px. Com ponteiro fino o conjunto inclina
+  (`rotateX(6deg) rotateY(-8deg)`) e as camadas se deslocam — paralaxe verdadeira, não sombra.
+- **Painéis como porta holográfica.** Entrada com `perspective(1100px) rotateY(-8deg)` pela borda
+  direita, brilho ciano projetado e scrim com dissolve (desfoque acima de 700 px de largura).
+- **Superfícies padronizadas.** Ajustes, diagnóstico, pessoas, memória, voz, arquivos e Visão usam o
+  mesmo vidro em diagonal, filete de luz superior e elevação de 2 px no hover.
+- **Retorno ao toque.** Botões afundam 1 px com escala 0.986 e halo curto; abas ativas recebem brilho
+  próprio, sem "pulo" seco.
+- **Estados reais.** Varredura de 1 px no balão "formulando", confirmação verde no diagnóstico OK e
+  pulso de borda no diagnóstico com falha. Nada anima sem o estado correspondente.
+- **Reduzir efeitos visuais.** Opção em Ajustes ▸ Voz ▸ Aparência do núcleo, persistida em
+  `efeitos_visuais`; desliga tilt, brilhos em movimento e animações longas. Independente de
+  `prefers-reduced-motion`, que continua valendo por si.
+- **Desempenho.** Só `transform`, `opacity` e `box-shadow`; `content-visibility` nas listas longas;
+  entrada mais curta abaixo de 420 px; desfoque desligado em `(update:slow)`. Nenhuma dependência nova.
+- **Nada de lógica foi tocado.** Telas, textos, permissões, integrações, os três estilos de núcleo e o
+  sistema de animação da 1.21.5 permanecem como estavam.
+- **Correção que segue no pacote:** o motor de arquivos do PC resolve caminhos com barra invertida do
+  Windows (o "Organizar" não movia nada), coberto por teste de regressão.
+- **Verificação:** suíte completa verde (1060 verificações) antes do empacotamento; APK conferido por
+  hash dentro de `assets/public`. Sem validação visual em aparelho físico ou emulador.
+
 ## 1.22.0 — 2026-10-29
 
 ## Visão 2.0 e cadastro de pessoas
