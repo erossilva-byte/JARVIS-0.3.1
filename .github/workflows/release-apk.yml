@@ -53,7 +53,7 @@ jobs:
           mkdir -p www
           # Todo recurso web do app precisa estar aqui: sem hermes.js o app.js recusa
           # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
-          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js www/
+          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
 
@@ -133,7 +133,7 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
-            **Novidades da 1.21.4:** o Núcleo 3D voltou a funcionar no celular e no PC — o tamanho
+            **Novidades da 1.22.0:** o Núcleo 3D voltou a funcionar no celular e no PC — o tamanho
             das partículas estava ~46x maior do que devia e saturava a tela em branco; agora respeita o
             pixel ratio, tem máscara circular, recupera contexto WebGL perdido e se redimensiona com o
             painel e a rotação. O serviço em primeiro plano ganhou uma segunda tentativa mínima de

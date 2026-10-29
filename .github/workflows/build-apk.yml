@@ -1,4 +1,4 @@
-name: Build e testes do J.A.R.V.I.S. Nova 1.21.4
+name: Build e testes do J.A.R.V.I.S. Nova 1.22.0
 
 on:
   workflow_dispatch:
@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   build:
-    name: Testar e compilar APK debug 1.21.4
+    name: Testar e compilar APK debug 1.22.0
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -82,7 +82,7 @@ jobs:
       - name: Preparar os recursos web do aplicativo
         run: |
           mkdir -p www
-          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js www/
+          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
 
@@ -129,7 +129,7 @@ jobs:
       - name: Publicar APK e checksum
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-Nova-1.21.4-APK
+          name: JARVIS-Nova-1.22.0-APK
           if-no-files-found: error
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk

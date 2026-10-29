@@ -59,11 +59,13 @@
   <button type="button" class="lat-btn" data-lat="voz" title="Voz, microfone e palavra de ativação"><span aria-hidden="true">◉</span>Voz</button>
   <button type="button" class="lat-btn" data-lat="visao" title="Visão: câmera, sessão e reconhecimento de objetos"><span aria-hidden="true">⌖</span>Visão</button>
   <button type="button" class="lat-btn" data-lat="tarefas" title="Lista de tarefas"><span aria-hidden="true">▤</span>Tarefas</button>
+  <button type="button" class="lat-btn" data-lat="pessoas" title="Cadastro de pessoas conhecidas"><span aria-hidden="true">♟</span>Pessoas</button>
   <button type="button" class="lat-btn" data-lat="rotinas" title="Rotinas automáticas"><span aria-hidden="true">⚡</span>Rotinas</button>
   <button type="button" class="lat-btn" data-lat="celular" title="Status do celular"><span aria-hidden="true">▰</span>Celular</button>
   <button type="button" class="lat-btn" data-lat="info" title="Aparelho, clima e manchetes do momento"><span aria-hidden="true">ⓘ</span>Informações</button>
   <button type="button" class="lat-btn" data-lat="memoria" title="Memória conectada: notas por tema"><span aria-hidden="true">◫</span>Memória</button>
   <button type="button" class="lat-btn" data-lat="arquivos" title="Arquivos .cad do CadSimu"><span aria-hidden="true">▧</span>Arquivos</button>
+  <button type="button" class="lat-btn" data-lat="pc" hidden title="Computador: arquivos, CAD, tarefas e diagnóstico"><span aria-hidden="true">▣</span>Computador</button>
   <button type="button" class="lat-btn" data-lat="atualizacao" title="Atualização pelo GitHub"><span aria-hidden="true">⇪</span>Atualizar</button>
   <button type="button" class="lat-btn" data-lat="diagnostico" title="Diagnóstico do sistema"><span aria-hidden="true">⌘</span>Diagnóstico</button>
   <div class="lat-rodape"><span class="lat-dot" aria-hidden="true"></span><small>SYSTEM STATUS</small><b id="lat-estado">ONLINE</b></div>
@@ -111,7 +113,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.21.4</span>
+      <span class="orb-sub" aria-hidden="true">v1.22.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -196,7 +198,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.21.4</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.22.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -219,6 +221,17 @@
     <div class="chave"><label>4. Gemini<input id="c-key-gemini" type="password" autocomplete="off" placeholder="opcional"></label><button type="button" class="mini" id="c-apagar-gemini">apagar</button></div><p class="dica links-chaves"><a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">Criar chave Gemini</a></p><p class="dica">Os planos e limites mudam. Verifique a cota gratuita na página oficial antes de usar. Não compartilhe suas chaves; o app não oferece garantia de cota ilimitada.</p>
     <label>Modelo preferido da Groq<input id="c-modelo" type="text" autocomplete="off"></label>
     <div class="info-card local-ai-card"><span class="info-icon">◈</span><div><b>IA local no aparelho · experimental</b><p>Importe um modelo <code>.task</code> compatível com MediaPipe. Depois de importado, a inferência pode funcionar sem internet e sem chave de API. O modelo não vem dentro do APK; o tamanho depende do arquivo escolhido.</p><p id="c-local-ai-status" role="status" aria-live="polite">Verificando suporte à IA local…</p><div class="botoes"><button id="c-local-ai-import" type="button" class="secundario">Importar modelo .task</button><button id="c-local-ai-test" type="button" class="secundario">Testar modelo</button><button id="c-local-ai-delete" type="button" class="secundario perigo">Apagar modelo</button></div><p class="dica">Use apenas modelos convertidos/empacotados para a API MediaPipe LLM Inference. Um arquivo GGUF comum não é compatível. O primeiro teste pode falhar em aparelhos sem memória ou aceleração suficientes.</p></div></div>
+    <details class="modelos-card">
+      <summary>Onde baixar modelos <code>.task</code> compatíveis</summary>
+      <p class="dica">A IA local deste app usa a API <b>MediaPipe LLM Inference</b> (<code>com.google.mediapipe:tasks-genai</code>). Só serve modelo empacotado nesse formato — um GGUF comum não carrega. O APK não inclui modelo: você importa o arquivo uma vez, ele fica no armazenamento privado e pode ser apagado.</p>
+      <ul class="modelos-lista">
+        <li><b>Gemma 3 1B IT</b> — repositório oficial da LiteRT Community, com variantes <code>.task</code> quantizadas (q4/q8) e contextos ekv1280/2048/4096. Licença Gemma: o uso segue os termos do Google.<br><a href="https://huggingface.co/litert-community/Gemma3-1B-IT" target="_blank" rel="noreferrer">huggingface.co/litert-community/Gemma3-1B-IT</a></li>
+        <li><b>Outros modelos prontos para MediaPipe</b> — <a href="https://huggingface.co/litert-community" target="_blank" rel="noreferrer">huggingface.co/litert-community</a></li>
+        <li><b>Documentação oficial do MediaPipe</b> (formatos, backend e conversão) — <a href="https://ai.google.dev/edge/mediapipe/solutions/genai/llm_inference" target="_blank" rel="noreferrer">LLM Inference guide</a></li>
+        <li><b>Gemma no Kaggle</b> — <a href="https://www.kaggle.com/models/google/gemma-3" target="_blank" rel="noreferrer">kaggle.com/models/google/gemma-3</a></li>
+      </ul>
+      <p class="dica">Arquivos conferidos no repositório: <code>Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task</code> e <code>Gemma3-1B-IT_multi-prefill-seq_q8_ekv2048.task</code>. São centenas de MB e a inferência consome bastante RAM — em aparelhos modestos o teste pode falhar sem derrubar o app. Lista completa em <code>MODELOS-IA-LOCAL.md</code>.</p>
+    </details>
     <div class="info-card"><span class="info-icon">◎</span><div><b>Seleção automática</b><p>Provedores com chave configurada podem ser usados em sequência quando um falhar ou atingir limite.</p></div></div>
     <h3>Perfil do usuário</h3>
     <label>Seu nome<input id="c-nome" type="text" maxlength="60" autocomplete="name" placeholder="Ex.: Eros"></label>
@@ -340,40 +353,43 @@
     <button id="c-memoria-adicionar" type="button" class="secundario">Adicionar à memória</button>
     <p class="dica" id="c-memoria-status" role="status" aria-live="polite">Limite de 1.200 caracteres. Revise e remova dados que não quer mais guardar.</p>
     <button id="c-memoria-limpar" type="button" class="secundario perigo">Apagar memória pessoal</button>
+    <div class="divider-small"></div>
+    <h3 id="obs-titulo">Cofre do Obsidian</h3>
+    <div id="obs-bloco" class="obs-bloco" role="group" aria-labelledby="obs-titulo">
+      <p class="dica">Um único lugar para conectar o cofre: o botão abaixo abre o seletor de pastas do sistema (SAF no Android, diálogo nativo no PC) e a permissão fica guardada para as próximas aberturas. O J.A.R.V.I.S. grava um arquivo por assunto em <code>Memoria/</code> (Gostos, Preferências, Projetos, Objetivos, Estudos, Dispositivos, Rotinas…), com data e origem. Nada é apagado e nenhuma nota sua fora de <code>Memoria/</code> é tocada.</p>
+      <label class="linha"><input id="obs-ativo" type="checkbox"><span>Usar o cofre como memória conectada<small>Ligado, o assistente consulta as notas relevantes antes de responder e grava o que você mandar anotar. Desligado, a memória interna continua funcionando.</small></span></label>
+      <div class="obs-estado">
+        <div class="obs-estado-cab"><span class="status-pill" id="obs-pill">sem vínculo</span><b id="obs-local">Nenhum cofre conectado</b></div>
+        <p id="obs-resumo">Escolha a pasta para o J.A.R.V.I.S. começar a organizar por tópico.</p>
+        <div class="botoes">
+          <button id="obs-escolher" type="button" class="primario">Escolher pasta do cofre</button>
+          <button id="obs-testar" type="button" class="secundario">Testar vínculo</button>
+        </div>
+      </div>
+      <div class="botoes">
+        <button id="obs-enviar" type="button" class="secundario">Enviar notas por tópico</button>
+        <button id="obs-receber" type="button" class="secundario">Trazer do cofre</button>
+      </div>
+      <div class="botoes">
+        <button id="obs-organizar" type="button" class="secundario">Organizar por tópicos</button>
+        <button id="obs-desconectar" type="button" class="secundario perigo">Desconectar</button>
+      </div>
+      <details class="obs-avancado">
+        <summary>Sem vínculo automático (navegador ou cofre indisponível)</summary>
+        <p class="dica">Baixe o pacote <code>.md</code> por tópico ou importe notas que você já tenha. Nada sai do aparelho.</p>
+        <div class="botoes">
+          <button id="obs-baixar" type="button" class="secundario">Baixar .md</button>
+          <button id="obs-importar-btn" type="button" class="secundario">Importar .md</button>
+        </div>
+        <input id="obs-importar" type="file" accept=".md,text/markdown" hidden>
+      </details>
+      <p id="obs-status" class="dica" role="status" aria-live="polite">Sem vínculo. Escolha a pasta do cofre para conectar.</p>
+      <p class="dica">No Android o APK não embarca o cofre do Obsidian: o acesso é pelo seletor de pasta, com permissão liberada por você. Sem vínculo, use “Baixar .md” e abra o arquivo no Obsidian.</p>
+      <p id="obs-diag" class="dica">Última operação: nenhuma nesta sessão.</p>
+      <div id="obs-topicos" class="mem-lista" aria-live="polite"></div>
+    </div>
   </section>
 
-<section class="grupo" id="obs-bloco">
-    <h3>Obsidian — cofre conectado</h3>
-    <p class="dica">Escolha a pasta do seu cofre. O J.A.R.V.I.S. grava um arquivo por assunto em <code>Memoria/</code> (Gostos, Preferências, Projetos, Objetivos, Estudos, Dispositivos, Rotinas, Conversas importantes…), com data e origem. Nada é apagado e nenhuma nota sua fora de <code>Memoria/</code> é tocada. No Android o acesso usa o seletor de pastas do sistema (SAF); no PC, o diálogo nativo.</p>
-    <label class="linha"><input id="obs-ativo" type="checkbox"><span>Usar o cofre como memória conectada<small>Quando ligado, o assistente consulta as notas relevantes antes de responder e grava o que você mandar anotar. Desligado, a memória interna continua funcionando.</small></span></label>
-    <div class="info-card"><span class="info-icon">⌂</span><div><b id="obs-local">Nenhum cofre conectado</b><p id="obs-resumo">Escolha a pasta para o J.A.R.V.I.S. começar a organizar por tópico.</p></div></div>
-    <label>Caminho do cofre (PC)<input id="obs-caminho" type="text" autocomplete="off" placeholder="ex.: C:\Users\voce\Documentos\MeuCofre · no Android use o botão ao lado"></label>
-    <div class="botoes">
-      <button id="obs-escolher" type="button" class="primario">Escolher pasta do cofre</button>
-      <button id="obs-testar" type="button" class="secundario">Testar vínculo</button>
-    </div>
-    <div class="botoes">
-      <button id="obs-enviar" type="button" class="secundario">Enviar notas por tópico</button>
-      <button id="obs-receber" type="button" class="secundario">Trazer do cofre</button>
-    </div>
-    <div class="botoes">
-      <button id="obs-organizar" type="button" class="secundario">Organizar por tópicos</button>
-      <button id="obs-desconectar" type="button" class="secundario perigo">Desconectar</button>
-    </div>
-    <details class="obs-avancado">
-      <summary>Sem vínculo automático (navegador ou cofre indisponível)</summary>
-      <p class="dica">Baixe o pacote <code>.md</code> por tópico ou importe notas que você já tenha. Nada sai do aparelho.</p>
-      <div class="botoes">
-        <button id="obs-baixar" type="button" class="secundario">Baixar .md</button>
-        <button id="obs-importar-btn" type="button" class="secundario">Importar .md</button>
-      </div>
-      <input id="obs-importar" type="file" accept=".md,text/markdown" hidden>
-    </details>
-    <p id="obs-status" class="dica" role="status" aria-live="polite">Sem vínculo. Escolha a pasta do cofre para conectar.</p>
-    <p class="dica">No Android o APK não embarca o cofre do Obsidian: o acesso é pelo seletor de pasta (SAF), com permissão liberada por você. No PC basta apontar a pasta do vault. Sem vínculo, use “Baixar .md” e abra o arquivo no Obsidian.</p>
-    <p id="obs-diag" class="dica">Última operação: nenhuma nesta sessão.</p>
-    <div id="obs-topicos" class="mem-lista" aria-live="polite"></div>
-  </section>
 
 
   <section class="grupo" data-category="rotinas" role="tabpanel" hidden>
@@ -443,8 +459,9 @@
       <span class="diag-chip ok">Operacional</span><span class="diag-chip warn">Aviso</span><span class="diag-chip fail">Falha</span>
       <span class="diag-chip cfg">Não configurado</span><span class="diag-chip off">Desativado</span><span class="diag-chip na">Não aplicável</span><span class="diag-chip nig">Não verificado</span>
     </div>
-    <button id="c-diagnostico" type="button" class="primario">Executar diagnóstico</button>
-    <div id="c-diagnostico-result" class="diag-lista" aria-live="polite"><p class="dica">Ainda não executado.</p></div>
+    <p class="dica">Os resultados aparecem agrupados por área: aplicativo e pacote, inteligência artificial, voz e áudio, memória e dados, permissões e sistema, rede. Cada linha traz estado, impacto e como resolver; os detalhes técnicos ficam recolhidos.</p>
+    <div class="botoes"><button id="c-diagnostico" type="button" class="primario">Executar diagnóstico</button><button id="diag-abrir-log" type="button" class="secundario">Abrir registro de erros</button></div>
+    <div id="c-diagnostico-result" class="diag-lista diag-grupos" aria-live="polite"><p class="dica">Ainda não executado.</p></div>
     <p class="dica">Este diagnóstico não substitui o teste em um aparelho físico. O funcionamento de wake word, tela bloqueada, serviço em segundo plano e permissões precisa ser validado no Android alvo.</p>
   </section>
 
@@ -481,6 +498,9 @@
     <div class="visao-palco">
       <video id="visao-video" playsinline muted autoplay></video>
       <canvas id="visao-canvas" hidden></canvas>
+      <video id="visao-video-arquivo" playsinline controls hidden aria-label="Vídeo escolhido para análise"></video>
+      <img id="visao-foto" alt="Imagem escolhida para análise" hidden>
+      <svg id="visao-guias" class="visao-guias" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
       <div id="visao-baloes" class="visao-baloes"></div>
       <p id="visao-status" class="visao-status" role="status" aria-live="polite">Abrindo a câmera…</p>
     </div>
@@ -489,6 +509,18 @@
       <button id="visao-botao-analisar" type="button" class="primario">Analisar o que estou vendo</button>
       <button id="visao-botao-nova" type="button" class="secundario">Nova análise</button>
       <button id="visao-abrir-ajustes" type="button" class="secundario">Chaves de IA</button>
+    </div>
+    <div class="botoes">
+      <button id="visao-escolher-imagem" type="button" class="secundario">Analisar imagem da galeria</button>
+      <button id="visao-escolher-video" type="button" class="secundario">Analisar vídeo</button>
+      <input id="visao-arquivo-imagem" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+      <input id="visao-arquivo-video" type="file" accept="video/mp4,video/webm,video/quicktime" hidden>
+    </div>
+    <label>Quadros do vídeo<select id="visao-video-max"><option value="4">4 quadros (mais rápido)</option><option value="6" selected>6 quadros</option><option value="9">9 quadros (mais detalhe)</option></select></label>
+    <div id="visao-progresso" class="visao-progresso" hidden role="status" aria-live="polite">
+      <div class="visao-progresso-topo"><span id="visao-progresso-texto">Preparando…</span><output id="visao-progresso-pct">0%</output></div>
+      <div class="visao-progresso-trilha"><span id="visao-progresso-barra"></span></div>
+      <button id="visao-cancelar" type="button" class="secundario">Cancelar análise</button>
     </div>
     <div class="divider-small"></div>
     <h3>Sessão contínua</h3>
@@ -505,11 +537,45 @@
     <label>Frequência da sessão<select id="visao-frequencia"><option value="0">Manual</option><option value="4">A cada 4 s</option><option value="8">A cada 8 s</option><option value="15">A cada 15 s</option></select></label>
     <div class="botoes"><button id="visao-salvar-memoria" type="button" class="secundario">Salvar resumo na memória</button></div>
     <p id="visao-sessao-status" class="dica" role="status" aria-live="polite">Sessão parada.</p>
+    <div class="visao-texto-caixa">
+      <div class="visao-texto-cab"><b>Análise em texto</b><span id="visao-texto-modo" class="status-pill">—</span></div>
+      <div id="visao-texto" class="visao-texto" role="region" aria-live="polite">Nenhuma análise ainda. Toque em analisar a câmera, escolha uma imagem ou um vídeo.</div>
+      <div class="botoes">
+        <button id="visao-voltar-resumo" type="button" class="secundario" disabled>Voltar à análise geral</button>
+        <button id="visao-copiar" type="button" class="secundario">Copiar texto</button>
+      </div>
+    </div>
     <div id="visao-detalhe" class="visao-detalhe" hidden></div>
+    <div id="visao-video-lista" class="visao-video-lista" hidden aria-live="polite"></div>
     <div id="visao-lista" class="visao-lista" aria-live="polite"></div>
     <p class="dica">Um único quadro é enviado ao provedor que reconhece imagens — escolhido pelo roteador entre os que têm chave (Gemini, Groq ou Mistral). Nada de vídeo contínuo e nada em segundo plano: fechar este painel desliga a câmera. Cada objeto reconhecido ganha um balão sobre a imagem; toque no balão para ouvir o detalhe. Por voz: “Jarvis, o que você está vendo?” ou “Jarvis, analise isso”.</p>
   </section>
   <div class="botoes barra"><button id="visao-fechar" type="button">Fechar</button></div>
+</aside>
+
+<aside id="painel-pessoas" class="painel painel-pessoas" hidden aria-label="Cadastro de pessoas conhecidas pelo J.A.R.V.I.S. Nova">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · PESSOAS</p><h2>Pessoas conhecidas</h2></div><span class="versao-chip">salvo neste aparelho</span></div>
+  <section class="grupo">
+    <p class="dica">Perfis separados por pessoa (Pessoa 1, Ana, “meu irmão”…). Só entra o que você escrever: o app não identifica ninguém por foto, voz ou nome parecido. Com dois nomes parecidos, o J.A.R.V.I.S. pergunta qual é em vez de adivinhar. Os números de contato não vão para a IA.</p>
+    <label>Nome ou identificação<input id="pessoa-nome" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: Ana"></label>
+    <label>Apelido<input id="pessoa-apelido" type="text" maxlength="40" autocomplete="off" placeholder="Ex.: Aninha"></label>
+    <label>Relação com você<input id="pessoa-relacao" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: irmã, colega de trabalho"></label>
+    <label>Descrição<textarea id="pessoa-descricao" rows="2" maxlength="400" placeholder="Quem é essa pessoa"></textarea></label>
+    <label>Preferências<textarea id="pessoa-preferencias" rows="2" maxlength="400" placeholder="Ex.: prefere café sem açúcar"></textarea></label>
+    <label>Observações<textarea id="pessoa-observacoes" rows="3" maxlength="800" placeholder="Anotações que você quer lembrar"></textarea></label>
+    <label>Contato autorizado (opcional)<input id="pessoa-contato" type="text" maxlength="120" autocomplete="off" placeholder="Ex.: +55 11 90000-0000"></label>
+    <div class="botoes"><button id="pessoa-salvar" type="button" class="primario">Salvar perfil</button><button id="pessoa-novo" type="button" class="secundario">Novo perfil</button></div>
+    <p id="pessoa-status" class="dica" role="status" aria-live="polite">Nenhum perfil cadastrado ainda.</p>
+    <label class="linha"><input id="pessoa-contexto" type="checkbox" checked><span>Usar os perfis como contexto da IA<small>Envia apenas nome, apelido, relação e preferências ao provedor escolhido quando a conversa precisa desse contexto. Desligado, os perfis ficam só neste aparelho.</small></span></label>
+    <div class="divider-small"></div>
+    <label>Buscar por nome ou apelido<input id="pessoa-busca" type="search" autocomplete="off" placeholder="digite para filtrar"></label>
+    <div id="pessoa-lista" class="pessoas-lista"></div>
+    <div class="botoes"><button id="pessoa-exportar" type="button" class="secundario">Exportar perfis (.json)</button><button id="pessoa-apagar-tudo" type="button" class="secundario perigo">Apagar todos os perfis</button></div>
+    <div class="botoes"><button id="pessoa-copiar-export" type="button" class="secundario">Copiar JSON da exportação</button></div>
+    <pre id="pessoa-exportacao" class="pessoa-exportacao" hidden aria-live="polite"></pre>
+    <p class="dica">Excluir um perfil é definitivo neste aparelho. A exportação é um arquivo JSON; no Android, se o download não aparecer, o mesmo JSON fica acima para copiar.</p>
+  </section>
+  <div class="botoes barra"><button id="pessoa-fechar" type="button">Fechar</button></div>
 </aside>
 
 <aside id="painel-info" class="painel painel-info" hidden aria-label="Informações do J.A.R.V.I.S. Nova: aparelho, clima e manchetes">
@@ -705,14 +771,121 @@
   </div>
 </div>
 
+<aside id="painel-pc" class="painel painel-pc" hidden aria-label="Computador: arquivos, CAD, tarefas e diagnóstico">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · COMPUTADOR</p><h2>Área do PC</h2></div><span class="versao-chip" id="pcx-plat">desktop</span></div>
+  <div class="pcx-abas" role="tablist" aria-label="Seções do computador">
+    <button type="button" role="tab" class="pcx-aba ativo" data-pcx-aba="arquivos" aria-selected="true">Arquivos</button>
+    <button type="button" role="tab" class="pcx-aba" data-pcx-aba="cad" aria-selected="false">CAD</button>
+    <button type="button" role="tab" class="pcx-aba" data-pcx-aba="tarefas" aria-selected="false">Tarefas</button>
+    <button type="button" role="tab" class="pcx-aba" data-pcx-aba="diagnostico" aria-selected="false">Diagnóstico</button>
+  </div>
+
+  <section class="pcx-secao" id="pcx-aba-arquivos">
+    <div class="pcx-linha">
+      <label class="pcx-campo">Pasta<input id="pcx-caminho" type="text" autocomplete="off" value="~" spellcheck="false"></label>
+      <div class="botoes"><button id="pcx-subir" type="button" class="secundario">↑ Acima</button><button id="pcx-atualizar" type="button" class="secundario">Atualizar</button><button id="pcx-nova-pasta" type="button" class="secundario">Nova pasta</button></div>
+    </div>
+    <div class="pcx-linha">
+      <label class="pcx-campo">Pesquisar dentro dos arquivos<input id="pcx-busca" type="search" placeholder="texto para localizar" autocomplete="off"></label>
+      <button id="pcx-buscar" type="button" class="secundario">Pesquisar</button>
+    </div>
+    <div id="pcx-lista" class="pcx-lista" aria-label="Arquivos da pasta"></div>
+    <div id="pcx-previa" class="pcx-previa" aria-live="polite"><p class="dica">Escolha um arquivo para ver a prévia.</p></div>
+    <div class="pcx-linha">
+      <label class="pcx-campo">Comparar com<input id="pcx-comparar-com" type="text" placeholder="~/Jarvis/outra-versao.md" spellcheck="false"></label>
+      <button id="pcx-comparar" type="button" class="secundario">Comparar</button>
+    </div>
+    <div class="pcx-linha">
+      <label class="pcx-campo">Converter arquivo aberto para<select id="pcx-converter-alvo"><option value="json">JSON</option><option value="csv">CSV</option><option value="md">Markdown</option><option value="html">HTML</option><option value="txt">texto</option></select></label>
+      <button id="pcx-converter" type="button" class="secundario">Converter</button>
+    </div>
+    <div class="pcx-linha">
+      <span class="pcx-campo">Organizar por tipo<output id="pcx-org-pasta" class="dica">~</output></span>
+      <button id="pcx-organizar" type="button" class="secundario">Ver plano</button>
+      <button id="pcx-organizar-aplicar" type="button" class="primario" disabled>Aplicar plano</button>
+    </div>
+    <div id="pcx-arq-status" class="pcx-status" role="status" aria-live="polite">Nada foi alterado ainda.</div>
+  </section>
+
+  <section class="pcx-secao" id="pcx-aba-cad" hidden>
+    <div class="pcx-linha">
+      <label class="pcx-campo">Arquivo CAD<input id="pcx-cad-caminho" type="text" placeholder="~/Jarvis/peca.cad" spellcheck="false"></label>
+      <button id="pcx-cad-abrir" type="button" class="primario">Abrir e visualizar</button>
+    </div>
+    <div class="pcx-cad-grade">
+      <div class="pcx-canvas-caixa">
+        <canvas id="pcx-canvas" class="pcx-canvas" width="760" height="420" aria-label="Visualizador CAD 2D e 3D"></canvas>
+        <div class="pcx-canvas-barra"><button id="pcx-cad-ajustar" type="button" class="secundario">Ajustar</button><span id="pcx-cad-info" class="dica">nenhum arquivo aberto</span></div>
+      </div>
+      <div class="pcx-cad-lado">
+        <h3>Propriedades</h3>
+        <div id="pcx-cad-props" class="pcx-props"><p class="dica">Abra um .cad, DXF ou STL.</p></div>
+        <h3>Exportar</h3>
+        <div class="pcx-linha">
+          <select id="pcx-cad-formato" aria-label="Formato de exportação"><option value="dxf">DXF</option><option value="stl">STL</option><option value="3mf">3MF</option><option value="step">STEP</option><option value="ifc">IFC</option><option value="cad">.cad</option></select>
+          <button id="pcx-cad-exportar" type="button" class="secundario">Exportar</button>
+        </div>
+        <div id="pcx-cad-exp-status" class="pcx-status" role="status" aria-live="polite">A exportação reabre o arquivo para validar.</div>
+      </div>
+    </div>
+    <div class="divider-small"></div>
+    <h3>Criar peça</h3>
+    <div class="pcx-linha">
+      <label class="pcx-campo">Nome<input id="pcx-cad-nome" type="text" value="peca-pc" maxlength="60"></label>
+      <label class="pcx-campo">Primitiva<select id="pcx-cad-tipo"><option value="caixa">Caixa</option><option value="esfera">Esfera</option><option value="cilindro">Cilindro</option><option value="cone">Cone</option><option value="plano">Plano</option></select></label>
+      <label class="pcx-campo">Unidade<select id="pcx-cad-unidades"><option value="mm">mm</option><option value="cm">cm</option><option value="m">m</option><option value="pol">pol</option></select></label>
+    </div>
+    <div class="pcx-linha pcx-dims">
+      <label class="pcx-campo">Largura / raio<input id="pcx-cad-d1" type="number" min="0.01" step="1" value="100"></label>
+      <label class="pcx-campo">Altura<input id="pcx-cad-d2" type="number" min="0.01" step="1" value="60"></label>
+      <label class="pcx-campo">Profundidade<input id="pcx-cad-d3" type="number" min="0.01" step="1" value="20"></label>
+    </div>
+    <div class="botoes"><button id="pcx-cad-criar" type="button" class="primario">Criar .cad</button></div>
+    <div class="divider-small"></div>
+    <h3>Alterar e gerar nova versão</h3>
+    <p class="dica">A alteração nunca sobrescreve o original: o app grava <code>nome-v2.cad</code>, reabre e só então confirma.</p>
+    <div class="pcx-linha pcx-dims">
+      <label class="pcx-campo">Objeto (1 = primeiro)<input id="pcx-cad-obj" type="number" min="1" step="1" value="1"></label>
+      <label class="pcx-campo">Nova largura / raio<input id="pcx-cad-novo-d1" type="number" min="0.01" step="1" placeholder="120"></label>
+      <label class="pcx-campo">Nova altura<input id="pcx-cad-novo-d2" type="number" min="0.01" step="1" placeholder="60"></label>
+    </div>
+    <div class="botoes"><button id="pcx-cad-modificar" type="button" class="secundario">Gerar nova versão</button></div>
+    <div id="pcx-cad-status" class="pcx-status" role="status" aria-live="polite">O original nunca é sobrescrito.</div>
+    <div class="divider-small"></div>
+    <h3>Matriz de formatos</h3>
+    <div id="pcx-cad-matriz" class="pcx-matriz" aria-live="polite"></div>
+  </section>
+
+  <section class="pcx-secao" id="pcx-aba-tarefas" hidden>
+    <p class="dica">Tarefa é uma sequência de passos permitidos: <code>listar</code>, <code>procurar</code>, <code>organizar</code>, <code>converter</code>, <code>pasta</code>, <code>identificar</code>, <code>abrir</code> e <code>exportar</code>. Cada passo usa as mesmas travas de uma ação isolada e o relatório mostra o que falhou.</p>
+    <label class="pcx-campo">Passos, um por linha<textarea id="pcx-tarefa-passos" rows="5" spellcheck="false">listar ~/Jarvis
+exportar ~/Jarvis/peca.cad stl</textarea></label>
+    <div class="botoes"><button id="pcx-tarefa-rodar" type="button" class="primario">Executar tarefa</button><button id="pcx-tarefa-cancelar" type="button" class="secundario">Cancelar</button></div>
+    <div id="pcx-tarefa-relatorio" class="pcx-status" role="status" aria-live="polite">Nenhuma tarefa executada.</div>
+    <h3>Histórico</h3>
+    <div id="pcx-tarefa-historico" class="pcx-historico"></div>
+  </section>
+
+  <section class="pcx-secao" id="pcx-aba-diagnostico" hidden>
+    <div class="botoes"><button id="pcx-diag-rodar" type="button" class="primario">Verificar este computador</button><button id="pcx-diag-copiar" type="button" class="secundario">Copiar detalhes</button></div>
+    <div id="pcx-diag-resumo" class="pcx-status" role="status" aria-live="polite">Ainda não verificado.</div>
+    <div id="pcx-diag-lista" class="pcx-diag"></div>
+  </section>
+
+  <div class="botoes barra"><button id="pcx-fechar" type="button" class="secundario">Fechar</button></div>
+</aside>
+
 <script src="plataforma.js"></script>
 <script src="memoria.js"></script>
 <script src="vendor/three.min.js"></script>
 <script src="orbita.js"></script>
 <script src="cad.js"></script>
+<script src="visao.js"></script>
+<script src="pessoas.js"></script>
 <script src="apps.js"></script>
 <!-- Núcleo de linguagem e decisão: precisa vir antes de app.js. -->
 <script src="hermes.js"></script>
 <script src="app.js"></script>
+<script src="pc.js" defer></script>
 </body>
 </html>

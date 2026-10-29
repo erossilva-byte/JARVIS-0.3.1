@@ -173,9 +173,15 @@ assert '.cad' in changelog and 'instancia.nivel is not a function' in changelog
 assert ('# J.A.R.V.I.S. Nova %s' % meta['version']) in texto('LEIA-ME.md')
 assert 'python3 tests/test_v1_17_0.py' in pkg['scripts']['test:all']
 assert 'node --check cad.js' in pkg['scripts']['test:all']
+MODULOS_WWW = ('app.js', 'apps.js', 'hermes.js', 'plataforma.js', 'memoria.js', 'orbita.js',
+               'cad.js', 'visao.js', 'pessoas.js')
 for wf in ('.github/workflows/build-apk.yml', '.github/workflows/release-apk.yml'):
     s = texto(wf)
-    assert 'cad.js www/' in s and meta['version'] in s and '1.17.0' in texto('CHANGELOG.md')
+    copia = [l.strip() for l in s.splitlines() if l.strip().startswith('cp index.html')]
+    assert len(copia) == 1 and copia[0].endswith(' www/'), (wf, copia)
+    for mod in MODULOS_WWW:
+        assert mod in copia[0].split(), (wf, mod)
+    assert meta['version'] in s and '1.17.0' in texto('CHANGELOG.md')
 
 # Ordem dos scripts: cad.js depois dos módulos base e antes do app.
 ordem = [html.index('src="%s"' % n) for n in ['plataforma.js', 'memoria.js', 'vendor/three.min.js', 'orbita.js', 'cad.js', 'apps.js', 'hermes.js', 'app.js']]

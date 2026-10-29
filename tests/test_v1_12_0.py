@@ -120,11 +120,17 @@ checagens = {
         '<script src="hermes.js"></script>' in html
         and html.index('hermes.js') < html.index('<script src="app.js"></script>')),
     "hermes.js entra na cópia da web (build e release) e no pacote do desktop": (
-        (raiz / ".github/workflows/build-apk.yml").read_text(encoding="utf-8").count(
-            "cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js www/") == 1
-        and (raiz / ".github/workflows/release-apk.yml").read_text(encoding="utf-8").count(
-            "cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js www/") == 1
-        and "hermes.js" in pacote.get("build", {}).get("files", [])),
+        # A linha de cópia cresce a cada módulo novo; o teste exige que TODOS os módulos
+        # carregados pelo index.html estejam nela, em vez de congelar o texto de uma versão.
+        all(
+            len([l for l in (raiz / wf).read_text(encoding="utf-8").splitlines()
+                 if "cp index.html style.css app.js" in l]) == 1
+            and all(mod in [l for l in (raiz / wf).read_text(encoding="utf-8").splitlines()
+                            if "cp index.html style.css app.js" in l][0]
+                    for mod in ("hermes.js", "visao.js", "pessoas.js", "cad.js"))
+            for wf in (".github/workflows/build-apk.yml", ".github/workflows/release-apk.yml"))
+        and all(mod in pacote.get("build", {}).get("files", [])
+                for mod in ("hermes.js", "visao.js", "pessoas.js"))),
     "Suíte roda o teste do núcleo": (
         "node tests/test_hermes.js" in pacote.get("scripts", {}).get("test:all", "")
         and "python3 tests/test_v1_12_0.py" in pacote.get("scripts", {}).get("test:all", "")),

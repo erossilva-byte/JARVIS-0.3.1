@@ -179,10 +179,15 @@ assert '## Instalar o J.A.R.V.I.S. no PC' in lei and 'npm start' in lei and 'npm
 assert '## 1.19.0' in texto('CHANGELOG.md') and '## 1.17.0' in texto('CHANGELOG.md')
 assert texto('CHANGELOG.md').count('\n## ') >= 30
 
+MODULOS_WWW = ('app.js', 'apps.js', 'hermes.js', 'plataforma.js', 'memoria.js', 'orbita.js',
+               'cad.js', 'visao.js', 'pessoas.js')
 for wf in ('.github/workflows/build-apk.yml', '.github/workflows/release-apk.yml'):
     s = texto(wf)
     assert 'J.A.R.V.I.S. Nova' in s, wf
-    assert 'cad.js www/' in s
+    copia = [l.strip() for l in s.splitlines() if l.strip().startswith('cp index.html')]
+    assert len(copia) == 1 and copia[0].endswith(' www/'), (wf, copia)
+    for mod in MODULOS_WWW:
+        assert mod in copia[0].split(), (wf, mod)
 assert 'Novidades da' in texto('.github/workflows/release-apk.yml')
 
 print('1.18.0: núcleo 3D corrigido para celular/PC, fallback 2D desenhando e auditoria do APK validada')

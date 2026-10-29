@@ -91,11 +91,16 @@ checar('Segurança intacta', "store.get('pin_hash'" in app and 'BLOQ_ATE' in app
 checar('Bloqueio segue opcional', "store.get('bloqueio', '0') === '1'" in app)
 
 # ---------- 5. Versão e entrega ----------
-checar('Versão 1.21.4 / 10214', meta['version'] == '1.21.4' and meta['versionCode'] == 10214 and pkg['version'] == '1.21.4')
-checar('app.js e interface na versão', "const VERSAO_APP = '1.21.4';" in app and html.count('v1.21.4') >= 2)
-checar('CHANGELOG e LEIA-ME na versão', '## 1.21.4' in texto('CHANGELOG.md') and '# J.A.R.V.I.S. Nova 1.21.4' in texto('LEIA-ME.md'))
+def _tri(v):
+    return tuple(int(x) for x in str(v).split('.')[:3])
+checar('Versão a partir da 1.21.4 / 10214',
+      _tri(meta['version']) >= (1, 21, 4) and meta['versionCode'] >= 10214 and pkg['version'] == meta['version'])
+checar('app.js e interface na versão corrente',
+      ("const VERSAO_APP = '" + meta['version'] + "';") in app and html.count('v' + meta['version']) >= 2)
+checar('CHANGELOG mantém a entrada 1.21.4 e o LEIA-ME segue versionado',
+      '## 1.21.4' in texto('CHANGELOG.md') and ('# J.A.R.V.I.S. Nova ' + meta['version']) in texto('LEIA-ME.md'))
 checar('Suíte roda este teste', 'python3 tests/test_v1_21_4.py' in pkg['scripts']['test:all'])
-checar('Workflows na versão', '1.21.4' in texto('.github/workflows/build-apk.yml') and '1.21.4' in texto('.github/workflows/release-apk.yml'))
+checar('Workflows na versão corrente', meta['version'] in texto('.github/workflows/build-apk.yml') and meta['version'] in texto('.github/workflows/release-apk.yml'))
 checar('Funções antigas preservadas', all(x in app for x in ['function obsEscolher', 'function executarDiagnostico', 'function tentarDesbloquear', 'function verificarAtualizacaoUI']))
 
 if falhas:

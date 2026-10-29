@@ -1,4 +1,25 @@
-# J.A.R.V.I.S. Nova 1.21.4
+# J.A.R.V.I.S. Nova 1.22.0
+
+## O que mudou na 1.22.0
+
+- **Visão 2.0**: balões sem sobreposição com linha-guia, texto copiável, imagem da galeria e
+  análise de vídeo por quadros com timestamp, progresso e cancelamento. Tocar num balão corta a
+  fala em curso antes de ler o detalhe.
+- **Pessoas**: perfis locais separados, com busca, ambiguidade respondida por pergunta e
+  exportação JSON. Nada de biometria; o contato não vai para a IA.
+- **Diagnóstico** confere os dois módulos novos no pacote.
+- **Testes**: `test_visao_nova.js`, `test_pessoas.js` e `test_v1_22_0.py` na suíte `npm run test:all`.
+
+## O que mudou na 1.21.5
+
+- **Cofre do Obsidian em um só lugar**: o bloco estava fora de qualquer aba (seção sem categoria), por isso
+  não aparecia em Ajustes ▸ Memória. Agora é um cartão único na aba Memória, com selo de estado, escolha de
+  pasta pelo seletor do sistema e **sem campo de caminho duplicado**.
+- **Diagnóstico por área**: seis grupos com contagem e pior estado, detalhes técnicos recolhíveis e atalho
+  para o registro de erros.
+- **Animações unificadas**: um sistema de tempos e curvas para seções, painéis, abas, cartões e diagnóstico,
+  com `prefers-reduced-motion` desligando tudo.
+- **Modelos `.task`**: links oficiais verificados na aba IA e em `MODELOS-IA-LOCAL.md`.
 
 ## O que mudou na 1.21.4
 

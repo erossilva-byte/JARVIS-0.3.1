@@ -1126,3 +1126,216 @@ body.bloqueado{overflow:hidden}
 #obs-topicos .mem-item{border-color:rgba(var(--rgb),.16)}
 .obs-topico-arquivo{font-family:ui-monospace,monospace;font-size:11px;color:var(--suave);word-break:break-all}
 #obs-resumo{line-height:1.45}
+
+/* ======================================================================
+   Sistema visual 1.21.5 — superfícies, movimento e diagnóstico agrupado
+   Um só conjunto de tempos e curvas para o app inteiro: núcleo, painéis,
+   cartões, abas e diagnóstico compartilham a mesma linguagem de animação.
+   ====================================================================== */
+:root{
+  --jv-dur-1:120ms; --jv-dur-2:200ms; --jv-dur-3:320ms;
+  --jv-ease:cubic-bezier(.22,.61,.36,1);
+  --jv-saida:cubic-bezier(.4,0,.9,.4);
+  --jv-linha:rgba(122,190,255,.14);
+  --jv-linha-forte:rgba(122,220,255,.32);
+  --jv-vidro:linear-gradient(180deg,rgba(16,27,44,.78),rgba(9,15,26,.66));
+  --jv-sombra:0 1px 0 rgba(255,255,255,.03) inset,0 18px 40px -30px rgba(0,0,0,.9);
+}
+@keyframes jv-surge{from{opacity:0;transform:translate3d(0,10px,0)}to{opacity:1;transform:none}}
+@keyframes jv-surge-x{from{opacity:0;transform:translate3d(-8px,0,0)}to{opacity:1;transform:none}}
+@keyframes jv-painel{from{opacity:0;transform:translate3d(0,22px,0) scale(.986)}to{opacity:1;transform:none}}
+@keyframes jv-fio{0%,100%{opacity:.28}50%{opacity:.7}}
+@keyframes jv-nucleo-pulso{0%,100%{filter:drop-shadow(0 0 10px rgba(109,255,194,.18))}50%{filter:drop-shadow(0 0 22px rgba(109,255,194,.34))}}
+
+/* --- entrada de tela: seções e cartões nascem no mesmo ritmo --------- */
+.grupo:not([hidden]) > *{animation:jv-surge var(--jv-dur-3) var(--jv-ease) both}
+.grupo:not([hidden]) > *:nth-child(2){animation-delay:24ms}
+.grupo:not([hidden]) > *:nth-child(3){animation-delay:48ms}
+.grupo:not([hidden]) > *:nth-child(4){animation-delay:72ms}
+.grupo:not([hidden]) > *:nth-child(5){animation-delay:96ms}
+.grupo:not([hidden]) > *:nth-child(6){animation-delay:120ms}
+.grupo:not([hidden]) > *:nth-child(n+7){animation-delay:150ms}
+.painel:not([hidden]){animation:jv-painel var(--jv-dur-3) var(--jv-ease) both}
+.painel:not([hidden]) .painel-topo{border-bottom:1px solid var(--jv-linha)}
+.diag-row,.mem-item,.rt-saved-list > *{animation:jv-surge-x var(--jv-dur-2) var(--jv-ease) both}
+
+/* --- superfícies: mesma borda, mesmo vidro, mesma sombra -------------- */
+.info-card,.dash-card,.nucleo-card,.ativacao-card,.diag-card,.diag-grupo,.obs-estado,.modelos-card,.audio-panel{
+  background:var(--jv-vidro);border:1px solid var(--jv-linha);border-radius:14px;box-shadow:var(--jv-sombra);
+}
+.info-card,.dash-card,.nucleo-card,.ativacao-card,.diag-card{transition:border-color var(--jv-dur-2) var(--jv-ease),transform var(--jv-dur-2) var(--jv-ease)}
+.info-card:hover,.dash-card:hover,.nucleo-card:hover{border-color:var(--jv-linha-forte)}
+.info-card .info-icon{transition:transform var(--jv-dur-2) var(--jv-ease),opacity var(--jv-dur-2) var(--jv-ease)}
+.info-card:hover .info-icon{transform:scale(1.06)}
+
+/* --- abas e controles com transição única ---------------------------- */
+.config-tab{transition:background var(--jv-dur-1) var(--jv-ease),color var(--jv-dur-1) var(--jv-ease),box-shadow var(--jv-dur-2) var(--jv-ease)}
+.config-tab[aria-selected="true"]{box-shadow:0 8px 22px -14px rgba(109,255,194,.8)}
+button,.link-botao,.lat-btn{transition:background var(--jv-dur-1) var(--jv-ease),color var(--jv-dur-1) var(--jv-ease),border-color var(--jv-dur-1) var(--jv-ease),transform var(--jv-dur-1) var(--jv-ease)}
+button:active:not(:disabled){transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid rgba(109,255,194,.55);outline-offset:2px}
+.status-pill{transition:color var(--jv-dur-1) var(--jv-ease),border-color var(--jv-dur-1) var(--jv-ease),background var(--jv-dur-2) var(--jv-ease)}
+.status-pill.ok{color:#7dffce;border-color:rgba(109,255,194,.45);background:rgba(109,255,194,.1)}
+.status-pill.warn{color:#ffce82;border-color:rgba(255,193,94,.45);background:rgba(255,193,94,.1)}
+.status-pill.off{color:var(--suave);border-color:rgba(160,180,200,.28);background:rgba(160,180,200,.08)}
+
+/* --- cofre do Obsidian: um só cartão de estado ----------------------- */
+.obs-bloco{display:grid;gap:12px}
+.obs-estado{padding:14px 16px;border-color:var(--jv-linha-forte);position:relative;overflow:hidden}
+.obs-estado::after{content:"";position:absolute;inset:0 auto 0 0;width:2px;background:linear-gradient(180deg,rgba(109,255,194,.85),rgba(109,255,194,0));animation:jv-fio 4.5s ease-in-out infinite}
+.obs-estado-cab{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.obs-estado-cab b{font-size:.98rem}
+.obs-estado p{margin:0 0 10px;color:var(--suave);font-size:.86rem;line-height:1.5}
+.obs-estado .botoes{margin:0}
+.obs-avancado summary,.modelos-card summary,.diag-tec summary{cursor:pointer;color:var(--cor);font-size:.88rem;letter-spacing:.01em}
+.obs-avancado summary::marker,.modelos-card summary::marker,.diag-tec summary::marker{color:rgba(109,255,194,.7)}
+.obs-avancado,.modelos-card{padding:12px 14px;border:1px solid var(--jv-linha);border-radius:12px;background:rgba(9,16,27,.5)}
+.obs-topico-arquivo{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.74rem;color:var(--suave)}
+.modelos-card{margin:14px 0}
+.modelos-lista{margin:10px 0 0;padding-left:18px;display:grid;gap:10px;font-size:.86rem;line-height:1.55;color:var(--suave)}
+.modelos-lista b{color:var(--texto,#e7f1ff)}
+.modelos-lista a{color:var(--cor);word-break:break-word}
+
+/* --- diagnóstico agrupado por área ---------------------------------- */
+.diag-grupos{display:grid;gap:14px}
+.diag-grupo{overflow:hidden}
+.diag-grupo[data-diag-pior="fail"]{border-color:rgba(255,120,120,.5)}
+.diag-grupo[data-diag-pior="warn"]{border-color:rgba(255,193,94,.38)}
+.diag-grupo-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--jv-linha)}
+.diag-grupo-cab b{font-size:.9rem;letter-spacing:.02em}
+.diag-grupo-contagem{font-size:.74rem;color:var(--suave);text-transform:uppercase;letter-spacing:.06em}
+.diag-grupo-contagem.fail{color:#ff9a9a}.diag-grupo-contagem.warn{color:#ffce82}.diag-grupo-contagem.ok{color:#7dffce}
+.diag-grupo-lista{display:grid;gap:10px;padding:12px 14px}
+.diag-grupo .diag-row{padding-left:10px;border-left:2px solid rgba(160,180,200,.22);border-radius:0 10px 10px 0}
+.diag-grupo .diag-row.ok{border-left-color:rgba(109,255,194,.7)}
+.diag-grupo .diag-row.warn{border-left-color:rgba(255,193,94,.8)}
+.diag-grupo .diag-row.fail{border-left-color:rgba(255,110,110,.85)}
+.diag-grupo .diag-row.cfg,.diag-grupo .diag-row.nig{border-left-color:rgba(140,170,255,.6)}
+.diag-grupo .diag-row.off,.diag-grupo .diag-row.na{border-left-color:rgba(160,180,200,.28)}
+.diag-tec{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.22);border:1px dashed rgba(122,190,255,.16)}
+.diag-tec small{display:block;margin-top:6px;color:var(--suave);font-size:.78rem;line-height:1.5}
+.diag-tec-meta{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;opacity:.75;font-size:.72rem!important}
+
+/* --- sincronismo de estado: o núcleo e os indicadores respiram juntos - */
+body[data-state="thinking"] .hud{animation:jv-nucleo-pulso 1.9s ease-in-out infinite}
+body[data-state="listening"] .ondas-voz span:nth-child(2n){animation-delay:90ms}
+body[data-state="speaking"] .ondas-voz span:nth-child(3n){animation-delay:120ms}
+#chip-estado{transition:color var(--jv-dur-2) var(--jv-ease),background var(--jv-dur-2) var(--jv-ease)}
+
+/* --- telas pequenas: cartões sem estourar --------------------------- */
+@media(max-width:430px){
+  .obs-estado{padding:12px}
+  .obs-estado .botoes{display:grid;grid-template-columns:1fr;gap:8px}
+  .diag-grupo-cab{flex-wrap:wrap}
+  .modelos-lista{padding-left:14px;font-size:.83rem}
+}
+
+/* --- acessibilidade: nada se move para quem pediu menos movimento ---- */
+@media(prefers-reduced-motion:reduce){
+  .grupo:not([hidden]) > *,.painel:not([hidden]),.diag-row,.mem-item,.rt-saved-list > *,
+  body[data-state="thinking"] .hud,.obs-estado::after{animation:none!important}
+  button,.config-tab,.info-card,.status-pill,#chip-estado{transition:none!important}
+}
+
+/* ---------- Painel do computador (Electron: Windows, Linux, macOS) ----------
+   Só aparece quando pc.js confirma o preload do Electron; no Android o botão e o
+   painel continuam escondidos. As classes usam o mesmo vocabulário visual do resto
+   da interface (superfícies, selos, tempos de transição). */
+.painel-pc{width:min(1080px,98vw)}
+.pcx-abas{position:sticky;top:0;z-index:2;display:flex;gap:6px;overflow-x:auto;padding:8px 16px 10px;background:rgba(7,13,23,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--linha);scrollbar-width:thin}
+.pcx-aba{flex:none;font:inherit;font-size:12.5px;padding:8px 13px;border-radius:99px;border:1px solid var(--linha);background:transparent;color:var(--suave);cursor:pointer;transition:color .18s,border-color .18s,background .18s}
+.pcx-aba.ativo,.pcx-aba[aria-selected=true]{color:#04121a;background:var(--cor);border-color:var(--cor);font-weight:600}
+.pcx-secao{display:flex;flex-direction:column;gap:12px;padding:16px 20px;border-bottom:1px solid var(--linha);animation:jv-entra .28s var(--jv-ease, ease-out) both}
+.pcx-linha{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.pcx-campo{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--suave);flex:1 1 190px;min-width:0}
+.pcx-campo input,.pcx-campo select,.pcx-campo textarea{background:var(--superficie2);border:1px solid var(--linha);border-radius:10px;padding:9px 11px;color:var(--texto);font:inherit;font-size:13px;min-height:40px;width:100%}
+.pcx-campo textarea{font-family:ui-monospace,Menlo,Consolas,monospace;resize:vertical}
+.pcx-dims .pcx-campo{flex:1 1 140px}
+.pcx-lista{display:flex;flex-direction:column;gap:2px;max-height:30vh;overflow:auto;border:1px solid var(--linha);border-radius:12px;padding:6px;background:rgba(4,10,18,.5)}
+.pcx-item{display:flex;justify-content:space-between;gap:10px;align-items:center;width:100%;text-align:left;font:inherit;font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--texto);cursor:pointer}
+.pcx-item:hover{background:rgba(var(--rgb),.1);border-color:rgba(var(--rgb),.24)}
+.pcx-item.pasta{color:#9ad0ff}
+.pcx-item-nome{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcx-item-meta{font-size:11px;color:var(--suave);flex:none;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcx-previa{display:flex;flex-direction:column;gap:10px;border:1px solid var(--linha);border-radius:12px;padding:12px;background:rgba(4,10,18,.42);min-height:70px}
+.pcx-previa-topo{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13.5px}
+.pcx-selo{font-size:10px;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--linha);color:var(--suave);padding:3px 7px;border-radius:99px}
+.pcx-editor{width:100%;background:#040a12;border:1px solid var(--linha);border-radius:10px;padding:10px;color:var(--texto);font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;resize:vertical}
+.pcx-imagem{max-width:100%;max-height:46vh;border-radius:10px;border:1px solid var(--linha);object-fit:contain;background:#02060c}
+.pcx-tabela{width:100%;border-collapse:collapse;font-size:12px;display:block;max-height:40vh;overflow:auto}
+.pcx-tabela th,.pcx-tabela td{border:1px solid var(--linha);padding:5px 8px;text-align:left;white-space:nowrap}
+.pcx-tabela th{background:rgba(var(--rgb),.1);position:sticky;top:0}
+.pcx-tabela td.pcx-nota{white-space:normal;color:var(--suave);font-size:11.5px;max-width:340px}
+.pcx-meta{max-height:34vh;overflow:auto;background:#040a12;border:1px solid var(--linha);border-radius:10px;padding:10px;font:11.5px/1.5 ui-monospace,Menlo,Consolas,monospace;color:#b9d7ea;margin:0;white-space:pre-wrap;word-break:break-word}
+.pcx-status{margin:0;font-size:12.5px;color:var(--suave);line-height:1.45;border-left:2px solid rgba(var(--rgb),.5);padding:6px 10px;background:rgba(var(--rgb),.06);border-radius:0 8px 8px 0}
+.pcx-status.erro{color:#ffb4b4;border-left-color:var(--alerta);background:rgba(255,107,107,.08)}
+.pcx-plano{margin:0;padding-left:18px;font-size:12.5px;color:var(--suave);max-height:32vh;overflow:auto}
+.pcx-achado{display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:left;font:inherit;font-size:12.5px;padding:7px 9px;border-radius:8px;border:1px solid var(--linha);background:transparent;color:var(--texto);cursor:pointer}
+.pcx-achado:hover{background:rgba(var(--rgb),.1)}
+.pcx-cad-grade{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(220px,1fr);gap:12px;align-items:start}
+.pcx-canvas-caixa{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pcx-canvas{width:100%;height:auto;aspect-ratio:760/420;border:1px solid var(--linha);border-radius:12px;background:#04070d;touch-action:none;cursor:grab}
+.pcx-canvas:active{cursor:grabbing}
+.pcx-canvas-barra{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pcx-cad-lado{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pcx-props dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12px}
+.pcx-props dt{color:var(--suave)}
+.pcx-props dd{margin:0;overflow:hidden;text-overflow:ellipsis}
+.pcx-matriz{overflow:auto;max-height:38vh}
+.pcx-diag{display:flex;flex-direction:column;gap:8px}
+.pcx-diag-item{border:1px solid var(--linha);border-left:3px solid rgba(var(--rgb),.6);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:5px;background:rgba(4,10,18,.4)}
+.pcx-diag-item.estado-aviso{border-left-color:#ffd479}
+.pcx-diag-item.estado-erro{border-left-color:var(--alerta)}
+.pcx-diag-item.estado-nao_configurado,.pcx-diag-item.estado-nao_verificado,.pcx-diag-item.estado-desativado{border-left-color:#8ba3b7}
+.pcx-diag-item b{font-size:13px}
+.pcx-impacto{margin:0;font-size:11.5px;color:var(--suave)}
+.pcx-historico{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--suave)}
+.pcx-historico-item{border-bottom:1px solid var(--linha);padding:5px 0}
+.pcx-passo{font-size:12.5px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.pcx-passo.ok{color:#9fe8c8}
+.pcx-passo.falha{color:#ffb4b4}
+body.pc .lat-btn[data-lat=pc]{display:flex}
+@media(max-width:860px){.pcx-cad-grade{grid-template-columns:1fr}.painel-pc{width:100%}}
+@media(prefers-reduced-motion:reduce){.pcx-secao{animation:none}}
+
+/* ---- 1.22.0: Visão 2.0 (balões sem sobreposição, texto e vídeo) e Pessoas ----
+   O palco ganhou camadas separadas: mídia, linhas-guia (SVG) e balões. As linhas e os
+   balões usam a mesma unidade (porcentagem da imagem), então continuam alinhados quando
+   o painel muda de largura. Nada de posição fixa em pixel. */
+.visao-palco img,.visao-palco video#visao-video-arquivo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#04070d}
+.visao-palco img[hidden],.visao-palco video#visao-video-arquivo[hidden]{display:none}
+.visao-guias{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.visao-guias line{stroke:rgba(var(--rgb),.55);stroke-width:.35;vector-effect:non-scaling-stroke;stroke-dasharray:2 2}
+.balao{transition:background .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+.balao.selecionado{background:rgba(24,58,92,.96);border-color:rgba(var(--rgb),.95);box-shadow:0 0 0 2px rgba(var(--rgb),.35),0 8px 24px rgba(0,0,0,.45);transform:translate(-50%,-50%) scale(1.04)}
+.balao.balao-agrupado{border-style:dashed}
+.visao-texto-caixa{margin-top:10px;border:1px solid var(--linha);border-radius:14px;background:rgba(6,16,28,.55);padding:11px 12px}
+.visao-texto-cab{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:7px}
+.visao-texto-cab b{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--suave)}
+.visao-texto{max-height:34vh;min-height:64px;overflow-y:auto;overscroll-behavior:contain;white-space:pre-wrap;line-height:1.55;font-size:13.5px;padding-right:4px}
+.visao-video-lista{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.visao-video-item{display:flex;gap:9px;align-items:flex-start;text-align:left;width:100%;padding:9px 11px;border-radius:11px;border:1px solid var(--linha);background:rgba(var(--rgb),.05);color:inherit;font:inherit;font-size:12.5px;line-height:1.45;animation:entra .2s ease-out}
+.visao-video-item b{color:var(--cor);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.visao-video-item:active{background:rgba(var(--rgb),.14)}
+.visao-progresso{margin-top:10px;padding:11px 12px;border:1px solid rgba(var(--rgb),.28);border-radius:13px;background:rgba(8,20,35,.7)}
+.visao-progresso-topo{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:#cfe6f5;margin-bottom:7px}
+.visao-progresso-trilha{height:5px;border-radius:99px;background:rgba(var(--rgb),.16);overflow:hidden;margin-bottom:9px}
+.visao-progresso-trilha span{display:block;width:0;height:100%;border-radius:99px;background:linear-gradient(90deg,rgba(var(--rgb),.55),var(--cor));transition:width .25s cubic-bezier(.22,.61,.36,1)}
+.visao-progresso button{width:100%}
+@media(prefers-reduced-motion:reduce){.balao,.visao-video-item,.visao-progresso-trilha span{transition:none!important;animation:none!important}}
+
+/* Pessoas: um cartão por pessoa, sem misturar dados */
+.painel-pessoas{width:min(100vw,640px)}
+.pessoas-lista{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+.pessoa-card{border:1px solid var(--linha);border-radius:14px;padding:12px 13px;background:rgba(var(--rgb),.045);animation:entra .22s ease-out}
+.pessoa-cab{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pessoa-cab b{font-size:15px}
+.pessoa-apelido{color:var(--suave);font-size:12.5px}
+.pessoa-card small{display:block;color:var(--suave);font-size:12px;line-height:1.5;margin-top:3px}
+.pessoa-card p{margin:7px 0 0;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.pessoa-card .botoes{margin-top:9px}
+@media(prefers-reduced-motion:reduce){.pessoa-card{animation:none!important}}
+
+/* Pessoas 1.22.0 — rolagem garantida do painel e JSON de exportação copiável */
+#painel-pessoas{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.pessoa-exportacao{max-height:32vh;overflow:auto;margin-top:8px;padding:10px 12px;border:1px solid var(--linha);border-radius:12px;background:rgba(4,10,18,.75);color:#cfe6f5;font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;user-select:text}

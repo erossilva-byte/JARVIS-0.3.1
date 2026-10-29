@@ -1,3 +1,101 @@
+## 1.22.0 — 2026-10-29
+
+## Visão 2.0 e cadastro de pessoas
+
+- **Balões sem sobreposição.** O posicionamento saiu do `app.js` para `visao.js`, que calcula
+  colisão, margem e linha-guia. O teste `test_visao_nova.js` coloca 10 objetos no mesmo ponto e
+  prova que nenhum balão cobre outro; objetos colados na borda continuam dentro da imagem.
+- **Balão interrompe a fala.** Tocar num balão corta o TTS nativo, a síntese do navegador e a voz
+  neural antes de falar o detalhe. A fala antiga não continua depois da escolha e a análise geral
+  pode ser retomada pelo botão "Voltar à análise geral".
+- **Texto da análise** em painel próprio, com rolagem, cópia e o texto do balão selecionado; o
+  resultado é preservado ao alternar entre balões e ao reabrir o painel.
+- **Imagens da galeria/arquivo** entram pelo mesmo caminho da câmera, com redução para 1024 px,
+  limite de 16 MB e mensagens claras para formato inválido ou falha de leitura.
+- **Vídeos MP4/WebM/MOV** com pré-visualização, até 9 quadros extraídos por canvas, análise
+  quadro a quadro com timestamp, progresso real, cancelamento e lista clicável que volta ao
+  momento correspondente. O áudio não é analisado e isso é dito na tela.
+- **Cadastro de pessoas** (`pessoas.js` + painel próprio): nome obrigatório, apelido, relação,
+  descrição, preferências, observações e contato opcional; busca por nome/apelido sem acento,
+  perfis nunca fundidos, ambiguidade respondida com pergunta, exportação JSON e exclusão com
+  confirmação. O contato não entra no contexto da IA; nome, apelido, relação e preferências só
+  entram se a opção estiver ligada.
+- **Diagnóstico** passa a listar os dois módulos novos entre os componentes do pacote.
+- **Testes:** `test_visao_nova.js` (8 grupos), `test_pessoas.js` (10 grupos) e
+  `test_v1_22_0.py` (contrato de interface, versão, scripts, CSS e ausência de chaves).
+
+## Limitações desta revisão
+
+- Não houve compilação de APK nem execução em aparelho físico neste ambiente: o JDK e o Android
+  SDK não estão instalados. Os testes são estáticos e de núcleo (Node/Python).
+- A análise de vídeo depende de um provedor com visão configurado e envia um quadro por vez; não
+  há análise de áudio nem transcrição de fala do vídeo.
+- O indicador de fala fora do aplicativo por notificação/sobreposição não foi implementado nesta
+  revisão; a fala continua sendo interrompida pelos controles do app e pelo botão Parar.
+
+## 1.21.5 — 2026-10-29
+
+## Camada Windows (PC) — 1.21.5
+
+Expansão do J.A.R.V.I.S. Nova para computador, sobre o mesmo núcleo do Android.
+
+- **Painel ▸ Computador** (só no Electron): abas Arquivos, CAD, Tarefas e Diagnóstico.
+  O botão e o painel nascem escondidos; `pc.js` só age quando existe `window.jarvisNative`.
+- **Motor de arquivos do PC** (`platforms/desktop/arquivos.js`): formato detectado por
+  assinatura de bytes, prévia por tipo (tabela para CSV, imagem inline, texto extraído de
+  DOCX, planilhas de XLSX, metadados de PDF), gravação atômica com backup `.bak-<data>`,
+  comparação por bloco, pesquisa textual, conversões reais (csv↔json, md→html, html→txt,
+  txt→md) e organização em duas etapas (plano e aplicação).
+- **CAD do PC** (`platforms/desktop/cad_pc.js`): identifica DXF, STL, 3MF, STEP, IFC,
+  `.cad`, DWG, FCStd e OLE pelo conteúdo; visualiza DXF em linhas/camadas e malha 3D;
+  cria, altera em nova versão (nunca sobrescreve o original) e exporta com validação por
+  reabertura e lista de perdas. DWG, RVT/RFA e FCStd são recusados com o motivo.
+- **Tarefas sequenciais** com lista branca de passos, relatório por passo, parada no
+  primeiro erro e cancelamento.
+- **Diagnóstico do PC**: versão, memória, disco, provedores com chave (só nomes), cofre do
+  Obsidian, ferramentas CAD instaladas e falhas recentes — com estados reais, incluindo
+  "não verificado".
+- Nada disso muda o Android: versão e `versionCode` continuam 1.21.5 / 10215.
+
+
+### Cofre do Obsidian num único lugar (correção real)
+
+- O bloco do cofre era um `<section class="grupo">` **sem `data-category`**: a navegação de abas só
+  mostra/esconde seções marcadas, então ele não aparecia em Ajustes ▸ Memória. Agora é um cartão
+  **dentro** da aba Memória, ao lado da memória pessoal.
+- **Um só ponto de seleção**: removido o campo de texto “Caminho do cofre (PC)”, que duplicava a
+  escolha. A pasta vem sempre do seletor do sistema (SAF no Android, diálogo nativo no PC) e o
+  caminho salvo é lido do armazenamento, não de um input paralelo.
+- Selo de estado do vínculo (`conectado`, `falta a pasta`, `desligado`, `sem pasta aqui`) e resumo com
+  quantidade de `.md`, leitura/escrita e existência de `Memoria/`.
+
+### Diagnóstico agrupado por área
+
+- Resultados organizados em seis grupos — aplicativo e pacote, IA, voz e áudio, memória e dados,
+  permissões e sistema, rede — com contagem e **pior estado** em cada cabeçalho.
+- Cada linha mantém estado, descrição, impacto, como resolver, atalho para a aba certa e horário;
+  os textos longos e o estado interno ficam em **Detalhes técnicos** recolhível.
+- Botão “Abrir registro de erros” leva ao painel de registro a partir do diagnóstico.
+
+### Interface e animações
+
+- Sistema único de movimento: `--jv-dur-1/2/3`, `--jv-ease` e três keyframes compartilhados
+  (`jv-surge`, `jv-surge-x`, `jv-painel`) usados por seções, painéis, abas, cartões e linhas do
+  diagnóstico — entrada em cascata curta, sem efeitos independentes competindo.
+- Superfícies unificadas (borda, vidro, sombra) em cartões de IA, painel, status e diagnóstico;
+  selos de estado com cor por severidade.
+- Estados reais continuam mandando na animação: `thinking` pulsa o HUD, `listening` e `speaking`
+  escalonam as ondas; nada anima quando a atividade não existe.
+- `prefers-reduced-motion` desliga animações e transições.
+
+### Modelos `.task`
+
+- Bloco “Onde baixar modelos `.task` compatíveis” na aba IA com links verificados: repositório
+  oficial `litert-community/Gemma3-1B-IT`, coleção LiteRT Community, documentação do MediaPipe LLM
+  Inference e Gemma no Kaggle.
+- Lista completa com nomes de arquivo conferidos, tamanho, licença e limites de RAM em
+  `MODELOS-IA-LOCAL.md`. O `.task` é binário: nenhum link é inserido dentro do modelo.
+
 ## 1.21.4 — 2026-10-29
 
 ### Obsidian em Ajustes ▸ Memória

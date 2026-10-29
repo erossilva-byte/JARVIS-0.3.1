@@ -33,7 +33,7 @@ jobs:
       - name: Conferir os fontes web obrigatórios
         shell: bash
         run: |
-          for f in index.html style.css app.js hermes.js plataforma.js memoria.js orbita.js cad.js vendor/three.min.js platforms/desktop/main.js; do
+          for f in index.html style.css app.js pc.js hermes.js plataforma.js memoria.js orbita.js cad.js vendor/three.min.js platforms/desktop/main.js platforms/desktop/arquivos.js platforms/desktop/cad_pc.js; do
             test -s "$f" || { echo "Falta $f: o pacote do PC sairia incompleto."; exit 1; }
           done
 
@@ -44,6 +44,15 @@ jobs:
         run: |
           node --check platforms/desktop/main.js
           node --check app.js
+
+      - name: Testar motores de arquivos e CAD do PC
+        shell: bash
+        run: |
+          node --check pc.js
+          node --check platforms/desktop/arquivos.js
+          node --check platforms/desktop/cad_pc.js
+          node tests/test_pc_arquivos.js
+          node tests/test_pc_cad.js
 
       - name: Empacotar Windows (instalador NSIS + portátil)
         run: npx electron-builder --win nsis portable --publish never
@@ -80,6 +89,7 @@ jobs:
             dist/*.exe
             dist/*.sha256
             dist/*.zip
+            dist/win-unpacked/**
             dist/*.yml
           if-no-files-found: error
 

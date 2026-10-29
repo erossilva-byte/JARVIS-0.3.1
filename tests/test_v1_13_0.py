@@ -157,8 +157,8 @@ checagens = {
 
     # 8. Empacotamento e release
     "hermes.js vai para o www nos dois workflows": (
-        build_wf.count("cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js www/") == 1
-        and release_wf.count("cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js www/") == 1),
+        build_wf.count("cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/") == 1
+        and release_wf.count("cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/") == 1),
     "JarvisAtivacao.java é exigido no build e no release": (
         "JarvisAtivacao.java" in build_wf and "JarvisAtivacao.java" in release_wf
         and "JarvisAtivacao.java" not in ler(".gitignore")),

@@ -8,7 +8,8 @@ raiz (núcleo web compartilhado)
   index.html  style.css  app.js  apps.js  hermes.js
   plataforma.js  memoria.js  orbita.js  cad.js   <- rodam em Android, iOS, desktop e navegador
 platforms/
-  desktop/   Electron: janela, IPC, arquivos do PC, Obsidian, captura de tela
+  desktop/   Electron: janela, IPC, arquivos do PC (arquivos.js), CAD do PC (cad_pc.js),
+             Obsidian, captura de tela — ver platforms/WINDOWS.md
   android/   Java nativo (serviço, voz, plugins) + patches de build
   ios/       configuração do Capacitor e checklist de portabilidade
   web/       PWA (manifesto) e o que muda no navegador
@@ -38,3 +39,10 @@ efetiva é por camada: o que é do Android está identificado abaixo e nada mais
 - **Desktop (Electron):** tudo do núcleo + arquivos do PC, status do sistema, Obsidian em pasta real, captura de tela para a visão, cofre de chaves do SO. Voz usa o motor do navegador embutido.
 - **Web/PWA:** núcleo completo, voz do navegador, câmera com permissão do navegador; sem segundo plano e sem arquivos locais.
 - **iOS:** configuração pronta, **não compilado nem testado** — exige macOS com Xcode.
+
+## Camada Windows
+
+`WINDOWS.md` documenta a expansão de PC: arquitetura compartilhada, matriz por formato de
+arquivo e de CAD, segurança, testes executados, pendências e como gerar o instalador NSIS.
+O código de PC vive em `platforms/desktop` (motores) e em `pc.js` (interface), ambos
+inertes fora do Electron.

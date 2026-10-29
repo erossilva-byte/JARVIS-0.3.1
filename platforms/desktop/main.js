@@ -1,8 +1,12 @@
 const { app, BrowserWindow, ipcMain, shell, clipboard, safeStorage, desktopCapturer, dialog } = require('electron');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+// Motores da camada PC. São Node puro (sem Electron) para poderem ser testados fora da
+// janela: `node tests/test_pc_arquivos.js` roda os mesmos arquivos que o app usa.
+const ARQ = require('./arquivos.js');
+const CADPC = require('./cad_pc.js');
 // Este arquivo vive em platforms/desktop; o núcleo web compartilhado fica na raiz do projeto.
 // Nada de caminho relativo solto: com dois níveis fixos, o pacote empacotado e o modo dev
 // resolvem para os mesmos arquivos.
@@ -416,9 +420,168 @@ Object.assign(acoes, {
   }
 });
 
+// ---------- Camada PC: arquivos, CAD, tarefas e diagnóstico ----------
+// Tudo abaixo trabalha dentro da pasta do usuário (app.getPath('home')). O renderer manda
+// caminho relativo e confirma operações destrutivas; nenhuma ação aceita comando de shell.
+const PC_ARQ = () => ARQ.criarArquivos({ raiz: app.getPath('home') });
+const PC_CAD = () => CADPC.criarCad({ raiz: app.getPath('home') });
+
+const falhasRecentes = [];
+function anotarFalha(acao, erro) {
+  falhasRecentes.unshift({ acao: String(acao || '?'), erro: String(erro && erro.message ? erro.message : erro).slice(0, 300), quando: Date.now() });
+  if (falhasRecentes.length > 40) falhasRecentes.pop();
+}
+
+// Tarefas com várias etapas: cada passo é uma ação JÁ permitida da lista branca.
+// Não existe "executar comando": o pior que um passo faz é mexer em arquivo com as
+// mesmas travas de uma ação isolada, e o relatório diz o que falhou.
+const ACOES_DE_TAREFA = new Set([
+  'arq_listar', 'arq_pesquisar', 'arq_organizar', 'arq_converter', 'arq_criar_pasta',
+  'cad_identificar', 'cad_abrir', 'cad_criar', 'cad_exportar'
+]);
+let cancelarTarefaAtual = false;
+
+function comandoExiste(nomes) {
+  const lista = Array.isArray(nomes) ? nomes : [nomes];
+  for (const nome of lista) {
+    try {
+      const r = plat === 'win32'
+        ? spawnSync('where', [nome], { stdio: 'ignore', timeout: 2500 })
+        : spawnSync('sh', ['-c', 'command -v ' + String(nome).replace(/[^A-Za-z0-9_.-]/g, '')], { stdio: 'ignore', timeout: 2500 });
+      if (r && r.status === 0) return true;
+    } catch (_) { /* comando ausente */ }
+  }
+  return false;
+}
+
+const acoesPC2 = {
+  arq_listar: ({ caminho }) => PC_ARQ().listar(caminho),
+  arq_ler: ({ caminho }) => PC_ARQ().ler(caminho),
+  arq_salvar: ({ caminho, texto, backup }) => PC_ARQ().salvar({ caminho, texto, backup: backup !== false }),
+  arq_comparar: ({ a, b }) => PC_ARQ().comparar(a, b),
+  arq_pesquisar: ({ termo, pasta, limite }) => PC_ARQ().pesquisar(termo, pasta, { limite: limite }),
+  arq_converter: ({ caminho, alvo, sobrescrever }) => PC_ARQ().converter({ caminho: caminho, alvo: alvo, sobrescrever: !!sobrescrever }),
+  arq_organizar: ({ pasta, aplicar }) => PC_ARQ().organizar({ pasta: pasta, aplicar: !!aplicar }),
+  arq_mover: ({ de, para }) => PC_ARQ().mover({ de: de, para: para }),
+  arq_criar_pasta: ({ pasta, nome }) => PC_ARQ().criarPasta({ pasta: pasta, nome: nome }),
+  arq_apagar: async ({ caminho }) => PC_ARQ().apagar(caminho, (alvo) => shell.trashItem(alvo)),
+  arq_abrir: async ({ caminho }) => {
+    const alvo = PC_ARQ().resolver(caminho);
+    const erro = await shell.openPath(alvo);
+    if (erro) throw new Error(erro);
+    return { ok: true, caminho: alvo };
+  },
+  cad_identificar: ({ caminho }) => PC_CAD().identificar(caminho),
+  cad_abrir: ({ caminho }) => PC_CAD().abrir(caminho),
+  cad_criar: (dados) => PC_CAD().criar(dados || {}),
+  cad_modificar: (dados) => PC_CAD().modificar(dados || {}),
+  cad_exportar: (dados) => PC_CAD().exportar(dados || {}),
+  cad_formatos: () => PC_CAD().formatos(),
+  tarefas_executar: async ({ passos, titulo }) => {
+    const lista = Array.isArray(passos) ? passos.slice(0, 40) : [];
+    if (!lista.length) throw new Error('A tarefa não tem passos.');
+    for (const p of lista) {
+      if (!p || !ACOES_DE_TAREFA.has(p.acao)) throw new Error('Passo não permitido em tarefa: ' + (p && p.acao ? p.acao : '?'));
+    }
+    cancelarTarefaAtual = false;
+    const inicio = Date.now();
+    const relatorio = [];
+    let falhou = false;
+    for (let i = 0; i < lista.length; i++) {
+      const passo = lista[i];
+      if (cancelarTarefaAtual) { relatorio.push({ passo: i + 1, acao: passo.acao, ok: false, erro: 'cancelado pelo usuário' }); break; }
+      try {
+        const r = await acoes[passo.acao](passo.args || {});
+        relatorio.push({ passo: i + 1, acao: passo.acao, ok: true, resultado: resumirResultado(passo.acao, r) });
+      } catch (e) {
+        falhou = true;
+        anotarFalha('tarefa:' + passo.acao, e);
+        relatorio.push({ passo: i + 1, acao: passo.acao, ok: false, erro: String(e && e.message ? e.message : e) });
+        break; // não sigo depois de erro: o relatório precisa ser confiável
+      }
+    }
+    const ok = relatorio.filter((r) => r.ok).length;
+    return {
+      titulo: String(titulo || 'Tarefa').slice(0, 80), passos: lista.length, concluidos: ok,
+      cancelada: cancelarTarefaAtual, falhou, segundos: Math.round((Date.now() - inicio) / 1000),
+      relatorio,
+      resumo: (falhou || cancelarTarefaAtual ? 'Interrompida: ' : 'Concluída: ') + ok + ' de ' + lista.length + ' passo(s).'
+    };
+  },
+  tarefas_cancelar: async () => { cancelarTarefaAtual = true; return { ok: true }; },
+  diag_pc: async () => {
+    const pkg = require(path.join(RAIZ, 'package.json'));
+    const itens = [];
+    const item = (grupo, nome, estado, detalhe, impacto, acao) => itens.push({ grupo, nome, estado, detalhe, impacto: impacto || '', acao: acao || '' });
+    item('Aplicativo', 'Versão instalada', 'ok', 'J.A.R.V.I.S. Nova ' + (pkg.version || '?') + ' · Electron ' + process.versions.electron + ' · Chromium ' + process.versions.chrome, '', '');
+    const mem = os.totalmem(), livre = os.freemem();
+    const ramOk = livre / mem > 0.12;
+    item('Sistema', 'Memória e processador', ramOk ? 'ok' : 'aviso', os.cpus().length + ' núcleo(s) · ' + Math.round(livre / 1073741824 * 10) / 10 + ' de ' + Math.round(mem / 1073741824 * 10) / 10 + ' GB livres', ramOk ? '' : 'com pouca memória livre o modelo local pode não carregar', '');
+    let disco = null;
+    try {
+      const st = fs.statfsSync(app.getPath('home'));
+      disco = { livre: st.bavail * st.bsize, total: st.blocks * st.bsize };
+    } catch (_) { /* sem statfs */ }
+    item('Sistema', 'Espaço em disco', !disco ? 'nao_verificado' : (disco.livre > 2 * 1073741824 ? 'ok' : 'aviso'),
+      disco ? Math.round(disco.livre / 1073741824 * 10) / 10 + ' de ' + Math.round(disco.total / 1073741824 * 10) / 10 + ' GB livres na pasta do usuário' : 'o sistema não expôs o espaço livre',
+      disco && disco.livre <= 2 * 1073741824 ? 'modelos .task grandes podem não caber' : '', '');
+    let chaves = [];
+    try { chaves = Object.keys(lerCofreDesktop()).filter((k) => /^(groq|cerebras|mistral|gemini)$/.test(k)); } catch (_) { chaves = []; }
+    item('IA', 'Provedores com chave no cofre do SO', chaves.length ? 'ok' : 'nao_configurado',
+      chaves.length ? chaves.join(', ') : 'nenhuma chave salva neste computador', '', 'Ajustes ▸ IA Core');
+    item('IA', 'Modelo local (.task)', chaves.length || cofreAutorizado ? 'nao_verificado' : 'nao_configurado',
+      'o carregamento do .task depende do MediaPipe, que só existe no Android; no PC o núcleo usa provedor externo configurado',
+      'sem provedor configurado, o chat offline não responde', 'Ajustes ▸ IA Core');
+    let cofre = { estado: 'nao_configurado', detalhe: 'nenhuma pasta de cofre escolhida' };
+    try {
+      const cofre2 = exigirCofre();
+      const arquivos = listarMd(cofre2, 500).length;
+      let escrita = true;
+      try { fs.accessSync(cofre2, fs.constants.W_OK); } catch (_) { escrita = false; }
+      cofre = { estado: escrita ? 'ok' : 'aviso', detalhe: cofre2 + ' · ' + arquivos + ' nota(s) .md' + (escrita ? '' : ' · somente leitura') };
+    } catch (e) { cofre = { estado: 'nao_configurado', detalhe: String(e.message) }; }
+    item('Memória', 'Cofre do Obsidian', cofre.estado, cofre.detalhe, cofre.estado === 'ok' ? '' : 'a memória por tópicos não grava nem lê notas', 'Ajustes ▸ Memória');
+    item('Arquivos', 'Motor de arquivos', 'ok', 'detecção por assinatura, prévia por formato, gravação atômica com backup .bak', '', 'Painel ▸ Computador ▸ Arquivos');
+    const ferramentas = {
+      FreeCAD: comandoExiste(['FreeCAD', 'freecad', 'freecadcmd']),
+      LibreCAD: comandoExiste(['LibreCAD', 'librecad']),
+      Inkscape: comandoExiste(['inkscape']),
+      LibreOffice: comandoExiste(['soffice', 'libreoffice'])
+    };
+    const ausentes = Object.keys(ferramentas).filter((k) => !ferramentas[k]);
+    item('CAD', 'Ferramentas externas', ausentes.length ? 'aviso' : 'ok',
+      Object.keys(ferramentas).map((k) => k + ': ' + (ferramentas[k] ? 'instalado' : 'ausente')).join(' · '),
+      'FCStd e DWG dependem de software externo; DXF/STL/3MF/STEP/IFC são tratados pelo próprio app', 'Painel ▸ Computador ▸ CAD');
+    item('CAD', 'Formatos do núcleo', 'ok', require(path.join(RAIZ, 'cad.js')).FORMATOS.length + ' formato(s) na matriz, com validação por reabertura na exportação', '', 'Painel ▸ Computador ▸ CAD');
+    item('Diário', 'Falhas recentes', falhasRecentes.length ? 'aviso' : 'ok', falhasRecentes.length ? falhasRecentes.slice(0, 5).map((f) => f.acao + ': ' + f.erro).join(' | ') : 'nenhuma falha desde que o app abriu', '', '');
+    return {
+      itens, gerado: Date.now(),
+      resumo: itens.filter((i) => i.estado === 'erro').length + ' erro(s), ' + itens.filter((i) => i.estado === 'aviso').length + ' aviso(s) em ' + itens.length + ' verificação(ões).'
+    };
+  }
+};
+function resumirResultado(acao, r) {
+  if (!r || typeof r !== 'object') return '';
+  if (r.resumo) return String(r.resumo).slice(0, 200);
+  if (r.arquivo) return path.basename(r.arquivo);
+  if (r.itens) return r.itens.length + ' item(ns)';
+  if (r.achados) return r.achados.length + ' achado(s)';
+  if (typeof r.movidos === 'number') return r.movidos + ' movido(s)';
+  return '';
+}
+Object.assign(acoes, acoesPC2);
+
 ipcMain.handle('jarvis:run', async (_e, nome, args) => {
-  if (!Object.prototype.hasOwnProperty.call(acoes, nome)) throw new Error('Ação desconhecida');
-  return (await acoes[nome](args || {})) ?? true;
+  if (!Object.prototype.hasOwnProperty.call(acoes, nome)) {
+    anotarFalha(nome, 'ação desconhecida');
+    throw new Error('Ação desconhecida');
+  }
+  try {
+    return (await acoes[nome](args || {})) ?? true;
+  } catch (e) {
+    anotarFalha(nome, e);
+    throw e;
+  }
 });
 
 app.whenReady().then(criarJanela);

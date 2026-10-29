@@ -133,7 +133,7 @@ checks = {
 
     # 9. Obsidian
     "Bloco Obsidian no painel de memória": all(
-        i in html for i in ('id="obs-caminho"', 'id="obs-testar"', 'id="obs-enviar"', 'id="obs-receber"',
+        i in html for i in ('id="obs-testar"', 'id="obs-enviar"', 'id="obs-receber"',
                             'id="obs-baixar"', 'id="obs-importar"')),
     "Memória exporta Markdown com frontmatter e um arquivo por nota": (
         "function arquivosMarkdown" in mem and "function notaMd" in mem and "tema: ' + n.tema" in mem
