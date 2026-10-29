@@ -7917,3 +7917,28 @@ if (pessoaContextoUI) {
 }
 
 })();
+
+
+/* ---- "Reduzir efeitos visuais" (escolha do usuário, persistida) ----
+   O CSS lê body.efeitos-reduzidos. É separado de prefers-reduced-motion: aquela é
+   preferência do sistema, esta é do usuário e vale para o app inteiro. O estado
+   também é reaplicado ao abrir Ajustes, porque o checkbox nasce desmarcado. */
+(function () {
+  var CHAVE = 'efeitos_visuais';
+  function reduzido() { return store.get(CHAVE, 'completos') === 'reduzidos'; }
+  function aplicar() {
+    var r = reduzido();
+    document.body.classList.toggle('efeitos-reduzidos', r);
+    var cb = document.getElementById('c-efeitos');
+    if (cb) cb.checked = r;
+  }
+  document.addEventListener('change', function (e) {
+    var alvo = e.target;
+    if (!alvo || alvo.id !== 'c-efeitos') return;
+    store.set(CHAVE, alvo.checked ? 'reduzidos' : 'completos');
+    aplicar();
+    if (typeof registrar === 'function') registrar('interface', 'efeitos visuais: ' + store.get(CHAVE));
+  });
+  document.addEventListener('DOMContentLoaded', aplicar);
+  aplicar();
+})();

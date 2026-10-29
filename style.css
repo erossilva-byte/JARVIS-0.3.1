@@ -1339,3 +1339,118 @@ body.pc .lat-btn[data-lat=pc]{display:flex}
 /* Pessoas 1.22.0 — rolagem garantida do painel e JSON de exportação copiável */
 #painel-pessoas{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .pessoa-exportacao{max-height:32vh;overflow:auto;margin-top:8px;padding:10px 12px;border:1px solid var(--linha);border-radius:12px;background:rgba(4,10,18,.75);color:#cfe6f5;font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;user-select:text}
+
+
+/* ======================================================================
+   Revisão visual holográfica — profundidade 3D, brilho e transições
+   Camada final do CSS: dá volume ao núcleo e às superfícies, padroniza a
+   entrada dos painéis e o retorno ao toque. Nada aqui muda lógica: só
+   transform/opacity/box-shadow, que a GPU compõe sem relayout.
+   Desligado por prefers-reduced-motion e por body.efeitos-reduzidos.
+   ====================================================================== */
+:root{
+  --jv-prof:1100px;
+  --jv-vidro-3d:linear-gradient(158deg,rgba(26,48,68,.86),rgba(8,17,28,.74) 58%,rgba(5,11,19,.9));
+  --jv-brilho:0 0 0 1px rgba(150,252,255,.045),0 26px 70px -42px rgba(0,0,0,.95),0 1px 0 rgba(255,255,255,.05) inset;
+  --jv-realce:0 32px 90px -48px rgba(0,229,255,.55);
+}
+
+/* --- Núcleo: camadas em profundidades diferentes (parallax real) ------ */
+body[data-nucleo=hud] .hud{transform-style:preserve-3d}
+body[data-nucleo=hud] .hud .cam{transform:translateZ(14px)}
+body[data-nucleo=hud] .hud .halo{transform:translateZ(-16px)}
+body[data-nucleo=hud] .hud .orb-sub{transform:translate(-50%,-50%) translateZ(22px)}
+body[data-nucleo=hud] .hud .orb-marca{transform:translate(-50%,-50%) translateZ(34px)}
+body[data-nucleo=hud] .hud .hm-a{transform:translateX(-50%) translateZ(26px)}
+body[data-nucleo=hud] .hud .hm-c{transform:translateX(-50%) translateZ(26px)}
+body[data-nucleo=hud] .hud .hm-b{transform:translateY(-50%) translateZ(26px)}
+body[data-nucleo=hud] .hud .hm-d{transform:translateY(-50%) translateZ(26px)}
+/* Inclinação com o ponteiro: o disco inteiro responde, e as camadas acima se
+   deslocam em profundidade — profundidade de verdade, não só sombra. */
+@media (hover:hover) and (pointer:fine){
+  .hud{transition:transform var(--jv-dur-3) var(--jv-ease),filter var(--jv-dur-3) var(--jv-ease)}
+  .hud:hover{transform:perspective(900px) rotateX(6deg) rotateY(-8deg)}
+  .hud:active{transform:perspective(900px) rotateX(2.5deg) rotateY(-3deg) scale(.995)}
+}
+.hud::after{box-shadow:0 0 24px rgba(var(--rgb),.14),inset 0 0 30px rgba(var(--rgb),.08)}
+.relogio{position:relative}
+.relogio::after{content:"";position:absolute;left:50%;bottom:-7px;width:76px;height:1px;transform:translateX(-50%);background:linear-gradient(90deg,transparent,rgba(var(--rgb),.75),transparent);opacity:.55}
+.relogio #hora{text-shadow:0 0 26px rgba(var(--rgb),.3),0 0 2px rgba(255,255,255,.28)}
+
+/* --- Painéis: entrada em profundidade, como porta holográfica ---------- */
+@keyframes jv-painel-holo{
+  from{opacity:0;transform:perspective(var(--jv-prof)) rotateY(-8deg) translate3d(44px,0,0) scale(.986)}
+  to{opacity:1;transform:none}
+}
+@keyframes jv-fundo{from{opacity:0}to{opacity:1}}
+.painel:not([hidden]){animation:jv-painel-holo var(--jv-dur-3) var(--jv-ease) both;transform-origin:100% 50%;
+  box-shadow:-46px 0 130px -58px rgba(0,229,255,.4),-18px 0 60px -30px rgba(0,0,0,.9)}
+#scrim{background:radial-gradient(120% 90% at 82% 18%,rgba(8,40,56,.5),rgba(2,6,11,.8));animation:jv-fundo var(--jv-dur-2) var(--jv-ease)}
+@media(min-width:700px){#scrim{backdrop-filter:blur(7px)}}
+#lateral::after{content:"";position:absolute;top:0;bottom:0;right:0;width:1px;background:linear-gradient(180deg,transparent,rgba(var(--rgb),.45),transparent);pointer-events:none}
+.lat-btn.ativo{box-shadow:0 0 0 1px rgba(var(--rgb),.32),0 12px 34px -20px rgba(0,229,255,.9)}
+
+/* --- Superfícies de vidro com brilho superior e elevação no hover ------ */
+.dash-card,.info-card,.nucleo-card,.ativacao-card,.diag-grupo,.obs-estado,.modelos-card,
+.audio-panel,.pessoa-card,.neural-item,.cad-resultado,.visao-texto-caixa{
+  background-image:var(--jv-vidro-3d);box-shadow:var(--jv-brilho);
+  transition:transform var(--jv-dur-2) var(--jv-ease),box-shadow var(--jv-dur-2) var(--jv-ease),border-color var(--jv-dur-2) var(--jv-ease);
+}
+@media (hover:hover) and (pointer:fine){
+  .dash-card:hover,.info-card:hover,.nucleo-card:hover,.pessoa-card:hover,.diag-grupo:hover,.modelos-card:hover{
+    transform:translateY(-2px);border-color:var(--jv-linha-forte);box-shadow:var(--jv-brilho),var(--jv-realce);
+  }
+}
+
+/* --- Retorno ao toque: profundidade em vez de "pular" ------------------ */
+button{transition:transform var(--jv-dur-1) var(--jv-ease),box-shadow var(--jv-dur-2) var(--jv-ease),border-color var(--jv-dur-1) var(--jv-ease),background-color var(--jv-dur-1) var(--jv-ease),color var(--jv-dur-1) var(--jv-ease)}
+button:active:not(:disabled){transform:translateY(1px) scale(.986);box-shadow:0 2px 12px -8px rgba(0,229,255,.7)}
+button.primario,.config-tab.ativo{box-shadow:0 12px 30px -18px rgba(0,229,255,.85),0 0 0 1px rgba(255,255,255,.05) inset}
+.config-tab.ativo{box-shadow:0 10px 28px -16px rgba(0,229,255,.9),0 0 0 1px rgba(255,255,255,.06) inset}
+.msg.eu{box-shadow:0 16px 38px -30px rgba(0,229,255,.85),0 1px 0 rgba(255,255,255,.05) inset}
+.msg.jv::before{text-shadow:0 0 12px rgba(var(--rgb),.35)}
+
+/* --- Carregamento, conclusão e alerta -------------------------------- */
+.msg.pensando{position:relative;overflow:hidden}
+.msg.pensando::after{content:"";position:absolute;left:0;bottom:0;width:42%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(var(--rgb),.85),transparent);animation:jv-varre 1.6s var(--jv-ease) infinite}
+@keyframes jv-varre{0%{transform:translateX(-120%)}100%{transform:translateX(330%)}}
+.diag-resumo.ok{animation:jv-confirma .55s var(--jv-ease)}
+.diag-resumo.fail{animation:jv-alerta .9s var(--jv-ease) 2}
+@keyframes jv-confirma{from{opacity:.55;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes jv-alerta{0%,100%{border-color:rgba(255,110,120,.4)}50%{border-color:rgba(255,110,120,.95)}}
+.diag-row{background-image:linear-gradient(120deg,rgba(12,24,38,.7),rgba(6,13,22,.52))}
+.diag-row.ok{box-shadow:inset 2px 0 0 rgba(109,255,194,.55)}
+.diag-row.warn{box-shadow:inset 2px 0 0 rgba(255,193,94,.65)}
+.diag-row.fail{box-shadow:inset 2px 0 0 rgba(255,110,120,.75)}
+
+/* --- Listas longas: renderização sob demanda, sem salto de layout ------ */
+#log-lista div,.mem-lista .mem-nota{content-visibility:auto;contain-intrinsic-size:auto 64px}
+
+/* --- Celulares e aparelhos modestos: menos custo, mesma identidade ----- */
+@media(max-width:420px){
+  .painel:not([hidden]){animation-duration:var(--jv-dur-2)}
+  .hud::after{box-shadow:none}
+}
+@media (update:slow){
+  #scrim{backdrop-filter:none}
+  .dash-card,.info-card,.nucleo-card,.pessoa-card{backdrop-filter:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .hud:hover,.hud:active,.dash-card:hover,.info-card:hover,.nucleo-card:hover,.pessoa-card:hover,
+  .diag-grupo:hover,.modelos-card:hover{transform:none!important}
+  .painel:not([hidden]),#scrim,.msg.pensando::after,.diag-resumo.ok,.diag-resumo.fail{animation:none!important}
+}
+
+/* --- Opção do usuário: reduzir efeitos visuais (Ajustes ▸ Voz) --------- */
+body.efeitos-reduzidos .hud:hover,body.efeitos-reduzidos .hud:active,
+body.efeitos-reduzidos .dash-card:hover,body.efeitos-reduzidos .info-card:hover,
+body.efeitos-reduzidos .nucleo-card:hover,body.efeitos-reduzidos .pessoa-card:hover,
+body.efeitos-reduzidos .diag-grupo:hover,body.efeitos-reduzidos .modelos-card:hover{transform:none!important;box-shadow:var(--jv-brilho)!important}
+body.efeitos-reduzidos .painel:not([hidden]),body.efeitos-reduzidos #scrim,
+body.efeitos-reduzidos .msg.pensando::after,body.efeitos-reduzidos .diag-resumo.ok,
+body.efeitos-reduzidos .diag-resumo.fail{animation:none!important}
+body.efeitos-reduzidos *,body.efeitos-reduzidos *::before,body.efeitos-reduzidos *::after{
+  animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important
+}
+body.efeitos-reduzidos #scrim{backdrop-filter:none}
