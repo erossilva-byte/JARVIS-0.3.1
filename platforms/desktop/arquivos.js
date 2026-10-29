@@ -234,7 +234,19 @@ function fábrica({ raiz }) {
 
   function resolver(p) {
     const bruto = String(p == null ? '~' : p).trim() || '~';
-    const alvo = bruto === '~' ? raiz : path.resolve(raiz, bruto.replace(/^~(?=$|[\/])/, raiz));
+    if (bruto === '~') return raiz;
+    // O "~" pode vir seguido de barra normal ou invertida: no Windows relativo()
+    // devolve "~" + barra invertida e a interface manda esse mesmo texto de volta.
+    // Antes, "~" + barra invertida não era expandido: virava uma pasta literal "~"
+    // e a organização não movia nada. Caminho absoluto continua absoluto (e é
+    // recusado por dentro()), para não abrir brecha na checagem de segurança.
+    let alvo;
+    if (/^~(?=$|[\\/])/.test(bruto)) {
+      const partes = bruto.slice(1).split(/[\\/]+/).filter(Boolean);
+      alvo = partes.length ? path.resolve(raiz, partes.join(path.sep)) : raiz;
+    } else {
+      alvo = path.resolve(raiz, bruto);
+    }
     if (!dentro(raiz, alvo)) throw new Error('Caminho fora da pasta do usuário.');
     return alvo;
   }

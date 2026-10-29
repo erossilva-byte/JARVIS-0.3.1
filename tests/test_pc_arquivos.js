@@ -137,6 +137,13 @@ ok('Organizar aplicado move para subpasta por tipo', () => {
   assert.ok(fs.existsSync(path.join(raiz, 'Jarvis', 'documentos', 'disfarcado.txt')));
   assert.ok(fs.existsSync(path.join(raiz, 'Jarvis', 'documentos')));
 });
+ok('Caminho devolvido com barra invertida (Windows) é resolvido', () => {
+  // relativo() usa o separador do sistema: no runner Windows o caminho chega com barra
+  // invertida e precisa resolver para o mesmo arquivo dentro da pasta do usuário.
+  const r = arq.ler('~\\Jarvis\\documentos\\disfarcado.txt');
+  assert.strictEqual(r.formato, 'png');
+  assert.strictEqual(arq.ler('~/Jarvis/documentos/disfarcado.txt').formato, 'png');
+});
 
 // ---------- Segurança de caminho ----------
 ok('Recusa caminho fora da pasta do usuário', () => {
