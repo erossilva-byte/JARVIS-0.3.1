@@ -1,3 +1,31 @@
+## 1.21.3 — 2026-10-29
+
+### Tela de bloqueio
+
+- Redesenho completo em linguagem holográfica: núcleo com **quatro arcos SVG** em rotações
+  diferentes, varredura horizontal, grade e brilho de fundo, relógio e data em tempo real,
+  indicador de estado do sistema, **pontos de PIN** que acompanham a digitação, tremor curto
+  no PIN errado e saída animada ao desbloquear.
+- Continua **opcional** (Ajustes ▸ Segurança), não substitui o bloqueio do Android e mantém o
+  que já existia: PIN com hash SHA-256, biometria/credencial do aparelho pelo plugin
+  `JarvisSeguranca`, código de recuperação, atraso progressivo após erro e `prefers-reduced-motion`.
+- O relógio e os pontos são atualizados só enquanto a tela está aberta; o intervalo é limpo ao
+  fechar, e a animação de saída dura 260 ms para não atrasar o desbloqueio.
+
+### Diagnóstico real
+
+- Sete estados explícitos — **Operacional, Aviso, Falha, Não configurado, Desativado, Não
+  aplicável e Não verificado** — em vez de tudo virar “ok/warn”. Recurso opcional desligado
+  não aparece mais como defeito, e o que não pôde ser conferido não aparece como sucesso.
+- Cada item mostra **impacto**, **como resolver**, **atalho para o ajuste** e **horário** da
+  verificação; o topo resume a execução (falhas, avisos, total e duração).
+- Novas verificações de verdade: módulos carregados do pacote, identidade do pacote em execução
+  (e “não verificado” quando roda no navegador), escrita/leitura/remoção de uma chave de teste
+  no armazenamento, configurações realmente salvas, estado do cofre do Obsidian, rotinas e o
+  serviço de escuta em segundo plano.
+- Integridade, assinatura e conteúdo do `.apk` ficam onde pertencem: na compilação, não na tela.
+  O diagnóstico em execução diz isso explicitamente em vez de afirmar que o pacote está íntegro.
+
 ## 1.21.2 — 2026-10-29
 
 ### Auditoria de runtime

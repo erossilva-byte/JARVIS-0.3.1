@@ -111,7 +111,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.21.2</span>
+      <span class="orb-sub" aria-hidden="true">v1.21.3</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -196,7 +196,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.21.2</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.21.3</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -403,7 +403,12 @@
 
   <section class="grupo" data-category="diagnostico" role="tabpanel" hidden>
     <h3>Diagnóstico integrado</h3>
-    <p class="dica">Os testes de rede usam solicitações reais. O teste de pesquisa pode consultar o provedor configurado; não envia seu histórico, apenas a consulta de diagnóstico.</p>
+    <p class="dica">Cada item mostra o estado real do componente neste aparelho, o impacto no funcionamento e o que fazer quando algo falha. Testes de rede fazem solicitações reais; nenhum histórico é enviado.</p>
+    <div id="diag-resumo" class="diag-resumo" role="status" aria-live="polite"><b>Ainda não executado</b><small>Toque em “Executar diagnóstico” para conferir o pacote, os módulos, as permissões e os serviços.</small></div>
+    <div class="diag-legenda" aria-label="Legenda dos estados">
+      <span class="diag-chip ok">Operacional</span><span class="diag-chip warn">Aviso</span><span class="diag-chip fail">Falha</span>
+      <span class="diag-chip cfg">Não configurado</span><span class="diag-chip off">Desativado</span><span class="diag-chip na">Não aplicável</span><span class="diag-chip nig">Não verificado</span>
+    </div>
     <button id="c-diagnostico" type="button" class="primario">Executar diagnóstico</button>
     <div id="c-diagnostico-result" class="diag-lista" aria-live="polite"><p class="dica">Ainda não executado.</p></div>
     <p class="dica">Este diagnóstico não substitui o teste em um aparelho físico. O funcionamento de wake word, tela bloqueada, serviço em segundo plano e permissões precisa ser validado no Android alvo.</p>
@@ -649,20 +654,47 @@
 </div>
 
 <div id="bloqueio" class="bloqueio" hidden role="dialog" aria-modal="true" aria-labelledby="bloqueio-titulo">
+  <div class="bloq-fundo" aria-hidden="true"><span class="bloq-grade"></span><span class="bloq-brilho"></span><span class="bloq-linha l1"></span><span class="bloq-linha l2"></span></div>
   <div class="bloqueio-caixa">
-    <div class="bloq-nucleo" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="bloq-cabeca">
+      <div class="bloq-nucleo" aria-hidden="true">
+        <svg class="bloq-arcos" viewBox="0 0 120 120">
+          <circle class="ba ba1" cx="60" cy="60" r="55" pathLength="360" stroke-dasharray="88 16 44 20"/>
+          <circle class="ba ba2" cx="60" cy="60" r="46" pathLength="360" stroke-dasharray="2 6"/>
+          <circle class="ba ba3" cx="60" cy="60" r="35" pathLength="360" stroke-dasharray="62 28"/>
+          <circle class="ba ba4" cx="60" cy="60" r="24" pathLength="360" stroke-dasharray="1.5 5"/>
+        </svg>
+        <span class="bloq-varredura" aria-hidden="true"></span>
+        <span class="bloq-miolo" aria-hidden="true"></span>
+        <span class="bloq-centro" aria-hidden="true"></span>
+      </div>
+      <div class="bloq-painel">
+        <b id="bloq-hora" class="bloq-hora">--:--</b>
+        <span id="bloq-data" class="bloq-data">carregando data…</span>
+        <small id="bloq-estado" class="bloq-estado"><i aria-hidden="true"></i>SISTEMAS ONLINE · ACESSO RESTRITO</small>
+      </div>
+    </div>
     <p class="eyebrow">J.A.R.V.I.S. NOVA · ACESSO</p>
     <h2 id="bloqueio-titulo">Sistema bloqueado</h2>
     <p class="dica" id="bloqueio-dica">Digite seu PIN para liberar o assistente.</p>
-    <label class="bloq-campo">PIN<input id="bloqueio-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="8" placeholder="••••"></label>
-    <p id="bloqueio-erro" class="erro" role="alert"></p>
-    <div class="botoes"><button id="bloqueio-entrar" type="button" class="primario">Desbloquear</button><button id="bloqueio-bio" type="button" class="secundario" hidden>Usar biometria</button></div>
+    <div class="bloq-campo">
+      <label for="bloqueio-pin">PIN de acesso</label>
+      <input id="bloqueio-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="8" placeholder="••••" aria-describedby="bloqueio-erro">
+      <div class="bloq-pontos" id="bloqueio-pontos" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    </div>
+    <p id="bloqueio-erro" class="erro" role="alert" aria-live="assertive"></p>
+    <div class="botoes bloq-acoes">
+      <button id="bloqueio-entrar" type="button" class="primario">Desbloquear</button>
+      <button id="bloqueio-bio" type="button" class="secundario" hidden>Usar biometria</button>
+    </div>
     <button id="bloqueio-esqueci" type="button" class="link-botao">Esqueci o PIN</button>
     <div id="bloqueio-recuperacao" class="bloq-recuperacao" hidden>
       <p class="dica">Use o código de recuperação gerado em Ajustes ▸ Segurança. Ele apaga o PIN e desativa o bloqueio; depois defina um novo PIN.</p>
-      <label class="bloq-campo">Código<input id="bloqueio-codigo" type="text" autocomplete="one-time-code" placeholder="XXXXX-XXXXX"></label>
+      <label class="bloq-campo" for="bloqueio-codigo">Código de recuperação</label>
+      <input id="bloqueio-codigo" type="text" autocomplete="one-time-code" placeholder="XXXXX-XXXXX">
       <button id="bloqueio-recuperar" type="button" class="secundario">Recuperar acesso</button>
     </div>
+    <p class="bloq-rodape">Bloqueio opcional do aplicativo · não substitui a tela de bloqueio do Android</p>
   </div>
 </div>
 

@@ -35,7 +35,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.21.2';
+const VERSAO_APP = '1.21.3';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -401,6 +401,8 @@ function atualizarSeguranca() {
  */
 const BLOQ_TENT = 'bloqueio_tentativas';
 const BLOQ_ULTIMO = 'bloqueio_ultimo_plano';
+const BLOQ_ATE = 'bloqueio_espera_ate';
+let bloqTimer = 0;
 function bloqueioAtivo() {
   return store.get('bloqueio', '0') === '1' && !!store.get('pin_hash', '');
 }
@@ -429,11 +431,41 @@ function atualizarBloqueioUI() {
     } catch (e) { bio.hidden = true; }
   }
 }
+function bloqPintaPontos() {
+  const campo = $('#bloqueio-pin'), box = $('#bloqueio-pontos');
+  if (!box) return;
+  const n = Math.min(campo ? String(campo.value || '').length : 0, box.children.length);
+  Array.prototype.forEach.call(box.children, (p, i) => p.classList.toggle('on', i < n));
+}
+function bloqRelogio() {
+  const h = $('#bloq-hora'), d = $('#bloq-data'), e = $('#bloq-estado');
+  const agora = new Date();
+  if (h) h.textContent = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  if (d) d.textContent = agora.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+  if (e) {
+    const ativo = /^1$/.test(store.get('wake_deseja', '0')) || !!store.get('wake_ligado', '');
+    e.lastChild.textContent = ativo ? 'SISTEMAS ONLINE · ESCUTA ATIVA' : 'SISTEMAS ONLINE · ACESSO RESTRITO';
+  }
+}
+function bloqTremer() {
+  const tela = $('#bloqueio');
+  const caixa = tela ? tela.querySelector('.bloqueio-caixa') : null;
+  if (!caixa) return;
+  caixa.classList.remove('erro-ativo');
+  void caixa.offsetWidth;
+  caixa.classList.add('erro-ativo');
+  setTimeout(() => caixa.classList.remove('erro-ativo'), 420);
+}
 function abrirBloqueio() {
   const tela = $('#bloqueio');
   if (!tela || !bloqueioAtivo()) return;
   tela.hidden = false;
+  tela.classList.remove('saindo');
   document.body.classList.add('bloqueado');
+  bloqRelogio();
+  if (bloqTimer) clearInterval(bloqTimer);
+  bloqTimer = setInterval(bloqRelogio, 15000);
+  bloqPintaPontos();
   const erro = $('#bloqueio-erro'); if (erro) erro.textContent = '';
   const pin = $('#bloqueio-pin'); if (pin) { pin.value = ''; try { pin.focus(); } catch (e) { } }
   const rec = $('#bloqueio-recuperacao'); if (rec) rec.hidden = true;
@@ -455,14 +487,34 @@ function abrirBloqueio() {
 }
 function fecharBloqueio() {
   const tela = $('#bloqueio');
-  if (tela) tela.hidden = true;
+  if (bloqTimer) { clearInterval(bloqTimer); bloqTimer = 0; }
   document.body.classList.remove('bloqueado');
   store.set(BLOQ_TENT, '0');
+  store.set(BLOQ_ATE, '0');
   store.set(BLOQ_ULTIMO, String(Date.now()));
   registrar('segurança', 'aplicativo desbloqueado');
+  // Saída curta e previsível: o desbloqueio já valeu, a animação só evita o corte seco.
+  // Se a tela não existir, nada fica preso.
+  if (!tela) return;
+  tela.classList.add('saindo');
+  setTimeout(() => {
+    tela.hidden = true;
+    tela.classList.remove('saindo');
+    const caixa = tela.querySelector('.bloqueio-caixa');
+    if (caixa) caixa.classList.remove('erro-ativo');
+  }, 260);
 }
 async function tentarDesbloquear() {
   const campo = $('#bloqueio-pin'), erro = $('#bloqueio-erro');
+  // O atraso é conferido aqui, não só no botão: desabilitar o botão sozinho deixava a
+  // tecla Enter (e um toque vindo de script) furar o limite de tentativas.
+  const esperaAte = Number(store.get(BLOQ_ATE, '0')) || 0;
+  if (Date.now() < esperaAte) {
+    const resta = Math.max(1, Math.ceil((esperaAte - Date.now()) / 1000));
+    if (erro) erro.textContent = 'Aguarde ' + resta + ' s antes de tentar de novo.';
+    bloqTremer();
+    return;
+  }
   const pin = campo ? String(campo.value || '').trim() : '';
   if (!pin) { if (erro) erro.textContent = 'Digite o PIN.'; return; }
   const esperado = store.get('pin_hash', '');
@@ -475,6 +527,9 @@ async function tentarDesbloquear() {
   const espera = Math.min(30, Math.round(0.5 * Math.pow(2, Math.min(n, 6))));
   registrar('segurança', 'tentativa de desbloqueio recusada (' + n + ')');
   if (erro) erro.textContent = 'PIN incorreto. ' + (n >= 5 ? 'Use o código de recuperação se não lembrar.' : 'Tente de novo em ' + espera + ' s.');
+  bloqPintaPontos();
+  bloqTremer();
+  store.set(BLOQ_ATE, String(Date.now() + espera * 1000));
   const botao = $('#bloqueio-entrar');
   if (botao) { botao.disabled = true; setTimeout(() => { botao.disabled = false; }, espera * 1000); }
   const rec = $('#bloqueio-recuperacao'); if (rec) rec.hidden = false;
@@ -526,6 +581,7 @@ function iniciarBloqueioSeAtivo() {
   const entrar = $('#bloqueio-entrar'); if (entrar) entrar.onclick = () => tentarDesbloquear().catch(() => { });
   const pin = $('#bloqueio-pin');
   if (pin) pin.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tentarDesbloquear().catch(() => { }); } });
+  if (pin) pin.addEventListener('input', bloqPintaPontos);
   const bio = $('#bloqueio-bio'); if (bio) bio.onclick = () => desbloquearComBiometria();
   const esqueci = $('#bloqueio-esqueci');
   if (esqueci) esqueci.onclick = () => { const r = $('#bloqueio-recuperacao'); if (r) r.hidden = false; const c = $('#bloqueio-codigo'); if (c) c.focus(); };
@@ -3975,12 +4031,67 @@ function salvarRotinaEditor() {
 // Coletor opcional: enquanto o diagnóstico roda, cada linha também entra na lista que o
 // núcleo Hermes transforma no resumo falado ("verifique o sistema").
 let diagColetor = null;
-function diagLinha(tipo, titulo, detalhe) {
-  if (diagColetor) diagColetor.push({ nome: titulo, estado: tipo, detalhe: String(detalhe || '') });
+// Estados possíveis do diagnóstico. Cada um tem rótulo próprio porque "não configurado"
+// e "desativado" não são falhas — e "não verificado" não é sucesso.
+const DIAG_ESTADOS = {
+  ok: { rotulo: 'Operacional', icone: '✓' },
+  warn: { rotulo: 'Aviso', icone: '·' },
+  fail: { rotulo: 'Falha', icone: '!' },
+  cfg: { rotulo: 'Não configurado', icone: '○' },
+  off: { rotulo: 'Desativado', icone: '◌' },
+  na: { rotulo: 'Não aplicável', icone: '–' },
+  nig: { rotulo: 'Não verificado', icone: '?' }
+};
+let diagContagem = {};
+function diagLinha(tipo, titulo, detalhe, extra) {
+  const meta = DIAG_ESTADOS[tipo] || DIAG_ESTADOS.warn;
+  diagContagem[tipo] = (diagContagem[tipo] || 0) + 1;
+  if (diagColetor) diagColetor.push({
+    nome: titulo,
+    estado: tipo === 'ok' ? 'ok' : (tipo === 'fail' ? 'fail' : 'warn'),
+    detalhe: String(detalhe || '')
+  });
+  const box = $('#c-diagnostico-result');
+  if (!box) return;
   const el = document.createElement('div'); el.className = 'diag-row ' + tipo;
-  const icon = document.createElement('span'); icon.className = 'diag-mark'; icon.textContent = tipo === 'ok' ? '✓' : (tipo === 'fail' ? '!' : '·'); el.appendChild(icon);
-  const box = document.createElement('div'); const b = document.createElement('b'); b.textContent = titulo; box.appendChild(b);
-  const sm = document.createElement('small'); sm.textContent = detalhe; box.appendChild(sm); el.appendChild(box); $('#c-diagnostico-result').appendChild(el);
+  const cab = document.createElement('div'); cab.className = 'diag-cab';
+  const icon = document.createElement('span'); icon.className = 'diag-mark'; icon.textContent = meta.icone;
+  const b = document.createElement('b'); b.textContent = titulo;
+  const chip = document.createElement('span'); chip.className = 'diag-chip ' + tipo; chip.textContent = meta.rotulo;
+  cab.append(icon, b, chip); el.appendChild(cab);
+  const sm = document.createElement('small'); sm.textContent = detalhe; el.appendChild(sm);
+  if (extra && extra.impacto) { const x = document.createElement('small'); x.className = 'diag-impacto'; x.textContent = 'Impacto: ' + extra.impacto; el.appendChild(x); }
+  if (extra && extra.orientacao) { const x = document.createElement('small'); x.className = 'diag-orientacao'; x.textContent = 'Como resolver: ' + extra.orientacao; el.appendChild(x); }
+  if (extra && extra.atalho) {
+    const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'diag-atalho';
+    bt.textContent = extra.atalho.rotulo || 'Abrir ajuste';
+    bt.onclick = () => {
+      try { abrirConfig(); mudarCategoriaConfig(extra.atalho.aba); }
+      catch (e) { registrar('erro', 'atalho do diagnóstico: ' + ((e && e.message) || e)); }
+    };
+    el.appendChild(bt);
+  }
+  const hora = document.createElement('small'); hora.className = 'diag-hora';
+  hora.textContent = 'Verificado às ' + new Date().toLocaleTimeString('pt-BR');
+  el.appendChild(hora);
+  box.appendChild(el);
+}
+function diagResumo(itens, segundos) {
+  const box = $('#diag-resumo');
+  if (!box) return;
+  const lista = itens || [];
+  const falhas = lista.filter((i) => i.estado === 'fail').length;
+  const avisos = lista.filter((i) => i.estado === 'warn').length;
+  const b = document.createElement('b');
+  b.textContent = falhas
+    ? falhas + ' falha(s) e ' + avisos + ' aviso(s) em ' + lista.length + ' verificação(ões)'
+    : avisos
+      ? avisos + ' aviso(s) em ' + lista.length + ' verificação(ões) — nada crítico'
+      : lista.length + ' verificação(ões), tudo operacional';
+  const sm = document.createElement('small');
+  sm.textContent = 'Última execução ' + new Date().toLocaleString('pt-BR') + ' · ' + segundos + ' s · resultados deste aparelho, não do código-fonte.';
+  box.textContent = ''; box.append(b, sm);
+  box.className = 'diag-resumo ' + (falhas ? 'fail' : avisos ? 'warn' : 'ok');
 }
 async function testarRedeDiagnostico() {
   const ctl = new AbortController(), timeout = setTimeout(() => ctl.abort(), 10000);
@@ -3992,6 +4103,9 @@ async function executarDiagnostico() {
   if (btn.disabled) return { itens: [], resumo: 'O diagnóstico já está em execução, ' + trat() + '.' };
   btn.disabled = true; btn.textContent = 'Executando testes…'; box.textContent = '';
   diagColetor = [];
+  diagContagem = {};
+  const resumoBox = $('#diag-resumo');
+  if (resumoBox) { resumoBox.className = 'diag-resumo'; resumoBox.innerHTML = '<b>Verificando…</b><small>Conferindo pacote, módulos, permissões, serviços e rede.</small>'; }
   let itens = diagColetor;
   const inicioDiag = new Date();
   diagLinha('warn', 'Execução iniciada', inicioDiag.toLocaleString('pt-BR') + ' · os resultados dependem das permissões e da rede deste aparelho.');
@@ -4021,6 +4135,78 @@ async function executarDiagnostico() {
       }
     } catch (e) { diagLinha('warn', 'Armazenamento do app', 'Não foi possível consultar: ' + String(e.message || e).slice(0, 100)); }
     diagLinha(bootConcluido ? 'ok' : 'warn', 'Abertura do aplicativo', bootConcluido ? 'A sequência de abertura terminou e liberou a interface.' : 'A abertura ainda não foi concluída nesta sessão.');
+    // ---------- Pacote e módulos que realmente vieram no APK ----------
+    const modulos = [
+      ['Hermes (linguagem e decisão)', typeof Hermes !== 'undefined' && typeof Hermes.metricas === 'function'],
+      ['Memória por tópicos', !!(MEM && typeof MEM.contextoRelevante === 'function')],
+      ['Adaptador de plataforma', typeof Plataforma !== 'undefined' && typeof Plataforma.desktopComando === 'function'],
+      ['Núcleo 3D (canvas)', !!$('#nucleo-orbita')],
+      ['Painéis de conversa, memória, tarefas e visão', !!(PAINEIS_ESSENCIAIS)]
+    ];
+    const faltandoMod = modulos.filter((m) => !m[1]).map((m) => m[0]);
+    diagLinha(faltandoMod.length ? 'fail' : 'ok', 'Módulos no pacote instalado', faltandoMod.length
+      ? 'Ausentes: ' + faltandoMod.join(', ') + '. O pacote está incompleto.'
+      : modulos.map((m) => m[0]).join(' · ') + ' carregados dos assets deste pacote.',
+      faltandoMod.length
+        ? { impacto: 'As funções ligadas a esses módulos ficam indisponíveis.', orientacao: 'Reinstale o mesmo APK ou baixe de novo em Ajustes ▸ Atualização.' }
+        : {});
+    if (ehAndroid) diagLinha('ok', 'Pacote instalado', 'Versão ' + VERSAO_APP + ' · appId com.jarvis.nova · executando do APK instalado. Integridade, assinatura e conteúdo do .apk são conferidos na compilação, não aqui.');
+    else diagLinha('nig', 'Pacote instalado', 'Versão ' + VERSAO_APP + ' em execução, mas este ambiente não é o APK: identidade, assinatura e conteúdo do pacote não podem ser conferidos aqui.',
+      { orientacao: 'Abra o diagnóstico no aplicativo Android instalado para ver o pacote real.' });
+    // ---------- Persistência de verdade: grava, lê e apaga ----------
+    let persistOk = false, persistDetalhe = '';
+    try {
+      store.set('diag_probe', 'ok');
+      persistOk = store.get('diag_probe') === 'ok';
+      localStorage.removeItem('jv_diag_probe');
+      persistDetalhe = persistOk
+        ? 'Escrita, leitura e remoção conferidas no armazenamento local.' + (store.get('historico') ? ' Há histórico salvo.' : ' Ainda não há histórico salvo.')
+        : 'A leitura devolveu valor diferente do gravado.';
+    } catch (e) { persistDetalhe = 'Falha de armazenamento: ' + String((e && e.message) || e).slice(0, 120); }
+    diagLinha(persistOk ? 'ok' : 'fail', 'Persistência local', persistDetalhe, persistOk ? {} : {
+      impacto: 'Preferências, histórico e memória não sobrevivem ao fechamento do app.',
+      orientacao: 'Libere espaço no aparelho e confira se o app tem armazenamento disponível.'
+    });
+    // ---------- Configurações efetivamente carregadas ----------
+    const modeloCfg = store.get('modelo', ''), tratCfg = store.get('trat', '');
+    diagLinha(modeloCfg ? 'ok' : 'cfg', 'Configurações carregadas',
+      (modeloCfg ? 'Modelo ' + modeloCfg : 'Modelo no padrão do app') + ' · tratamento “' + (tratCfg || 'senhor') + '” · humor ' + (store.get('humor', '55') || '55') + '/100.',
+      modeloCfg ? {} : { atalho: { aba: 'ia', rotulo: 'Abrir ajustes de IA' }, orientacao: 'Escolha o modelo em Ajustes ▸ IA para não depender do padrão.' });
+    // ---------- Cofre do Obsidian: estado real ou desativado ----------
+    if (!obsAtivo()) {
+      diagLinha('off', 'Cofre do Obsidian', 'Desativado pelo usuário: a memória interna funciona sem o cofre.',
+        { atalho: { aba: 'memoria', rotulo: 'Abrir Memória' } });
+    } else {
+      const stCofre = await cofreStatusAtual(false);
+      if (stCofre && stCofre.conectado) {
+        diagLinha('ok', 'Cofre do Obsidian', 'Cofre “' + stCofre.nome + '” · ' + (stCofre.arquivos || 0) + ' .md · leitura ' + (stCofre.podeLer ? 'ok' : 'negada') + ' · escrita ' + (stCofre.podeEscrever === false ? 'negada' : 'ok') + '.',
+          { atalho: { aba: 'memoria', rotulo: 'Abrir Memória' } });
+      } else {
+        diagLinha('cfg', 'Cofre do Obsidian', 'Ligado, mas sem pasta acessível: ' + ((stCofre && stCofre.motivo) || 'nenhum cofre conectado') + '.',
+          { atalho: { aba: 'memoria', rotulo: 'Escolher pasta' }, impacto: 'As notas por tópico ficam só na memória interna.', orientacao: 'Escolha a pasta do cofre em Ajustes ▸ Memória.' });
+      }
+    }
+    // ---------- Rotinas salvas ----------
+    let rotinasN = 0, rotinasErro = '';
+    try {
+      const rs = JSON.parse(store.get('rotinas', '[]') || '[]');
+      if (Array.isArray(rs)) rotinasN = rs.length; else rotinasErro = 'formato inesperado';
+    } catch (e) { rotinasErro = 'JSON inválido'; }
+    diagLinha(rotinasErro ? 'fail' : (rotinasN ? 'ok' : 'off'), 'Rotinas',
+      rotinasErro ? 'Não consegui ler as rotinas salvas: ' + rotinasErro + '.' : rotinasN + ' rotina(s) salva(s) neste aparelho.' + (rotinasN ? '' : ' Nenhuma criada ainda.'),
+      { atalho: { aba: 'rotinas', rotulo: 'Abrir Rotinas' }, orientacao: rotinasErro ? 'Recrie a rotina em Ajustes ▸ Rotinas para corrigir o registro.' : '' });
+    // ---------- Serviço em segundo plano (só Android) ----------
+    if (ehAndroid) {
+      try {
+        const bg = await diagnosticoSegundoPlano(false);
+        const pends = (bg.itens || []).filter((i) => i.estado !== 'ok');
+        diagLinha(pends.length ? 'warn' : 'ok', 'Serviço de escuta em segundo plano', bg.resumo,
+          { atalho: { aba: 'voz', rotulo: 'Abrir Voz' }, orientacao: pends.length ? 'Resolva as pendências listadas em Ajustes ▸ Voz ▸ Segundo plano.' : '' });
+      } catch (e) {
+        diagLinha('nig', 'Serviço de escuta em segundo plano', 'Não foi possível consultar: ' + String((e && e.message) || e).slice(0, 120) + '.');
+      }
+    } else diagLinha('na', 'Serviço de escuta em segundo plano', 'Só existe no aplicativo Android.');
+
     const mediaOk = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && (window.AudioContext || window.webkitAudioContext));
     diagLinha(mediaOk ? 'ok' : 'fail', 'Compatibilidade de áudio', mediaOk ? 'getUserMedia e AudioContext disponíveis.' : 'Falta getUserMedia ou AudioContext neste ambiente.');
     // Núcleo de linguagem e decisão: o motor que escolhe a rota de cada turno.
@@ -4099,9 +4285,11 @@ async function executarDiagnostico() {
     btn.disabled = false; btn.textContent = 'Executar diagnóstico novamente';
     itens = diagColetor || itens; diagColetor = null;
   }
+  diagResumo(itens, Math.round((Date.now() - inicioDiag.getTime()) / 1000));
   // O resumo falado é montado pelo núcleo Hermes — o mesmo usado por voz: "verifique o sistema".
   return { itens, resumo: Hermes.resumoDiagnostico(itens, { tratamento: trat() }) };
 }
+const PAINEIS_ESSENCIAIS = !!($('#painel-config') && $('#painel-memoria') && $('#painel-tarefas') && $('#painel-visao') && $('#painel-info') && $('#painel-arquivos'));
 const H = (typeof history !== 'undefined') ? history : null;
 const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas', '#painel-visao', '#painel-info', '#painel-memoria', '#painel-arquivos'];
 const estadoPainelJarvis = (estado) => Boolean(estado && estado.jarvisPainel === true);

@@ -50,17 +50,19 @@ checar('Lockfile e package.json na mesma versão',
       deps.get('', {}).get('version') == pkg['version'])
 
 # ---------- 3. Versão e documentação ----------
-checar('VERSAO.json e package.json na 1.21.2',
-      meta['version'] == '1.21.2' and pkg['version'] == '1.21.2' and meta['versionCode'] == 10212)
-checar('app.js na versão corrente', "const VERSAO_APP = '1.21.2';" in app)
-checar('Interface na versão corrente', html.count('v1.21.2') >= 2)
+# A versão avança a cada release; este teste exige que a 1.21.2 tenha sido entregue e que
+# o projeto continue coerente com a versão corrente registrada no VERSAO.json.
+checar('Projeto na 1.21.2 ou posterior, com versionCode coerente',
+      tuple(int(x) for x in meta['version'].split('.')) >= (1, 21, 2)
+      and meta['versionCode'] >= 10212 and pkg['version'] == meta['version'])
+checar('app.js na versão corrente', ("const VERSAO_APP = '" + meta['version'] + "';") in app)
+checar('Interface na versão corrente', html.count('v' + meta['version']) >= 2)
 checar('CHANGELOG registra a 1.21.2', '## 1.21.2' in texto('CHANGELOG.md'))
-checar('LEIA-ME registra a 1.21.2',
-      '# J.A.R.V.I.S. Nova 1.21.2' in texto('LEIA-ME.md') and '## O que mudou na 1.21.2' in texto('LEIA-ME.md'))
+checar('LEIA-ME registra a 1.21.2', '## O que mudou na 1.21.2' in texto('LEIA-ME.md'))
 checar('Suíte roda este teste', 'python3 tests/test_v1_21_2.py' in pkg['scripts']['test:all'])
 checar('Workflows citam a versão corrente',
-      '1.21.2' in texto('.github/workflows/build-apk.yml')
-      and '1.21.2' in texto('.github/workflows/release-apk.yml'))
+      meta['version'] in texto('.github/workflows/build-apk.yml')
+      and meta['version'] in texto('.github/workflows/release-apk.yml'))
 
 # ---------- 4. Funções preservadas das versões anteriores ----------
 checar('Cofre do Obsidian segue ligado à interface',

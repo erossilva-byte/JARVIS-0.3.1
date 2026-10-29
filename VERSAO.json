@@ -1,33 +1,23 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.21.2",
-  "versionCode": 10212,
+  "version": "1.21.3",
+  "versionCode": 10213,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-10-29",
-  "status": "1.21.2: auditoria de runtime corrigiu o botão de apagar chave que falhava em silêncio (promessa rejeitada sem tratamento) e o package-lock fora de sincronia, que impedia npm ci.",
+  "status": "1.21.3: tela de bloqueio holográfica com relógio, núcleo animado e validação real de PIN, e diagnóstico que verifica pacote, módulos, persistência, cofre, rotinas e serviço em segundo plano com estados distintos (falha, aviso, desativado, não configurado, não verificado).",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.21.2 (2026-10-29). Auditoria de ponta a ponta do app: inicialização, 12 abas, 167 botões, painéis, rolagem e persistência exercitados em DOM real (jsdom). Correção do handler de apagar chave, que rejeitava a promessa sem catch quando o cofre seguro não estava disponível, e sincronização do package-lock.json (npm ci voltou a instalar do zero). Mantidas as funções da 1.21.1: cofre do Obsidian por SAF/pasta nativa, memória por tópicos, núcleo 3D com quatro anéis, IA local MediaPipe com validação de .task e atualização in-app. O núcleo mantém os três estilos (HUD, plasma e órbita) e a animação própria de cada um, com quarto anel e varredura holográfica; a memória grava um arquivo por tópico em Memoria/.",
+  "notas": "Revisão 1.21.3 (2026-10-29). Tela de bloqueio redesenhada: núcleo com quatro arcos em SVG, varredura, grade holográfica, relógio e data em tempo real, indicador de estado do sistema, pontos de PIN, tremor no erro e saída animada — sem atrasar o desbloqueio e respeitando prefers-reduced-motion. O diagnóstico deixou de ser lista de mensagens: verifica os módulos carregados do pacote, grava e relê uma chave de teste no armazenamento, confere as configurações realmente salvas, o estado do cofre do Obsidian, as rotinas e o serviço de escuta, com impacto, orientação, atalho para o ajuste e horário de cada verificação. O núcleo mantém os três estilos (HUD, plasma e órbita) e a animação própria de cada um.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"
   ],
   "build": {
     "resultado": "success",
-    "sha256": "c49452c620177c90f1132d79bc6373b8a21a705de92d7aacd5d4883b635ffc44",
-    "bytes": 71066567,
-    "arquivo": "jarvis-nova-1.21.2-10212.apk",
+    "sha256": "66709e06b2a14c3764c0f38d688020ebfe8636f22b34bd62b11749ea90b80e16",
+    "bytes": 71223019,
+    "arquivo": "jarvis-nova-1.21.3-10213.apk",
     "data": "2026-10-29",
     "ambiente": "compilação local (JDK 17 + Android SDK 34; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.21.2: assets/public/app.js com VERSAO_APP='1.21.2', versionCode 10212; handler de apagar chave com try/catch. Sem teste em aparelho físico.",
-    "pc": {
-      "portatil": "jarvis-nova-1.21.2-pc-portatil.exe",
-      "sha256": "d901759c41156c98d1c665d0c470e93fe0a1df3b3db8b3248f596dcd7235fde8",
-      "bytes": 75428801,
-      "pasta": "jarvis-nova-1.21.2-pc-pasta.zip",
-      "sha256_pasta": "7e52faae914b2544ed6b6b0bebb61c032453c2f7ae2f8e59fc77947c7e444dc0",
-      "bytes_pasta": 117526873,
-      "instalador": "não gerado nesta máquina: o NSIS/rcedit exige Wine 32 bits, ausente neste container. Sai do workflow release-pc.yml em windows-latest.",
-      "observacao": "Portátil gerado com -c.win.signAndEditExecutable=false: por falta de Wine 32 bits o electron-builder não grava ícone/versão no .exe. O executável roda normalmente; apenas o ícone é o padrão do Electron."
-    }
+    "observacao": "APK 1.21.3: VERSAO_APP='1.21.3', versionCode 10213, bloqueio holográfico e diagnóstico com estados reais. Sem teste em aparelho físico."
   }
 }

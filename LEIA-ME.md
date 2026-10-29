@@ -1,4 +1,14 @@
-# J.A.R.V.I.S. Nova 1.21.2
+# J.A.R.V.I.S. Nova 1.21.3
+
+## O que mudou na 1.21.3
+
+- **Tela de bloqueio holográfica**: núcleo com quatro arcos animados, varredura, grade de fundo, relógio e
+  data ao vivo, estado do sistema, pontos de PIN e tremor no erro. Continua opcional, mantém hash SHA-256 do
+  PIN, biometria do aparelho e código de recuperação, e respeita “reduzir movimento”.
+- **Diagnóstico de verdade**: sete estados (Operacional, Aviso, Falha, Não configurado, Desativado, Não
+  aplicável, Não verificado), com impacto, orientação, atalho para o ajuste e horário por item; resumo no topo.
+- Novas checagens: módulos carregados do pacote, identidade do app em execução, persistência (grava, lê e
+  apaga), configurações salvas, cofre do Obsidian, rotinas e serviço de escuta em segundo plano.
 
 ## O que mudou na 1.21.2
 
