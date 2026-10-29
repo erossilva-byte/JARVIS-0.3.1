@@ -1,3 +1,26 @@
+## 1.21.4 — 2026-10-29
+
+### Obsidian em Ajustes ▸ Memória
+
+- O bloco do cofre saiu do painel avulso e passou a viver **dentro da aba Memória dos Ajustes**,
+  abaixo da memória pessoal: ativar/desativar, escolher a pasta do cofre (SAF no Android, diálogo
+  nativo no PC), testar o vínculo, enviar e trazer as notas por tópico, organizar e desconectar.
+- Ao abrir a aba, o app **consulta o estado real do cofre** (`cofreStatus`) em vez de mostrar
+  “sem vínculo” até você tocar em testar. O painel Memória ganhou o atalho
+  “Abrir Memória nos Ajustes”.
+- A gravação continua um arquivo por tópico em `Memoria/`, sem apagar notas fora dessa pasta e
+  sem duplicar a extensão `.md`.
+
+### Diagnóstico
+
+- Nova verificação **Erros recentes**: lê o registro do próprio app e conta as falhas das
+  últimas 24 h, com orientação para abrir o Registro de ações.
+
+### Tela de bloqueio
+
+- Ajuste moderado, sem mudar a identidade: núcleo um pouco menor, grade e brilho mais discretos,
+  arcos mais finos, títulos e espaçamentos mais equilibrados e botões alinhados.
+
 ## 1.21.3 — 2026-10-29
 
 ### Tela de bloqueio

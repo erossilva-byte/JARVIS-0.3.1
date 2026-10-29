@@ -71,11 +71,16 @@ checar('Pacote não verificável no navegador é assumido', "diagLinha('nig', 'P
 checar('Diagnóstico não afirma integridade do APK', 'conferidos na compilação, não aqui' in app)
 
 # ---------- 5. Versão, documentação e suíte ----------
-checar('Versão 1.21.3 / 10213', meta['version'] == '1.21.3' and meta['versionCode'] == 10213 and pkg['version'] == '1.21.3')
-checar('app.js e interface na versão', "const VERSAO_APP = '1.21.3';" in app and html.count('v1.21.3') >= 2)
-checar('CHANGELOG e LEIA-ME na versão', '## 1.21.3' in texto('CHANGELOG.md') and '# J.A.R.V.I.S. Nova 1.21.3' in texto('LEIA-ME.md'))
+checar('Versão 1.21.3 ou posterior, coerente',
+      tuple(int(x) for x in meta['version'].split('.')) >= (1, 21, 3) and meta['versionCode'] >= 10213
+      and pkg['version'] == meta['version'])
+checar('app.js e interface na versão corrente',
+      ("const VERSAO_APP = '" + meta['version'] + "';") in app and html.count('v' + meta['version']) >= 2)
+checar('CHANGELOG e LEIA-ME registram a 1.21.3',
+      '## 1.21.3' in texto('CHANGELOG.md') and '## O que mudou na 1.21.3' in texto('LEIA-ME.md'))
 checar('Suíte roda este teste', 'python3 tests/test_v1_21_3.py' in pkg['scripts']['test:all'])
-checar('Workflows na versão', '1.21.3' in texto('.github/workflows/build-apk.yml') and '1.21.3' in texto('.github/workflows/release-apk.yml'))
+checar('Workflows na versão corrente',
+      meta['version'] in texto('.github/workflows/build-apk.yml') and meta['version'] in texto('.github/workflows/release-apk.yml'))
 checar('Funções antigas preservadas', all(x in app for x in ['function executarDiagnostico', 'function obsEscolher', 'function verificarAtualizacaoUI']))
 
 if falhas:

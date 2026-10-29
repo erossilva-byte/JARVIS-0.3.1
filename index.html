@@ -111,7 +111,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.21.3</span>
+      <span class="orb-sub" aria-hidden="true">v1.21.4</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -196,7 +196,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.21.3</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.21.4</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -332,7 +332,7 @@
   </section>
 
   <section class="grupo" data-category="memoria" role="tabpanel" hidden>
-    <h3>Memória pessoal controlada</h3>
+    <h3>Memória do J.A.R.V.I.S.</h3>
     <p class="dica">Nada é aprendido ou salvo automaticamente nesta tela. Escreva apenas as preferências que deseja guardar. A memória só é enviada quando a memória global e o controle “Memória pessoal” da conversa estiverem ligados.</p>
     <label class="linha"><input id="c-memoria-ativa" type="checkbox"><span>Permitir memória pessoal<small>Controle global. Desligar impede seu uso pelo modelo, mesmo que esteja preenchida.</small></span></label>
     <label>O que o Jarvis pode lembrar<textarea id="c-memoria" rows="6" maxlength="1200" placeholder="Ex.: prefiro respostas em português e explicações passo a passo."></textarea></label>
@@ -341,6 +341,40 @@
     <p class="dica" id="c-memoria-status" role="status" aria-live="polite">Limite de 1.200 caracteres. Revise e remova dados que não quer mais guardar.</p>
     <button id="c-memoria-limpar" type="button" class="secundario perigo">Apagar memória pessoal</button>
   </section>
+
+<section class="grupo" id="obs-bloco">
+    <h3>Obsidian — cofre conectado</h3>
+    <p class="dica">Escolha a pasta do seu cofre. O J.A.R.V.I.S. grava um arquivo por assunto em <code>Memoria/</code> (Gostos, Preferências, Projetos, Objetivos, Estudos, Dispositivos, Rotinas, Conversas importantes…), com data e origem. Nada é apagado e nenhuma nota sua fora de <code>Memoria/</code> é tocada. No Android o acesso usa o seletor de pastas do sistema (SAF); no PC, o diálogo nativo.</p>
+    <label class="linha"><input id="obs-ativo" type="checkbox"><span>Usar o cofre como memória conectada<small>Quando ligado, o assistente consulta as notas relevantes antes de responder e grava o que você mandar anotar. Desligado, a memória interna continua funcionando.</small></span></label>
+    <div class="info-card"><span class="info-icon">⌂</span><div><b id="obs-local">Nenhum cofre conectado</b><p id="obs-resumo">Escolha a pasta para o J.A.R.V.I.S. começar a organizar por tópico.</p></div></div>
+    <label>Caminho do cofre (PC)<input id="obs-caminho" type="text" autocomplete="off" placeholder="ex.: C:\Users\voce\Documentos\MeuCofre · no Android use o botão ao lado"></label>
+    <div class="botoes">
+      <button id="obs-escolher" type="button" class="primario">Escolher pasta do cofre</button>
+      <button id="obs-testar" type="button" class="secundario">Testar vínculo</button>
+    </div>
+    <div class="botoes">
+      <button id="obs-enviar" type="button" class="secundario">Enviar notas por tópico</button>
+      <button id="obs-receber" type="button" class="secundario">Trazer do cofre</button>
+    </div>
+    <div class="botoes">
+      <button id="obs-organizar" type="button" class="secundario">Organizar por tópicos</button>
+      <button id="obs-desconectar" type="button" class="secundario perigo">Desconectar</button>
+    </div>
+    <details class="obs-avancado">
+      <summary>Sem vínculo automático (navegador ou cofre indisponível)</summary>
+      <p class="dica">Baixe o pacote <code>.md</code> por tópico ou importe notas que você já tenha. Nada sai do aparelho.</p>
+      <div class="botoes">
+        <button id="obs-baixar" type="button" class="secundario">Baixar .md</button>
+        <button id="obs-importar-btn" type="button" class="secundario">Importar .md</button>
+      </div>
+      <input id="obs-importar" type="file" accept=".md,text/markdown" hidden>
+    </details>
+    <p id="obs-status" class="dica" role="status" aria-live="polite">Sem vínculo. Escolha a pasta do cofre para conectar.</p>
+    <p class="dica">No Android o APK não embarca o cofre do Obsidian: o acesso é pelo seletor de pasta (SAF), com permissão liberada por você. No PC basta apontar a pasta do vault. Sem vínculo, use “Baixar .md” e abra o arquivo no Obsidian.</p>
+    <p id="obs-diag" class="dica">Última operação: nenhuma nesta sessão.</p>
+    <div id="obs-topicos" class="mem-lista" aria-live="polite"></div>
+  </section>
+
 
   <section class="grupo" data-category="rotinas" role="tabpanel" hidden>
     <h3>Editor visual de rotinas</h3>
@@ -549,6 +583,11 @@
     <button id="mem-criar" type="button" class="primario">Criar nota</button>
     <p id="mem-status" class="dica" role="status" aria-live="polite">Limite de 240 notas e 512 kB. Apagar pede confirmação (e PIN, se cadastrado).</p>
   </section>
+  <section class="grupo" id="obs-atalho">
+    <h3>Obsidian</h3>
+    <p class="dica">A conexão com o cofre do Obsidian fica em <b>Ajustes ▸ Memória</b>, junto das demais preferências de memória: lá você escolhe a pasta, testa o vínculo, envia e traz as notas por tópico.</p>
+    <button id="mem-abrir-obs" type="button" class="secundario">Abrir Memória nos Ajustes</button>
+  </section>
   <section class="grupo" id="pc-bloco" hidden>
     <h3>Computador</h3>
     <p class="dica">Só aparece no aplicativo desktop. As ações ficam dentro da sua pasta de usuário: listar, abrir e criar arquivos com autorização explícita. Nada de comando de shell solto vindo da conversa.</p>
@@ -562,39 +601,7 @@
     <button id="pc-criar" type="button" class="primario">Criar arquivo</button>
     <p id="pc-msg" class="dica" role="status" aria-live="polite">Arquivos criados por aqui ficam em ~/Jarvis.</p>
   </section>
-  <section class="grupo" id="obs-bloco">
-    <h3>Obsidian — cofre conectado</h3>
-    <p class="dica">Escolha a pasta do seu cofre. O J.A.R.V.I.S. grava um arquivo por assunto em <code>Memoria/</code> (Gostos, Preferências, Projetos, Objetivos, Estudos, Dispositivos, Rotinas, Conversas importantes…), com data e origem. Nada é apagado e nenhuma nota sua fora de <code>Memoria/</code> é tocada. No Android o acesso usa o seletor de pastas do sistema (SAF); no PC, o diálogo nativo.</p>
-    <label class="linha"><input id="obs-ativo" type="checkbox"><span>Usar o cofre como memória conectada<small>Quando ligado, o assistente consulta as notas relevantes antes de responder e grava o que você mandar anotar. Desligado, a memória interna continua funcionando.</small></span></label>
-    <div class="info-card"><span class="info-icon">⌂</span><div><b id="obs-local">Nenhum cofre conectado</b><p id="obs-resumo">Escolha a pasta para o J.A.R.V.I.S. começar a organizar por tópico.</p></div></div>
-    <label>Caminho do cofre (PC)<input id="obs-caminho" type="text" autocomplete="off" placeholder="ex.: C:\Users\voce\Documentos\MeuCofre · no Android use o botão ao lado"></label>
-    <div class="botoes">
-      <button id="obs-escolher" type="button" class="primario">Escolher pasta do cofre</button>
-      <button id="obs-testar" type="button" class="secundario">Testar vínculo</button>
-    </div>
-    <div class="botoes">
-      <button id="obs-enviar" type="button" class="secundario">Enviar notas por tópico</button>
-      <button id="obs-receber" type="button" class="secundario">Trazer do cofre</button>
-    </div>
-    <div class="botoes">
-      <button id="obs-organizar" type="button" class="secundario">Organizar por tópicos</button>
-      <button id="obs-desconectar" type="button" class="secundario perigo">Desconectar</button>
-    </div>
-    <details class="obs-avancado">
-      <summary>Sem vínculo automático (navegador ou cofre indisponível)</summary>
-      <p class="dica">Baixe o pacote <code>.md</code> por tópico ou importe notas que você já tenha. Nada sai do aparelho.</p>
-      <div class="botoes">
-        <button id="obs-baixar" type="button" class="secundario">Baixar .md</button>
-        <button id="obs-importar-btn" type="button" class="secundario">Importar .md</button>
-      </div>
-      <input id="obs-importar" type="file" accept=".md,text/markdown" hidden>
-    </details>
-    <p id="obs-status" class="dica" role="status" aria-live="polite">Sem vínculo. Escolha a pasta do cofre para conectar.</p>
-    <p class="dica">No Android o APK não embarca o cofre do Obsidian: o acesso é pelo seletor de pasta (SAF), com permissão liberada por você. No PC basta apontar a pasta do vault. Sem vínculo, use “Baixar .md” e abra o arquivo no Obsidian.</p>
-    <p id="obs-diag" class="dica">Última operação: nenhuma nesta sessão.</p>
-    <div id="obs-topicos" class="mem-lista" aria-live="polite"></div>
-  </section>
-  <div class="botoes barra"><button id="mem-fechar" type="button" class="primario">Fechar</button></div>
+    <div class="botoes barra"><button id="mem-fechar" type="button" class="primario">Fechar</button></div>
 </aside>
 
 

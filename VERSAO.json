@@ -1,23 +1,23 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.21.3",
-  "versionCode": 10213,
+  "version": "1.21.4",
+  "versionCode": 10214,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-10-29",
-  "status": "1.21.3: tela de bloqueio holográfica com relógio, núcleo animado e validação real de PIN, e diagnóstico que verifica pacote, módulos, persistência, cofre, rotinas e serviço em segundo plano com estados distintos (falha, aviso, desativado, não configurado, não verificado).",
+  "status": "1.21.4: Obsidian de verdade em Ajustes ▸ Memória — o bloco do cofre saiu do painel avulso e passou a viver na aba de memória, que consulta o estado real da pasta ao abrir.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.21.3 (2026-10-29). Tela de bloqueio redesenhada: núcleo com quatro arcos em SVG, varredura, grade holográfica, relógio e data em tempo real, indicador de estado do sistema, pontos de PIN, tremor no erro e saída animada — sem atrasar o desbloqueio e respeitando prefers-reduced-motion. O diagnóstico deixou de ser lista de mensagens: verifica os módulos carregados do pacote, grava e relê uma chave de teste no armazenamento, confere as configurações realmente salvas, o estado do cofre do Obsidian, as rotinas e o serviço de escuta, com impacto, orientação, atalho para o ajuste e horário de cada verificação. O núcleo mantém os três estilos (HUD, plasma e órbita) e a animação própria de cada um.",
+  "notas": "Revisão 1.21.4 (2026-10-29). A integração com o cofre do Obsidian agora aparece em Ajustes ▸ Memória, ao lado da memória pessoal, com ativar/desativar, escolher pasta, testar vínculo, enviar e trazer notas por tópico, organizar e desconectar. A aba consulta o estado real do cofre ao abrir, então não mostra “sem vínculo” quando a pasta já estava escolhida. O painel Memória ganhou um atalho para essa aba. O diagnóstico também lê os erros registrados nas últimas 24 h. Tela de bloqueio com ajuste moderado de escala, iluminação e espaçamento. O núcleo mantém os três estilos (HUD, plasma e órbita) e a animação própria de cada um.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"
   ],
   "build": {
     "resultado": "success",
-    "sha256": "66709e06b2a14c3764c0f38d688020ebfe8636f22b34bd62b11749ea90b80e16",
-    "bytes": 71223019,
-    "arquivo": "jarvis-nova-1.21.3-10213.apk",
+    "sha256": "8c5874a27a82f2cade5c20caa4d01c52858c569c5fdbde5360855f5b3afc557e",
+    "bytes": 71074139,
+    "arquivo": "jarvis-nova-1.21.4-10214.apk",
     "data": "2026-10-29",
     "ambiente": "compilação local (JDK 17 + Android SDK 34; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.21.3: VERSAO_APP='1.21.3', versionCode 10213, bloqueio holográfico e diagnóstico com estados reais. Sem teste em aparelho físico."
+    "observacao": "APK 1.21.4: VERSAO_APP='1.21.4', versionCode 10214, bloco do Obsidian dentro de Ajustes ▸ Memória. Sem teste em aparelho físico."
   }
 }

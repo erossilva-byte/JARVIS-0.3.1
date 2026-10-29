@@ -1,4 +1,12 @@
-# J.A.R.V.I.S. Nova 1.21.3
+# J.A.R.V.I.S. Nova 1.21.4
+
+## O que mudou na 1.21.4
+
+- **Obsidian onde você procura**: a conexão com o cofre agora fica em **Ajustes ▸ Memória**, junto da memória
+  pessoal — escolher pasta, testar vínculo, enviar/trazer notas por tópico e desconectar. A aba consulta o
+  estado real do cofre ao abrir, e o painel Memória aponta para ela.
+- **Diagnóstico** ganhou a verificação de **erros recentes** (últimas 24 h) lida do registro do app.
+- **Tela de bloqueio** com ajuste moderado de escala, iluminação e espaçamento.
 
 ## O que mudou na 1.21.3
 

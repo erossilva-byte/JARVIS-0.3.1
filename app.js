@@ -35,7 +35,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.21.3';
+const VERSAO_APP = '1.21.4';
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -3773,6 +3773,9 @@ function mostrarChaves() {
 function mudarCategoriaConfig(cat) {
   const permitidas = new Set(['ia', 'voz', 'privacidade', 'memoria', 'rotinas', 'seguranca', 'celular', 'atualizacao', 'diagnostico']);
   if (!permitidas.has(cat)) cat = 'ia';
+  // A aba Memória mostra o estado real do cofre: consultar ao entrar evita exibir
+  // “sem vínculo” quando a pasta já foi escolhida antes de abrir o app.
+  if (cat === 'memoria' && typeof atualizarObsUI === 'function') setTimeout(() => { atualizarObsUI().catch(() => {}); }, 0);
   document.querySelectorAll('[data-config-tab]').forEach((b) => {
     const ativo = b.dataset.configTab === cat;
     b.classList.toggle('ativo', ativo);
@@ -4276,6 +4279,15 @@ async function executarDiagnostico() {
       }
     }
     if (ehAndroid) diagLinha('warn', 'Compatibilidade real do Android', 'O dispositivo não pode ser certificado aqui: teste wake word, tela bloqueada, microfone e serviço em segundo plano no aparelho-alvo.');
+    // ---------- Falhas recentes registradas pelo próprio app ----------
+    let logRec = [];
+    try { logRec = JSON.parse(store.get('log', '[]')) || []; } catch (e) { logRec = []; }
+    const errosRec = logRec.filter((x) => x && x.tipo === 'erro');
+    const erros24 = errosRec.filter((x) => Number(x.t) > Date.now() - 24 * 60 * 60 * 1000);
+    diagLinha(erros24.length ? 'warn' : 'ok', 'Erros recentes', erros24.length
+      ? erros24.length + ' erro(s) nas últimas 24 h. Último: ' + String((errosRec[0] && errosRec[0].detalhe) || '').slice(0, 120) + '.'
+      : 'Nenhum erro registrado nas últimas 24 h' + (errosRec.length ? ' (há ' + errosRec.length + ' registro(s) antigo(s)).' : '.'),
+      { orientacao: erros24.length ? 'Abra o Registro de ações, no ícone de lista do topo, para ver a sequência completa.' : '' });
     diagLinha('ok', 'Privacidade', 'Os testes acima não incluem histórico de conversa; a chamada de pesquisa usa apenas a consulta de diagnóstico.');
     diagLinha('ok', 'Conclusão', 'Verificação encerrada em ' + new Date().toLocaleString('pt-BR') + ' (' + Math.round((Date.now() - inicioDiag.getTime()) / 1000) + ' s).' );
     registrar('diagnóstico', 'teste integrado executado');
@@ -6334,6 +6346,7 @@ function renderMemoria() {
 }
 function abrirMemoria() {
   renderMemoria();
+  if (typeof atualizarObsUI === 'function') atualizarObsUI().catch(() => {});
   abrirPainel('#painel-memoria');
   if (PC) atualizarPC().catch(() => {});
 }
@@ -7040,6 +7053,8 @@ async function atualizarObsUI() {
       obsDiag('Vínculo ativo · ' + (r.arquivos || 0) + ' .md · ' + new Date().toLocaleString('pt-BR'));
     }).catch(() => {});
   });
+  const abrirNosAjustes = $('#mem-abrir-obs');
+  if (abrirNosAjustes) abrirNosAjustes.onclick = () => { abrirConfig(); mudarCategoriaConfig('memoria'); };
   const ba = $('#obs-baixar'); if (ba) ba.onclick = () => obsBaixar();
   const campo = $('#obs-caminho'); if (campo) campo.value = store.get('obs_caminho', '');
   const entrada = $('#obs-importar');
