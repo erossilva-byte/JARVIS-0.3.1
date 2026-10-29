@@ -87,8 +87,15 @@ checar('Nomes de arquivo conferidos no documento',
       'Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task' in doc and 'Gemma3-1B-IT_multi-prefill-seq_q8_ekv2048.task' in doc)
 checar('Documento explica que .task é binário e GGUF não serve',
       'GGUF' in doc and 'Task Bundle' in doc and 'não' in doc)
+# A pasta android/ é gerada pelo `npx cap add android` DEPOIS dos testes no CI,
+# então a fonte de verdade é o patch que o workflow aplica nela.
+_gradle = RAIZ / 'android/app/build.gradle'
+if _gradle.exists():
+    _fonte_mediapipe = _gradle.read_text(encoding='utf-8')
+else:
+    _fonte_mediapipe = texto('patch_gradle.py')
 checar('Documento aponta a API realmente usada',
-      'tasks-genai' in texto('android/app/build.gradle') and 'MediaPipe' in doc)
+      'tasks-genai' in _fonte_mediapipe and 'MediaPipe' in doc)
 checar('Nenhum link fora das fontes oficiais nos modelos',
       all(h in ('huggingface.co', 'ai.google.dev', 'www.kaggle.com')
           for h in re.findall(r'https://([^/\s)]+)', doc)))
