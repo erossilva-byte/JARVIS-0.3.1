@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, clipboard, safeStorage, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, clipboard, safeStorage, desktopCapturer, dialog } = require('electron');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -311,6 +311,110 @@ const acoesExtras = {
   }
 };
 Object.assign(acoes, acoesExtras);
+
+// ---------- Cofre do Obsidian no PC ----------
+// A pasta é escolhida pelo usuário no diálogo nativo e fica autorizada neste processo.
+// O renderer não escolhe caminho arbitrário: só usa a pasta autorizada e só grava em
+// Memoria/. Nada é apagado, e notas fora de Memoria/ nunca são tocadas.
+const arquivoCofreDesktop = () => path.join(app.getPath('userData'), 'jarvis-cofre.json');
+let cofreAutorizado = '';
+try {
+  if (fs.existsSync(arquivoCofreDesktop())) {
+    const bruto = JSON.parse(fs.readFileSync(arquivoCofreDesktop(), 'utf8'));
+    if (bruto && typeof bruto.caminho === 'string') cofreAutorizado = bruto.caminho;
+  }
+} catch (_) { cofreAutorizado = ''; }
+
+function gravarCofreAutorizado(caminho) {
+  cofreAutorizado = caminho;
+  try { fs.writeFileSync(arquivoCofreDesktop(), JSON.stringify({ caminho }), { mode: 0o600 }); } catch (_) { /* sem persistência */ }
+}
+function exigirCofre() {
+  if (!cofreAutorizado) throw new Error('Nenhuma pasta de cofre escolhida no computador.');
+  if (!fs.existsSync(cofreAutorizado) || !fs.statSync(cofreAutorizado).isDirectory()) {
+    throw new Error('A pasta do cofre não existe mais: ' + cofreAutorizado);
+  }
+  return cofreAutorizado;
+}
+function dentroDoCofre(relativo) {
+  const cofre = exigirCofre();
+  const partes = String(relativo || '').split('/').filter((p) => p && p !== '.' && p !== '..');
+  const alvo = path.join(cofre, ...partes);
+  const rel = path.relative(cofre, alvo);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error('Caminho fora do cofre.');
+  return alvo;
+}
+function listarMd(base, limite) {
+  const achados = [];
+  const fila = [{ dir: base, nivel: 0, prefixo: '' }];
+  while (fila.length && achados.length < limite) {
+    const atual = fila.shift();
+    let itens = [];
+    try { itens = fs.readdirSync(atual.dir, { withFileTypes: true }); } catch (_) { continue; }
+    for (const item of itens) {
+      if (item.name.startsWith('.')) continue;
+      if (item.isDirectory() && atual.nivel < 3) {
+        fila.push({ dir: path.join(atual.dir, item.name), nivel: atual.nivel + 1, prefixo: atual.prefixo + item.name + '/' });
+      } else if (/\.md$/i.test(item.name)) {
+        achados.push(atual.prefixo + item.name);
+      }
+      if (achados.length >= limite) break;
+    }
+  }
+  return achados;
+}
+
+Object.assign(acoes, {
+  escolher_cofre: async () => {
+    const r = await dialog.showOpenDialog({ properties: ['openDirectory'], title: 'Escolha a pasta do cofre do Obsidian' });
+    if (r.canceled || !r.filePaths || !r.filePaths.length) throw new Error('Seleção de pasta cancelada.');
+    const caminho = r.filePaths[0];
+    if (!fs.statSync(caminho).isDirectory()) throw new Error('O caminho escolhido não é uma pasta.');
+    gravarCofreAutorizado(caminho);
+    return { caminho, nome: path.basename(caminho) };
+  },
+  cofre_status: async ({ caminho }) => {
+    if (caminho && String(caminho).trim() && String(caminho).trim() !== cofreAutorizado) {
+      const escolhido = String(caminho).trim();
+      if (!fs.existsSync(escolhido) || !fs.statSync(escolhido).isDirectory()) {
+        throw new Error('Essa pasta não existe: ' + escolhido);
+      }
+      gravarCofreAutorizado(escolhido);
+    }
+    const cofre = exigirCofre();
+    let podeLer = true, podeEscrever = true;
+    try { fs.accessSync(cofre, fs.constants.R_OK); } catch (_) { podeLer = false; }
+    try { fs.accessSync(cofre, fs.constants.W_OK); } catch (_) { podeEscrever = false; }
+    const pastas = fs.readdirSync(cofre, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name).slice(0, 50);
+    return {
+      conectado: podeLer, caminho: cofre, nome: path.basename(cofre),
+      podeLer, podeEscrever, arquivos: listarMd(cofre, 500).length,
+      pastaMemoria: fs.existsSync(path.join(cofre, 'Memoria')), pastas
+    };
+  },
+  cofre_listar: async () => ({ arquivos: listarMd(exigirCofre(), 200) }),
+  cofre_ler: async ({ arquivo }) => {
+    const alvo = dentroDoCofre(arquivo);
+    const st = fs.statSync(alvo);
+    if (!st.isFile()) throw new Error('Isso não é um arquivo.');
+    if (st.size > 1024 * 1024) throw new Error('Arquivo grande demais para leitura (limite de 1 MB).');
+    return { caminho: arquivo, texto: fs.readFileSync(alvo, 'utf8') };
+  },
+  cofre_escrever: async ({ arquivo, texto }) => {
+    const rel = String(arquivo || '');
+    if (!/^Memoria\//.test(rel)) throw new Error('Só escrevo em Memoria/ para não mexer nas suas notas.');
+    const alvo = dentroDoCofre(rel);
+    fs.mkdirSync(path.dirname(alvo), { recursive: true });
+    const conteudo = String(texto == null ? '' : texto).slice(0, 512 * 1024);
+    fs.writeFileSync(alvo, conteudo, 'utf8');
+    return { ok: true, caminho: rel, bytes: Buffer.byteLength(conteudo, 'utf8') };
+  },
+  esquecer_cofre: async () => {
+    cofreAutorizado = '';
+    try { fs.unlinkSync(arquivoCofreDesktop()); } catch (_) { /* já não existia */ }
+    return true;
+  }
+});
 
 ipcMain.handle('jarvis:run', async (_e, nome, args) => {
   if (!Object.prototype.hasOwnProperty.call(acoes, nome)) throw new Error('Ação desconhecida');

@@ -1,23 +1,33 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.20.0",
-  "versionCode": 10200,
+  "version": "1.21.2",
+  "versionCode": 10212,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
-  "gerado": "2026-10-28",
-  "status": "1.20.0: o app voltou a inicializar sem o erro \"Cannot access 'MEM' before initialization\" (a declaração da memória agora acontece antes do bloco que monta os painéis), a IA local valida o modelo antes de chamar o MediaPipe e não derruba mais o processo, o diagnóstico mostra memória/armazenamento/abertura e há bloqueio OPCIONAL do aplicativo com PIN e biometria.",
+  "gerado": "2026-10-29",
+  "status": "1.21.2: auditoria de runtime corrigiu o botão de apagar chave que falhava em silêncio (promessa rejeitada sem tratamento) e o package-lock fora de sincronia, que impedia npm ci.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.20.0 (2026-10-28). CRÍTICO: o bloco de ligações da memória rodava na carga do app.js antes de \"const MEM\" — zona morta temporal — e abortava o arquivo inteiro; era por isso que diagnóstico, abas de Ajustes e memória pareciam ter desaparecido. A declaração foi movida para o topo, junto da detecção de plataforma, com estado explícito e diagnóstico próprio. IA local: pré-checagem de tamanho/cabeçalho (.task ZIP ou TFL3), trava de sessão única e mensagens de erro detalhadas, para não chamar o MediaPipe com modelo inválido (SIGABRT \"interpreter_ != nullptr\"). Diagnóstico: memória conectada, armazenamento, abertura e carimbo de hora. Bloqueio opcional em Ajustes ▸ Segurança: PIN (hash), biometria/credencial do aparelho via BiometricPrompt, código de recuperação e atraso progressivo; desligado por padrão e nunca impede o uso. Windows: workflow separado gera instalador NSIS e versão portátil com electron-builder. O núcleo mantém os três estilos (HUD, plasma e órbita) e a animação própria de cada um, agora dentro de um app.js que termina de carregar de verdade.",
+  "notas": "Revisão 1.21.2 (2026-10-29). Auditoria de ponta a ponta do app: inicialização, 12 abas, 167 botões, painéis, rolagem e persistência exercitados em DOM real (jsdom). Correção do handler de apagar chave, que rejeitava a promessa sem catch quando o cofre seguro não estava disponível, e sincronização do package-lock.json (npm ci voltou a instalar do zero). Mantidas as funções da 1.21.1: cofre do Obsidian por SAF/pasta nativa, memória por tópicos, núcleo 3D com quatro anéis, IA local MediaPipe com validação de .task e atualização in-app. O núcleo mantém os três estilos (HUD, plasma e órbita) e a animação própria de cada um, com quarto anel e varredura holográfica; a memória grava um arquivo por tópico em Memoria/.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md"
   ],
   "build": {
     "resultado": "success",
-    "sha256": "78d0db69855be1d5fbbe8a6c4e3e110b20723172c8fdc81fc4ed708ba20eec5c",
-    "bytes": 71050690,
-    "arquivo": "jarvis-nova-1.20.0-10200.apk",
-    "data": "2026-10-28",
-    "run": "40789717136",
-    "observacao": "APK do release v1.20.0 compilado pelo workflow de release com ci/debug.keystore; checksum conferido após o download. Dentro do APK: assets/public/app.js com 'const MEM = (() =>' antes de qualquer rotina de topo, 'Memória conectada (Obsidian local)' no diagnóstico e VERSAO_APP = '1.20.0'; index.html com o bloqueio opcional (bloqueio-pin); classes7.dex com JarvisSeguranca (biometria). O mesmo release traz o instalador NSIS e o portátil do PC gerados pelo workflow release-pc.yml (run 40789717487)."
+    "sha256": "c49452c620177c90f1132d79bc6373b8a21a705de92d7aacd5d4883b635ffc44",
+    "bytes": 71066567,
+    "arquivo": "jarvis-nova-1.21.2-10212.apk",
+    "data": "2026-10-29",
+    "ambiente": "compilação local (JDK 17 + Android SDK 34; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
+    "observacao": "APK 1.21.2: assets/public/app.js com VERSAO_APP='1.21.2', versionCode 10212; handler de apagar chave com try/catch. Sem teste em aparelho físico.",
+    "pc": {
+      "portatil": "jarvis-nova-1.21.2-pc-portatil.exe",
+      "sha256": "d901759c41156c98d1c665d0c470e93fe0a1df3b3db8b3248f596dcd7235fde8",
+      "bytes": 75428801,
+      "pasta": "jarvis-nova-1.21.2-pc-pasta.zip",
+      "sha256_pasta": "7e52faae914b2544ed6b6b0bebb61c032453c2f7ae2f8e59fc77947c7e444dc0",
+      "bytes_pasta": 117526873,
+      "instalador": "não gerado nesta máquina: o NSIS/rcedit exige Wine 32 bits, ausente neste container. Sai do workflow release-pc.yml em windows-latest.",
+      "observacao": "Portátil gerado com -c.win.signAndEditExecutable=false: por falta de Wine 32 bits o electron-builder não grava ícone/versão no .exe. O executável roda normalmente; apenas o ícone é o padrão do Electron."
+    }
   }
 }

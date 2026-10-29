@@ -20,6 +20,7 @@ import android.view.KeyEvent;
 import android.net.Uri;
 import android.provider.CalendarContract;
 import android.provider.Settings;
+import android.app.Activity;
 import android.os.BatteryManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
@@ -41,6 +42,9 @@ import com.getcapacitor.PermissionState;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.ActivityCallback;
+import androidx.activity.result.ActivityResult;
+import androidx.documentfile.provider.DocumentFile;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
@@ -1028,6 +1032,239 @@ public class JarvisUtilPlugin extends Plugin {
         } catch (Exception e) {
             call.reject("Não consegui cancelar: " + e.getMessage());
         }
+    }
+
+
+    /* ---------- Cofre do Obsidian (Storage Access Framework) ----------
+     * O usuário escolhe a pasta do cofre no seletor do Android; o app guarda a permissão
+     * persistente e passa a ler/escrever só dentro dela. Nada é apagado e nenhum arquivo
+     * fora de `Memoria/` é sobrescrito: os tópicos do J.A.R.V.I.S. ficam em `Memoria/`.
+     * Sem SAF não há como o Obsidian abrir pastas privadas do app — por isso este caminho.
+     */
+    private static final String PREF_COFRE = "jarvis_cofre";
+    private static final String CHAVE_URI = "uri";
+
+    private android.net.Uri uriCofre() {
+        String s = getContext().getSharedPreferences(PREF_COFRE, Context.MODE_PRIVATE).getString(CHAVE_URI, "");
+        if (s == null || s.isEmpty()) return null;
+        try { return android.net.Uri.parse(s); } catch (Exception e) { return null; }
+    }
+
+    private DocumentFile raizCofre() {
+        android.net.Uri u = uriCofre();
+        if (u == null) return null;
+        try { return DocumentFile.fromTreeUri(getContext(), u); } catch (Exception e) { return null; }
+    }
+
+    private DocumentFile acharCaminho(DocumentFile raiz, String caminho, boolean criar) {
+        if (raiz == null) return null;
+        String[] partes = (caminho == null ? "" : caminho).split("/");
+        DocumentFile atual = raiz;
+        for (String parte : partes) {
+            String nome = parte.trim();
+            if (nome.isEmpty() || nome.equals(".") || nome.equals("..")) continue;
+            DocumentFile achado = atual.findFile(nome);
+            if (achado == null) {
+                if (!criar) return null;
+                achado = atual.createDirectory(nome);
+            }
+            if (achado == null) return null;
+            atual = achado;
+        }
+        return atual;
+    }
+
+    private void contarMd(DocumentFile dir, int[] contador, int nivel) {
+        if (dir == null || nivel > 3 || contador[0] >= 500) return;
+        DocumentFile[] filhos = dir.listFiles();
+        for (DocumentFile f : filhos) {
+            if (f.isDirectory()) contarMd(f, contador, nivel + 1);
+            else if (f.getName() != null && f.getName().toLowerCase(Locale.ROOT).endsWith(".md")) contador[0]++;
+            if (contador[0] >= 500) return;
+        }
+    }
+
+    @PluginMethod
+    public void escolherCofre(PluginCall call) {
+        try {
+            Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+            startActivityForResult(call, i, "cofreEscolhido");
+        } catch (Exception e) {
+            call.reject("Não foi possível abrir o seletor de pastas do Android: " + msg(e));
+        }
+    }
+
+    @ActivityCallback
+    private void cofreEscolhido(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        if (result == null || result.getResultCode() != Activity.RESULT_OK
+            || result.getData() == null || result.getData().getData() == null) {
+            call.reject("Seleção de pasta cancelada.");
+            return;
+        }
+        try {
+            android.net.Uri uri = result.getData().getData();
+            getContext().getContentResolver().takePersistableUriPermission(uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            getContext().getSharedPreferences(PREF_COFRE, Context.MODE_PRIVATE).edit()
+                .putString(CHAVE_URI, uri.toString()).apply();
+            DocumentFile d = DocumentFile.fromTreeUri(getContext(), uri);
+            JSObject out = new JSObject();
+            out.put("ok", true);
+            out.put("uri", uri.toString());
+            out.put("nome", d != null && d.getName() != null ? d.getName() : "cofre");
+            out.put("podeLer", d != null && d.canRead());
+            out.put("podeEscrever", d != null && d.canWrite());
+            call.resolve(out);
+        } catch (Exception e) {
+            call.reject("Não consegui guardar o acesso à pasta: " + msg(e));
+        }
+    }
+
+    @PluginMethod
+    public void cofreStatus(PluginCall call) {
+        JSObject out = new JSObject();
+        DocumentFile raiz = raizCofre();
+        if (raiz == null) {
+            out.put("conectado", false);
+            out.put("motivo", "Nenhuma pasta de cofre escolhida neste aparelho.");
+            call.resolve(out);
+            return;
+        }
+        try {
+            int[] contador = new int[]{0};
+            contarMd(raiz, contador, 0);
+            DocumentFile memoria = raiz.findFile("Memoria");
+            out.put("conectado", raiz.canRead());
+            out.put("nome", raiz.getName() == null ? "cofre" : raiz.getName());
+            out.put("uri", uriCofre() == null ? "" : uriCofre().toString());
+            out.put("podeLer", raiz.canRead());
+            out.put("podeEscrever", raiz.canWrite());
+            out.put("arquivos", contador[0]);
+            out.put("pastaMemoria", memoria != null && memoria.exists());
+            out.put("motivo", raiz.canRead() ? "Pasta acessível." : "O Android revogou a permissão desta pasta; escolha de novo.");
+        } catch (Exception e) {
+            out.put("conectado", false);
+            out.put("motivo", "Falha ao consultar a pasta: " + msg(e));
+        }
+        call.resolve(out);
+    }
+
+    @PluginMethod
+    public void cofreListar(PluginCall call) {
+        DocumentFile raiz = raizCofre();
+        JSObject out = new JSObject();
+        JSArray lista = new JSArray();
+        if (raiz == null) {
+            out.put("arquivos", lista);
+            out.put("motivo", "Nenhum cofre escolhido.");
+            call.resolve(out);
+            return;
+        }
+        try {
+            coletarMd(raiz, "", lista, 0);
+            out.put("arquivos", lista);
+            out.put("total", lista.length());
+        } catch (Exception e) {
+            call.reject("Não consegui listar o cofre: " + msg(e));
+            return;
+        }
+        call.resolve(out);
+    }
+
+    private void coletarMd(DocumentFile dir, String prefixo, JSArray saida, int nivel) {
+        if (dir == null || nivel > 3 || saida.length() >= 200) return;
+        DocumentFile[] filhos = dir.listFiles();
+        for (DocumentFile f : filhos) {
+            String nome = f.getName();
+            if (nome == null || nome.startsWith(".") || f.isDirectory()) {
+                if (f.isDirectory() && nivel < 3) coletarMd(f, prefixo + nome + "/", saida, nivel + 1);
+                continue;
+            }
+            if (nome.toLowerCase(Locale.ROOT).endsWith(".md")) saida.put(prefixo + nome);
+            if (saida.length() >= 200) return;
+        }
+    }
+
+    @PluginMethod
+    public void cofreLer(PluginCall call) {
+        DocumentFile raiz = raizCofre();
+        if (raiz == null) { call.reject("Nenhum cofre escolhido."); return; }
+        String caminho = call.getString("caminho", "");
+        try {
+            DocumentFile alvo = acharCaminho(raiz, caminho, false);
+            if (alvo == null || !alvo.isFile()) { call.reject("Arquivo não encontrado no cofre: " + caminho); return; }
+            if (alvo.length() > 1024 * 1024) { call.reject("Arquivo grande demais para leitura (limite de 1 MB)."); return; }
+            java.io.InputStream in = getContext().getContentResolver().openInputStream(alvo.getUri());
+            if (in == null) { call.reject("Não foi possível abrir o arquivo."); return; }
+            java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+            byte[] dados = new byte[8192];
+            int n;
+            while ((n = in.read(dados)) != -1) buf.write(dados, 0, n);
+            in.close();
+            JSObject out = new JSObject();
+            out.put("caminho", caminho);
+            out.put("texto", buf.toString("UTF-8"));
+            call.resolve(out);
+        } catch (Exception e) { call.reject("Falha ao ler do cofre: " + msg(e)); }
+    }
+
+    @PluginMethod
+    public void cofreEscrever(PluginCall call) {
+        DocumentFile raiz = raizCofre();
+        if (raiz == null) { call.reject("Nenhum cofre escolhido."); return; }
+        String caminho = call.getString("caminho", "");
+        String texto = call.getString("texto", "");
+        if (caminho == null || caminho.trim().isEmpty()) { call.reject("Caminho da nota vazio."); return; }
+        if (!caminho.startsWith("Memoria/")) { call.reject("Só escrevo em Memoria/ para não mexer nas suas notas."); return; }
+        if (texto == null) texto = "";
+        if (texto.length() > 512 * 1024) { call.reject("Nota acima do limite de 512 kB."); return; }
+        try {
+            String[] partes = caminho.split("/");
+            StringBuilder pasta = new StringBuilder();
+            for (int i = 0; i < partes.length - 1; i++) { if (i > 0) pasta.append('/'); pasta.append(partes[i]); }
+            DocumentFile dir = acharCaminho(raiz, pasta.toString(), true);
+            if (dir == null || !dir.canWrite()) { call.reject("Sem permissão de escrita nessa pasta do cofre."); return; }
+            String arquivo = partes[partes.length - 1];
+            DocumentFile nota = dir.findFile(arquivo);
+            if (nota == null) {
+                nota = dir.createFile("text/markdown", arquivo);
+                if (nota == null) { call.reject("Não foi possível criar a nota no cofre."); return; }
+                // Alguns provedores acrescentam a extensão do MIME ao nome ("Gostos.md.md").
+                // Renomear para o nome exato evita arquivos duplicados na segunda sincronização.
+                String criado = nota.getName();
+                if (criado != null && !criado.equals(arquivo)) nota.renameTo(arquivo);
+            }
+            java.io.OutputStream out = getContext().getContentResolver().openOutputStream(nota.getUri(), "wt");
+            if (out == null) { call.reject("Não foi possível abrir a nota para escrita."); return; }
+            out.write(texto.getBytes("UTF-8"));
+            out.flush();
+            out.close();
+            JSObject resp = new JSObject();
+            resp.put("ok", true);
+            resp.put("caminho", caminho);
+            resp.put("bytes", texto.getBytes("UTF-8").length);
+            call.resolve(resp);
+        } catch (Exception e) { call.reject("Falha ao gravar no cofre: " + msg(e)); }
+    }
+
+    @PluginMethod
+    public void esquecerCofre(PluginCall call) {
+        try {
+            android.net.Uri u = uriCofre();
+            if (u != null) {
+                try { getContext().getContentResolver().releasePersistableUriPermission(u,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION); } catch (Exception ignored) { }
+            }
+            getContext().getSharedPreferences(PREF_COFRE, Context.MODE_PRIVATE).edit().remove(CHAVE_URI).apply();
+            call.resolve();
+        } catch (Exception e) { call.reject("Não foi possível desconectar o cofre: " + msg(e)); }
+    }
+
+    private String msg(Exception e) {
+        return e.getMessage() == null ? "erro desconhecido" : e.getMessage();
     }
 
 }

@@ -48,13 +48,29 @@ jobs:
       - name: Empacotar Windows (instalador NSIS + portátil)
         run: npx electron-builder --win nsis portable --publish never
 
-      - name: Listar artefatos gerados
+      - name: Conferir instalador e portátil (nunca publicar stub)
         shell: bash
         run: |
           ls -lh dist || true
-          find dist -maxdepth 2 -type f \( -name '*.exe' -o -name '*.zip' \) -print
-          test -n "$(find dist -maxdepth 2 -type f -name '*.exe' -print -quit)" || {
-            echo 'Nenhum .exe foi gerado; confira o log do electron-builder.' >&2; exit 1; }
+          SETUP=$(find dist -maxdepth 1 -type f -name '*Setup*.exe' -print -quit)
+          PORTATIL=$(find dist -maxdepth 1 -type f -name '*.exe' ! -name '*Setup*' -print -quit)
+          test -n "$SETUP" || { echo 'Instalador NSIS não foi gerado.' >&2; exit 1; }
+          test -n "$PORTATIL" || { echo 'Executável portátil não foi gerado.' >&2; exit 1; }
+          # O electron-builder deixa um stub de ~160 kB quando falha no meio; exigir tamanho
+          # mínimo impede publicar um instalador que não instala nada.
+          for f in "$SETUP" "$PORTATIL"; do
+            BYTES=$(wc -c < "$f")
+            echo "$f · $BYTES bytes"
+            test "$BYTES" -gt 20000000 || { echo "Artefato pequeno demais (possível stub): $f" >&2; exit 1; }
+          done
+          grep -a -q 'Nullsoft' "$SETUP" || { echo 'O Setup.exe não é um instalador NSIS válido.' >&2; exit 1; }
+
+      - name: Gerar checksums
+        shell: bash
+        run: |
+          cd dist
+          for f in *.exe; do sha256sum "$f" > "$f.sha256"; done
+          cat *.sha256
 
       - name: Guardar artefatos do build
         uses: actions/upload-artifact@v4
@@ -62,6 +78,7 @@ jobs:
           name: jarvis-nova-pc
           path: |
             dist/*.exe
+            dist/*.sha256
             dist/*.zip
             dist/*.yml
           if-no-files-found: error
@@ -72,6 +89,7 @@ jobs:
         with:
           files: |
             dist/*.exe
+            dist/*.sha256
             dist/*.zip
             dist/*.yml
           generate_release_notes: false

@@ -111,7 +111,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.20.0</span>
+      <span class="orb-sub" aria-hidden="true">v1.21.2</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -196,7 +196,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.20.0</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.21.2</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -513,11 +513,15 @@
     </div>
     <div class="mem-temas" role="tablist" aria-label="Temas da memória">
       <button type="button" data-mem-tema="gostos">Gostos</button>
-      <button type="button" data-mem-tema="pesquisas">Pesquisas</button>
+      <button type="button" data-mem-tema="preferencias">Preferências</button>
       <button type="button" data-mem-tema="projetos">Projetos</button>
+      <button type="button" data-mem-tema="objetivos">Objetivos</button>
+      <button type="button" data-mem-tema="estudos">Estudos</button>
+      <button type="button" data-mem-tema="dispositivos">Dispositivos</button>
+      <button type="button" data-mem-tema="pesquisas">Pesquisas</button>
       <button type="button" data-mem-tema="contextos">Contextos</button>
       <button type="button" data-mem-tema="rotinas">Rotinas</button>
-      <button type="button" data-mem-tema="mensagens">Mensagens</button>
+      <button type="button" data-mem-tema="mensagens">Conversas</button>
     </div>
     <label>Buscar na memória<input id="mem-busca" type="text" autocomplete="off" placeholder="palavra, projeto, assunto…"></label>
     <div id="mem-lista" class="mem-lista" aria-live="polite"></div>
@@ -525,11 +529,15 @@
     <h3>Nova nota</h3>
     <label>Tema<select id="mem-tema">
       <option value="gostos">Gostos</option>
-      <option value="pesquisas">Pesquisas</option>
+      <option value="preferencias">Preferências</option>
       <option value="projetos">Projetos</option>
+      <option value="objetivos">Objetivos</option>
+      <option value="estudos">Estudos</option>
+      <option value="dispositivos">Dispositivos</option>
+      <option value="pesquisas">Pesquisas</option>
       <option value="contextos">Contextos</option>
       <option value="rotinas">Rotinas</option>
-      <option value="mensagens">Mensagens</option>
+      <option value="mensagens">Conversas importantes</option>
     </select></label>
     <label>Título (opcional)<input id="mem-titulo" type="text" maxlength="120" autocomplete="off" placeholder="Ex.: preferências de voz"></label>
     <label>Anotação<textarea id="mem-texto" rows="4" maxlength="4000" placeholder="Escreva o que o JARVIS deve lembrar. Por voz: “Jarvis, anote que prefiro respostas curtas.”"></textarea></label>
@@ -550,20 +558,36 @@
     <p id="pc-msg" class="dica" role="status" aria-live="polite">Arquivos criados por aqui ficam em ~/Jarvis.</p>
   </section>
   <section class="grupo" id="obs-bloco">
-    <h3>Obsidian</h3>
-    <p class="dica">Ligue esta memória a uma pasta de cofre do Obsidian. No computador o vínculo é direto: o J.A.R.V.I.S. escreve notas <code>.md</code> com frontmatter em uma subpasta <code>Jarvis Nova</code> dentro do cofre, sem apagar nada que já exista. No Android o Obsidian não abre pastas do aplicativo, então o caminho é exportar o pacote <code>.md</code> e importar de volta — o vínculo automático exige um plugin de armazenamento (SAF), que este aplicativo ainda não embarca.</p>
-    <label>Caminho do cofre (computador)<input id="obs-caminho" type="text" autocomplete="off" placeholder="~/Documentos/MeuCofre"></label>
+    <h3>Obsidian — cofre conectado</h3>
+    <p class="dica">Escolha a pasta do seu cofre. O J.A.R.V.I.S. grava um arquivo por assunto em <code>Memoria/</code> (Gostos, Preferências, Projetos, Objetivos, Estudos, Dispositivos, Rotinas, Conversas importantes…), com data e origem. Nada é apagado e nenhuma nota sua fora de <code>Memoria/</code> é tocada. No Android o acesso usa o seletor de pastas do sistema (SAF); no PC, o diálogo nativo.</p>
+    <label class="linha"><input id="obs-ativo" type="checkbox"><span>Usar o cofre como memória conectada<small>Quando ligado, o assistente consulta as notas relevantes antes de responder e grava o que você mandar anotar. Desligado, a memória interna continua funcionando.</small></span></label>
+    <div class="info-card"><span class="info-icon">⌂</span><div><b id="obs-local">Nenhum cofre conectado</b><p id="obs-resumo">Escolha a pasta para o J.A.R.V.I.S. começar a organizar por tópico.</p></div></div>
+    <label>Caminho do cofre (PC)<input id="obs-caminho" type="text" autocomplete="off" placeholder="ex.: C:\Users\voce\Documentos\MeuCofre · no Android use o botão ao lado"></label>
     <div class="botoes">
+      <button id="obs-escolher" type="button" class="primario">Escolher pasta do cofre</button>
       <button id="obs-testar" type="button" class="secundario">Testar vínculo</button>
-      <button id="obs-enviar" type="button" class="secundario">Enviar notas</button>
+    </div>
+    <div class="botoes">
+      <button id="obs-enviar" type="button" class="secundario">Enviar notas por tópico</button>
       <button id="obs-receber" type="button" class="secundario">Trazer do cofre</button>
     </div>
     <div class="botoes">
-      <button id="obs-baixar" type="button" class="secundario">Baixar .md</button>
-      <button id="obs-importar-btn" type="button" class="secundario">Importar .md</button>
+      <button id="obs-organizar" type="button" class="secundario">Organizar por tópicos</button>
+      <button id="obs-desconectar" type="button" class="secundario perigo">Desconectar</button>
     </div>
-    <input id="obs-importar" type="file" accept=".md,text/markdown" hidden>
-    <p id="obs-status" class="dica" role="status" aria-live="polite">Sem vínculo. No computador, informe a pasta do cofre e toque em “Testar vínculo”.</p>
+    <details class="obs-avancado">
+      <summary>Sem vínculo automático (navegador ou cofre indisponível)</summary>
+      <p class="dica">Baixe o pacote <code>.md</code> por tópico ou importe notas que você já tenha. Nada sai do aparelho.</p>
+      <div class="botoes">
+        <button id="obs-baixar" type="button" class="secundario">Baixar .md</button>
+        <button id="obs-importar-btn" type="button" class="secundario">Importar .md</button>
+      </div>
+      <input id="obs-importar" type="file" accept=".md,text/markdown" hidden>
+    </details>
+    <p id="obs-status" class="dica" role="status" aria-live="polite">Sem vínculo. Escolha a pasta do cofre para conectar.</p>
+    <p class="dica">No Android o APK não embarca o cofre do Obsidian: o acesso é pelo seletor de pasta (SAF), com permissão liberada por você. No PC basta apontar a pasta do vault. Sem vínculo, use “Baixar .md” e abra o arquivo no Obsidian.</p>
+    <p id="obs-diag" class="dica">Última operação: nenhuma nesta sessão.</p>
+    <div id="obs-topicos" class="mem-lista" aria-live="polite"></div>
   </section>
   <div class="botoes barra"><button id="mem-fechar" type="button" class="primario">Fechar</button></div>
 </aside>

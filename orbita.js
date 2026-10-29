@@ -42,8 +42,14 @@
     idle: { prim: 0x06b6d4, sec: 0x0284c7, nucleo: 0x22d3ee, giro: 0.30, ruido: 0.10, anel: 0.34, pulso: 1.0 },
     listening: { prim: 0x2563eb, sec: 0x06b6d4, nucleo: 0x60a5fa, giro: 0.80, ruido: 0.42, anel: 0.62, pulso: 1.5 },
     thinking: { prim: 0xd97706, sec: 0x7c3aed, nucleo: 0xfbbf24, giro: 2.00, ruido: 0.74, anel: 1.10, pulso: 1.9 },
-    speaking: { prim: 0x059669, sec: 0x06b6d4, nucleo: 0x34d399, giro: 1.05, ruido: 0.52, anel: 0.80, pulso: 1.6 }
+    speaking: { prim: 0x059669, sec: 0x06b6d4, nucleo: 0x34d399, giro: 1.05, ruido: 0.52, anel: 0.80, pulso: 1.6 },
+    processing: { prim: 0xb45309, sec: 0x6d28d9, nucleo: 0xfcd34d, giro: 2.20, ruido: 0.78, anel: 1.15, pulso: 2.0 },
+    error: { prim: 0xb91c1c, sec: 0x7f1d1d, nucleo: 0xfca5a5, giro: 0.45, ruido: 0.55, anel: 0.55, pulso: 1.2 }
   };
+  PALETAS.erro = PALETAS.error;
+  PALETAS.ouvindo = PALETAS.listening;
+  PALETAS.falando = PALETAS.speaking;
+  PALETAS.pensando = PALETAS.thinking;
 
   var reduzido = false;
   try { reduzido = !!(raiz.matchMedia && raiz.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { reduzido = false; }
@@ -260,8 +266,8 @@
     this.grupo.add(this.particulas);
 
     this.aneis = [];
-    var raios = [2.05, 2.42, 2.78];
-    for (var a = 0; a < 3; a++) {
+    var raios = [2.05, 2.42, 2.78, 3.14];
+    for (var a = 0; a < 4; a++) {
       var rg = new T.RingGeometry(raios[a], raios[a] + (a === 1 ? 0.010 : 0.016), 160);
       var mat = new T.MeshBasicMaterial({
         transparent: true,
@@ -278,6 +284,14 @@
       this.grupo.add(anel);
       this.aneis.push(anel);
     }
+
+    var matVarredura = new T.MeshBasicMaterial({
+      transparent: true, opacity: 0.22, side: T.DoubleSide, depthWrite: false, blending: T.AdditiveBlending
+    });
+    matVarredura.color = this.corNucleo;
+    this.varredura = new T.Mesh(new T.RingGeometry(1.18, 1.215, 96), matVarredura);
+    this.varredura.rotation.x = Math.PI / 2;
+    this.grupo.add(this.varredura);
 
     var matMiolo = new T.MeshBasicMaterial({ wireframe: true, transparent: true, opacity: 0.46, depthWrite: false });
     matMiolo.color = this.corNucleo;
@@ -408,8 +422,13 @@
       var anel = this.aneis[i];
       anel.rotation.z += dt * (0.10 + giro * 0.30) * (i % 2 ? -1 : 1);
       anel.rotation.x = Math.PI / 2.6 + i * 0.34 + Math.sin(this.clock.elapsedTime * 0.35 + i) * 0.12;
-      anel.material.opacity = (0.22 + this.audioNivel * 0.16) * (1 - i * 0.18);
+      anel.material.opacity = (0.14 + (this.alvo.anel || 0.34) * 0.10 + this.audioNivel * 0.18) * (1 - i * 0.14);
     }
+
+    var fase = (this.clock.elapsedTime * 0.55) % 1;
+    this.varredura.position.y = -0.9 + fase * 1.8;
+    this.varredura.scale.setScalar(0.82 + Math.sin(fase * Math.PI) * 0.26 + this.audioNivel * 0.08);
+    this.varredura.material.opacity = (this.estadoAtual === 'error' ? 0.10 : 0.16) + this.audioNivel * 0.14;
 
     this.miolo.rotation.y -= dt * (0.35 + giro * 0.5);
     this.miolo.rotation.x += dt * 0.18;

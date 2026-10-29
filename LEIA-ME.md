@@ -1,4 +1,13 @@
-# J.A.R.V.I.S. Nova 1.20.0
+# J.A.R.V.I.S. Nova 1.21.2
+
+## O que mudou na 1.21.2
+
+- **Auditoria de runtime**: o app foi carregado em DOM real (jsdom) na mesma ordem do APK, com as 12 abas
+  percorridas e os 167 botões clicados. Nenhuma exceção, promessa rejeitada ou botão inerte no caminho exercitado.
+- **Correção**: apagar uma chave de API falhava em silêncio quando o cofre seguro não existia (o clique gerava
+  promessa rejeitada sem tratamento). Agora a falha é avisada no chat e registrada no log de ações.
+- **Correção**: `package-lock.json` estava dessincronizado do `package.json` e `npm ci` recusava instalar.
+  O lockfile foi regenerado sem trocar versões declaradas.
 
 ## O que mudou na 1.19.1
 
@@ -429,3 +438,42 @@ Funções equivalentes no PC: IA (chaves e roteador), voz, memória/Obsidian por
 tarefas/rotinas, arquivos, CAD, diagnóstico e bloqueio opcional. Câmera, biometria do aparelho,
 notificações e serviços em segundo plano do Android dependem de APIs que não existem no desktop;
 o app informa isso em vez de fingir que funcionam.
+
+
+## 1.21.0 — Obsidian conectado de verdade
+
+### Conectar o cofre
+
+1. Abra **Ajustes ▸ Memória** e toque em **Escolher pasta do cofre**.
+   - Android: abre o seletor de pastas do sistema; escolha a pasta do vault do Obsidian.
+     O Android guarda a permissão, então não precisa escolher de novo a cada abertura.
+   - PC: abre o diálogo nativo de pasta.
+2. **Testar vínculo** mostra nome, quantidade de `.md`, leitura/escrita e se `Memoria/`
+   já existe.
+3. **Enviar notas por tópico** grava um arquivo por assunto em `Memoria/` dentro do vault.
+4. **Trazer do cofre** importa os `.md` de volta para a memória interna (sem duplicar).
+5. **Desconectar** remove só o vínculo; as notas continuam na pasta.
+
+Se o cofre estiver em outro aparelho, use **Baixar .md** e **Importar .md** — não há
+sincronização automática entre Android e Windows.
+
+### Como a memória é organizada
+
+Cada assunto vira um arquivo: `Memoria/Gostos.md`, `Preferencias.md`, `Projetos.md`,
+`Objetivos.md`, `Estudos.md`, `Dispositivos.md`, `Rotinas.md`,
+`Conversas importantes.md`, `Pesquisas.md`, `Contextos.md`. Cada nota aparece como uma
+seção `##` com data, tags e origem. Anotar de novo o mesmo título acrescenta uma linha
+datada em vez de criar outra nota.
+
+Antes de responder, o J.A.R.V.I.S. consulta apenas as notas que têm relação com a
+pergunta (título, tags, corpo e tema provável). Se não houver registro, ele diz que não
+encontrou em vez de inventar.
+
+### Limites conhecidos
+
+- O acesso depende de a pasta continuar existindo e da permissão não ser revogada;
+  o painel mostra o motivo quando o Android recusa.
+- Escrever fora de `Memoria/` é bloqueado de propósito para não mexer nas suas notas.
+- Nada é enviado a serviços externos: o cofre é lido e gravado localmente.
+- O teste de SAF, biometria e 3D depende de aparelho físico; a suíte automatizada cobre
+  a lógica, o parser, a coerência da interface e a compilação.

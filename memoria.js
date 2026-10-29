@@ -24,12 +24,31 @@
   var CHAVE = 'jv_obsidian_vault';
   var TEMAS = [
     { id: 'gostos', nome: 'Gostos', icone: '♥' },
+    { id: 'preferencias', nome: 'Preferências', icone: '✧' },
     { id: 'pesquisas', nome: 'Pesquisas', icone: '⌕' },
     { id: 'projetos', nome: 'Projetos', icone: '▤' },
+    { id: 'objetivos', nome: 'Objetivos', icone: '◎' },
+    { id: 'estudos', nome: 'Estudos', icone: '✎' },
+    { id: 'dispositivos', nome: 'Dispositivos', icone: '⌗' },
     { id: 'contextos', nome: 'Contextos', icone: '◈' },
     { id: 'rotinas', nome: 'Rotinas', icone: '⚡' },
-    { id: 'mensagens', nome: 'Mensagens', icone: '✉' }
+    { id: 'mensagens', nome: 'Conversas importantes', icone: '✉' }
   ];
+  /* Um arquivo Markdown por tópico dentro do cofre do Obsidian, em `Memoria/`.
+   * Nada é apagado: cada gravação reescreve só o arquivo do próprio tópico, e os
+   * títulos dentro dele viram seções `##`, que o Obsidian mostra como estrutura. */
+  var ARQUIVOS = {
+    gostos: 'Memoria/Gostos.md',
+    preferencias: 'Memoria/Preferencias.md',
+    pesquisas: 'Memoria/Pesquisas.md',
+    projetos: 'Memoria/Projetos.md',
+    objetivos: 'Memoria/Objetivos.md',
+    estudos: 'Memoria/Estudos.md',
+    dispositivos: 'Memoria/Dispositivos.md',
+    contextos: 'Memoria/Contextos.md',
+    rotinas: 'Memoria/Rotinas.md',
+    mensagens: 'Memoria/Conversas importantes.md'
+  };
   var LIMITE_BYTES = 512 * 1024;
   var LIMITE_NOTAS = 240;
   var LIMITE_TEXTO = 4000;
@@ -79,11 +98,15 @@
   function temaPorPalavras(txt) {
     var n = normalizar(txt);
     var mapa = [
-      ['pesquisas', /(pesquis|estud|artigo|fonte|referenc|aprendi|descobri|compar)/],
-      ['projetos', /(projet|repositor|github|codigo|app|site|bug|implement|entrega|prazo do projeto)/],
+      ['projetos', /(projet|repositor|github|codigo|app|site|bug|implement|entrega|sprint|backlog)/],
+      ['objetivos', /(objetivo|meta|pretendo|quero (?:chegar|concluir|aprender|montar)|plano de|ate o fim do ano)/],
+      ['estudos', /(estud|curso|apostila|aula|faculdade|concurso|ler o livro|aprendi|descobri)/],
+      ['dispositivos', /(celular|computador|notebook|pc|placa|arduino|impressora|roteador|hd|ssd|configuracao do)/],
       ['rotinas', /(rotina|habito|todo dia|todos os dias|acordo|treino|lembrar de fazer)/],
-      ['mensagens', /(mensagem|email|e-mail|recado|whatsapp|avisar|conversa com)/],
-      ['gostos', /(gosto|prefiro|favorit|odeio|nao gosto|cafe|musica|filme|comida|cor favorita)/],
+      ['mensagens', /(mensagem|email|e-mail|recado|whatsapp|avisar|conversa com|ligar para)/],
+      ['gostos', /(gosto|odeio|nao gosto|cafe|musica|filme|comida|cor favorita|estilo visual)/],
+      ['preferencias', /(preferencia|prefiro (?:que|respost|estilo|tom|seja|usar)|favorit|melhor jeito|gosto de responder|quero que voce|chame|tratamento)/],
+      ['pesquisas', /(pesquis|artigo|fonte|referenc|compar|documentacao)/],
       ['contextos', /(contexto|sobre mim|meu trabalho|minha casa|familia|importante saber)/]
     ];
     for (var i = 0; i < mapa.length; i++) if (mapa[i][1].test(n)) return mapa[i][0];
@@ -348,23 +371,178 @@
       String(b.meta || '').split('\n').forEach(function (linha) {
         var m = linha.match(/^\s*([A-Za-z_]+)\s*:\s*(.*)$/);
         if (!m) return;
-        meta[m[1].toLowerCase()] = m[2].replace(/^["']|[\"']$/g, '').trim();
+        meta[m[1].toLowerCase()] = m[2].replace(/^["']|["']$/g, '').trim();
       });
-      var corpo = String(b.corpo || '').replace(/^\s*#\s+.*\n/, '').trim();
+      var corpo = String(b.corpo || '').replace(/^\s*#\s+[^\n]*\n?/, '').trim();
       if (!corpo) { ignoradas++; return; }
-      var titulo = meta.title || corpo.split('\n')[0].slice(0, 80);
       var tags = (meta.tags || '').replace(/[\[\]]/g, '').split(',')
         .map(function (t) { return t.trim(); }).filter(Boolean);
-      var r = criar({
-        tema: meta.tema || temaPorPalavras(titulo + ' ' + corpo),
-        titulo: titulo, texto: corpo, tags: tags, origem: 'painel'
+      var temaBase = meta.tema ? temaValido(meta.tema) : '';
+      // Arquivo por tópico: `## Título` separa as notas. Sem seções, o arquivo inteiro
+      // é uma nota só (notas comuns do Obsidian continuam funcionando).
+      // O H1 já foi removido, então a primeira seção pode começar na coluna zero.
+      var partes = ('\n' + corpo).split(/\n\s*##\s+/);
+      var secoes = [];
+      if (partes.length > 1) {
+        for (var si = 1; si < partes.length; si++) {
+          var linhas = partes[si].split('\n');
+          var tituloSecao = String(linhas.shift() || '').trim();
+          var textoSecao = linhas.join('\n').replace(/_atualizado:[^\n]*/g, '').trim();
+          if (tituloSecao && textoSecao) secoes.push({ titulo: tituloSecao, texto: textoSecao });
+        }
+      }
+      if (!secoes.length) {
+        secoes.push({ titulo: meta.title || corpo.split('\n')[0].slice(0, 80), texto: corpo });
+      }
+      secoes.forEach(function (sec) {
+        var tema = temaBase || temaPorPalavras(sec.titulo + ' ' + sec.texto);
+        // Mesmo título no mesmo tópico já existe: não duplica nem sobrescreve o que o
+        // usuário possa ter editado no Obsidian. Conta como repetida e segue.
+        var jaExiste = carregar().some(function (n) {
+          return n.tema === tema && normalizar(n.titulo) === normalizar(sec.titulo);
+        });
+        if (jaExiste) { repetidas++; return; }
+        var r = criar({ tema: tema, titulo: sec.titulo, texto: sec.texto, tags: tags, origem: 'painel' });
+        if (r.ok && r.duplicada) repetidas++;
+        else if (r.ok) criadas++;
+        else ignoradas++;
       });
-      if (r.ok && r.duplicada) repetidas++;
-      else if (r.ok) criadas++;
-      else ignoradas++;
     });
     if (!criadas && !repetidas) return { ok: false, erro: 'Nenhuma nota legível encontrada no Markdown.' };
     return { ok: true, criadas: criadas, repetidas: repetidas, ignoradas: ignoradas };
+  }
+
+  /* ---------- Tópicos: um arquivo Markdown por assunto ---------- */
+  function arquivoDoTema(tema) {
+    return ARQUIVOS[temaValido(tema)] || 'Memoria/Contextos.md';
+  }
+  /** Notas agrupadas por tópico, no formato que o Obsidian lê (frontmatter + seções). */
+  function arquivosPorTopico() {
+    var lista = carregar();
+    return TEMAS.map(function (t) {
+      var doTema = lista.filter(function (n) { return n.tema === t.id; })
+        .sort(function (a, b) { return b.atualizado - a.atualizado; });
+      if (!doTema.length) return null;
+      var atualizado = new Date(doTema[0].atualizado).toISOString();
+      var corpo = doTema.map(function (n) {
+        return '## ' + n.titulo + '\n\n' +
+          '_atualizado: ' + new Date(n.atualizado).toISOString() +
+          (n.tags && n.tags.length ? ' · tags: ' + n.tags.join(', ') : '') +
+          ' · origem: ' + n.origem + '_\n\n' + n.texto + '\n';
+      }).join('\n');
+      var texto = '---\n' +
+        'title: "' + escaparYaml(t.nome) + '"\n' +
+        'tema: ' + t.id + '\n' +
+        'atualizado: ' + atualizado + '\n' +
+        'notas: ' + doTema.length + '\n' +
+        'origem: jarvis-nova\n' +
+        '---\n\n# ' + t.nome + '\n\n' + corpo;
+      return { nome: ARQUIVOS[t.id], tema: t.id, titulo: t.nome, notas: doTema.length, texto: texto };
+    }).filter(Boolean);
+  }
+  /** Contagem por tópico para o painel (sem carregar texto). */
+  function topicos() {
+    var lista = carregar();
+    return TEMAS.map(function (t) {
+      var notas = lista.filter(function (n) { return n.tema === t.id; }).length;
+      return { id: t.id, nome: t.nome, arquivo: ARQUIVOS[t.id], notas: notas };
+    });
+  }
+
+  var PARADAS = ' de da do das dos e ou a o as os um uma para por com que em no na nos nas se ao aos sobre como meu minha seu sua'.split(' ');
+  function termos(txt) {
+    return normalizar(txt).split(' ').filter(function (t) {
+      return t.length > 2 && PARADAS.indexOf(t) < 0;
+    }).slice(0, 12);
+  }
+  /**
+   * Contexto para o prompt: só as notas que têm a ver com a pergunta.
+   *
+   * Antes o app mandava o cofre inteiro (ou as últimas notas). Aqui cada nota é pontuada
+   * por sobreposição de termos (título pesa mais que corpo, tag pesa no meio) e pelo tema
+   * provável da pergunta. Se nada casar, devolve string vazia — e o prompt diz que não há
+   * registro, em vez de inventar lembrança.
+   */
+  function contextoRelevante(pergunta, maxChars) {
+    var limite = Math.max(200, Number(maxChars) || 1600);
+    var lista = carregar();
+    if (!lista.length) return '';
+    var ts = termos(pergunta);
+    if (!ts.length) return '';
+    var temaProvavel = temaPorPalavras(pergunta);
+    var pontuadas = lista.map(function (n) {
+      var titulo = normalizar(n.titulo);
+      var texto = normalizar(n.texto);
+      var tags = normalizar((n.tags || []).join(' '));
+      var pontos = 0;
+      ts.forEach(function (t) {
+        if (titulo.indexOf(t) >= 0) pontos += 4;
+        if (tags.indexOf(t) >= 0) pontos += 3;
+        if (texto.indexOf(t) >= 0) pontos += 1;
+      });
+      if (n.tema === temaProvavel) pontos += 2;
+      return { nota: n, pontos: pontos };
+    }).filter(function (x) { return x.pontos > 0; })
+      .sort(function (a, b) { return b.pontos - a.pontos || b.nota.atualizado - a.nota.atualizado; });
+
+    // Pergunta por assunto ("quais são minhas preferências?") raramente repete as palavras
+    // da nota. Sem nenhuma pista textual, devolve as notas recentes do tópico da pergunta —
+    // e só dele — em vez de mandar o cofre inteiro ou inventar lembrança.
+    if (!pontuadas.length) {
+      pontuadas = lista.filter(function (n) { return n.tema === temaProvavel; })
+        .sort(function (a, b) { return b.atualizado - a.atualizado; })
+        .slice(0, 3)
+        .map(function (n) { return { nota: n, pontos: 1 }; });
+    }
+
+    var partes = [];
+    var usado = 0;
+    for (var i = 0; i < pontuadas.length; i++) {
+      var n = pontuadas[i].nota;
+      var linha = '[' + temaNome(n.tema) + '] ' + n.titulo + ': ' +
+        n.texto.replace(/\s+/g, ' ').slice(0, 280);
+      if (usado + linha.length > limite) break;
+      partes.push(linha);
+      usado += linha.length + 1;
+    }
+    return partes.join('\n');
+  }
+  /** Trechos relevantes para a interface (busca com pontuação, sem prompt). */
+  function buscarRelevante(pergunta, limite) {
+    var txt = contextoRelevante(pergunta, 4000);
+    if (!txt) return [];
+    return txt.split('\n').slice(0, Math.max(1, Number(limite) || 5));
+  }
+
+  /**
+   * Registra uma informação classificando o assunto automaticamente.
+   * Se já existir nota com o mesmo título no tópico, acrescenta uma linha datada em vez
+   * de criar outra — mantém histórico sem duplicar.
+   */
+  function anexarAoTopico(texto, dados) {
+    var d = dados || {};
+    var limpo = limpar(texto, LIMITE_TEXTO);
+    if (!limpo) return { ok: false, erro: 'Não há texto para guardar.' };
+    var tema = temaValido(d.tema || temaPorPalavras(limpo));
+    var titulo = limpar(d.titulo, LIMITE_TITULO) || limpo.split('\n')[0].slice(0, 60);
+    var lista = carregar();
+    var existente = lista.filter(function (n) {
+      return n.tema === tema && normalizar(n.titulo) === normalizar(titulo);
+    })[0];
+    if (existente) {
+      var carimbo = new Date().toLocaleDateString('pt-BR');
+      var novo = (existente.texto + '\n\n' + carimbo + ': ' + limpo).slice(0, LIMITE_TEXTO);
+      var r = atualizar(existente.id, { texto: novo, tags: d.tags });
+      if (!r.ok) return r;
+      return { ok: true, atualizada: true, nota: r.nota, tema: tema };
+    }
+    var c = criar({ tema: tema, titulo: titulo, texto: limpo, tags: d.tags, origem: d.origem });
+    if (!c.ok) return c;
+    return { ok: true, criada: true, nota: c.nota, tema: tema, duplicada: !!c.duplicada };
+  }
+
+  function arquivosDoCofre() {
+    return arquivosPorTopico();
   }
 
   return {
@@ -391,6 +569,14 @@
     exportar: exportar,
     importar: importar,
     arquivosMarkdown: arquivosMarkdown,
+    arquivosPorTopico: arquivosPorTopico,
+    arquivosDoCofre: arquivosDoCofre,
+    topicos: topicos,
+    arquivoDoTema: arquivoDoTema,
+    contextoRelevante: contextoRelevante,
+    buscarRelevante: buscarRelevante,
+    anexarAoTopico: anexarAoTopico,
+    ARQUIVOS: ARQUIVOS,
     markdown: markdown,
     importarMarkdown: importarMarkdown
   };

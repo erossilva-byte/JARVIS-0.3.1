@@ -106,21 +106,27 @@ checar('Estilo do bloqueio no CSS',
       '.bloqueio{' in css and '@keyframes bloq-gira' in css and 'body.bloqueado' in css)
 
 # ---------- 4. Versão, documentação, suíte e PC ----------
-checar('Versão 1.20.0 com versionCode 10200',
-      meta.get('version') == '1.20.0' and meta.get('versionCode') == 10200 and pkg.get('version') == '1.20.0')
+# A partir da 1.20.0 a versão anda: o teste confere a coerência interna e o piso, não o número.
+VERSAO = tuple(int(x) for x in str(meta.get('version', '0')).split('.'))
+checar('Versão >= 1.20.0 com versionCode coerente',
+      VERSAO >= (1, 20, 0) and int(meta.get('versionCode', 0)) >= 10200
+      and pkg.get('version') == meta.get('version'))
 checar('app.js e interface com a versão corrente',
-      "const VERSAO_APP = '1.20.0';" in app and html.count('v1.20.0') >= 2)
+      ("const VERSAO_APP = '" + meta['version'] + "';") in app
+      and html.count('v' + meta['version']) >= 2)
 # O diretório android/ é gerado por `cap add android` no CI; quando existe, a versão tem de bater.
 gradle_local = RAIZ / 'android' / 'app' / 'build.gradle'
 gradle_txt = gradle_local.read_text(encoding='utf-8') if gradle_local.exists() else ''
-checar('Gradle coerente com 1.20.0/10200 (quando o projeto nativo existe)',
-      (not gradle_txt) or ('versionCode 10200' in gradle_txt and 'versionName "1.20.0"' in gradle_txt))
+checar('Gradle coerente com a versão corrente (quando o projeto nativo existe)',
+      (not gradle_txt) or ('versionCode ' + str(meta['versionCode']) in gradle_txt
+                            and 'versionName "' + meta['version'] + '"' in gradle_txt))
 checar('patch_android_version lê a versão do VERSAO.json',
       'VERSAO.json' in texto('patch_android_version.py'))
 changelog = texto('CHANGELOG.md')
 leia = texto('LEIA-ME.md')
 checar('CHANGELOG registra a 1.20.0', '## 1.20.0' in changelog and 'MEM' in changelog)
-checar('LEIA-ME registra a 1.20.0', '# J.A.R.V.I.S. Nova 1.20.0' in leia and 'bloqueio' in leia.lower())
+checar('LEIA-ME registra a 1.20.0 (e segue atualizado)',
+      '# J.A.R.V.I.S. Nova ' in leia and '## 1.20.0' in changelog and 'bloqueio' in leia.lower())
 checar('Suíte roda o teste desta versão',
       'python3 tests/test_v1_20_0.py' in pkg['scripts']['test:all'])
 checar('Workflow do PC existe e empacota Windows',

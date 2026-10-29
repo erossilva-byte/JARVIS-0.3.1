@@ -1056,3 +1056,11 @@ body.bloqueado{overflow:hidden}
 .link-botao{margin-top:10px;background:none;border:none;color:var(--suave);text-decoration:underline;font-size:12px;cursor:pointer}
 .codigo-recuperacao{display:block;margin-top:8px;padding:10px 12px;border-radius:12px;border:1px dashed rgba(var(--rgb),.4);background:rgba(var(--rgb),.06);font-family:ui-monospace,monospace;font-size:13px;letter-spacing:.08em;word-break:break-all}
 @media(prefers-reduced-motion:reduce){.bloq-nucleo span{animation:none}.bloq-nucleo span:nth-child(3){opacity:.9}}
+
+/* ---------- Cofre do Obsidian (Ajustes ▸ Memória) ---------- */
+.obs-avancado{margin-top:6px;border:1px solid var(--linha);border-radius:12px;padding:10px 12px}
+.obs-avancado summary{cursor:pointer;font-size:12px;color:var(--suave)}
+#obs-topicos{max-height:210px;overflow-y:auto;margin-top:8px}
+#obs-topicos .mem-item{border-color:rgba(var(--rgb),.16)}
+.obs-topico-arquivo{font-family:ui-monospace,monospace;font-size:11px;color:var(--suave);word-break:break-all}
+#obs-resumo{line-height:1.45}

@@ -1,3 +1,70 @@
+## 1.21.2 — 2026-10-29
+
+### Auditoria de runtime
+
+- **Apagar chave deixou de falhar em silêncio.** O handler de `#c-apagar-<provedor>` chamava
+  `gravarChave()` sem `try/catch`; quando o cofre seguro não estava disponível (navegador
+  comum, ou falha do cofre no Android/desktop), o clique virava promessa rejeitada sem dono —
+  o botão parecia não fazer nada e nenhum aviso aparecia. Agora a falha é registrada, dita ao
+  usuário no chat e a lista de chaves é atualizada mesmo assim.
+- **Instalação reproduzível.** O `package-lock.json` estava fora de sincronia com o
+  `package.json` (faltavam as dependências do empacotador Windows) e `npm ci` recusava
+  instalar. O lockfile foi regenerado sem alterar as versões declaradas; `npm ci` voltou a
+  funcionar a partir de um diretório limpo.
+
+### Verificação desta versão
+
+- Harness de runtime em DOM real (jsdom): carrega `index.html` e os scripts na mesma ordem do
+  app, percorre as 12 abas, clica nos 167 botões, confere abertura/fechamento dos painéis, a
+  rolagem do painel de configurações e a persistência do interruptor do cofre.
+- Nenhuma exceção, nenhuma promessa rejeitada e nenhum botão inerte no caminho exercitado.
+- `npm run test:all` completo, incluindo o teste desta versão.
+
+## 1.21.1
+
+- **Vínculo com o Obsidian**: o interruptor "Usar o cofre como memória conectada" agora grava o estado, reflete na conversa e avisa quando ainda falta escolher a pasta (antes não tinha handler nenhum).
+- **Escrita SAF sem nome duplicado**: se o provedor do Android criar `Gostos.md.md`, o arquivo é renomeado para o nome exato — a segunda sincronização reaproveita a nota em vez de criar outra.
+- **Cancelar o seletor** de pasta deixou de aparecer como falha de conexão.
+
+## 1.21.0 — 2026-10-29
+
+### Obsidian: cofre de verdade
+
+- Android: novo caminho **SAF** em `JarvisUtilPlugin` — `escolherCofre`, `cofreStatus`,
+  `cofreListar`, `cofreLer`, `cofreEscrever` e `esquecerCofre`, com permissão persistente
+  (`takePersistableUriPermission`). O app lê e grava só dentro da pasta escolhida e só em
+  `Memoria/`; nada é apagado e nenhuma nota sua fora dessa pasta é tocada.
+- PC: `escolher_cofre` no diálogo nativo; a pasta fica autorizada no processo principal e
+  os comandos `cofre_*` recusam caminho fora dela.
+- Ajustes ▸ Memória: ativar/desativar o cofre, escolher pasta, testar vínculo, enviar e
+  trazer notas, organizar por tópicos, desconectar e ver a última operação. O `.md`
+  avulso continua disponível como alternativa.
+
+### Memória por tópicos
+
+- Dez tópicos, cada um com um arquivo: `Memoria/Gostos.md`, `Preferencias.md`,
+  `Projetos.md`, `Objetivos.md`, `Estudos.md`, `Dispositivos.md`, `Rotinas.md`,
+  `Conversas importantes.md`, `Pesquisas.md`, `Contextos.md`, com frontmatter (título,
+  tema, data, número de notas, origem) e uma seção `##` por nota.
+- `anexarAoTopico()` classifica o assunto pelas palavras, atualiza a nota existente com
+  data em vez de duplicar e preserva o histórico.
+- A importação entende as seções `##`, então exportar e trazer de volta não cria lixo.
+- `contextoRelevante()` pontua título, tags e corpo e usa o tema provável da pergunta;
+  só o que casa entra no prompt. Sem correspondência, o prompt diz que não há registro —
+  e o assistente não inventa lembrança.
+
+### Núcleo 3D
+
+- Quarto anel orbital, varredura holográfica vertical e opacidade dos anéis ligada à
+  energia do estado (idle, ouvindo, pensando, falando, erro).
+- Paletas `processing` e `error` com apelidos em português, sem alocação por quadro.
+
+### Correções de auditoria
+
+- O bloqueio opcional agora reflete o estado salvo ao abrir Ajustes ▸ Segurança.
+- Tópicos novos aparecem nos chips e no seletor de nova nota; o painel mostra o arquivo
+  correspondente no cofre.
+
 ## 1.20.0 — 2026-10-28
 
 ### Corrigido na raiz
