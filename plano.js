@@ -86,9 +86,24 @@
     return String(passo && passo.acao || '').replace(/_/g, ' ') + (passo && passo.porque ? ' — ' + passo.porque : '');
   }
 
-  function resumo(plano) {
+  function resumoArgs(args) {
+    const a = args && typeof args === 'object' ? args : {};
+    return Object.keys(a).slice(0, 6).map((k) => {
+      let v = a[k];
+      if (v == null) return k;
+      if (typeof v === 'object') { try { v = JSON.stringify(v); } catch (e) { v = '[objeto]'; } }
+      return k + '=' + String(v).replace(/\s+/g, ' ').slice(0, 80);
+    }).join(', ');
+  }
+
+  /** Resumo para exibição. Com { args: true }, mostra o que será enviado antes da confirmação. */
+  function resumo(plano, opcoes) {
     const ps = (plano && plano.passos) || [];
-    return ps.map((p, i) => (i + 1) + '. ' + descrever(p)).join(' · ');
+    const comArgs = !!(opcoes && opcoes.args);
+    return ps.map((p, i) => {
+      const extra = comArgs ? resumoArgs(p.args) : '';
+      return (i + 1) + '. ' + descrever(p) + (extra ? ' [' + extra + ']' : '');
+    }).join(' · ');
   }
 
   function vazio() {

@@ -7,7 +7,7 @@ const store = {
 };
 // Agentes especializados + recibos de execução (1.30.0): toda ferramenta passa por aqui.
 const AGENTES = (typeof window !== 'undefined' && window.AgentesJarvis) ? window.AgentesJarvis : null;
-// Supervisor de planos multi-etapas (1.31.1): valida, confirma e acompanha cada etapa.
+// Supervisor de planos multi-etapas (1.31.2): valida, confirma e acompanha cada etapa.
 const PLANO = (typeof window !== 'undefined' && window.PlanoJarvis) ? window.PlanoJarvis : null;
 // Só estas ações têm o efeito comprovado pelo próprio dado devolvido. As demais,
 // mesmo com risco 0 (volume, lanterna, player), continuam "incertas" no plano.
@@ -43,7 +43,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.31.1';
+const VERSAO_APP = '1.31.2';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -1685,7 +1685,7 @@ async function executarRotina(nome) {
   if (!abortar) { registrar('rotina', 'concluída: ' + rotina.nome); await falar('Rotina concluída, ' + trat() + '.'); }
   return true;
 }
-/* ---------- Planos multi-etapas supervisionados (1.31.1) ---------- */
+/* ---------- Planos multi-etapas supervisionados (1.31.2) ---------- */
 // O modelo propõe; o PlanoJarvis valida; o usuário confirma; cada etapa só avança
 // com recibo "ok". Uma etapa "incerta" pausa e pede autorização explícita.
 let planoEmCurso = false, ultimoPlano = null;
@@ -1733,7 +1733,7 @@ async function iniciarPlano(objetivo) {
     await falar('Não consegui montar um plano válido para isso. ' + String((e && e.message) || e).slice(0, 180));
     return true;
   }
-  const confirmado = await confirmar('Plano com ' + plano.passos.length + ' etapa(s): ' + PLANO.resumo(plano) + '. Executar agora? Ações sensíveis pedirão confirmação e etapa sem efeito confirmado vai pausar.', false);
+  const confirmado = await confirmar('Plano com ' + plano.passos.length + ' etapa(s): ' + PLANO.resumo(plano, { args: true }) + '. Executar agora? Ações sensíveis pedirão confirmação e etapa sem efeito confirmado vai pausar.', false);
   if (!confirmado) { msg('sis', 'Plano descartado antes de executar qualquer etapa.'); await falar('Plano descartado, ' + trat() + '.'); return true; }
   planoEmCurso = true;
   msg('sis', 'Executando plano de ' + plano.passos.length + ' etapa(s). Nenhuma etapa seguinte roda sem confirmação quando o efeito é incerto.');

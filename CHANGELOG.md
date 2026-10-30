@@ -1,3 +1,11 @@
+## 1.31.2 — Auditoria de consentimento e coerência da interface
+
+- **Confirmação de plano mostra argumentos**: antes de autorizar, o usuário vê destinatário, texto e demais parâmetros de cada etapa; o resumo padrão (usado em logs/testes) continua sem valores.
+- **Texto de humor corrigido**: a interface dizia “70% padrão”, mas o controle e o padrão reais são 90%.
+- **Auditoria**: botões de apagar chave confirmados como ligados por delegação dinâmica; nenhum botão morto nesse grupo.
+- **Testes**: resumo detalhado coberto e suíte completa reexecutada.
+- **Preservado**: planos, agentes, recibos, VAD, pessoas, memória, visão, IA local e Windows.
+
 ## 1.31.1 — Correção de classificação de leitura
 
 - **Falso positivo corrigido**: texto de falha (“não encontrei”, “sem permissão”, “indisponível”) agora vence a marca otimista `verificado`, em vez de virar `ok`.

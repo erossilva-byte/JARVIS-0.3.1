@@ -1,4 +1,10 @@
-# J.A.R.V.I.S. Nova 1.31.1
+# J.A.R.V.I.S. Nova 1.31.2
+
+## 1.31.2 — Consentimento e coerência
+
+A confirmação de um plano agora mostra os **argumentos** de cada etapa (destinatário, texto, caminho), não só o nome da ação.
+O resumo sem argumentos continua sendo usado em registros e testes. Também corrigi o texto de humor que dizia 70% quando o
+padrão real sempre foi 90%.
 
 ## 1.31.1 — Correção de leitura
 

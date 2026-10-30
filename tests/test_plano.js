@@ -75,6 +75,7 @@ assert.equal(r.status, 'falhou'); assert.equal(r.ok, 0);
 n = P.normalizar({ objetivo: 'Mensagem', passos: [{ acao: 'abrir_app', args: { texto: 'segredo' }, porque: 'abrir' }] }, { acoes: ACOES, disponiveis: disp });
 assert.ok(P.resumo(n.plano).indexOf('segredo') < 0);
 assert.ok(P.resumo(n.plano).indexOf('abrir app') >= 0);
+assert.ok(P.resumo(n.plano, { args: true }).indexOf('texto=segredo') >= 0);
 
 console.log('test_plano: 25 verificações aprovadas');
 
