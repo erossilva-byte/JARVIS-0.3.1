@@ -21,6 +21,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const crypto = require('crypto');
 
 const LIMITE_TEXTO = 2 * 1024 * 1024;      // leitura de texto
 const LIMITE_BINARIO = 32 * 1024 * 1024;    // leitura de binário (imagem, zip, cad)
@@ -42,6 +43,92 @@ function extensao(nome) {
 function dentro(base, alvo) {
   const rel = path.relative(base, alvo);
   return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+}
+
+/* Impressão digital do conteúdo: é o que permite dizer "isto é o mesmo arquivo
+ * que você abriu" em vez de confiar só no caminho. SHA-256 não é criptografia de
+ * segurança aqui, é comparação de bytes. */
+function hashBuf(buf) {
+  return crypto.createHash('sha256').update(buf).digest('hex');
+}
+
+/* Nome de temporário único por operação: dois salvamentos simultâneos do mesmo
+ * arquivo (ou duas janelas do app) não podem escrever no mesmo .tmp. */
+let seqTmp = 0;
+function nomeTemporario(alvo) {
+  seqTmp += 1;
+  return alvo + '.tmp-' + process.pid + '-' + Date.now().toString(36) + '-' + seqTmp + '-' + crypto.randomBytes(4).toString('hex');
+}
+
+/* CRC-32 da norma do ZIP (polinômio 0xEDB88320), em tabela preguiçosa. */
+let tabelaCrc = null;
+function crc32(buf) {
+  if (!tabelaCrc) {
+    tabelaCrc = new Int32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      tabelaCrc[n] = c;
+    }
+  }
+  let crc = -1;
+  for (let i = 0; i < buf.length; i++) crc = (crc >>> 8) ^ tabelaCrc[(crc ^ buf[i]) & 0xFF];
+  return (crc ^ -1) >>> 0;
+}
+
+/* ZIP sem compressão (método "store"): existe para empacotar arquivos que o próprio
+ * app gerou. Não é compactador — o nome diz ZIP, o conteúdo é legível, e o teste
+ * confere com o zipfile do Python, não com este mesmo código. */
+function zipStore(entradas) {
+  const locais = [];
+  const centrais = [];
+  let deslocamento = 0;
+  for (const e of entradas) {
+    const nome = Buffer.from(String(e.nome), 'utf8');
+    const dados = Buffer.isBuffer(e.dados) ? e.dados : Buffer.from(String(e.dados == null ? '' : e.dados), 'utf8');
+    const crc = crc32(dados);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);       // versão necessária
+    local.writeUInt16LE(0x0800, 6);   // nomes em UTF-8
+    local.writeUInt16LE(0, 8);        // store
+    local.writeUInt16LE(0, 10);
+    local.writeUInt16LE(0, 12);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(dados.length, 18);
+    local.writeUInt32LE(dados.length, 22);
+    local.writeUInt16LE(nome.length, 26);
+    local.writeUInt16LE(0, 28);
+    locais.push(local, nome, dados);
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0x0800, 8);
+    central.writeUInt16LE(0, 10);
+    central.writeUInt16LE(0, 12);
+    central.writeUInt16LE(0, 14);
+    central.writeUInt32LE(crc, 16);
+    central.writeUInt32LE(dados.length, 20);
+    central.writeUInt32LE(dados.length, 24);
+    central.writeUInt16LE(nome.length, 28);
+    central.writeUInt16LE(0, 30);
+    central.writeUInt16LE(0, 32);
+    central.writeUInt16LE(0, 34);
+    central.writeUInt16LE(0, 36);
+    central.writeUInt32LE(0, 38);
+    central.writeUInt32LE(deslocamento, 42);
+    centrais.push(central, nome);
+    deslocamento += 30 + nome.length + dados.length;
+  }
+  const diretorio = Buffer.concat(centrais);
+  const fim = Buffer.alloc(22);
+  fim.writeUInt32LE(0x06054b50, 0);
+  fim.writeUInt16LE(entradas.length, 8);
+  fim.writeUInt16LE(entradas.length, 10);
+  fim.writeUInt32LE(diretorio.length, 12);
+  fim.writeUInt32LE(deslocamento, 16);
+  return Buffer.concat([Buffer.concat(locais), diretorio, fim]);
 }
 
 /* ------------------------------- ZIP interno ------------------------------- */
@@ -149,7 +236,9 @@ function detectar(buf, nome) {
     try {
       const json = JSON.parse(buf.toString('utf8'));
       if (json && typeof json === 'object' && /cad/i.test(String(json.formato || '')) && Array.isArray(json.objetos)) {
-        return { formato: 'cad', tipo: 'cad', descricao: 'CadSimu CAD v' + (json.versao || '?') };
+        // Formato próprio (JSON documentado em cad.js). NÃO é o .cad proprietário do
+        // CADe SIMU: chamar de CadSimu aqui só confundia o usuário.
+        return { formato: 'cad', tipo: 'cad', descricao: 'CAD do J.A.R.V.I.S. v' + (json.versao || '?') + ' (JSON próprio, não é o .cad do CADe SIMU)' };
       }
       return { formato: 'json', tipo: 'dados', descricao: 'JSON' };
     } catch (_) {
@@ -297,7 +386,7 @@ function fábrica({ raiz }) {
     if (st.size > LIMITE_BINARIO) throw new Error('Arquivo acima do limite de 32 MB para prévia neste painel.');
     const buf = fs.readFileSync(alvo);
     const det = detectar(buf, alvo);
-    const base = { caminho: alvo, relativo: relativo(alvo), nome: path.basename(alvo), bytes: buf.length, modificado: st.mtimeMs, formato: det.formato, tipo: det.tipo, descricao: det.descricao };
+    const base = { caminho: alvo, relativo: relativo(alvo), nome: path.basename(alvo), bytes: buf.length, modificado: st.mtimeMs, mtimeMs: st.mtimeMs, hash: hashBuf(buf), formato: det.formato, tipo: det.tipo, descricao: det.descricao };
     const limite = Math.max(1, LIMITE_PREVIA);
 
     if (det.tipo === 'imagem' && ['png', 'jpg', 'gif', 'webp', 'bmp'].includes(det.formato)) {
@@ -375,26 +464,176 @@ function fábrica({ raiz }) {
       resumo: det.descricao + ', ' + texto.split('\n').length + ' linha(s)' + (texto.length > limite ? ' — prévia limitada a 120 kB' : '') + '.' };
   }
 
-  function salvar({ caminho, texto, backup = true }) {
+  /* Gravação segura: temporário único → fsync → renomeio atômico → releitura e
+   * comparação de SHA-256. Se qualquer etapa falhar, o original (ou a cópia .bak) é
+   * restaurado e a função lança erro: nunca devolve "salvo" sem conferir o disco. */
+  function gravarBinario({ caminho, dados, backup = true, hashEsperado = '', forcar = false }) {
     const alvo = resolver(caminho);
     if (fs.existsSync(alvo) && fs.statSync(alvo).isDirectory()) throw new Error('O caminho é uma pasta.');
-    const conteudo = String(texto == null ? '' : texto);
-    if (Buffer.byteLength(conteudo, 'utf8') > 8 * 1024 * 1024) throw new Error('Conteúdo acima de 8 MB: não salvo pelo painel.');
-    fs.mkdirSync(path.dirname(alvo), { recursive: true });
+    const buf = Buffer.isBuffer(dados) ? dados : Buffer.from(String(dados == null ? '' : dados), 'utf8');
+    if (buf.length > 8 * 1024 * 1024) throw new Error('Conteúdo acima de 8 MB: não salvo pelo painel.');
+    const existia = fs.existsSync(alvo);
     let copia = '';
-    if (fs.existsSync(alvo) && backup) {
+    if (existia) {
+      const atual = fs.readFileSync(alvo);
+      const hashAtual = hashBuf(atual);
+      if (hashEsperado && hashAtual !== hashEsperado && !forcar) {
+        throw new Error('O arquivo mudou desde que foi aberto (outra janela ou outro programa). Nada foi gravado; reabra e refaça a edição, ou confirme a substituição.');
+      }
+      if (!backup && !forcar) throw new Error('Substituir ' + relativo(alvo) + ' sem cópia de segurança exige confirmação explícita.');
+    }
+    fs.mkdirSync(path.dirname(alvo), { recursive: true });
+    if (existia && backup) {
       copia = alvo + '.bak-' + new Date().toISOString().replace(/[:.]/g, '-');
       fs.copyFileSync(alvo, copia);
+      if (fs.statSync(copia).size !== fs.statSync(alvo).size) throw new Error('A cópia de segurança saiu incompleta; nada foi gravado.');
     }
-    const tmp = alvo + '.tmp-' + process.pid;
-    fs.writeFileSync(tmp, conteudo, 'utf8');
-    fs.renameSync(tmp, alvo);              // troca atômica: nunca deixa arquivo pela metade
-    return { caminho: alvo, relativo: relativo(alvo), bytes: Buffer.byteLength(conteudo, 'utf8'), backup: copia ? relativo(copia) : '' };
+    const tmp = nomeTemporario(alvo);
+    try {
+      const fd = fs.openSync(tmp, 'w');
+      try {
+        fs.writeFileSync(fd, buf);
+        fs.fsyncSync(fd);
+      } finally { fs.closeSync(fd); }
+      fs.renameSync(tmp, alvo);
+    } catch (e) {
+      try { fs.unlinkSync(tmp); } catch (_) { /* temporário já não existe */ }
+      throw e;
+    }
+    const conferido = fs.readFileSync(alvo);
+    const hash = hashBuf(conferido);
+    if (conferido.length !== buf.length || hash !== hashBuf(buf)) {
+      if (copia) { try { fs.copyFileSync(copia, alvo); } catch (_) { /* backup também falhou: erro abaixo */ } }
+      throw new Error('A conferência depois da gravação falhou' + (copia ? '; o arquivo anterior foi restaurado de ' + relativo(copia) : '') + '. O conteúdo em disco não confere.');
+    }
+    return { caminho: alvo, relativo: relativo(alvo), bytes: buf.length, hash, mtimeMs: fs.statSync(alvo).mtimeMs, backup: copia ? relativo(copia) : '' };
+  }
+
+  function salvar({ caminho, texto, backup = true, hashEsperado = '', forcar = false }) {
+    return gravarBinario({ caminho, dados: Buffer.from(String(texto == null ? '' : texto), 'utf8'), backup, hashEsperado, forcar });
+  }
+
+  /** ZIP de verdade (método store), com CRC conferido por quem abrir. */
+  function compactar({ destino, arquivos }) {
+    const lista = Array.isArray(arquivos) ? arquivos : [];
+    if (!lista.length) throw new Error('Informe pelo menos um arquivo para compactar.');
+    if (lista.length > 200) throw new Error('Compacto no máximo 200 arquivos por vez.');
+    const entradas = [];
+    let total = 0;
+    const usados = new Set();
+    for (const item of lista) {
+      const origem = resolver(item && item.caminho ? item.caminho : item);
+      const st = fs.statSync(origem);
+      if (!st.isFile()) throw new Error('Só compacto arquivos: ' + relativo(origem) + ' é pasta.');
+      if (st.size > LIMITE_BINARIO) throw new Error('Arquivo acima de 32 MB não entra no ZIP: ' + relativo(origem));
+      let nome = String((item && item.nome) || path.basename(origem)).replace(/[\\/]+/g, '-');
+      if (usados.has(nome)) nome = path.basename(origem, path.extname(origem)) + '-' + entradas.length + path.extname(origem);
+      usados.add(nome);
+      const dados = fs.readFileSync(origem);
+      total += dados.length;
+      if (total > 64 * 1024 * 1024) throw new Error('O ZIP passaria de 64 MB descompactados; reduza a seleção.');
+      entradas.push({ nome, dados });
+    }
+    const buf = zipStore(entradas);
+    const nomeZip = String(destino || 'arquivos.zip');
+    const rel = /^~(?=$|[\\/])/.test(nomeZip) ? nomeZip : '~/' + nomeZip.replace(/^[\\/]+/, '');
+    const alvo = resolver(/\.zip$/i.test(rel) ? rel : rel + '.zip');
+    if (fs.existsSync(alvo)) throw new Error('Já existe ' + relativo(alvo) + '; escolha outro nome.');
+    const salvo = gravarBinario({ caminho: relativo(alvo), dados: buf, backup: false });
+    return { ...salvo, formato: 'zip', entradas: entradas.length, descompactado: total, resumo: 'ZIP com ' + entradas.length + ' arquivo(s), ' + Math.round(buf.length / 1024) + ' kB.' };
+  }
+
+  /** Auditoria de integridade: estrutura do formato, não só existência. */
+  function verificar(caminho) {
+    const alvo = resolver(caminho);
+    const st = fs.statSync(alvo);
+    if (!st.isFile()) throw new Error('Isso não é um arquivo.');
+    if (st.size > LIMITE_BINARIO) throw new Error('Arquivo acima de 32 MB não é verificado aqui.');
+    const buf = fs.readFileSync(alvo);
+    const det = detectar(buf, alvo);
+    const problemas = [];
+    let detalhe = '';
+    if (['zip', 'docx', 'xlsx', 'pptx', 'odf', '3mf', 'fcstd'].includes(det.formato)) {
+      const fim = eocd(buf);
+      if (!fim) problemas.push('sem diretório central: o ZIP/Office está truncado ou corrompido');
+      else {
+        const entradas = entradasZip(buf);
+        if (!entradas.length) problemas.push('ZIP sem entradas legíveis');
+        let quebradas = 0;
+        for (const e of entradas) {
+          if (buf.readUInt32LE(e.local) !== 0x04034b50) { quebradas++; continue; }
+          if (e.metodo === 8 && conteudoZip(buf, e) === null) quebradas++;
+        }
+        if (quebradas) problemas.push(quebradas + ' entrada(s) com dados corrompidos');
+        detalhe = entradas.length + ' entrada(s) no índice, ' + Math.round(fim.offset / 1024) + ' kB de diretório central';
+      }
+    } else if (det.formato === 'json' || det.formato === 'jsonl' || (det.formato === 'cad')) {
+      try { JSON.parse(buf.toString('utf8')); } catch (e) { problemas.push('JSON inválido: ' + String(e.message).slice(0, 120)); }
+    } else if (det.formato === 'pdf') {
+      const texto = buf.toString('latin1');
+      if (!/%%EOF\s*$/.test(texto)) problemas.push('sem marcador %%EOF: o PDF pode estar truncado');
+      if (!/\/Type\s*\/Page/.test(texto)) problemas.push('nenhuma página encontrada');
+    } else if (det.formato === 'csv' || det.formato === 'tsv') {
+      const t = tabelaCsv(buf.toString('utf8'), 5);
+      if (!t.linhas.length) problemas.push('tabela vazia');
+    } else if (det.formato === 'stl') {
+      if (buf.length >= 84) {
+        const n = buf.readUInt32LE(80);
+        if (n > 0 && buf.length !== 84 + n * 50) problemas.push('STL binário declara ' + n + ' triângulo(s) mas o tamanho não bate');
+      }
+    } else if (['png', 'jpg', 'gif', 'webp', 'bmp'].includes(det.formato)) {
+      if (buf.length < 32) problemas.push('imagem menor que o cabeçalho mínimo');
+    } else if (det.tipo === 'binario') {
+      problemas.push('binário sem estrutura reconhecida: não há como validar o conteúdo aqui');
+    }
+    if (det.tipo === 'texto') {
+      const texto = buf.toString('utf8');
+      const ruins = (texto.match(/\uFFFD/g) || []).length;
+      if (ruins > Math.max(4, texto.length * 0.01)) problemas.push('texto com ' + ruins + ' caractere(s) inválido(s): provável codificação não UTF-8');
+    }
+    return {
+      caminho: alvo, relativo: relativo(alvo), nome: path.basename(alvo), formato: det.formato, descricao: det.descricao,
+      bytes: buf.length, hash: hashBuf(buf), mtimeMs: st.mtimeMs, problemas, ok: problemas.length === 0,
+      detalhe, resumo: problemas.length ? problemas.length + ' problema(s): ' + problemas.join('; ') : 'Estrutura de ' + det.formato.toUpperCase() + ' conferida, sem problema encontrado.'
+    };
+  }
+
+  /** Remove temporários abandonados (de queda ou interrupção) sem tocar em .bak. */
+  function limparTemporarios(pasta, horas) {
+    const base = resolver(pasta || '~');
+    if (!fs.statSync(base).isDirectory()) throw new Error('Isso não é uma pasta.');
+    const idade = Math.max(0, Number(horas) || 24) * 3600 * 1000;
+    const agora = Date.now();
+    let removidos = 0;
+    const nomes = [];
+    for (const item of fs.readdirSync(base, { withFileTypes: true })) {
+      if (!item.isFile() || !/\.tmp-\d+-/.test(item.name)) continue;
+      const completo = path.join(base, item.name);
+      try {
+        if (agora - fs.statSync(completo).mtimeMs < idade) continue;
+        fs.unlinkSync(completo);
+        removidos++;
+        nomes.push(item.name);
+      } catch (_) { /* arquivo em uso ou sem permissão: fica para a próxima */ }
+    }
+    return { pasta: relativo(base), removidos, nomes: nomes.slice(0, 50) };
   }
 
   function comparar(a, b) {
     const pa = resolver(a);
     const pb = resolver(b);
+    for (const p of [pa, pb]) {
+      const st = fs.statSync(p);
+      if (!st.isFile()) throw new Error('Comparo arquivos, não pastas: ' + relativo(p));
+      if (st.size > LIMITE_TEXTO) throw new Error('Comparação de texto até 2 MB: ' + relativo(p) + ' tem ' + Math.round(st.size / 1024) + ' kB.');
+      const cab = Buffer.alloc(Math.min(4096, st.size));
+      const fd = fs.openSync(p, 'r');
+      try { if (cab.length) fs.readSync(fd, cab, 0, cab.length, 0); } finally { fs.closeSync(fd); }
+      const det = detectar(cab, p);
+      if (det.tipo === 'binario' || (det.tipo === 'imagem' && det.formato !== 'svg') || det.tipo === 'cad' || det.tipo === 'apresentacao') {
+        throw new Error('Não comparo ' + det.descricao + ' linha a linha: sem texto, a diferença seria inventada. Use "Abrir no sistema".');
+      }
+    }
     const la = fs.readFileSync(pa, 'utf8').replace(/\r\n/g, '\n').split('\n');
     const lb = fs.readFileSync(pb, 'utf8').replace(/\r\n/g, '\n').split('\n');
     let ini = 0;
@@ -601,10 +840,10 @@ function fábrica({ raiz }) {
     return { caminho: relativo(alvo) };
   }
 
-  return { raiz, resolver, relativo, listar, ler, salvar, comparar, pesquisar, converter, organizar, mover, criarPasta, apagar, detectar, PASTAS_PADRAO };
+  return { raiz, resolver, relativo, listar, ler, salvar, salvarBinario: gravarBinario, gravarBinario, comparar, pesquisar, converter, compactar, verificar, limparTemporarios, organizar, mover, criarPasta, apagar, detectar, PASTAS_PADRAO };
 }
 
-module.exports = { criarArquivos: fábrica, criar: fábrica, detectar, entradasZip, xmlTexto, tabelaCsv, organizarPadrao: {
+module.exports = { criarArquivos: fábrica, criar: fábrica, detectar, entradasZip, xmlTexto, tabelaCsv, zipStore, crc32, organizarPadrao: {
   imagens: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'],
   documentos: ['pdf', 'docx', 'odt', 'rtf', 'txt', 'md'],
   planilhas: ['xlsx', 'ods', 'csv', 'tsv'],

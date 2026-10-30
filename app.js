@@ -8034,7 +8034,7 @@ function renderAnexos() {
     const nome = document.createElement('b');
     nome.textContent = a.nome;
     const meta = document.createElement('small');
-    meta.textContent = a.erro ? a.erro : (a.tipo + ' · ' + tamanhoLegivel(a.tamanho));
+    meta.textContent = a.erro ? a.erro : (a.tipo + ' · ' + tamanhoLegivel(a.tamanho) + (a.aviso ? ' · ' + a.aviso : ''));
     const fim = document.createElement('button');
     fim.type = 'button';
     fim.className = 'anexo-remover';
@@ -8051,6 +8051,7 @@ function anexosParaIA() {
   return uteis.map((a) => {
     const corte = a.texto.length > ANEXO_MAX;
     return '[ARQUIVO ANEXADO: ' + a.nome + ' (' + a.tipo + ', ' + tamanhoLegivel(a.tamanho) + ')]\n' +
+      (a.aviso ? '[aviso: ' + a.aviso + ']\n' : '') +
       '```' + (extAnexo(a.nome) || 'texto') + '\n' + a.texto.slice(0, ANEXO_MAX) + '\n```\n' +
       (corte ? '[conteúdo cortado nos primeiros ' + ANEXO_MAX + ' caracteres; peça o trecho que precisar]' : '');
   }).join('\n\n');
@@ -8071,8 +8072,21 @@ function lerAnexo(arquivo) {
         erro: 'binário: aqui só leio texto' });
       return;
     }
+    if (arquivo.size > 4 * 1024 * 1024) {
+      resolve({ nome: arquivo.name, tamanho: arquivo.size, tipo: 'texto', texto: '', erro: 'acima de 4 MB: grande demais para o chat' });
+      return;
+    }
     const leitor = new FileReader();
-    leitor.onload = () => resolve({ nome: arquivo.name, tamanho: arquivo.size, tipo: 'texto', texto: String(leitor.result || '') });
+    leitor.onload = () => {
+      const bruto = String(leitor.result || '');
+      if (bruto.indexOf('\u0000') >= 0) {
+        resolve({ nome: arquivo.name, tamanho: arquivo.size, tipo: 'binário', texto: '', erro: 'binário disfarçado de texto: conteúdo não enviado' });
+        return;
+      }
+      const ruins = (bruto.match(/\uFFFD/g) || []).length;
+      const aviso = ruins > Math.max(4, bruto.length * 0.01) ? 'codificação não UTF-8: acentos podem ter sido perdidos' : '';
+      resolve({ nome: arquivo.name, tamanho: arquivo.size, tipo: 'texto', texto: bruto, aviso });
+    };
     leitor.onerror = () => resolve({ nome: arquivo.name, tamanho: arquivo.size, tipo: 'texto', texto: '', erro: 'falha ao ler' });
     leitor.readAsText(arquivo);
   });

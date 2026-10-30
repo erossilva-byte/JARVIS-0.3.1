@@ -191,7 +191,7 @@ function fábricaCad({ raiz }) {
     const det = ARQ.detectar(buf, alvo);
     const nome = path.basename(alvo);
     const mapa = {
-      cad: { aberto: true, visualiza: true, cria: true, edita: true, exporta: true, obs: 'formato nativo do aplicativo; edição paramétrica por objeto' },
+      cad: { aberto: true, visualiza: true, cria: true, edita: true, exporta: true, obs: 'formato nativo do aplicativo (JSON documentado); o .cad proprietário do CADe SIMU não é lido nem gerado' },
       dxf: { aberto: true, visualiza: true, cria: true, edita: false, exporta: true, obs: 'desenho em linhas e faces; edição estrutural exige software CAD' },
       stl: { aberto: true, visualiza: true, cria: true, edita: false, exporta: true, obs: 'malha para impressão 3D; sem unidades no arquivo' },
       '3mf': { aberto: true, visualiza: true, cria: true, edita: false, exporta: true, obs: 'modelo de impressão 3D em ZIP+XML' },
@@ -351,7 +351,7 @@ function fábricaCad({ raiz }) {
     return CAD.FORMATOS.map((f) => ({
       ...f,
       desktop: {
-        cad: 'abre, visualiza, cria, edita e exporta',
+        cad: 'abre, visualiza, cria, edita e exporta (JSON do app; não é o .cad do CADe SIMU)',
         dxf: 'abre e visualiza (linhas/camadas), cria e exporta',
         stl: 'abre e visualiza a malha, cria e exporta',
         '3mf': 'gera e exporta; visualização pelo .cad de origem',

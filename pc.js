@@ -156,7 +156,9 @@
           salvar.onclick = async function () {
             status('pcx-arq-status', 'Gravando…');
             try {
-              var g = await pedir('arq_salvar', { caminho: r.relativo, texto: area.value, backup: true });
+              // O hash vai junto: se outra janela/programa alterou o arquivo depois da
+              // prévia, o processo principal recusa em vez de sobrescrever em silêncio.
+              var g = await pedir('arq_salvar', { caminho: r.relativo, texto: area.value, backup: true, hashEsperado: r.hash });
               status('pcx-arq-status', 'Salvo em ' + g.relativo + ' (' + kb(g.bytes) + ')' + (g.backup ? '; cópia anterior em ' + g.backup : '') + '.');
               await prever(r.relativo);
             } catch (e) {
@@ -186,6 +188,18 @@
         status('pcx-arq-status', 'Agora informe o outro arquivo em "Comparar com" e toque em Comparar.');
       };
       acoes.appendChild(comparar);
+      var verificar = tag('button', 'secundario', 'Verificar integridade');
+      verificar.type = 'button';
+      verificar.onclick = async function () {
+        status('pcx-arq-status', 'Conferindo a estrutura do arquivo…');
+        try {
+          var v = await pedir('arq_verificar', { caminho: r.relativo });
+          status('pcx-arq-status', v.resumo, !v.ok);
+        } catch (e) {
+          status('pcx-arq-status', 'Não verifiquei: ' + (e && e.message ? e.message : e), true);
+        }
+      };
+      acoes.appendChild(verificar);
       caixa.appendChild(acoes);
       status('pcx-arq-status', 'Prévia de ' + r.relativo + ' (' + kb(r.bytes) + ').');
     } catch (e) {

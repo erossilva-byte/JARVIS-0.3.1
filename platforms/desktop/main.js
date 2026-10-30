@@ -163,29 +163,25 @@ const acoesPC = {
       carregado: Date.now()
     };
   },
+  /* Ações antigas do painel: continuam existindo para não quebrar chamadas, mas agora
+   * delegam ao motor de arquivos. Antes elas cortavam texto em 200 kB sem avisar —
+   * isso era perda silenciosa de dados. */
   listar_arquivos: async ({ caminho }) => {
-    const alvo = dentroDaCasa(caminho);
-    const itens = fs.readdirSync(alvo, { withFileTypes: true })
-      .filter((d) => !d.name.startsWith('.'))
-      .sort((a, b) => (b.isDirectory() - a.isDirectory()) || a.name.localeCompare(b.name))
-      .slice(0, 200)
-      .map((d) => d.name + (d.isDirectory() ? '/' : ''));
-    return { caminho: alvo, itens };
+    const r = PC_ARQ().listar(caminho);
+    return { caminho: r.caminho, itens: r.itens.map((i) => i.nome + (i.pasta ? '/' : '')) };
   },
   ler_arquivo: async ({ caminho }) => {
-    const alvo = dentroDaCasa(caminho);
-    const st = fs.statSync(alvo);
-    if (!st.isFile()) throw new Error('Isso não é um arquivo.');
-    if (st.size > 200 * 1024) throw new Error('Arquivo grande demais para leitura (limite de 200 kB).');
-    return { caminho: alvo, texto: fs.readFileSync(alvo, 'utf8').slice(0, 200000) };
+    const r = PC_ARQ().ler(caminho);
+    if (r.binario) throw new Error(r.descricao + ': não leio este formato como texto. Use a prévia do painel.');
+    return { caminho: r.caminho, texto: r.texto || '', bytes: r.bytes, hash: r.hash, truncado: !!r.truncado, resumo: r.resumo };
   },
   criar_arquivo: async ({ nome, texto, pasta }) => {
     const base = dentroDaCasa(pasta || '~/Jarvis');
-    fs.mkdirSync(base, { recursive: true });
     const alvo = path.join(base, nomeSeguro(nome));
     if (!dentroDaCasa(alvo)) throw new Error('Caminho fora da pasta do usuário.');
-    fs.writeFileSync(alvo, String(texto == null ? '' : texto).slice(0, 200000), 'utf8');
-    return { caminho: alvo };
+    const rel = path.relative(app.getPath('home'), alvo).split(path.sep).join('/');
+    const salvo = PC_ARQ().salvar({ caminho: '~/' + rel, texto: String(texto == null ? '' : texto) });
+    return { caminho: salvo.caminho, bytes: salvo.bytes, hash: salvo.hash };
   },
   apagar_arquivo: async ({ caminho }) => {
     const alvo = dentroDaCasa(caminho);
@@ -242,7 +238,7 @@ function notasMd(base, limite) {
   return achados;
 }
 function nomeNotaSeguro(nome) {
-  const limpo = String(nome || 'nota.md').replace(/[\\:*?"<>|\u0000-\u001f]/g, '-').replace(/\.{2,}/g, '.').replace(/^[.\-\s]+/, '');
+  const limpo = String(nome || 'nota.md').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\.{2,}/g, '.').replace(/^[.\-\s]+/, '');
   if (!/\.md$/i.test(limpo)) throw new Error('A nota precisa terminar em .md.');
   return limpo.slice(0, 140);
 }
@@ -270,10 +266,23 @@ const acoesExtras = {
       let atual = null;
       try { atual = fs.readFileSync(alvo, 'utf8'); } catch (e) { atual = null; }
       if (atual === texto) { iguais++; return; }
-      fs.writeFileSync(alvo, texto, 'utf8');
+      // Nota existente ganha cópia antes de ser reescrita: a sincronização nunca
+      // destrói a versão anterior sem deixar como voltar.
+      if (atual != null) {
+        const copia = alvo + '.bak-' + new Date().toISOString().replace(/[:.]/g, '-');
+        try { fs.copyFileSync(alvo, copia); } catch (e) { throw new Error('Não consegui copiar ' + nome + ' antes de gravar: ' + e.message); }
+      }
+      const temporario = alvo + '.tmp-' + process.pid + '-' + Date.now().toString(36);
+      try {
+        fs.writeFileSync(temporario, texto, 'utf8');
+        fs.renameSync(temporario, alvo);
+      } catch (e) {
+        try { fs.unlinkSync(temporario); } catch (_) { /* já não existe */ }
+        throw e;
+      }
       gravadas++; bytes += Buffer.byteLength(texto, 'utf8');
     });
-    return { caminho: destino, gravadas, iguais, bytes };
+    return { caminho: destino, gravadas, iguais, bytes, aviso: 'notas existentes são copiadas para .bak-* antes de qualquer reescrita' };
   },
   vault_ler: async ({ caminho, limite }) => {
     const cofre = resolverCofre(caminho);
@@ -303,15 +312,16 @@ const acoesExtras = {
     fs.mkdirSync(base, { recursive: true });
     const alvo = path.join(base, nomeSeguro(nome));
     if (!dentroDaCasa(alvo)) throw new Error('Caminho fora da pasta do usuário.');
+    const rel = path.relative(app.getPath('home'), alvo).split(path.sep).join('/');
     if (base64) {
       const bruto = Buffer.from(String(base64), 'base64');
+      if (!bruto.length) throw new Error('O conteúdo em base64 está vazio ou inválido.');
       if (bruto.length > 20 * 1024 * 1024) throw new Error('Arquivo acima do limite de 20 MB.');
-      fs.writeFileSync(alvo, bruto);
-      return { caminho: alvo, bytes: bruto.length };
+      const salvo = PC_ARQ().salvarBinario({ caminho: '~/' + rel, dados: bruto });
+      return { caminho: salvo.caminho, bytes: salvo.bytes, hash: salvo.hash };
     }
-    const conteudo = String(texto == null ? '' : texto);
-    fs.writeFileSync(alvo, conteudo.slice(0, 8 * 1024 * 1024), 'utf8');
-    return { caminho: alvo, bytes: Buffer.byteLength(conteudo, 'utf8') };
+    const salvo = PC_ARQ().salvar({ caminho: '~/' + rel, texto: String(texto == null ? '' : texto) });
+    return { caminho: salvo.caminho, bytes: salvo.bytes, hash: salvo.hash };
   }
 };
 Object.assign(acoes, acoesExtras);
@@ -471,6 +481,9 @@ const acoesPC2 = {
     if (erro) throw new Error(erro);
     return { ok: true, caminho: alvo };
   },
+  arq_verificar: ({ caminho }) => PC_ARQ().verificar(caminho),
+  arq_compactar: ({ destino, arquivos }) => PC_ARQ().compactar({ destino: destino, arquivos: arquivos }),
+  arq_limpar_temporarios: ({ pasta, horas }) => PC_ARQ().limparTemporarios(pasta, horas),
   cad_identificar: ({ caminho }) => PC_CAD().identificar(caminho),
   cad_abrir: ({ caminho }) => PC_CAD().abrir(caminho),
   cad_criar: (dados) => PC_CAD().criar(dados || {}),
