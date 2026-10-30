@@ -7,11 +7,11 @@ const store = {
 };
 // Agentes especializados + recibos de execução (1.30.0): toda ferramenta passa por aqui.
 const AGENTES = (typeof window !== 'undefined' && window.AgentesJarvis) ? window.AgentesJarvis : null;
-// Supervisor de planos multi-etapas (1.31.0): valida, confirma e acompanha cada etapa.
+// Supervisor de planos multi-etapas (1.31.1): valida, confirma e acompanha cada etapa.
 const PLANO = (typeof window !== 'undefined' && window.PlanoJarvis) ? window.PlanoJarvis : null;
 // Só estas ações têm o efeito comprovado pelo próprio dado devolvido. As demais,
 // mesmo com risco 0 (volume, lanterna, player), continuam "incertas" no plano.
-const PLANO_LEITURA = new Set(['hora', 'clima', 'pesquisar', 'agenda_consultar', 'notificacoes', 'status_dispositivo', 'versao', 'arquivos_listar', 'arquivo_verificar', 'musica_tocando']);
+const PLANO_LEITURA = new Set(['hora', 'clima', 'pesquisar', 'agenda_consultar', 'status_dispositivo', 'versao', 'arquivos_listar', 'musica_tocando']);
 if (AGENTES) { try { AGENTES.configurar({ store }); } catch (e) { /* recibo opcional não derruba o app */ } }
 const nativoDesk = window.jarvisNative || null;
 const Cap = window.Capacitor;
@@ -43,7 +43,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.31.0';
+const VERSAO_APP = '1.31.1';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -1685,7 +1685,7 @@ async function executarRotina(nome) {
   if (!abortar) { registrar('rotina', 'concluída: ' + rotina.nome); await falar('Rotina concluída, ' + trat() + '.'); }
   return true;
 }
-/* ---------- Planos multi-etapas supervisionados (1.31.0) ---------- */
+/* ---------- Planos multi-etapas supervisionados (1.31.1) ---------- */
 // O modelo propõe; o PlanoJarvis valida; o usuário confirma; cada etapa só avança
 // com recibo "ok". Uma etapa "incerta" pausa e pede autorização explícita.
 let planoEmCurso = false, ultimoPlano = null;

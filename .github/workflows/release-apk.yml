@@ -145,7 +145,7 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
-            **Novidades da 1.31.0:** **planos multi-etapas supervisionados**. Peça “planeje …” e o app monta até seis
+            **Novidades da 1.31.1:** **planos multi-etapas supervisionados**. Peça “planeje …” e o app monta até seis
             etapas usando apenas ferramentas reais do aparelho. O plano é mostrado e confirmado antes de executar; cada
             etapa passa pelo recibo: efeito confirmado avança, efeito incerto **pausa** e pede autorização, falha ou
             bloqueio interrompem o restante. As proteções existentes (risco, PIN, modo seguro, offline) continuam valendo.

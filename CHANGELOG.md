@@ -1,3 +1,10 @@
+## 1.31.1 — Correção de classificação de leitura
+
+- **Falso positivo corrigido**: texto de falha (“não encontrei”, “sem permissão”, “indisponível”) agora vence a marca otimista `verificado`, em vez de virar `ok`.
+- **Lista de leitura restrita**: notificações e verificação de arquivo deixam de ser tratadas como consulta comprovada; permanecem `incerto` e podem pausar o plano.
+- **Teste**: suíte completa reverificada e APK 1.31.1 reconstruído.
+- **Preservado**: planos, agentes, recibos, voz/VAD, pessoas, memória, visão, IA local e Windows.
+
 ## 1.31.0 — Planos multi-etapas supervisionados
 
 - **Planejador validado** (`plano.js`): objetivo vira até seis etapas usando somente ações reais do catálogo; ação inventada, indisponível, recursiva ou com argumentos excessivos é recusada.

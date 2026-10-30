@@ -107,12 +107,14 @@
     if (resultado.falhou === true || resultado.erro || resultado.ok === false) {
       return { estado: 'falhou', motivo: String(resultado.erro || resultado.info || resultado.fala || 'a ferramenta informou falha').slice(0, 180) };
     }
-    if (resultado.verificado === true || resultado.ok === true || resultado.sucesso === true) {
-      return { estado: 'ok', motivo: 'efeito confirmado pela ferramenta' };
-    }
+    // Texto de falha vence até uma marca otimista: "Não encontrei" ou "sem permissão"
+    // não pode virar "ok" só porque o adaptador preencheu verificado: true.
     const texto = String(resultado.info || resultado.fala || resultado.mensagem || '');
     if (/n[ãa]o (?:foi poss[íi]vel|consegui|encontrei|reconheci|est[áa] dispon[íi]vel)|falh|erro|negad|indispon[íi]vel|sem permiss[ãa]o|precisa de internet/i.test(texto)) {
       return { estado: 'falhou', motivo: texto.slice(0, 180) };
+    }
+    if (resultado.verificado === true || resultado.ok === true || resultado.sucesso === true) {
+      return { estado: 'ok', motivo: 'efeito confirmado pela ferramenta' };
     }
     if (resultado.incerto === true) {
       return { estado: 'incerto', motivo: 'a ferramenta sinalizou que o efeito não foi observado' };

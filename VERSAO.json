@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.31.0",
-  "versionCode": 10310,
+  "version": "1.31.1",
+  "versionCode": 10311,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-10-30",
-  "status": "1.31.0: planos multi-etapas supervisionados; agentes, recibos, VAD e identificação preservados.",
+  "status": "1.31.1: planos supervisionados com classificação de leitura corrigida; agentes, recibos, VAD e identificação preservados.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.31.0 (2026-10-30). Terceira fase da evolução baseada nos oito repositórios. O módulo plano.js transforma um objetivo em até seis etapas usando apenas ações reais do catálogo, recusando ação inventada, indisponível, argumentos grandes ou plano recursivo. O usuário confirma o plano antes de qualquer execução. Cada etapa passa pelo executarSeguro e pelo recibo da 1.30.0: ok avança; incerto pausa e exige autorização explícita; falha, bloqueio e cancelamento interrompem o restante. O planejamento usa o provedor de IA já configurado, mas salva e restaura o histórico para não contaminar a conversa. O comando é explícito (planeje..., status do plano, cancelar plano); não há execução autônoma silenciosa. O núcleo (HUD, plasma e órbita 3D), a animação, a personalidade, o humor, a memória, a identificação de pessoas, a visão, o VAD, a voz neural, a IA local e o Windows seguem intactos. O que não foi possível testar aqui: aparelho Android, microfone, câmera, Windows e efeitos nativos reais; o motor de plano foi testado com executor e confirmações injetados, e a geração por IA depende do provedor configurado.",
+  "notas": "Revisão 1.31.1 (2026-10-30). Terceira fase da evolução baseada nos oito repositórios. O módulo plano.js transforma um objetivo em até seis etapas usando apenas ações reais do catálogo, recusando ação inventada, indisponível, argumentos grandes ou plano recursivo. O usuário confirma o plano antes de qualquer execução. Cada etapa passa pelo executarSeguro e pelo recibo da 1.30.0: ok avança; incerto pausa e exige autorização explícita; falha, bloqueio e cancelamento interrompem o restante. O planejamento usa o provedor de IA já configurado, mas salva e restaura o histórico para não contaminar a conversa. O comando é explícito (planeje..., status do plano, cancelar plano); não há execução autônoma silenciosa. O núcleo (HUD, plasma e órbita 3D), a animação, a personalidade, o humor, a memória, a identificação de pessoas, a visão, o VAD, a voz neural, a IA local e o Windows seguem intactos. O que não foi possível testar aqui: aparelho Android, microfone, câmera, Windows e efeitos nativos reais; o motor de plano foi testado com executor e confirmações injetados, e a geração por IA depende do provedor configurado. Correção 1.31.1: texto de falha (\"não encontrei\", \"sem permissão\", \"indisponível\") vence a marca otimista de verificação; notificações e verificação de arquivo deixam de ser leitura comprovada e podem pausar o plano.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,12 +16,12 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "cd82a5d289c29f104fe9aec54d5e9bb4460e6ddb7fbd6526e350542f53e5e825",
-    "bytes": 81102537,
-    "arquivo": "jarvis-nova-1.31.0-10310.apk",
+    "sha256": "66cb4ce28eb6c6be6ea71090804bfcaa3c34805c5de2c40df87e0454b70ee964",
+    "bytes": 81102609,
+    "arquivo": "jarvis-nova-1.31.1-10311.apk",
     "data": "2026-10-30",
     "ambiente": "compilação local (JDK 21 + AGP 8.7.3 + Gradle 8.9 + Android SDK 35; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.31.0 com plano.js, agentes.js, app.js, escuta.js, identidade.js, identidade_ui.js, voz_motor.js e humor.js; suíte npm run test:all exit 0 (inclui 25 verificações do motor de planos e 13 do contrato de integração). Sem aparelho/microfone neste ambiente: efeitos nativos reais, geração por IA e captura de voz precisam ser conferidos no aparelho."
+    "observacao": "APK 1.31.1 com plano.js, agentes.js, app.js, escuta.js, identidade.js, identidade_ui.js, voz_motor.js e humor.js; suíte npm run test:all exit 0. Inclui a correção em que texto de falha vence a marca otimista de leitura. Sem aparelho/microfone neste ambiente: efeitos nativos reais, geração por IA e captura de voz precisam ser conferidos no aparelho."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

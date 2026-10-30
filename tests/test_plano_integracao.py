@@ -1,4 +1,4 @@
-"""Contrato estático da integração do supervisor de planos (1.31.0)."""
+"""Contrato estático da integração do supervisor de planos (1.31.1)."""
 import json
 import pathlib
 
@@ -25,10 +25,10 @@ check('plano pausa em vez de seguir incerto', "status === 'pausado'" in app)
 check('falha interrompe o restante', 'Nenhuma etapa seguinte foi executada' in app)
 check('ações passam pelo executor seguro', 'executarSeguro({ nome: p.acao, args: p.args }, { leituraOk: PLANO_LEITURA.has(p.acao) })' in app)
 check('planejamento não contamina histórico', 'histAntes = hist.slice()' in app and 'hist.length = 0' in app)
-check('versão 1.31.0 no app e no metadado', meta.get('version') == '1.31.0' and meta.get('versionCode') == 10310 and "const VERSAO_APP = '1.31.0';" in app)
+check('versão 1.31.1 no app e no metadado', meta.get('version') == '1.31.1' and meta.get('versionCode') == 10311 and "const VERSAO_APP = '1.31.1';" in app)
 check('pacote e suíte incluem plano.js', 'plano.js' in pkg.get('build', {}).get('files', []) and 'tests/test_plano.js' in pkg.get('scripts', {}).get('test:all', ''))
 check('workflows copiam plano.js', 'plano.js' in (RAIZ / '.github/workflows/build-apk.yml').read_text(encoding='utf-8'))
-check('CHANGELOG registra a versão', '## 1.31.0' in (RAIZ / 'CHANGELOG.md').read_text(encoding='utf-8'))
+check('CHANGELOG registra a versão', '## 1.31.1' in (RAIZ / 'CHANGELOG.md').read_text(encoding='utf-8'))
 
 if falhas:
     print('\nFALHA:', '; '.join(falhas))

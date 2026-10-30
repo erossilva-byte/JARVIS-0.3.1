@@ -1,4 +1,10 @@
-# J.A.R.V.I.S. Nova 1.31.0
+# J.A.R.V.I.S. Nova 1.31.1
+
+## 1.31.1 — Correção de leitura
+
+Uma consulta que responde “não encontrei” ou “sem permissão” não é mais tratada como efeito confirmado. A marcação
+otimista de leitura agora perde para o texto de falha, e notificações/verificação de arquivo voltam a ficar `incerto`
+em vez de `ok`. Isso evita que um plano avance sobre uma consulta que, na prática, não devolveu o dado.
 
 ## 1.31.0 — Planos multi-etapas supervisionados
 
