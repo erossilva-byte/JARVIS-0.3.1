@@ -90,7 +90,8 @@ jobs:
           mkdir -p www
           cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
           cp arquivos_dev.js www/
-          cp voz_motor.js www/\n          cp humor.js www/
+          cp voz_motor.js www/
+          cp humor.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
 
