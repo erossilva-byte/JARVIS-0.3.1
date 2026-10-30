@@ -1,3 +1,21 @@
+## 1.23.1 — 2026-10-30
+
+## Correções de inicialização, diagnóstico e anexos no chat
+
+- **`store is not defined` corrigido na causa.** A camada visual da 1.23.0 acrescentou um bloco no fim do
+  `app.js`, depois do `})();` que fecha o IIFE — ali `store` não existe e a inicialização abortava. O bloco
+  voltou para dentro do IIFE; a opção "Reduzir efeitos visuais" lê, aplica e persiste de novo.
+- **Diagnóstico sem texto vertical.** O cabeçalho do cartão era um flex sem quebra e sem largura mínima no
+  nome: em painel estreito o nome virava uma letra por linha. Agora o selo de estado não encolhe, o nome tem
+  `min-width` legível e o conjunto quebra em duas linhas; `min-width:0` em toda a cadeia de flex/grid.
+- **Anexos no chat (real).** Botão de clipe no rodapé, `<input type=file multiple>` (SAF no Android, diálogo
+  do Windows no Electron), lista com nome/tipo/tamanho e remoção, leitura de texto por `FileReader` com limite
+  de 40 mil caracteres por arquivo e envio do conteúdo dentro do mesmo pedido da IA.
+- **Limites ditos na tela:** imagem é encaminhada ao painel Visão; binário não é lido como texto.
+- **Não incluído nesta revisão:** geração de `.cad` do CADe SIMU (formato proprietário, sem especificação
+  pública), automação de aplicativos/janelas do Windows e alarme do Windows (o desktop não tem motor de alarme).
+- **Verificação:** suíte completa verde (1091 → 1100 verificações com o teste desta revisão).
+
 ## 1.23.0 — 2026-10-29
 
 ## Reformulação visual holográfica

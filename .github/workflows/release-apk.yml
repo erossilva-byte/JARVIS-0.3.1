@@ -133,6 +133,14 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
+            **Novidades da 1.23.1:** corrigido o erro `store is not defined` que abortava a
+            inicialização (o bloco da opção de efeitos estava fora do escopo do app); corrigido o texto
+            vertical do diagnóstico (nome com largura mínima e quebra em duas linhas, selo que não encolhe);
+            e o chat ganhou **anexos reais** — clipe no rodapé, seletor nativo do Android/Windows, lista com
+            nome/tipo/tamanho, remoção e envio do conteúdo de texto para a IA. Imagem e binário são
+            identificados com a limitação escrita. **Ainda não incluído:** geração de .cad do CADe SIMU,
+            automação de janelas/aplicativos do Windows e alarme do Windows.
+
             **Novidades da 1.23.0:** reformulação visual holográfica. O núcleo em HUD ganhou camadas
             reais em profundidade (halo atrás, aro à frente, marca e telemetria acima) e inclina com o
             ponteiro, produzindo paralaxe de verdade; os painéis entram em perspectiva pela borda direita e

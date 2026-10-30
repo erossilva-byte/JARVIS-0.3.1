@@ -25,14 +25,16 @@ def checar(nome, ok):
 
 
 # ---------- 1. Versão única ----------
-checar('VERSAO.json em 1.23.0', meta.get('version') == '1.23.0' and meta.get('versionCode') == 10230)
-checar('package.json em 1.23.0', pkg.get('version') == '1.23.0')
-checar('app.js em 1.23.0', "const VERSAO_APP = '1.23.0';" in app)
-checar('interface na 1.23.0', 'v1.23.0' in html and 'v1.22.0' not in html)
+checar('VERSAO.json em 1.23.0 ou posterior',
+      [int(x) for x in meta.get('version', '0').split('.')] >= [1, 23, 0]
+      and meta.get('versionCode', 0) >= 10230)
+checar('package.json acompanha o VERSAO.json', pkg.get('version') == meta.get('version'))
+checar('app.js acompanha o VERSAO.json', ("const VERSAO_APP = '%s';" % meta['version']) in app)
+checar('interface na versão corrente', ('v' + meta['version']) in html and 'v1.22.0' not in html)
 checar('CHANGELOG na 1.23.0', '## 1.23.0' in texto('CHANGELOG.md'))
-checar('LEIA-ME na 1.23.0', '# J.A.R.V.I.S. Nova 1.23.0' in texto('LEIA-ME.md'))
-checar('Workflows na 1.23.0', '1.23.0' in texto('.github/workflows/build-apk.yml')
-      and '1.23.0' in texto('.github/workflows/release-apk.yml'))
+checar('LEIA-ME na versão corrente', ('# J.A.R.V.I.S. Nova ' + meta['version']) in texto('LEIA-ME.md'))
+checar('Workflows na versão corrente', meta['version'] in texto('.github/workflows/build-apk.yml')
+      and meta['version'] in texto('.github/workflows/release-apk.yml'))
 checar('Suíte roda este teste', 'python3 tests/test_v1_23_0.py' in pkg['scripts']['test:all'])
 
 # ---------- 2. Camada holográfica: profundidade real ----------

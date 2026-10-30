@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.23.0",
-  "versionCode": 10230,
+  "version": "1.23.1",
+  "versionCode": 10231,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
-  "gerado": "2026-10-29",
-  "status": "1.23.0: reformulação visual — núcleo com profundidade 3D real (camadas em translateZ e inclinação com o ponteiro), painéis entrando em perspectiva, superfícies de vidro padronizadas, transições e retorno ao toque consistentes, além da opção persistida \"Reduzir efeitos visuais\".",
+  "gerado": "2026-10-30",
+  "status": "1.23.1: correção do \"store is not defined\" (bloco de efeitos agora dentro do IIFE), diagnóstico com nome e etiqueta na horizontal em qualquer largura, e anexos reais no chat (seletor nativo, leitura de texto e envio à IA).",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.23.0 (2026-10-29). A interface ganhou uma camada holográfica sem novas dependências: no estilo HUD o disco central usa preserve-3d e cada camada vive num plano diferente (halo atrás, aro à frente, marca e telemetria acima), então inclinar o conjunto com o ponteiro produz paralaxe real em vez de sombra falsa. Os painéis entram com rotateY e perspectiva a partir da borda direita, com brilho ciano projetado; o scrim passou a dissolver e, acima de 700 px, desfoca o fundo. Cartões de painel, diagnóstico, pessoas, memória, voz e arquivos compartilham o mesmo vidro em diagonal, filete de luz superior e elevação no hover. Botões afundam com escala em vez de pular; o balão \"formulando\" recebeu varredura de 1 px, o diagnóstico confirma em verde ou pulsa em vermelho conforme o resultado real. Em Ajustes ▸ Voz ▸ Aparência do núcleo há a opção \"Reduzir efeitos visuais\", persistida em efeitos_visuais, que desliga tilt, brilhos em movimento e animações longas; é independente de prefers-reduced-motion, que continua valendo para quem configurou no sistema. Desempenho: apenas transform/opacity/box-shadow, content-visibility nas listas longas, entrada mais curta abaixo de 420 px e desfoque desligado quando o navegador informa update:slow. Nenhuma lógica, tela, texto, permissão ou integração foi alterada; os três estilos de núcleo (HUD, plasma e órbita 3D) e o sistema de animação da 1.21.5 seguem intactos. Não houve validação visual em aparelho físico ou emulador nesta revisão.",
+  "notas": "Revisão 1.23.1 (2026-10-30). O erro \"Uncaught ReferenceError: store is not defined\" vinha da camada visual da 1.23.0: o bloco que liga a opção de efeitos tinha sido anexado DEPOIS do ()`})();` que fecha o IIFE do app.js, então rodava fora do escopo onde `store` é declarado e abortava a inicialização. O bloco voltou para dentro do IIFE; a opção \"Reduzir efeitos visuais\" volta a ser lida, aplicada e persistida. O texto vertical do diagnóstico era layout: o cabeçalho do cartão era um flex sem quebra e o nome não tinha largura mínima, então em painel estreito o nome era comprimido a uma letra por linha enquanto o selo mantinha a largura. Agora o selo não encolhe, o nome tem largura mínima legível e o conjunto quebra em duas linhas quando precisa, com `min-width:0` em toda a cadeia de flex/grid. O chat ganhou anexos de verdade: botão de clipe no rodapé, `<input type=file multiple>` (SAF no Android, diálogo do Windows no Electron), lista com nome, tipo e tamanho, remoção antes do envio, leitura de arquivos de texto por FileReader com limite de 40 mil caracteres por arquivo e envio do conteúdo dentro do mesmo pedido da IA. Imagem e binário entram identificados com a limitação escrita, sem fingir leitura. A interface mantém o núcleo (HUD, plasma e órbita 3D) e a animação da 1.23.0 intactos. Não incluído nesta revisão: geração de arquivos .cad do CADe SIMU, automação de aplicativos/janelas do Windows e alarme do Windows — o desktop não tem motor de alarme implementado, e o formato .cad do CADe SIMU é proprietário e não documentado.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,12 +16,12 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "6b8813f8dbfd9d1edf2d68ea5720ab973c8c5ef6ed30ca55859285afe839a23b",
-    "bytes": 71107349,
-    "arquivo": "jarvis-nova-1.23.0-10230.apk",
-    "data": "2026-10-29",
+    "sha256": "84c1fee3a65a95d656bee9759a3ea3bf18ffb17bed57427e2eb4a5672b40dbea",
+    "bytes": 71110105,
+    "arquivo": "jarvis-nova-1.23.1-10231.apk",
+    "data": "2026-10-30",
     "ambiente": "compilação local (JDK 17 + Android SDK 34; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.23.0: VERSAO_APP=1.23.0, versionCode 10230. style.css com a camada holográfica e index.html/app.js com a opção c-efeitos conferidos dentro de assets/public. Suíte completa com 1091 verificações aprovada antes do empacotamento. Sem teste em aparelho físico nem emulador neste ambiente."
+    "observacao": "APK 1.23.1: VERSAO_APP=1.23.1, versionCode 10231. style.css com a correção do diagnóstico e index.html/app.js com anexos conferidos dentro de assets/public. Suíte completa com 1122 verificações aprovada antes do empacotamento. Sem teste em aparelho físico nem emulador neste ambiente."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

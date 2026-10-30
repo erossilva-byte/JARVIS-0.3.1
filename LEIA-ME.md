@@ -1,4 +1,13 @@
-# J.A.R.V.I.S. Nova 1.23.0
+# J.A.R.V.I.S. Nova 1.23.1
+
+## O que mudou na 1.23.1
+
+- **Erro de inicialização corrigido**: `store is not defined` não aparece mais; a opção de reduzir efeitos
+  voltou a funcionar e fica salva.
+- **Diagnóstico legível**: nome e etiqueta na horizontal, com quebra natural em telas estreitas.
+- **Anexos no chat**: clipe no rodapé para escolher arquivos (Android e Windows), lista com nome, tipo e
+  tamanho, remoção antes do envio e conteúdo de texto entregue à IA junto do pedido.
+- **Ainda não incluído**: `.cad` do CADe SIMU, automação de janelas do Windows e alarme do Windows.
 
 ## O que mudou na 1.23.0
 

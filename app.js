@@ -35,7 +35,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.23.0';
+const VERSAO_APP = '1.23.1';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -3477,19 +3477,24 @@ function ciclo() {
     } while (conversaLigada() && !abortar);
   });
 }
-function enviarComando(t) {
+function enviarComando(t, extra) {
   t = String(t || '').trim();
   if (!t || ocupado) return;
   entrarConversa();   // a resposta aparece na tela de conversa, não no menu
   msg('eu', t);
   aquecer();
-  executar(async () => { setEstado('thinking'); await turno(t); });
+  // Arquivos anexados entram como conteúdo do MESMO pedido (nome, tipo e texto), não como
+  // mensagem separada: o usuário vê só o que digitou e a IA recebe o arquivo para analisar.
+  const pedido = extra ? t + '\n\n' + extra : t;
+  if (typeof limparAnexos === 'function') limparAnexos();
+  executar(async () => { setEstado('thinking'); await turno(pedido); });
 }
 function enviarTexto() {
   const t = $('#entrada').value.trim();
-  if (!t || ocupado) return;
+  const extra = typeof anexosParaIA === 'function' ? anexosParaIA() : '';
+  if ((!t && !extra) || ocupado) return;
   $('#entrada').value = '';
-  enviarComando(t);
+  enviarComando(t || 'Analise o(s) arquivo(s) anexado(s) e diga o que encontrou.', extra);
 }
 
 async function testarMicrofone() {
@@ -7916,9 +7921,6 @@ if (pessoaContextoUI) {
   });
 }
 
-})();
-
-
 /* ---- "Reduzir efeitos visuais" (escolha do usuário, persistida) ----
    O CSS lê body.efeitos-reduzidos. É separado de prefers-reduced-motion: aquela é
    preferência do sistema, esta é do usuário e vale para o app inteiro. O estado
@@ -7941,4 +7943,99 @@ if (pessoaContextoUI) {
   });
   document.addEventListener('DOMContentLoaded', aplicar);
   aplicar();
+})();
+
+/* ---- Anexos no chat (Android, Windows e navegador) ----
+   O seletor é o nativo de cada plataforma: <input type=file multiple> abre o Storage Access
+   Framework no Android, o diálogo do Windows no Electron e o seletor do navegador na web.
+   Arquivos de texto vão para a IA dentro do pedido, com limite por arquivo. Imagem e binário
+   entram identificados, com a limitação escrita: aqui NÃO se finge ler imagem nem binário. */
+const ANEXO_TEXTO = new Set(['txt','md','markdown','rtf','csv','tsv','json','jsonl','xml','yaml','yml',
+  'html','htm','css','js','mjs','cjs','ts','tsx','jsx','py','java','kt','kts','c','h','cpp','hpp','cs',
+  'go','rs','rb','php','sh','bat','ps1','sql','gradle','sln','csproj','dxf','scad','stl','obj','step',
+  'stp','svg','ini','cfg','conf','toml','log','diff','patch']);
+const ANEXO_MAX = 40000;
+const ANEXO_MAX_ARQUIVOS = 4;
+let anexos = [];
+
+function tamanhoLegivel(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1).replace('.', ',') + ' KB';
+  return (n / (1024 * 1024)).toFixed(1).replace('.', ',') + ' MB';
+}
+function extAnexo(nome) {
+  const m = /\.([a-z0-9]+)$/i.exec(nome || '');
+  return m ? m[1].toLowerCase() : '';
+}
+function renderAnexos() {
+  const caixa = document.getElementById('anexos');
+  if (!caixa) return;
+  caixa.textContent = '';
+  caixa.hidden = anexos.length === 0;
+  anexos.forEach((a, i) => {
+    const item = document.createElement('span');
+    item.className = 'anexo-item' + (a.erro ? ' erro' : '');
+    const nome = document.createElement('b');
+    nome.textContent = a.nome;
+    const meta = document.createElement('small');
+    meta.textContent = a.erro ? a.erro : (a.tipo + ' · ' + tamanhoLegivel(a.tamanho));
+    const fim = document.createElement('button');
+    fim.type = 'button';
+    fim.className = 'anexo-remover';
+    fim.setAttribute('aria-label', 'Remover ' + a.nome);
+    fim.textContent = '×';
+    fim.onclick = () => { anexos.splice(i, 1); renderAnexos(); };
+    item.append(nome, meta, fim);
+    caixa.appendChild(item);
+  });
+}
+function anexosParaIA() {
+  const uteis = anexos.filter((a) => !a.erro && a.texto);
+  if (!uteis.length) return '';
+  return uteis.map((a) => {
+    const corte = a.texto.length > ANEXO_MAX;
+    return '[ARQUIVO ANEXADO: ' + a.nome + ' (' + a.tipo + ', ' + tamanhoLegivel(a.tamanho) + ')]\n' +
+      '```' + (extAnexo(a.nome) || 'texto') + '\n' + a.texto.slice(0, ANEXO_MAX) + '\n```\n' +
+      (corte ? '[conteúdo cortado nos primeiros ' + ANEXO_MAX + ' caracteres; peça o trecho que precisar]' : '');
+  }).join('\n\n');
+}
+function limparAnexos() { anexos = []; renderAnexos(); }
+function lerAnexo(arquivo) {
+  return new Promise((resolve) => {
+    const ext = extAnexo(arquivo.name);
+    const imagem = /^image\//.test(arquivo.type || '') || ['png','jpg','jpeg','gif','webp','bmp'].includes(ext);
+    const texto = ANEXO_TEXTO.has(ext) || /^text\//.test(arquivo.type || '');
+    if (imagem) {
+      resolve({ nome: arquivo.name, tamanho: arquivo.size, tipo: 'imagem', texto: '',
+        erro: 'imagem: analise no painel Visão' });
+      return;
+    }
+    if (!texto) {
+      resolve({ nome: arquivo.name, tamanho: arquivo.size, tipo: 'binário', texto: '',
+        erro: 'binário: aqui só leio texto' });
+      return;
+    }
+    const leitor = new FileReader();
+    leitor.onload = () => resolve({ nome: arquivo.name, tamanho: arquivo.size, tipo: 'texto', texto: String(leitor.result || '') });
+    leitor.onerror = () => resolve({ nome: arquivo.name, tamanho: arquivo.size, tipo: 'texto', texto: '', erro: 'falha ao ler' });
+    leitor.readAsText(arquivo);
+  });
+}
+async function receberAnexos(lista) {
+  for (const f of Array.from(lista || [])) {
+    if (anexos.length >= ANEXO_MAX_ARQUIVOS) break;
+    anexos.push(await lerAnexo(f));
+  }
+  renderAnexos();
+  if (typeof registrar === 'function') {
+    registrar('arquivos', anexos.filter((a) => !a.erro).length + ' anexo(s) no chat');
+  }
+}
+const btnAnexo = document.getElementById('btn-anexo');
+const inputAnexo = document.getElementById('anexo-input');
+if (btnAnexo && inputAnexo) {
+  btnAnexo.onclick = () => inputAnexo.click();
+  inputAnexo.addEventListener('change', () => { receberAnexos(inputAnexo.files); inputAnexo.value = ''; });
+}
+
 })();
