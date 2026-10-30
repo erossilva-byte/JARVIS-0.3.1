@@ -60,7 +60,7 @@ jobs:
           # Todo recurso web do app precisa estar aqui: sem hermes.js o app.js recusa
           # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
           cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
-          cp identidade.js identidade_ui.js escuta.js agentes.js www/
+          cp identidade.js identidade_ui.js escuta.js agentes.js plano.js www/
           cp arquivos_dev.js www/
           cp voz_motor.js www/
           cp humor.js www/
@@ -144,6 +144,11 @@ jobs:
             “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
+
+            **Novidades da 1.31.0:** **planos multi-etapas supervisionados**. Peça “planeje …” e o app monta até seis
+            etapas usando apenas ferramentas reais do aparelho. O plano é mostrado e confirmado antes de executar; cada
+            etapa passa pelo recibo: efeito confirmado avança, efeito incerto **pausa** e pede autorização, falha ou
+            bloqueio interrompem o restante. As proteções existentes (risco, PIN, modo seguro, offline) continuam valendo.
 
             **Novidades da 1.30.0:** agentes especializados e **recibos de execução verificáveis**. Toda ferramenta passa
             por um registro que separa **efeito confirmado** de **ação apenas disparada**: abrir um app, preparar um SMS ou

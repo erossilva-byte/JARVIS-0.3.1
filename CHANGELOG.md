@@ -1,3 +1,14 @@
+## 1.31.0 — Planos multi-etapas supervisionados
+
+- **Planejador validado** (`plano.js`): objetivo vira até seis etapas usando somente ações reais do catálogo; ação inventada, indisponível, recursiva ou com argumentos excessivos é recusada.
+- **Confirmação antes de executar**: o plano inteiro é apresentado e precisa de autorização; não existe execução autônoma silenciosa.
+- **Recibo por etapa**: `ok` avança; `incerto` pausa e pede autorização explícita; `falhou`, `bloqueado` ou `cancelado` interrompem o restante.
+- **Integração segura**: cada passo passa por `executarSeguro`, mantendo risco, PIN, modo seguro, offline e confirmações existentes.
+- **Histórico limpo**: a chamada de planejamento salva e restaura o histórico, sem contaminar a conversa com o JSON interno.
+- **Comandos**: “planeje …”, “status do plano” e “cancelar plano”.
+- **Testes**: motor com executor/confirmações injetados e contrato estático da integração.
+- **Preservado**: Hermes, rotinas, agentes, recibos, voz/VAD, pessoas, memória, visão, IA local e Windows.
+
 ## 1.30.0 — Agentes especializados e recibos de execução
 
 - **Agentes especializados** (`agentes.js`): nove domínios classificam cada ferramenta — conversa, pesquisa, dispositivo, arquivos, memória, pessoas, visão, computador e sistema — sem duplicar o roteamento do Hermes.

@@ -1,4 +1,20 @@
-# J.A.R.V.I.S. Nova 1.30.0
+# J.A.R.V.I.S. Nova 1.31.0
+
+## 1.31.0 — Planos multi-etapas supervisionados
+
+Peça “planeje organizar minha tarde” (ou outro objetivo) e o app monta um plano de até seis etapas usando apenas
+ferramentas que existem naquele aparelho. O plano é mostrado antes de executar e só começa depois da sua confirmação.
+
+Cada etapa usa o recibo da 1.30.0. Se o efeito for confirmado, o plano avança. Se ficar **incerto** — por exemplo,
+“abri o aplicativo” sem confirmação de que ele abriu —, o plano **pausa** e pergunta se você quer seguir. Falha,
+bloqueio de segurança ou cancelamento interrompem o restante; nenhuma etapa seguinte roda escondida.
+
+As ações continuam passando pelo `executarSeguro`, então risco, PIN, modo seguro, offline e confirmações sensíveis
+seguem valendo. “Status do plano” mostra o resultado e “cancelar plano” interrompe o que estiver em curso.
+
+**Limitação:** o planejamento depende do provedor de IA configurado. Sem chave e sem modelo local, o app informa que
+não conseguiu montar o plano; não inventa etapas. A confirmação de efeito continua limitada ao que cada adaptador
+Android devolve.
 
 ## 1.30.0 — Agentes especializados e recibos de execução
 
