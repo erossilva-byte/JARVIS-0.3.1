@@ -6461,6 +6461,89 @@ function cadAnalisarPorNome(nome) {
   return { ok: true, nome: f.nome, resumo: r.resumo, doc: r.doc, fala: r.resumo };
 }
 
+/* ---------- Projeto CAD: reparo, script OpenSCAD e pacote para o PC ----------
+ * Usa window.CadProjeto (cad_projeto.js), o mesmo módulo testado no Node. Nada aqui
+ * promete execução de OpenSCAD/FreeCAD no aparelho: gera, valida e entrega. */
+const CADPROJ = window.CadProjeto || null;
+function cadProjetoAtual() {
+  if (!CAD) return null;
+  const txt = $('#cad-texto') ? $('#cad-texto').value : '';
+  if (!txt.trim()) return null;
+  const r = CAD.analisar(txt);
+  return r.ok ? r.doc : null;
+}
+function cadProjetoStatus(texto, erro) {
+  const el = $('#cad-projeto-status');
+  if (el) { el.textContent = texto; el.classList.toggle('erro', !!erro); }
+  cadStatus(texto, erro);
+}
+function cadNomeLivre(base) {
+  if (!CAD) return base;
+  const nomes = CAD.listar().map((a) => a.nome.toLowerCase());
+  let nome = base;
+  let n = 2;
+  while (nomes.indexOf((nome + '.cad').toLowerCase()) >= 0) { nome = base + '-v' + n; n++; }
+  return nome;
+}
+function baixarBytes(nome, bytes, tipo) {
+  const blob = new Blob([bytes], { type: tipo || 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nome; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+function cadRepararProjeto() {
+  if (!CAD || !CADPROJ) { cadProjetoStatus('O módulo de projeto CAD não carregou neste pacote.', true); return; }
+  const doc = cadProjetoAtual();
+  if (!doc) { cadProjetoStatus('Gere ou analise um modelo antes de reparar.', true); return; }
+  const r = CADPROJ.reparar(doc);
+  if (!r.ok) { cadProjetoStatus('Não salvei: ' + (r.erro || 'restam problemas críticos.') + ' O original está intacto.', true); return; }
+  const nome = cadNomeLivre((doc.nome || 'modelo') + '-reparado');
+  const salvo = CAD.salvar(nome, r.doc);
+  if (!salvo.ok) { cadProjetoStatus(salvo.erro || 'Não consegui salvar a versão reparada.', true); return; }
+  if ($('#cad-texto')) $('#cad-texto').value = r.texto;
+  analisarCadTexto(r.texto, salvo.nome);
+  cadProjetoStatus('Versão reparada salva como ' + salvo.nome + '. ' + r.resumo);
+  registrar('arquivos', '.cad reparado: ' + salvo.nome);
+  renderArquivos();
+}
+function cadScadProjeto() {
+  if (!CAD || !CADPROJ) { cadProjetoStatus('O módulo de projeto CAD não carregou.', true); return; }
+  const doc = cadProjetoAtual();
+  if (!doc) { cadProjetoStatus('Gere ou analise um modelo antes de gerar o script.', true); return; }
+  const s = CADPROJ.gerarScad(doc);
+  if (!s.ok) { cadProjetoStatus('O script saiu inválido: ' + s.problemas.join('; '), true); return; }
+  const nome = CADPROJ.slug(doc.nome || 'modelo') + '.scad';
+  baixarBytes(nome, s.texto, 'text/plain');
+  cadProjetoStatus(nome + ' gerado (' + cadKb(s.bytes) + '). ' + s.aviso);
+  registrar('arquivos', '.scad gerado: ' + nome);
+}
+async function cadPacoteProjeto() {
+  if (!CAD || !CADPROJ) { cadProjetoStatus('O módulo de projeto CAD não carregou.', true); return; }
+  const doc = cadProjetoAtual();
+  if (!doc) { cadProjetoStatus('Gere ou analise um modelo antes de montar o pacote.', true); return; }
+  const p = CADPROJ.pacote(doc, { formatos: ['cad', 'dxf', 'stl', 'step'] });
+  if (!p.ok) { cadProjetoStatus('Pacote não gerado: ' + (p.falhas.length ? p.falhas.join('; ') : p.validacao.resumo), true); return; }
+  const arquivo = new File([p.bytes], p.nome, { type: 'application/zip' });
+  let como = 'baixado';
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+      await navigator.share({ files: [arquivo], title: 'Projeto CAD — ' + (doc.nome || 'modelo') });
+      como = 'compartilhado';
+    } else {
+      baixarBytes(p.nome, p.bytes, 'application/zip');
+    }
+  } catch (e) {
+    baixarBytes(p.nome, p.bytes, 'application/zip');
+    como = 'baixado (compartilhamento indisponível)';
+  }
+  cadProjetoStatus(p.nome + ' ' + como + ': ' + p.entradas.length + ' arquivo(s), ' + cadKb(p.tamanho) + '. ' + p.validacao.resumo);
+  registrar('arquivos', 'pacote CAD: ' + p.nome);
+}
+['#cad-reparar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => cadRepararProjeto(); });
+['#cad-scad'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => cadScadProjeto(); });
+['#cad-pacote'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => cadPacoteProjeto(); });
+
 function memTemaAtual() {
   const t = store.get('memoria_tema', 'gostos');
   return MEM && MEM.TEMAS.some((x) => x.id === t) ? t : 'gostos';

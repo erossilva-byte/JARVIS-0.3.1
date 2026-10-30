@@ -724,6 +724,12 @@
     <div class="botoes"><button id="cad-exportar" type="button" class="primario">Exportar</button><button id="cad-malha" type="button" class="secundario">Ver malha e volume</button></div>
     <p id="cad-exportar-status" class="dica" role="status" aria-live="polite">Gere ou analise um modelo para liberar a exportação.</p>
     <div class="divider-small"></div>
+    <h3>Reparar, validar e levar para o PC</h3>
+    <p class="dica">O reparo corrige dimensão e posição inválidas, remove duplicata exata e <b>revalida a malha</b> antes de salvar como versão nova — o original não é tocado. O pacote leva <code>.cad</code>, DXF, STL, STEP, script OpenSCAD, relatório e instruções num ZIP: o celular prepara, o CAD abre no computador. DWG, IGES, 3DM, FCStd e o <code>.cad</code> do CADe SIMU não são gerados e isso aparece no relatório.</p>
+    <div class="botoes"><button id="cad-reparar" type="button" class="secundario">Reparar e validar</button><button id="cad-scad" type="button" class="secundario">Gerar OpenSCAD</button></div>
+    <div class="botoes"><button id="cad-pacote" type="button" class="primario">Pacote .zip para o PC</button></div>
+    <p id="cad-projeto-status" class="dica" role="status" aria-live="polite">Gere ou analise um modelo para liberar o reparo e o pacote.</p>
+    <div class="divider-small"></div>
     <h3>Arquivos salvos</h3>
     <div id="cad-lista" class="mem-lista cad-lista" aria-live="polite"></div>
     <div class="botoes"><button id="cad-liberar" type="button" class="secundario">Liberar espaço</button><button id="cad-apagar-tudo" type="button" class="secundario perigo">Apagar todos</button></div>
@@ -897,6 +903,7 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="vendor/three.min.js"></script>
 <script src="orbita.js"></script>
 <script src="cad.js"></script>
+<script src="cad_projeto.js"></script>
 <script src="visao.js"></script>
 <script src="pessoas.js"></script>
 <script src="apps.js"></script>
