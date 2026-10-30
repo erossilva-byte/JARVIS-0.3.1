@@ -1,3 +1,12 @@
+## 1.26.0 — Reconhecimento de locutor local
+
+- **Motor de voz próprio** (`voz_motor.js`): VAD adaptativo, FFT/mel, pitch por HPS, formantes, prosódia e embedding de 59 dimensões.
+- **Três estados reais**: compatível, diferente ou inconclusivo; identificação entre até cinco perfis com margem entre candidatos.
+- **Cadastro guiado e consentido**: três frases, recusa de áudio curto/saturado/ruidoso, média dos vetores e nenhum áudio guardado.
+- **Microfone configurável**: cancelamento de eco, supressão de ruído e AGC, medidor em tempo real, relatório de qualidade e diagnóstico.
+- **Limiar ajustável** e modo de identificação opcional; a ativação por voz existente continua funcionando.
+- Testes com vozes sintéticas (mesma/outra voz, ruído, clipping, curto, ambiguidade) e contrato da interface.
+
 ## 1.25.0 — Desenvolvimento de Arquivos, voz em três estados
 
 - **Nova aba Desenvolvimento de Arquivos**: recebe vários arquivos ou projeto `.zip`, lista idioma/tamanho/linhas,

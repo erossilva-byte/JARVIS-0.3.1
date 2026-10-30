@@ -1,4 +1,12 @@
-# J.A.R.V.I.S. Nova 1.25.0
+# J.A.R.V.I.S. Nova 1.26.0
+
+## 1.26.0 — Reconhecimento de locutor
+
+A voz do usuário agora tem um motor local de verdade: VAD, pitch, formantes e um vetor de 59 dimensões,
+com cadastro guiado em três frases, consentimento, limiar ajustável e até cinco perfis. O resultado é
+**compatível**, **diferente** ou **inconclusivo** — é indicação de locutor, não autenticação. O áudio
+bruto nunca é guardado. A captura permite cancelamento de eco, supressão de ruído e AGC.
+
 
 ## 1.25.0 — Desenvolvimento de Arquivos
 

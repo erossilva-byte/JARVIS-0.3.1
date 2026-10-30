@@ -114,7 +114,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.25.0</span>
+      <span class="orb-sub" aria-hidden="true">v1.26.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -204,7 +204,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.25.0</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.26.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -291,10 +291,24 @@
     <button id="c-testar-mic" type="button" class="secundario">Testar microfone e ruído (3 s)</button>
     <p id="c-mic-status" class="dica" role="status" aria-live="polite">O teste verifica o sinal do microfone e estima o ruído de fundo.</p>
     <div class="divider-small"></div>
-    <h3>Perfil acústico experimental</h3>
-    <p class="dica">Este recurso captura características acústicas simples no aparelho e compara com o perfil salvo; não é biometria profissional nem prova de identidade. Cadastre três amostras em ambiente silencioso, falando por cerca de 4 segundos em cada uma, e depois teste. O áudio bruto não é guardado; apenas um vetor numérico fica no armazenamento local. Não use para autorizar pagamentos, abrir dados privados ou outras ações sensíveis.</p>
-    <div class="botoes"><button id="c-voz-cadastrar" type="button" class="secundario">Cadastrar amostra de voz</button><button id="c-voz-verificar" type="button" class="secundario">Comparar minha voz</button><button id="c-voz-apagar-perfil" type="button" class="secundario perigo">Apagar perfil de voz</button></div>
-    <p id="c-voz-perfil-status" class="dica" role="status" aria-live="polite">Nenhuma amostra cadastrada. Use três gravações para montar um perfil experimental.</p>
+    <h3>Reconhecimento de locutor (minha voz)</h3>
+    <p class="dica">O perfil vocal guarda apenas um vetor de características (espectro, formantes, pitch e ritmo), nunca o áudio. A comparação é local e indicativa: <b>não é biometria certificada nem prova de identidade</b>. Cadastre três amostras em ambiente diferente para reduzir falsos positivos; em caso de dúvida, o J.A.R.V.I.S. responde “inconclusivo” em vez de adivinhar.</p>
+    <label class="linha"><input id="c-voz-consentimento" type="checkbox"><span>Autorizo o cadastro da minha voz neste aparelho<small>Posso apagar o perfil e as amostras a qualquer momento. Sem esta autorização, nenhuma captura para cadastro é iniciada.</small></span></label>
+    <label>Nome do perfil<input id="c-voz-nome" type="text" maxlength="40" autocomplete="off" placeholder="Ex.: Minha voz"></label>
+    <p id="c-voz-frase" class="dica">Frase 1 de 3: “Jarvis, hoje eu quero testar se você reconhece a minha voz.”</p>
+    <div class="botoes"><button id="c-voz-cadastrar" type="button" class="secundario">Gravar amostra guiada (4 s)</button><button id="c-voz-verificar" type="button" class="secundario">Testar reconhecimento (4 s)</button><button id="c-voz-apagar-perfil" type="button" class="secundario perigo">Apagar perfil ativo</button></div>
+    <div class="botoes"><button id="c-voz-salvar" type="button" class="primario">Salvar perfil com 3 amostras</button><button id="c-voz-diag" type="button" class="secundario">Diagnóstico de voz</button></div>
+    <label>Perfil ativo<select id="c-voz-perfil-ativo"></select></label>
+    <label>Limiar de decisão <output id="c-voz-limiar-valor">72%</output><input id="c-voz-limiar" type="range" min="0.55" max="0.9" step="0.01" value="0.72"></label>
+    <label class="linha"><input id="c-voz-identificar" type="checkbox" checked><span>Identificar entre os perfis cadastrados<small>Com mais de um perfil, compara todos e exige margem entre o primeiro e o segundo. Uma voz parecida com duas pessoas resulta em inconclusivo.</small></span></label>
+    <div class="botoes">
+      <label class="linha"><input id="c-mic-ec" type="checkbox" checked><span>Cancelar eco</span></label>
+      <label class="linha"><input id="c-mic-ns" type="checkbox" checked><span>Suprimir ruído</span></label>
+      <label class="linha"><input id="c-mic-agc" type="checkbox" checked><span>Ganho automático</span></label>
+    </div>
+    <p id="c-voz-qualidade" class="dica" role="status" aria-live="polite">Nenhuma captura nesta sessão. O relatório mostra duração de fala, SNR, clipping e pitch.</p>
+    <p id="c-voz-perfil-status" class="dica" role="status" aria-live="polite">Nenhum perfil vocal salvo.</p>
+    <div id="c-voz-perfis" class="pessoas-lista" aria-live="polite"></div>
     <label>Quando conferir a voz<select id="c-wake-perfil-modo"><option value="sessao">Uma vez por sessão (primeiro acesso e depois de ligar o celular)</option><option value="sempre">Em toda ativação</option></select></label>
     <p class="dica">No modo por sessão, ele fala “analisando sua voz”, grava quatro segundos e libera o assistente — e não repete isso até você desligar o celular.</p>
     <label class="linha" id="c-wake-perfil-row"><input id="c-wake-perfil" type="checkbox"><span>Só obedeça à minha voz depois da ativação<small>Com perfil cadastrado (3 amostras) isto vem ligado: na ativação ele fala que está analisando a voz, grava quatro segundos e só libera o assistente se a comparação passar do limiar. Compara energia, zcr e formato do espectro, ignorando silêncio e ruído — não é autenticação e pode reprovar a sua voz de manhã ou aceitar outra pessoa parecida. Desmarque para desligar.</small></span></label>
@@ -958,6 +972,7 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="apps.js"></script>
 <!-- Núcleo de linguagem e decisão: precisa vir antes de app.js. -->
 <script src="hermes.js"></script>
+<script src="voz_motor.js"></script>
 <script src="arquivos_dev.js"></script>
 <script src="app.js"></script>
 <script src="pc.js" defer></script>

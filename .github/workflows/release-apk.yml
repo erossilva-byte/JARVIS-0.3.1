@@ -61,6 +61,7 @@ jobs:
           # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
           cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
           cp arquivos_dev.js www/
+          cp voz_motor.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
 
@@ -139,6 +140,13 @@ jobs:
             “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
+
+            **Novidades da 1.26.0:** reconhecimento de **locutor local**. O vetor experimental de 6 números deu lugar a
+            um motor com VAD, FFT/mel, pitch por HPS, formantes, prosódia e 59 dimensões; a comparação pondera espectro,
+            formantes e pitch, e responde **compatível**, **diferente** ou **inconclusivo** (nunca adivinha). O cadastro
+            é guiado em três frases, exige consentimento, recusa áudio curto/saturado/ruidoso e guarda **apenas o vetor**,
+            nunca o áudio. Até cinco perfis, limiar ajustável, identificação entre perfis com margem, medidor de nível,
+            relatório de qualidade e diagnóstico. A captura permite cancelar eco, suprimir ruído e ativar AGC.
 
             **Novidades da 1.25.0:** nova aba **Desenvolvimento de Arquivos**, separada da conversa: recebe vários
             arquivos ou um projeto `.zip`,

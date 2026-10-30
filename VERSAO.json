@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.25.0",
-  "versionCode": 10250,
+  "version": "1.26.0",
+  "versionCode": 10260,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-10-30",
-  "status": "1.25.0: central de Desenvolvimento de Arquivos — recebe texto/código/projeto .zip, analisa de verdade (JSON inválido, importações ausentes, duplicatas, segredos, conflitos e desequilíbrio), corrige preservando o original e cria PDF/DOCX/XLSX/CSV/JSON/ZIP com estrutura real, além de histórico, download individual e pacote do projeto. Comparação de voz agora responde compatível, diferente ou inconclusivo.",
+  "status": "1.26.0: reconhecimento de locutor local de verdade — VAD, pitch (HPS), formantes, embedding de 59 dimensões, três estados (compatível/diferente/inconclusivo), perfis com consentimento, limiar configurável e captura com cancelamento de eco, supressão de ruído e AGC.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.25.0 (2026-10-30). Entrou a aba própria **Desenvolvimento de Arquivos**, separada da conversa: recebe vários arquivos ou um projeto `.zip` (lido no aparelho, inclusive pastas), mostra idioma, tamanho e linhas, e analisa com regras determinísticas — JSON inválido com linha, importações relativas que não existem no conjunto, arquivos duplicados por impressão digital, segredos/chaves privadas, `eval`, `innerHTML`, HTTP sem TLS, marcadores de conflito de merge, indentação misturada no Python, HTML sem fechamento e símbolos desbalanceados. Nada do código recebido é executado. Correções seguras (formatar JSON válido, normalizar CRLF/LF, remover espaços supérfluos e BOM) alteram uma cópia e mantêm o original na sessão; o histórico local registra as 30 últimas operações. A criação gera formatos reais: PDF com objetos/xref, DOCX e XLSX como pacotes OOXML válidos, CSV a partir de lista JSON, ZIP com CRC32 e estrutura de pastas; instruções como “crie um projeto Python chamado X” montam um projeto inicial com README, código executável e requirements. Exportação individual e pacote `.zip`, com confirmação do que foi gerado. A comparação de voz passou a classificar em **compatível**, **diferente** ou **inconclusivo**, com margem em torno do limiar configurável, deixando explícito que timbre não é prova de identidade. O núcleo (HUD, plasma e órbita 3D) e a animação da 1.23.0 continuam intactos. O cadastro de pessoas, a memória, a visão, os provedores remotos, a IA local Gemma 3 (MediaPipe 0.10.24) e o Windows continuam intactos. Testes: suíte estática (incluindo auditoria externa dos formatos com zipfile/XML/csv do Python) e compilação do APK neste ambiente; teste em aparelho físico, microfone real e abertura dos arquivos no Office/Adobe continuam pendentes de um dispositivo.",
+  "notas": "Revisão 1.26.0 (2026-10-30). O reconhecimento de locutor saiu do vetor experimental de 6 números para um motor local (`voz_motor.js`): reamostragem para 16 kHz, pré-ênfase, quadros de 25 ms, FFT de 512 pontos, banco de 24 filtros mel, média e desvio por banda, pitch por HPS, formantes pelos picos do espectro médio, ZCR, centroide, planicidade e estatísticas de fala (duração, segmentos, pausas). O vetor tem 59 dimensões e a comparação pondera espectro, formantes, pitch, centroide e ZCR — o cosseno espectral sozinho aprovava vozes diferentes. O VAD usa piso de ruído e pico com histerese; a qualidade recusa áudio curto, saturado ou com SNR baixo. O cadastro é guiado em três frases, exige consentimento explícito, média os vetores e guarda apenas o embedding e metadados — nunca o áudio. É possível manter até cinco perfis, escolher o ativo, atualizar, apagar e testar a identificação entre eles, com margem entre o primeiro e o segundo candidato; empate ou proximidade do limiar resulta em inconclusivo. A captura usa getUserMedia com echoCancellation, noiseSuppression e autoGainControl configuráveis, medidor de nível em tempo real, relatório de SNR/clipping/pitch/formantes e diagnóstico do motor. Um indício fraco de replay (SNR altíssimo e pitch sem variação) é mostrado como aviso, nunca como bloqueio. O perfil antigo de 6 números fica preservado como backup, mas precisa ser recadastrado. A ativação por voz, os provedores remotos, a memória, as pessoas, a IA local Gemma 3 e o Windows continuam intactos; o núcleo (HUD, plasma e órbita 3D) e a animação seguem iguais. Testes: 24 verificações com vozes sintéticas (mesma voz, outra voz, ruído, clipping, áudio curto, identificação e ambiguidade) e contrato da interface; a validação com microfone real e a calibração final dos limiares dependem de gravações no aparelho, que este ambiente não possui.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,12 +16,12 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "cdb1ef30e8e897427d40f985b95354d6ccab72dee5c39c757cea961b9e1011e4",
-    "bytes": 81046317,
-    "arquivo": "jarvis-nova-1.25.0-10250.apk",
+    "sha256": "9578be013c38c2727bd36d1ab568e7b7030f832ec956dd01f1b09dc742ce05e7",
+    "bytes": 81056829,
+    "arquivo": "jarvis-nova-1.26.0-10260.apk",
     "data": "2026-10-30",
     "ambiente": "compilação local (JDK 21 + AGP 8.7.3 + Gradle 8.9 + Android SDK 35; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.25.0 (81 MB) com MediaPipe tasks-genai 0.10.24, arquivos_dev.js e o painel de Desenvolvimento de Arquivos. Suíte com 1443 verificações aprovada antes do empacotamento, incluindo auditoria externa de PDF/DOCX/XLSX/ZIP. Sem aparelho físico ou microfone neste ambiente: recebimento real, download no Android, abertura no Office/Adobe e comparação de voz precisam ser confirmados no aparelho."
+    "observacao": "APK 1.26.0 com voz_motor.js, MediaPipe 0.10.24 e o painel de Desenvolvimento de Arquivos. Suíte com 1513 verificações aprovada. Sem microfone nem aparelho físico neste ambiente: a captura real, a calibração do limiar e a comparação entre pessoas precisam ser testadas no Poco X7."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

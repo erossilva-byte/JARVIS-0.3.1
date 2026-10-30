@@ -35,7 +35,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.25.0';
+const VERSAO_APP = '1.26.0';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -5280,106 +5280,277 @@ function gerenciarVariantesWake() {
     '. Tolerância atual: ' + cfg.tolerancia + ' letra(s) trocada(s) em palavras começando com “j”.';
 }
 gerenciarVariantesWake();
-// Perfil acústico experimental: extrai apenas estatísticas do sinal, nunca salva o áudio.
-// Isto é uma comparação rudimentar de timbre, não reconhecimento biométrico seguro.
+/* Reconhecimento de locutor: motor local (voz_motor.js), sem guardar áudio.
+ * O perfil antigo de 6 números (perfil_acustico_v2) fica intacto como backup, mas
+ * não é comparável com o vetor novo: é preciso cadastrar de novo.
+ */
 const VOZ_PERFIL_KEY = 'perfil_acustico_v2';
-function lerPerfilAcustico() { try { const v = JSON.parse(store.get(VOZ_PERFIL_KEY, 'null')); return v && Array.isArray(v.v) && v.v.length === ESCALAS_VOZ.length ? v : null; } catch (_) { return null; } }
-function statusPerfilAcustico(texto) { const el = document.getElementById('c-voz-perfil-status'); if (el) el.textContent = texto; }
-// Extrai 6 características do sinal usando apenas os quadros com fala.
-// Silêncio e ruído de fundo ficam de fora — antes disso, qualquer som batia perto de 100%.
+const VOZ_PERFIS_KEY = 'voz_perfis_v3';
+const VOZ_PENDENTE_KEY = 'voz_pendente_v3';
+const VOZ_FRASES = [
+  'Jarvis, hoje eu quero testar se você reconhece a minha voz.',
+  'Amanhã eu preciso organizar meus arquivos e lembrar dos compromissos.',
+  'Esta é a terceira amostra, falada com calma e distância constante do microfone.'
+];
+let vozPendentes = [];
+let vozUltimaAnalise = null;
+function vozMotor() { return (typeof VozMotor !== 'undefined') ? VozMotor : null; }
+function vozLimiar() { return Math.max(0.5, Math.min(0.95, Number(store.get('voz_limiar', '0.72')) || 0.72)); }
+function vozPerfis() {
+  try {
+    const lista = JSON.parse(store.get(VOZ_PERFIS_KEY, '[]'));
+    return Array.isArray(lista) ? lista.filter((p) => p && Array.isArray(p.v) && p.v.length) : [];
+  } catch (_) { return []; }
+}
+function vozSalvarLista(lista) { store.set(VOZ_PERFIS_KEY, JSON.stringify(lista.slice(0, 5))); }
+function vozAtivoId() {
+  const lista = vozPerfis(), id = store.get('voz_perfil_ativo', '');
+  return lista.some((p) => p.id === id) ? id : (lista[0] ? lista[0].id : '');
+}
+function lerPerfilAcustico() {
+  const p = vozPerfis().find((x) => x.id === vozAtivoId());
+  return p ? { v: p.v, samples: p.samples || 1, updated: p.updated, qualidade: p.qualidade, nome: p.nome } : null;
+}
+function similaridadeVoz(a, b) { const m = vozMotor(); return m ? m.similaridade(a, b) : 0; }
 function vetorAcustico(samples, sampleRate) {
-  const n = samples.length;
-  if (n < sampleRate) throw new Error('Áudio muito curto. Fale por pelo menos 2 segundos.');
-  // Reduz para ~8 kHz: suficiente para o timbre e muito mais leve para o celular.
-  const passo = Math.max(1, Math.round(sampleRate / 8000));
-  const sr = sampleRate / passo;
-  const x = [];
-  for (let i = 0; i < n; i += passo) x.push(samples[i]);
-  const janela = Math.round(sr * 0.04), salto = Math.round(janela / 2);
-  const quadros = [];
-  let somaGlobal = 0, contagem = 0;
-  for (let i = 0; i + janela <= x.length; i += salto) {
-    let soma = 0, cruz = 0;
-    for (let j = 0; j < janela; j++) {
-      const v = x[i + j];
-      soma += v * v;
-      if (j && ((v >= 0) !== (x[i + j - 1] >= 0))) cruz++;
-    }
-    const rms = Math.sqrt(soma / janela);
-    quadros.push({ inicio: i, rms, zcr: cruz / janela });
-    somaGlobal += rms; contagem++;
+  const m = vozMotor();
+  if (!m) throw new Error('O motor de voz não carregou.');
+  return m.analisar(samples, sampleRate).v;
+}
+function statusPerfilAcustico(texto) { const el = document.getElementById('c-voz-perfil-status'); if (el) el.textContent = texto; }
+function vozQualidadeUI(texto) { const el = document.getElementById('c-voz-qualidade'); if (el) el.textContent = texto; }
+function vozMicConfig() {
+  return {
+    echoCancellation: store.get('mic_ec', '1') === '1',
+    noiseSuppression: store.get('mic_ns', '1') === '1',
+    autoGainControl: store.get('mic_agc', '1') === '1'
+  };
+}
+function vozNivel(nivel) {
+  const val = document.getElementById('c-audio-value'), fill = document.getElementById('c-audio-meter-fill');
+  if (val) val.textContent = nivel + '%';
+  if (fill) fill.style.width = Math.max(2, nivel) + '%';
+  if (fill && fill.parentElement) fill.parentElement.setAttribute('aria-valuenow', String(nivel));
+}
+async function capturarAmostraVoz(ms) {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !AC) {
+    throw new Error('O microfone não está disponível neste WebView. Verifique a permissão do Android.');
   }
-  if (!contagem) throw new Error('Não consegui analisar o áudio. Tente de novo.');
-  const piso = Math.max(0.004, (somaGlobal / contagem) * 0.75);
-  const fala = quadros.filter((q) => q.rms >= piso);
-  const duracaoFala = fala.length * (salto / sr);
-  if (duracaoFala < 1.2) throw new Error('Quase não captei fala (só ' + duracaoFala.toFixed(1) + ' s de voz). Fale mais alto e mais perto do microfone por uns 4 segundos.');
-  // Até 16 quadros de fala, espalhados por toda a gravação, para não pesar no processamento.
-  const N = 256, maxQuadros = 16;
-  const escolhidos = [];
-  for (let i = 0; i < Math.min(maxQuadros, fala.length); i++) {
-    escolhidos.push(fala[Math.floor(i * (fala.length - 1) / Math.max(1, Math.min(maxQuadros, fala.length) - 1))]);
+  const cfg = vozMicConfig();
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: cfg.echoCancellation, noiseSuppression: cfg.noiseSuppression, autoGainControl: cfg.autoGainControl, channelCount: 1 },
+    video: false
+  });
+  let ctx, source, processor, silent;
+  const pedacos = [];
+  try {
+    ctx = new AC();
+    if (ctx.state === 'suspended') await ctx.resume();
+    source = ctx.createMediaStreamSource(stream);
+    processor = ctx.createScriptProcessor(4096, 1, 1);
+    silent = ctx.createGain(); silent.gain.value = 0;
+    processor.onaudioprocess = (e) => {
+      const a = e.inputBuffer.getChannelData(0);
+      pedacos.push(new Float32Array(a));
+      let soma = 0;
+      for (let i = 0; i < a.length; i++) soma += a[i] * a[i];
+      vozNivel(Math.min(100, Math.round(Math.sqrt(soma / a.length) * 320)));
+    };
+    source.connect(processor); processor.connect(silent); silent.connect(ctx.destination);
+    await new Promise((r) => setTimeout(r, ms || 4000));
+    const total = pedacos.reduce((n, a) => n + a.length, 0);
+    const samples = new Float32Array(total);
+    let off = 0;
+    pedacos.forEach((a) => { samples.set(a, off); off += a.length; });
+    if (!total) throw new Error('Não recebi áudio do microfone.');
+    return { samples: samples, sampleRate: ctx.sampleRate };
+  } finally {
+    try { if (processor) processor.disconnect(); if (source) source.disconnect(); if (silent) silent.disconnect(); if (ctx) await ctx.close(); } catch (_) {}
+    stream.getTracks().forEach((t) => t.stop());
+    vozNivel(0);
   }
-  let pRms = 0, pZcr = 0, baixo = 0, medio = 0, alto = 0, energia = 0, centro = 0, usados = 0;
-  for (const q of escolhidos) {
-    const inicio = Math.min(q.inicio, Math.max(0, x.length - N));
-    pRms += q.rms; pZcr += q.zcr; usados++;
-    for (let k = 1; k < N / 2; k++) {
-      let re = 0, im = 0;
-      for (let j = 0; j < N; j++) {
-        const jan = 0.5 - 0.5 * Math.cos(2 * Math.PI * j / (N - 1));
-        const ang = 2 * Math.PI * k * j / N;
-        re += x[inicio + j] * jan * Math.cos(ang);
-        im -= x[inicio + j] * jan * Math.sin(ang);
-      }
-      const pot = re * re + im * im, hz = k * sr / N;
-      energia += pot; centro += hz * pot;
-      if (hz < 500) baixo += pot; else if (hz < 1800) medio += pot; else alto += pot;
-    }
-  }
-  const total = energia + 1e-12;
-  return [
-    Math.log10(pRms / Math.max(1, usados) + 1e-6),
-    pZcr / Math.max(1, usados),
-    Math.log10(centro / total + 1),
-    baixo / total,
-    medio / total,
-    alto / total
-  ];
 }
 async function capturarVetorVoz() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.AudioContext) throw new Error('O acesso ao microfone não está disponível neste WebView. Verifique a permissão do Android.');
-  const stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
-  let ctx, source, processor, silentGain, chunks=[];
-  try {
-    ctx = new AudioContext(); source=ctx.createMediaStreamSource(stream); processor=ctx.createScriptProcessor(4096,1,1); silentGain=ctx.createGain(); silentGain.gain.value=0;
-    processor.onaudioprocess=(e)=>{const a=e.inputBuffer.getChannelData(0); chunks.push(new Float32Array(a));};
-    source.connect(processor); processor.connect(silentGain); silentGain.connect(ctx.destination);
-    statusPerfilAcustico('Gravando por 4 segundos… fale naturalmente a uma distância constante.');
-    await new Promise(resolve=>setTimeout(resolve,4000));
-    processor.disconnect(); source.disconnect();
-    const length=chunks.reduce((a,b)=>a+b.length,0), samples=new Float32Array(length); let offset=0; chunks.forEach(a=>{samples.set(a,offset);offset+=a.length;});
-    return vetorAcustico(samples,ctx.sampleRate);
-  } finally { try{if(processor)processor.disconnect();if(source)source.disconnect();if(silentGain)silentGain.disconnect();if(ctx)await ctx.close();}catch(_){} stream.getTracks().forEach(t=>t.stop()); }
+  const a = await capturarAmostraVoz(4000);
+  const m = vozMotor();
+  if (!m) throw new Error('O motor de voz não carregou.');
+  vozUltimaAnalise = m.analisar(a.samples, a.sampleRate);
+  return vozUltimaAnalise.v;
 }
-// Distância entre vetores com escalas fixas por característica; 1 = idêntico, 0 = nada parecido.
-const ESCALAS_VOZ = [0.45, 0.05, 0.18, 0.08, 0.08, 0.08];
-function similaridadeVoz(a, b) {
-  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || !a.length) return 0;
-  let d = 0;
-  for (let i = 0; i < a.length; i++) {
-    const dif = (Number(a[i]) - Number(b[i])) / ESCALAS_VOZ[i];
-    d += dif * dif;
+function vozDescreverQualidade(r) {
+  if (!r) return '';
+  const q = r.qualidade, mt = r.metricas;
+  return 'Fala ' + q.falaSeg + ' s · SNR ' + q.snrDb + ' dB · clipping ' + q.clipping + '% · pitch ' + mt.pitchHz + ' Hz · formantes ' + mt.formantes.join('/') + ' Hz' + (q.problemas.length ? ' · ' + q.problemas.join(' ') : '');
+}
+function vozRenderPerfis() {
+  const sel = document.getElementById('c-voz-perfil-ativo');
+  const box = document.getElementById('c-voz-perfis');
+  const lista = vozPerfis();
+  if (sel) {
+    sel.textContent = '';
+    if (!lista.length) { const o = document.createElement('option'); o.value = ''; o.textContent = 'Nenhum perfil salvo'; sel.appendChild(o); }
+    lista.forEach((p) => {
+      const o = document.createElement('option'); o.value = p.id; o.textContent = p.nome + ' · ' + (p.samples || 1) + ' amostra(s)'; sel.appendChild(o);
+    });
+    sel.value = vozAtivoId();
   }
-  d = Math.sqrt(d / a.length);
-  return Math.max(0, Math.min(1, Math.exp(-(d * d) / 2)));
+  if (box) {
+    box.textContent = '';
+    lista.forEach((p) => {
+      const item = document.createElement('div'); item.className = 'dev-item';
+      const info = document.createElement('div');
+      const b = document.createElement('b'); b.textContent = p.nome;
+      const meta = document.createElement('small'); meta.textContent = (p.samples || 1) + ' amostra(s) · ' + (p.qualidade ? 'SNR ' + p.qualidade.snrDb + ' dB' : 'qualidade não registrada') + ' · ' + (p.updated ? new Date(p.updated).toLocaleString('pt-BR') : '');
+      info.append(b, meta);
+      const acoes = document.createElement('div'); acoes.className = 'dev-acoes';
+      const usar = document.createElement('button'); usar.type = 'button'; usar.className = 'secundario'; usar.textContent = 'Usar';
+      usar.onclick = () => { store.set('voz_perfil_ativo', p.id); atualizarStatusPerfilVoz(); };
+      const apagar = document.createElement('button'); apagar.type = 'button'; apagar.className = 'secundario perigo'; apagar.textContent = 'Apagar';
+      apagar.onclick = () => {
+        if (!confirm('Apagar o perfil vocal "' + p.nome + '" deste aparelho? O áudio nunca foi guardado.')) return;
+        vozSalvarLista(vozPerfis().filter((x) => x.id !== p.id));
+        atualizarStatusPerfilVoz();
+      };
+      acoes.append(usar, apagar); item.append(info, acoes); box.appendChild(item);
+    });
+  }
 }
-const btnVozCadastrar=document.getElementById('c-voz-cadastrar'), btnVozVerificar=document.getElementById('c-voz-verificar'), btnVozApagar=document.getElementById('c-voz-apagar-perfil');
-function atualizarStatusPerfilVoz(){const p=lerPerfilAcustico();statusPerfilAcustico(p?`Perfil experimental salvo com ${p.samples} amostra(s). Comparação indicativa, não autenticação.`:'Nenhuma amostra cadastrada. Cadastre três amostras em ambiente silencioso.');}
-if(btnVozCadastrar) btnVozCadastrar.onclick=async()=>{btnVozCadastrar.disabled=true;try{const v=await capturarVetorVoz();const p=lerPerfilAcustico();const samples=p&&p.samples<3?p.samples+1:1;let vec=v;if(p&&p.samples<3)vec=v.map((x,i)=>(p.v[i]*p.samples+x)/(p.samples+1));store.set(VOZ_PERFIL_KEY,JSON.stringify({v:vec,samples,updated:new Date().toISOString()}));atualizarStatusPerfilVoz();registrar('voz','amostra acústica local cadastrada');}catch(e){statusPerfilAcustico(e.message||'Não foi possível capturar a amostra.');}finally{btnVozCadastrar.disabled=false;}};
-if(btnVozVerificar) btnVozVerificar.onclick=async()=>{btnVozVerificar.disabled=true;try{const p=lerPerfilAcustico();if(!p||p.samples<3)throw new Error('Cadastre três amostras antes de comparar.');const v=await capturarVetorVoz();const score=similaridadeVoz(p.v,v);const limiar=Number(store.get('wake_perfil_limiar','0.6'));const margem=0.08;const pct=Math.round(Math.max(0,score)*100);let veredito='INCONCLUSIVO — amostra ambígua; repita a captura em local silencioso.';if(score>=limiar+margem)veredito='COMPATÍVEL com a referência cadastrada (indicativo, não é prova de identidade).';else if(score<=limiar-margem)veredito='DIFERENTE da referência cadastrada (pode ser outra pessoa ou ruído).';statusPerfilAcustico(`${veredito} Similaridade ${pct}%, limiar ${Math.round(limiar*100)}%. Comparação grosseira de timbre: não confirma identidade e pode errar.`);registrar('voz','comparação acústica experimental executada');}catch(e){statusPerfilAcustico(e.message||'Não foi possível comparar a voz.');}finally{btnVozVerificar.disabled=false;}};
-if(btnVozApagar) btnVozApagar.onclick=()=>{if(!confirm('Apagar o perfil acústico salvo neste aparelho?'))return;store.set(VOZ_PERFIL_KEY,'');store.set('wake_perfil_sessao','');atualizarStatusPerfilVoz();};
-if(document.getElementById('c-voz-perfil-status')) atualizarStatusPerfilVoz();
+function atualizarStatusPerfilVoz() {
+  const p = lerPerfilAcustico();
+  if (document.getElementById('c-voz-perfil-ativo')) vozRenderPerfis();
+  const fr = document.getElementById('c-voz-frase');
+  if (fr) fr.textContent = 'Amostra ' + (vozPendentes.length + 1) + ' de 3: “' + VOZ_FRASES[Math.min(vozPendentes.length, 2)] + '”';
+  statusPerfilAcustico(p
+    ? 'Perfil ativo: ' + (p.nome || 'voz') + ' com ' + (p.samples || 1) + ' amostra(s). Comparação local indicativa; não é prova de identidade.'
+    : 'Nenhum perfil vocal salvo. Marque o consentimento e grave três amostras guiadas.');
+}
+function vozAplicarConfigUI() {
+  const lim = document.getElementById('c-voz-limiar');
+  if (lim) { lim.value = String(vozLimiar()); document.getElementById('c-voz-limiar-valor').textContent = Math.round(vozLimiar() * 100) + '%'; }
+  const ident = document.getElementById('c-voz-identificar');
+  if (ident) ident.checked = store.get('voz_identificar', '1') === '1';
+  [['c-mic-ec', 'mic_ec'], ['c-mic-ns', 'mic_ns'], ['c-mic-agc', 'mic_agc']].forEach(([id, chave]) => {
+    const el = document.getElementById(id);
+    if (el) el.checked = store.get(chave, '1') === '1';
+  });
+}
+const btnVozCadastrar = document.getElementById('c-voz-cadastrar');
+const btnVozVerificar = document.getElementById('c-voz-verificar');
+const btnVozApagar = document.getElementById('c-voz-apagar-perfil');
+const btnVozSalvar = document.getElementById('c-voz-salvar');
+const btnVozDiag = document.getElementById('c-voz-diag');
+if (btnVozCadastrar) btnVozCadastrar.onclick = async () => {
+  const consent = document.getElementById('c-voz-consentimento');
+  if (!consent || !consent.checked) { statusPerfilAcustico('Marque o consentimento antes de gravar sua voz.'); return; }
+  btnVozCadastrar.disabled = true;
+  try {
+    statusPerfilAcustico('Gravando amostra ' + (vozPendentes.length + 1) + ' de 3 por 4 segundos…');
+    const a = await capturarAmostraVoz(4000);
+    const m = vozMotor();
+    if (!m) throw new Error('O motor de voz não carregou.');
+    const r = m.analisar(a.samples, a.sampleRate);
+    vozUltimaAnalise = r;
+    vozQualidadeUI(vozDescreverQualidade(r));
+    if (!r.qualidade.ok) {
+      statusPerfilAcustico('Amostra recusada: ' + r.qualidade.problemas.join(' '));
+      return;
+    }
+    vozPendentes.push(r);
+    statusPerfilAcustico('Amostra ' + vozPendentes.length + ' de 3 aceita. ' + (vozPendentes.length < 3 ? 'Leia a próxima frase.' : 'Agora salve o perfil.'));
+    registrar('voz', 'amostra de locutor capturada (qualidade ok)');
+    atualizarStatusPerfilVoz();
+  } catch (e) {
+    statusPerfilAcustico(e.message || 'Não foi possível capturar a amostra.');
+  } finally { btnVozCadastrar.disabled = false; }
+};
+if (btnVozSalvar) btnVozSalvar.onclick = () => {
+  try {
+    if (vozPendentes.length < 3) throw new Error('Grave três amostras antes de salvar (tenho ' + vozPendentes.length + ').');
+    const nome = (document.getElementById('c-voz-nome').value || '').trim() || 'Minha voz';
+    const dim = vozPendentes[0].v.length;
+    const media = new Array(dim).fill(0);
+    vozPendentes.forEach((p) => p.v.forEach((x, i) => { media[i] += x / vozPendentes.length; }));
+    const melhor = vozPendentes.slice().sort((a, b) => b.qualidade.snrDb - a.qualidade.snrDb)[0];
+    const perfil = {
+      id: 'voz-' + Date.now().toString(36), nome: nome, consentimento: true,
+      v: media.map((x) => +x.toFixed(6)), samples: vozPendentes.length,
+      qualidade: { snrDb: melhor.qualidade.snrDb, falaSeg: melhor.qualidade.falaSeg, pitchHz: melhor.metricas.pitchHz },
+      updated: new Date().toISOString()
+    };
+    const lista = vozPerfis().filter((p) => p.nome !== nome);
+    lista.unshift(perfil);
+    vozSalvarLista(lista);
+    store.set('voz_perfil_ativo', perfil.id);
+    vozPendentes = [];
+    atualizarStatusPerfilVoz();
+    vozQualidadeUI('Perfil salvo só com o vetor de características. Nenhum áudio foi armazenado.');
+    registrar('voz', 'perfil de locutor salvo: ' + nome);
+  } catch (e) { statusPerfilAcustico(e.message || 'Não foi possível salvar o perfil.'); }
+};
+if (btnVozVerificar) btnVozVerificar.onclick = async () => {
+  btnVozVerificar.disabled = true;
+  try {
+    const perfis = vozPerfis();
+    if (!perfis.length) throw new Error('Salve um perfil antes de testar o reconhecimento.');
+    statusPerfilAcustico('Gravando 4 segundos para comparar com o perfil…');
+    const a = await capturarAmostraVoz(4000);
+    const m = vozMotor();
+    if (!m) throw new Error('O motor de voz não carregou.');
+    const r = m.analisar(a.samples, a.sampleRate);
+    vozUltimaAnalise = r;
+    vozQualidadeUI(vozDescreverQualidade(r));
+    const limiar = vozLimiar();
+    const entrePerfis = document.getElementById('c-voz-identificar') && document.getElementById('c-voz-identificar').checked;
+    let res;
+    if (entrePerfis) res = m.identificar(perfis, r, { limiar: limiar, margem: 0.06 });
+    else res = m.comparar(perfis.find((p) => p.id === vozAtivoId()) || perfis[0], r, { limiar: limiar, margem: 0.06 });
+    const pct = Math.round((res.similaridade || 0) * 100);
+    let texto;
+    if (res.estado === 'compativel') texto = 'COMPATÍVEL com a referência cadastrada' + (res.nome ? ' (' + res.nome + ')' : '') + ' — similaridade ' + pct + '%, limiar ' + Math.round(limiar * 100) + '%. Indicação local, não é prova de identidade.';
+    else if (res.estado === 'diferente') texto = 'DIFERENTE da referência cadastrada — similaridade ' + pct + '%, limiar ' + Math.round(limiar * 100) + '%. Pode ser outra pessoa, ruído ou mudança de voz.';
+    else texto = 'INCONCLUSIVO — similaridade ' + pct + '% próxima do limiar de ' + Math.round(limiar * 100) + '%. Repita em local silencioso. ' + (res.motivos || []).join(' ');
+    const replay = m.pistaReplay(r);
+    statusPerfilAcustico(texto + (replay.suspeita ? ' ' + replay.motivo : ''));
+    registrar('voz', 'teste de locutor: ' + res.estado);
+  } catch (e) { statusPerfilAcustico(e.message || 'Não foi possível comparar a voz.'); }
+  finally { btnVozVerificar.disabled = false; }
+};
+if (btnVozApagar) btnVozApagar.onclick = () => {
+  const p = lerPerfilAcustico();
+  if (!p) { statusPerfilAcustico('Nenhum perfil para apagar.'); return; }
+  if (!confirm('Apagar o perfil "' + (p.nome || 'voz') + '" e o vetor salvo? O áudio nunca foi guardado.')) return;
+  vozSalvarLista(vozPerfis().filter((x) => x.id !== vozAtivoId()));
+  vozPendentes = [];
+  atualizarStatusPerfilVoz();
+};
+if (btnVozDiag) btnVozDiag.onclick = () => {
+  const m = vozMotor();
+  const cfg = vozMicConfig();
+  const p = lerPerfilAcustico();
+  const q = vozUltimaAnalise ? vozUltimaAnalise.qualidade : null;
+  statusPerfilAcustico('Diagnóstico: motor ' + (m ? 'carregado (v' + m.VERSAO + ', ' + m.DIM + ' dimensões)' : 'AUSENTE') +
+    ' · perfis ' + vozPerfis().length + ' · limiar ' + Math.round(vozLimiar() * 100) + '%' +
+    ' · microfone ' + (navigator.mediaDevices ? 'disponível' : 'indisponível') +
+    ' · eco ' + (cfg.echoCancellation ? 'sim' : 'não') + ' · ruído ' + (cfg.noiseSuppression ? 'sim' : 'não') + ' · AGC ' + (cfg.autoGainControl ? 'sim' : 'não') +
+    (q ? ' · última captura: fala ' + q.falaSeg + ' s, SNR ' + q.snrDb + ' dB' : ' · nenhuma captura nesta sessão') +
+    (p ? ' · perfil ativo com ' + p.samples + ' amostra(s)' : ' · sem perfil'));
+};
+const vozLimiarInput = document.getElementById('c-voz-limiar');
+if (vozLimiarInput) vozLimiarInput.oninput = () => {
+  store.set('voz_limiar', vozLimiarInput.value);
+  const out = document.getElementById('c-voz-limiar-valor'); if (out) out.textContent = Math.round(Number(vozLimiarInput.value) * 100) + '%';
+};
+const vozIdentificarInput = document.getElementById('c-voz-identificar');
+if (vozIdentificarInput) vozIdentificarInput.onchange = () => store.set('voz_identificar', vozIdentificarInput.checked ? '1' : '0');
+[['c-mic-ec', 'mic_ec'], ['c-mic-ns', 'mic_ns'], ['c-mic-agc', 'mic_agc']].forEach(([id, chave]) => {
+  const el = document.getElementById(id);
+  if (el) el.onchange = () => store.set(chave, el.checked ? '1' : '0');
+});
+const vozPerfilSel = document.getElementById('c-voz-perfil-ativo');
+if (vozPerfilSel) vozPerfilSel.onchange = () => { store.set('voz_perfil_ativo', vozPerfilSel.value); atualizarStatusPerfilVoz(); };
+vozAplicarConfigUI();
+if (document.getElementById('c-voz-perfil-status')) atualizarStatusPerfilVoz();
 
 /* ---------- Voz neural no aparelho (sherpa-onnx) ---------- */
 // O catálogo e a síntese vivem no plugin nativo JarvisVoz. Aqui só desenhamos a lista,

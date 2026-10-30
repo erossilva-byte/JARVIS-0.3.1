@@ -61,7 +61,7 @@ check('análise não executa código recebido', 'eval(' not in mod.split('functi
 check('segredo, conflito e importação checados', all(x in mod for x in ["id: 'segredo'", "id: 'conflito'", 'importacao']))
 
 check('resultado de voz em três estados', all(x in app for x in ['INCONCLUSIVO', 'COMPATÍVEL com a referência', 'DIFERENTE da referência']))
-check('limiar de voz é configurável', "store.get('wake_perfil_limiar'" in app and 'margem=0.08' in app)
+check('limiar de voz é configurável', "store.get('voz_limiar'" in app and "INCONCLUSIVO" in app)
 
 check('estilo do painel responsivo', '.painel-dev' in css and '@media (max-width:520px)' in css)
 check('painel rola na vertical', '#painel-dev{overflow-y:auto' in css)
