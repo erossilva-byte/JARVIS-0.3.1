@@ -2,6 +2,7 @@ package com.jarvis.nova;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.OpenableColumns;
@@ -23,16 +24,22 @@ import java.io.InputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Experimental on-device text inference. Model files are imported by the user and remain app-private. */
+/** Inferência de texto no aparelho com MediaPipe LLM Inference (modelos .task compatíveis). */
 @CapacitorPlugin(name = "JarvisLocalAI")
 public class JarvisLocalAIPlugin extends Plugin {
     private static final String TAG = "JarvisLocalAI";
     private static final long MAX_MODEL_BYTES = 6L * 1024L * 1024L * 1024L;
+    /** Contexto do .task q4_ekv2048: 2048 tokens. Prompt acima disso estoura o KV cache. */
+    private static final int MAX_PROMPT_CHARS = 6000;
+    private static final String PREF = "jarvis_local_ai";
+
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private LlmInference engine;
     private final Object engineLock = new Object();
-    /** Uma sessão de inferência por vez: duas chamadas concorrentes criavam dois interpreters e o crash nativo. */
+    /** Uma geração por vez: dois interpreters simultâneos derrubavam o processo. */
     private volatile boolean gerando = false;
+    /** Durante onDestroy o worker pode estar gerando; fechar a engine agora seria crash nativo. */
+    private volatile boolean desligando = false;
 
     private File modelFile() {
         File dir = new File(getContext().getFilesDir(), "jarvis-models");
@@ -40,20 +47,44 @@ public class JarvisLocalAIPlugin extends Plugin {
         return new File(dir, "jarvis-model.task");
     }
 
+    private SharedPreferences prefs() {
+        return getContext().getSharedPreferences(PREF, Context.MODE_PRIVATE);
+    }
+
+    private void responder(PluginCall call, JSObject out) {
+        android.app.Activity a = getActivity();
+        if (a != null) a.runOnUiThread(() -> call.resolve(out));
+        else call.resolve(out);
+    }
+
+    private void recusar(PluginCall call, String msg) {
+        android.app.Activity a = getActivity();
+        if (a != null) a.runOnUiThread(() -> call.reject(msg));
+        else call.reject(msg);
+    }
+
     @PluginMethod
     public void status(PluginCall call) {
         File f = modelFile();
-        JSObject out = new JSObject();
         boolean existe = f.isFile() && f.length() > 0;
         String motivo = existe ? validarModelo(f) : "Nenhum modelo importado.";
+        boolean valida = existe && motivo.isEmpty();
+        JSObject out = new JSObject();
         out.put("supported", true);
-        out.put("installed", existe && motivo.isEmpty());
+        out.put("installed", valida);
+        out.put("valida", valida);
         out.put("bytes", f.isFile() ? f.length() : 0);
-        out.put("valida", existe && motivo.isEmpty());
         out.put("motivo", motivo);
-        out.put("runtime", "MediaPipe LLM Inference experimental");
-        out.put("note", "Importe um modelo .task compatível. O arquivo permanece no armazenamento privado do app.");
-        call.resolve(out);
+        // "pronto" só depois de uma geração real bem-sucedida; importar não prova nada.
+        out.put("testado", valida && prefs().getBoolean("testado", false));
+        out.put("pronto", valida && prefs().getBoolean("testado", false));
+        out.put("carregado", engine != null);
+        out.put("modelo", prefs().getString("modelo", ""));
+        out.put("api", "tasks-genai 0.10.24");
+        out.put("contexto", "2048 tokens (q4_ekv2048)");
+        out.put("runtime", "MediaPipe LLM Inference · CPU");
+        out.put("note", "Importe um .task compatível (Gemma 3 1B IT funciona a partir do runtime 0.10.22). O arquivo fica no armazenamento privado do app.");
+        responder(call, out);
     }
 
     @PluginMethod
@@ -69,7 +100,7 @@ public class JarvisLocalAIPlugin extends Plugin {
     private void modelSelected(PluginCall call, ActivityResult result) {
         if (call == null) return;
         if (result == null || result.getResultCode() != android.app.Activity.RESULT_OK || result.getData() == null || result.getData().getData() == null) {
-            call.reject("Importação de modelo cancelada.");
+            recusar(call, "Importação de modelo cancelada.");
             return;
         }
         Uri uri = result.getData().getData();
@@ -97,7 +128,6 @@ public class JarvisLocalAIPlugin extends Plugin {
                     out.getFD().sync();
                 }
                 if (total < 1024 * 1024) throw new Exception("O arquivo é pequeno demais para ser um modelo de linguagem válido.");
-                // Troca atômica com rollback: um erro de rename não deve apagar o modelo funcional anterior.
                 synchronized (engineLock) { closeEngineLocked(); }
                 File backup = new File(target.getParentFile(), "jarvis-model.task.bak");
                 if (backup.exists() && !backup.delete()) throw new Exception("Não foi possível limpar o backup antigo do modelo.");
@@ -108,12 +138,14 @@ public class JarvisLocalAIPlugin extends Plugin {
                     throw new Exception("Não foi possível finalizar a importação; o modelo anterior foi preservado quando possível.");
                 }
                 if (backup.exists()) backup.delete();
+                prefs().edit().putString("modelo", name).putBoolean("testado", false).apply();
                 JSObject out = new JSObject();
                 out.put("installed", true); out.put("bytes", total); out.put("name", name);
-                call.resolve(out);
+                out.put("validado", true);
+                responder(call, out);
             } catch (Exception e) {
                 if (temp.exists()) temp.delete();
-                call.reject("Falha ao importar modelo: " + (e.getMessage() == null ? "erro desconhecido" : e.getMessage()));
+                recusar(call, "Falha ao importar modelo: " + (e.getMessage() == null ? "erro desconhecido" : e.getMessage()));
             }
         });
     }
@@ -134,12 +166,16 @@ public class JarvisLocalAIPlugin extends Plugin {
     @PluginMethod
     public void generate(PluginCall call) {
         String prompt = call.getString("prompt", "").trim();
-        if (prompt.isEmpty()) { call.reject("O prompt está vazio."); return; }
-        if (prompt.length() > 14000) prompt = prompt.substring(0, 14000);
+        if (prompt.isEmpty()) { recusar(call, "O prompt está vazio."); return; }
+        if (prompt.length() > MAX_PROMPT_CHARS) {
+            recusar(call, "O prompt tem " + prompt.length() + " caracteres e passaria do contexto de 2048 tokens deste modelo. Envie um pedido mais curto (até " + MAX_PROMPT_CHARS + " caracteres).");
+            return;
+        }
         final String finalPrompt = prompt;
         worker.execute(() -> {
+            if (desligando) { recusar(call, "O aplicativo está sendo encerrado; a inferência local foi cancelada."); return; }
             if (gerando) {
-                call.reject("Já existe uma geração local em andamento. Aguarde a resposta atual terminar.");
+                recusar(call, "Já existe uma geração local em andamento. Aguarde a resposta atual terminar.");
                 return;
             }
             gerando = true;
@@ -152,17 +188,23 @@ public class JarvisLocalAIPlugin extends Plugin {
                     if (!problema.isEmpty()) throw new Exception(problema);
                     if (engine == null) {
                         checarMemoria(f);
+                        // CPU por escolha deliberada: o delegate GPU do MediaPipe em Mali/Adreno
+                        // era mais uma fonte de SIGABRT e não é necessário para 1B.
                         LlmInference.LlmInferenceOptions options = LlmInference.LlmInferenceOptions.builder()
                             .setModelPath(f.getAbsolutePath())
                             .setMaxTokens(512)
-                            .setTemperature(0.35f)
+                            .setPreferredBackend(LlmInference.Backend.CPU)
                             .build();
                         engine = LlmInference.createFromOptions(getContext(), options);
                     }
                     response = engine.generateResponse(finalPrompt);
                 }
-                JSObject out = new JSObject(); out.put("text", response == null ? "" : response.trim()); out.put("local", true);
-                call.resolve(out);
+                String texto = response == null ? "" : response.trim();
+                if (texto.isEmpty()) throw new Exception("O modelo abriu, mas não devolveu texto. Tente novamente ou use outro .task.");
+                prefs().edit().putBoolean("testado", true).putLong("ultimo_ms", System.currentTimeMillis()).apply();
+                JSObject out = new JSObject();
+                out.put("text", texto); out.put("local", true); out.put("pronto", true);
+                responder(call, out);
             } catch (Throwable e) {
                 Log.w(TAG, "Local inference failed", e);
                 synchronized (engineLock) { closeEngineLocked(); }
@@ -174,11 +216,23 @@ public class JarvisLocalAIPlugin extends Plugin {
                 } else {
                     detalhe = "falha nativa do MediaPipe (modelo incompatível com esta versão da biblioteca ou ABI)";
                 }
-                call.reject("A IA local não conseguiu carregar ou executar esse modelo: " + detalhe +
+                recusar(call, "A IA local não conseguiu carregar ou executar esse modelo: " + detalhe +
                     ". O app continua funcionando com os provedores em nuvem.");
             } finally {
                 gerando = false;
             }
+        });
+    }
+
+    /** Descarrega da memória sem apagar o arquivo: o modelo continua importado. */
+    @PluginMethod
+    public void unload(PluginCall call) {
+        worker.execute(() -> {
+            synchronized (engineLock) { closeEngineLocked(); }
+            JSObject out = new JSObject();
+            out.put("carregado", false);
+            out.put("pronto", prefs().getBoolean("testado", false));
+            responder(call, out);
         });
     }
 
@@ -189,18 +243,18 @@ public class JarvisLocalAIPlugin extends Plugin {
                 synchronized (engineLock) { closeEngineLocked(); }
                 File f = modelFile();
                 if (f.exists() && !f.delete()) throw new Exception("Não foi possível apagar o arquivo do modelo.");
-                call.resolve();
-            } catch (Exception e) { call.reject(e.getMessage() == null ? "Falha ao apagar modelo." : e.getMessage()); }
+                prefs().edit().remove("modelo").putBoolean("testado", false).putLong("ultimo_ms", 0).apply();
+                responder(call, new JSObject());
+            } catch (Exception e) { recusar(call, e.getMessage() == null ? "Falha ao apagar modelo." : e.getMessage()); }
         });
     }
 
     /**
-     * Pré-checagem do arquivo antes de qualquer chamada nativa.
+     * Pré-checagem do arquivo antes de chamar o nativo.
      *
-     * O .task do MediaPipe é um pacote (ZIP) ou um flatbuffer TFLite. Abrir um arquivo
-     * truncado, vazio ou que não é um modelo fazia o interpretador nascer nulo e o processo
-     * morrer com SIGABRT ("interpreter_ != nullptr" / LlmInferenceEngine_CreateSession).
-     * Um try/catch Java não pega isso: o certo é nunca chamar o nativo nesse caso.
+     * O .task do MediaPipe é um pacote (ZIP). Arquivo truncado/vazio ou GGUF renomeado
+     * fazia o interpretador nascer nulo e o processo morrer com SIGABRT — try/catch Java
+     * não pega isso, então o certo é nunca chamar o nativo nesses casos.
      */
     private String validarModelo(File f) {
         if (!f.isFile() || f.length() == 0) return "Arquivo do modelo ausente ou vazio.";
@@ -213,23 +267,22 @@ public class JarvisLocalAIPlugin extends Plugin {
         } catch (Exception e) {
             return "Não foi possível ler o início do modelo: " + (e.getMessage() == null ? "erro de I/O" : e.getMessage());
         }
-        boolean zip = cabecalho[0] == 0x50 && cabecalho[1] == 0x4B;                 // PK.. (pacote .task)
+        if (cabecalho[0] == 'G' && cabecalho[1] == 'G' && cabecalho[2] == 'U' && cabecalho[3] == 'F') {
+            return "Este arquivo é GGUF, não .task do MediaPipe. Exporte o modelo para o formato .task.";
+        }
+        boolean zip = cabecalho[0] == 0x50 && cabecalho[1] == 0x4B;
         boolean flat = cabecalho[0] == 'T' && cabecalho[1] == 'F' && cabecalho[2] == 'L' && cabecalho[3] == '3';
         if (!zip && !flat) return "O arquivo não parece um modelo MediaPipe (.task): o cabeçalho não é ZIP nem TFL3.";
         return "";
     }
 
-    /**
-     * O carregamento de um modelo .task pode pedir mais memória do que o arquivo ocupa.
-     * Sem esta checagem o processo morria com OutOfMemoryError nativo — e o app fechava
-     * sem explicação. Agora a falha vira mensagem na tela.
-     */
     private void checarMemoria(File modelo) throws Exception {
         android.app.ActivityManager am = (android.app.ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
         if (am == null) return;
         android.app.ActivityManager.MemoryInfo info = new android.app.ActivityManager.MemoryInfo();
         am.getMemoryInfo(info);
-        long precisa = modelo.length() + 256L * 1024L * 1024L;
+        // O runtime aloca pesos + KV cache + buffers: o arquivo sozinho não é a conta.
+        long precisa = modelo.length() + 512L * 1024L * 1024L;
         if (info.availMem < precisa) {
             throw new Exception("Memória livre insuficiente para carregar o modelo: "
                 + (info.availMem / (1024 * 1024)) + " MB livres, cerca de "
@@ -243,8 +296,13 @@ public class JarvisLocalAIPlugin extends Plugin {
 
     @Override
     protected void handleOnDestroy() {
-        synchronized (engineLock) { closeEngineLocked(); }
-        worker.shutdownNow();
+        desligando = true;
+        // Enfileira o fechamento no MESMO worker: se houver geração em curso, ela termina
+        // antes de a engine ser liberada. Fechar de outra thread no meio = SIGSEGV nativo.
+        worker.execute(() -> {
+            synchronized (engineLock) { closeEngineLocked(); }
+        });
+        worker.shutdown();
         super.handleOnDestroy();
     }
 }

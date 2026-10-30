@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory(prefix="jarvis-gradle-patch-") as tmp:
     repos = settings.read_text(encoding="utf-8")
     assert "minSdkVersion 26" in result, "minSdkVersion 26 não aplicado"
     assert "com.github.msnilsen:openwakeword-android:0.1.0" not in result, "Dependência openWakeWord não resolvida continua no Gradle"
-    assert result.count("com.google.mediapipe:tasks-genai:0.10.14") == 1, "Dependência IA local duplicada ou ausente"
+    assert result.count("com.google.mediapipe:tasks-genai:0.10.24") == 1, "Dependência IA local duplicada ou ausente"
     assert "https://jitpack.io" not in repos, "JitPack desnecessário continua sendo adicionado"
     # A assinatura de debug precisa estar fixada no keystore do repo: sem isso o CI
     # gerava um keystore novo a cada build e cada release saía com assinatura diferente.

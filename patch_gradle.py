@@ -5,12 +5,13 @@ from pathlib import Path
 
 app_gradle = Path(sys.argv[1])
 app_text = app_gradle.read_text(encoding="utf-8")
-local_ai_coordinate = 'implementation "com.google.mediapipe:tasks-genai:0.10.14"'
+local_ai_coordinate = 'implementation "com.google.mediapipe:tasks-genai:0.10.24"'
 
 # O detector de ativação é próprio (JarvisAtivacao + reconhecimento do Android): nenhum SDK de
 # palavra de ativação entra no APK. A integração de IA local e o resto do código nativo miram Android 8.0+.
-# MediaPipe 0.10.14 é fixado por compatibilidade com Java 17/Gradle 8.2; artefatos mais novos podem
-# exigir bytecode/runtime mais recentes.
+# MediaPipe 0.10.14 NÃO suporta Gemma 3: o runtime antigo aborta o processo ao abrir o .task
+# (SIGABRT nativo, impossível de capturar em Java). 0.10.24 suporta Gemma 3, mas o AAR é
+# compilado para Java 21 (class file 65): exige JDK 21 + AGP 8.7 + Gradle 8.9 + compileSdk 35.
 # Override the Capacitor template default so the APK does not install on unsupported devices.
 default_config = re.search(r"\bdefaultConfig\s*\{", app_text)
 if not default_config:
@@ -173,3 +174,37 @@ settings_text = settings.read_text(encoding="utf-8")
 # JitPack: a coordenada do detector de palavra de ativação de terceiro usado antes não resolvia no CI.
 settings.write_text(settings_text, encoding="utf-8")
 print(f"Repositórios Gradle preservados/corrigidos: {settings}")
+
+
+def alinhar_toolchain():
+    """Gemma 3 só existe em tasks-genai >= 0.10.22, e esses AARs são Java 21 (class file 65).
+
+    A cadeia antiga (AGP 8.2.1/Gradle 8.2.1/compileSdk 34) não lê esse bytecode e o Gradle 8.2
+    nem inicia em JDK 21. O CI regenera android/ com `cap add`, então o ajuste precisa ser
+    aplicado aqui, não apenas na pasta local.
+    """
+    raiz = app_gradle.parent.parent
+    build = raiz / "build.gradle"
+    if build.exists():
+        t = build.read_text(encoding="utf-8")
+        novo = re.sub(r"com\.android\.tools\.build:gradle:[0-9.]+", "com.android.tools.build:gradle:8.7.3", t)
+        if novo != t:
+            build.write_text(novo, encoding="utf-8")
+            print(f"AGP atualizado para 8.7.3: {build}")
+    variaveis = raiz / "variables.gradle"
+    if variaveis.exists():
+        t = variaveis.read_text(encoding="utf-8")
+        novo = re.sub(r"(?m)^(\s*compileSdkVersion\s*=\s*)\d+", r"\g<1>35", t)
+        if novo != t:
+            variaveis.write_text(novo, encoding="utf-8")
+            print(f"compileSdk atualizado para 35: {variaveis}")
+    wrapper = raiz / "gradle/wrapper/gradle-wrapper.properties"
+    if wrapper.exists():
+        t = wrapper.read_text(encoding="utf-8")
+        novo = re.sub(r"gradle-[0-9.]+-(?:all|bin)\.zip", "gradle-8.9-all.zip", t)
+        if novo != t:
+            wrapper.write_text(novo, encoding="utf-8")
+            print(f"Gradle Wrapper atualizado para 8.9: {wrapper}")
+
+
+alinhar_toolchain()

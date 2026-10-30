@@ -35,7 +35,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.23.1';
+const VERSAO_APP = '1.24.0';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -2163,30 +2163,62 @@ async function statusIALocal() {
   try { return await p.status(); }
   catch (e) { return { supported: false, installed: false, note: 'Não foi possível consultar a IA local.' }; }
 }
+/* Prompt do modelo local: o .task q4_ekv2048 tem 2048 tokens de contexto. O prompt
+ * completo da nuvem (~20 mil caracteres) estourava o KV cache e derrubava a inferência.
+ * Aqui a persona continua presente, mas condensada, e o histórico vai curto. */
+function promptLocal(texto, offline) {
+  const t = trat();
+  const regras = [
+    'Você é J.A.R.V.I.S. Nova, assistente pessoal brasileiro: competente, leal e com humor seco.',
+    PERSONALIDADE.tratamento.replace('{tratamento}', t) + ' Responda em português do Brasil, sem markdown, em 2 a 4 frases.',
+    PERSONALIDADE.humor.slice(0, 700),
+    'Formato obrigatório: um único objeto JSON {"fala":"texto","acao":null}. Não invente ações nem resultados.',
+    offline ? 'MODO OFFLINE: apenas conversa; "acao" sempre null.' : 'Sem ferramentas nesta resposta: "acao" sempre null.'
+  ].join(' ');
+  const recentes = (usarContextoNestaConversa ? hist.slice(-2) : [])
+    .filter((x) => x && x.content && x.role !== 'system')
+    .map((x) => (x.role === 'user' ? 'Usuário: ' : 'J.A.R.V.I.S.: ') + String(x.content).slice(0, 300))
+    .join('\n');
+  const pedido = String(texto || '').slice(0, 1200);
+  let prompt = regras + (recentes ? '\nHistórico recente:\n' + recentes : '') + '\nUsuário: ' + pedido + '\nJSON:';
+  // O plugin recusa acima de 6000 caracteres: corta o começo do texto do usuário, não as regras.
+  if (prompt.length > 5900) prompt = prompt.slice(0, 5900) + '\nJSON:';
+  return prompt;
+}
 async function gerarIALocal(texto, offline = false) {
   const p = LOCAL_AI();
   if (!p || typeof p.generate !== 'function') throw new Error('A IA local ainda não está disponível nesta plataforma.');
   const status = await p.status();
   if (!status || !status.installed) throw new Error('Nenhum modelo local foi importado. Abra Configurações > IA e importe um modelo .task compatível.');
-  const regrasOffline = offline ? '\nMODO OFFLINE ESTRITO: responda apenas à conversa. Não proponha ações, não alegue acesso à internet e não afirme executar tarefas do sistema. Retorne JSON com acao null.' : '';
-  const contextoLocal = (usarContextoNestaConversa ? hist.slice(-6) : hist.slice(-1));
-  if (contextoLocal.length && contextoLocal[contextoLocal.length - 1].role === 'user' && contextoLocal[contextoLocal.length - 1].content === String(texto)) contextoLocal.pop();
-  const mensagens = contextoLocal.map(x => (x.role === 'user' ? 'Usuário: ' : 'J.A.R.V.I.S.: ') + String(x.content).slice(0, 1800)).join('\n');
-  const prompt = promptSistema() + regrasOffline + '\nHistórico recente:\n' + mensagens + '\nUsuário: ' + String(texto).slice(0, 3000) + '\nResponda somente com o JSON solicitado pelo sistema.';
+  const prompt = promptLocal(texto, offline);
+  const inicio = Date.now();
   const result = await p.generate({ prompt });
+  const ms = Date.now() - inicio;
   const raw = String(result && result.text || '').trim();
   if (!raw) throw new Error('O modelo local retornou uma resposta vazia.');
   let obj = lerJson(raw);
   if (!obj || typeof obj !== 'object') obj = { fala: raw, acao: null };
-  return { fala: String(obj.fala || raw).slice(0, 6000), acao: (!offline && obj.acao && obj.acao.nome) ? obj.acao : null, raw };
+  return { fala: String(obj.fala || raw).slice(0, 6000), acao: (!offline && obj.acao && obj.acao.nome) ? obj.acao : null, raw, ms };
 }
 async function atualizarStatusIALocal() {
   const el = document.getElementById('c-local-ai-status');
   if (!el) return;
   const st = await statusIALocal();
-  if (!st.supported) el.textContent = st.note || 'IA local indisponível nesta plataforma.';
-  else if (st.installed) el.textContent = 'Modelo importado (' + (st.bytes ? (st.bytes / (1024 * 1024)).toFixed(0) + ' MB' : 'tamanho desconhecido') + '). A inferência local está disponível para teste.';
-  else el.textContent = 'Nenhum modelo importado. Importe um arquivo .task compatível para habilitar o fallback local.';
+  if (!st.supported) { el.textContent = st.note || 'IA local indisponível nesta plataforma.'; return; }
+  if (!st.installed) {
+    el.textContent = st.motivo && /GGUF|não parece|pequeno|truncado/i.test(st.motivo)
+      ? 'Modelo inválido: ' + st.motivo
+      : 'Nenhum modelo importado. Importe um arquivo .task compatível (Gemma 3 1B IT: q4_ekv2048).';
+    return;
+  }
+  const mb = (st.bytes / (1024 * 1024)).toFixed(0) + ' MB';
+  const nome = st.modelo ? st.modelo + ' · ' : '';
+  const estado = st.testado
+    ? (st.carregado ? 'PRONTO (carregado na memória)' : 'TESTADO (descarregado; recarrega ao usar)')
+    : 'VALIDADO, AINDA NÃO TESTADO — toque em “Testar modelo” para provar a inferência';
+  el.textContent = nome + mb + ' · ' + estado + '. Motor: ' + (st.api || 'MediaPipe') + ', ' + (st.contexto || 'contexto do modelo') + '.';
+  const bt = document.getElementById('c-local-ai-unload');
+  if (bt) bt.disabled = !st.carregado;
 }
 
 /* ---------- IA de chat: Groq + reservas automáticas ---------- */
@@ -5038,16 +5070,36 @@ if (btnImportLocal) btnImportLocal.onclick = async () => {
   finally { btnImportLocal.disabled = false; await atualizarStatusIALocal(); }
 };
 if (btnTestLocal) btnTestLocal.onclick = async () => {
-  const el = document.getElementById('c-local-ai-status'); btnTestLocal.disabled = true; el.textContent = 'Executando teste local…';
-  try { const r = await gerarIALocal('Responda em português em uma frase: diga que o teste da IA local funcionou.', true); el.textContent = 'Teste concluído: ' + r.fala; registrar('config', 'teste de inferência local concluído'); }
-  catch (e) { el.textContent = e.message || 'Falha no teste local.'; }
-  finally { btnTestLocal.disabled = false; }
+  const el = document.getElementById('c-local-ai-status'); btnTestLocal.disabled = true; el.textContent = 'Carregando o modelo e executando o teste…';
+  try {
+    // Teste curto e direto: é a primeira carga real do modelo, então pode levar dezenas
+    // de segundos no primeiro token. O status só vira PRONTO se isto devolver texto.
+    const r = await gerarIALocal('Diga em uma frase curta que o teste local funcionou.', true);
+    el.textContent = 'Teste concluído em ' + (r.ms ? (r.ms / 1000).toFixed(1).replace('.', ',') + ' s' : 'tempo não medido') + ': ' + r.fala;
+    registrar('config', 'teste de inferência local concluído em ' + (r.ms || 0) + ' ms');
+    await atualizarStatusIALocal();
+  } catch (e) {
+    el.textContent = 'Falha no teste: ' + (e.message || 'erro desconhecido') + ' — o modelo continua importado; nenhum provedor remoto foi alterado.';
+    registrar('erro', 'teste IA local: ' + ((e && e.message) || e));
+  } finally { btnTestLocal.disabled = false; }
 };
 if (btnDeleteLocal) btnDeleteLocal.onclick = async () => {
   if (!confirm('Apagar o modelo local armazenado neste aparelho? Isso não apaga memórias nem chaves de API.')) return;
   const p = LOCAL_AI(); const el = document.getElementById('c-local-ai-status');
   try { if (!p || typeof p.removeModel !== 'function') throw new Error('A função está disponível apenas no APK Android.'); await p.removeModel(); el.textContent = 'Modelo local apagado. Memórias e chaves foram mantidas.'; provAtivo = ''; atualizarChipIA(); registrar('config', 'modelo local apagado'); }
   catch (e) { el.textContent = e.message || 'Falha ao apagar o modelo.'; }
+  finally { await atualizarStatusIALocal(); }
+};
+const btnUnloadLocal = document.getElementById('c-local-ai-unload');
+if (btnUnloadLocal) btnUnloadLocal.onclick = async () => {
+  const p = LOCAL_AI(); const el = document.getElementById('c-local-ai-status');
+  try {
+    if (!p || typeof p.unload !== 'function') throw new Error('Descarregar está disponível apenas no APK Android.');
+    btnUnloadLocal.disabled = true;
+    await p.unload();
+    registrar('config', 'modelo local descarregado da memória');
+    await atualizarStatusIALocal();
+  } catch (e) { el.textContent = e.message || 'Falha ao descarregar.'; }
   finally { await atualizarStatusIALocal(); }
 };
 void atualizarStatusIALocal();

@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.23.1",
-  "versionCode": 10231,
+  "version": "1.24.0",
+  "versionCode": 10240,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-10-30",
-  "status": "1.23.1: correção do \"store is not defined\" (bloco de efeitos agora dentro do IIFE), diagnóstico com nome e etiqueta na horizontal em qualquer largura, e anexos reais no chat (seletor nativo, leitura de texto e envio à IA).",
+  "status": "1.24.0: IA local Gemma 3 1B IT corrigida de verdade — MediaPipe 0.10.24 no lugar do 0.10.14 (que abortava o processo ao abrir o .task), prompt local dentro dos 2048 tokens de contexto, engine fechada só depois da geração e estados importado/validado/testado/pronto na interface.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.23.1 (2026-10-30). O erro \"Uncaught ReferenceError: store is not defined\" vinha da camada visual da 1.23.0: o bloco que liga a opção de efeitos tinha sido anexado DEPOIS do ()`})();` que fecha o IIFE do app.js, então rodava fora do escopo onde `store` é declarado e abortava a inicialização. O bloco voltou para dentro do IIFE; a opção \"Reduzir efeitos visuais\" volta a ser lida, aplicada e persistida. O texto vertical do diagnóstico era layout: o cabeçalho do cartão era um flex sem quebra e o nome não tinha largura mínima, então em painel estreito o nome era comprimido a uma letra por linha enquanto o selo mantinha a largura. Agora o selo não encolhe, o nome tem largura mínima legível e o conjunto quebra em duas linhas quando precisa, com `min-width:0` em toda a cadeia de flex/grid. O chat ganhou anexos de verdade: botão de clipe no rodapé, `<input type=file multiple>` (SAF no Android, diálogo do Windows no Electron), lista com nome, tipo e tamanho, remoção antes do envio, leitura de arquivos de texto por FileReader com limite de 40 mil caracteres por arquivo e envio do conteúdo dentro do mesmo pedido da IA. Imagem e binário entram identificados com a limitação escrita, sem fingir leitura. A interface mantém o núcleo (HUD, plasma e órbita 3D) e a animação da 1.23.0 intactos. Não incluído nesta revisão: geração de arquivos .cad do CADe SIMU, automação de aplicativos/janelas do Windows e alarme do Windows — o desktop não tem motor de alarme implementado, e o formato .cad do CADe SIMU é proprietário e não documentado.",
+  "notas": "Revisão 1.24.0 (2026-10-30). A IA local fechava o aplicativo por três causas somadas. Primeira: `com.google.mediapipe:tasks-genai:0.10.14` é anterior ao Gemma 3 e o runtime nativo aborta o processo (SIGABRT) ao abrir `Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task`; um try/catch Java não intercepta isso, e o app parecia \"fechar sozinho\" ao testar ou enviar mensagem, enquanto o AI Edge Gallery, com runtime novo, abria o mesmo arquivo. A dependência subiu para 0.10.24 (Gemma 3 é suportado a partir da linha 0.10.22) mantendo Java 17 e Gradle 8.2. Segunda: o prompt local herdava o prompt de sistema completo mais seis mensagens de 1800 caracteres, passando de 5 mil tokens num modelo de 2048; agora há um prompt local condensado (persona + humor + histórico de duas mensagens + pedido), com teto de 6000 caracteres conferido também no plugin. Terceira: `handleOnDestroy` fechava a engine nativa durante a geração e o retorno de `generate` era resolvido fora da UI thread; o fechamento passou a ser enfileirado na mesma thread de inferência e as respostas são entregues na thread principal. O backend é CPU explícito (sem delegate GPU, outra fonte de aborto em Mali/Adreno). Entraram `unload` para descarregar sem apagar, recusa de GGUF renomeado antes de chamar o nativo, checagem de memória com margem para pesos e KV cache, mensagens de erro específicas e estados separados: importado, validado, testado e pronto — \"pronto\" só aparece depois de uma geração real bem-sucedida, com tempo medido. O núcleo (HUD, plasma e órbita 3D) e a animação da 1.23.0 continuam intactos; provedores remotos, voz, memória e Windows não foram alterados. Testes: suíte estática completa e compilação do APK neste ambiente; a inferência real no Poco X7 depende de instalar o APK e importar o modelo, porque aqui não há aparelho, emulador nem o arquivo .task.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,12 +16,12 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "84c1fee3a65a95d656bee9759a3ea3bf18ffb17bed57427e2eb4a5672b40dbea",
-    "bytes": 71110105,
-    "arquivo": "jarvis-nova-1.23.1-10231.apk",
+    "sha256": "79d4ce339c551195860facf2aa31bd4a3f7393ca4dac5879482d08a61157b7a1",
+    "bytes": 81020766,
+    "arquivo": "jarvis-nova-1.24.0-10240.apk",
     "data": "2026-10-30",
-    "ambiente": "compilação local (JDK 17 + Android SDK 34; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.23.1: VERSAO_APP=1.23.1, versionCode 10231. style.css com a correção do diagnóstico e index.html/app.js com anexos conferidos dentro de assets/public. Suíte completa com 1122 verificações aprovada antes do empacotamento. Sem teste em aparelho físico nem emulador neste ambiente."
+    "ambiente": "compilação local (JDK 21 + AGP 8.7.3 + Gradle 8.9 + Android SDK 35; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
+    "observacao": "APK 1.24.0 com MediaPipe tasks-genai 0.10.24 e libs nativas arm64-v8a/armeabi-v7a (81 MB). Suíte com 1324 verificações aprovada antes do empacotamento. Sem aparelho físico, emulador ou arquivo .task neste ambiente: a inferência real precisa ser confirmada no Poco X7."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

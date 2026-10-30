@@ -113,7 +113,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.23.1</span>
+      <span class="orb-sub" aria-hidden="true">v1.24.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -203,7 +203,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.23.1</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.24.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -225,7 +225,7 @@
     <div class="chave"><label>3. Mistral<input id="c-key-mistral" type="password" autocomplete="off" placeholder="opcional"></label><button type="button" class="mini" id="c-apagar-mistral">apagar</button></div><p class="dica links-chaves"><a href="https://console.mistral.ai/" target="_blank" rel="noreferrer">Criar conta / chave Mistral</a></p>
     <div class="chave"><label>4. Gemini<input id="c-key-gemini" type="password" autocomplete="off" placeholder="opcional"></label><button type="button" class="mini" id="c-apagar-gemini">apagar</button></div><p class="dica links-chaves"><a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">Criar chave Gemini</a></p><p class="dica">Os planos e limites mudam. Verifique a cota gratuita na página oficial antes de usar. Não compartilhe suas chaves; o app não oferece garantia de cota ilimitada.</p>
     <label>Modelo preferido da Groq<input id="c-modelo" type="text" autocomplete="off"></label>
-    <div class="info-card local-ai-card"><span class="info-icon">◈</span><div><b>IA local no aparelho · experimental</b><p>Importe um modelo <code>.task</code> compatível com MediaPipe. Depois de importado, a inferência pode funcionar sem internet e sem chave de API. O modelo não vem dentro do APK; o tamanho depende do arquivo escolhido.</p><p id="c-local-ai-status" role="status" aria-live="polite">Verificando suporte à IA local…</p><div class="botoes"><button id="c-local-ai-import" type="button" class="secundario">Importar modelo .task</button><button id="c-local-ai-test" type="button" class="secundario">Testar modelo</button><button id="c-local-ai-delete" type="button" class="secundario perigo">Apagar modelo</button></div><p class="dica">Use apenas modelos convertidos/empacotados para a API MediaPipe LLM Inference. Um arquivo GGUF comum não é compatível. O primeiro teste pode falhar em aparelhos sem memória ou aceleração suficientes.</p></div></div>
+    <div class="info-card local-ai-card"><span class="info-icon">◈</span><div><b>IA local no aparelho · experimental</b><p>Importe um modelo <code>.task</code> compatível com MediaPipe. Depois de importado, a inferência pode funcionar sem internet e sem chave de API. O modelo não vem dentro do APK; o tamanho depende do arquivo escolhido.</p><p id="c-local-ai-status" role="status" aria-live="polite">Verificando suporte à IA local…</p><div class="botoes"><button id="c-local-ai-import" type="button" class="secundario">Importar modelo .task</button><button id="c-local-ai-test" type="button" class="secundario">Testar modelo</button><button id="c-local-ai-unload" type="button" class="secundario" disabled>Descarregar</button><button id="c-local-ai-delete" type="button" class="secundario perigo">Apagar modelo</button></div><p class="dica">Use um <code>.task</code> do MediaPipe; GGUF não é compatível. <b>Gemma 3 1B IT exige runtime 0.10.22 ou mais novo</b> — esta versão usa 0.10.24, porque a 0.10.14 abortava o processo ao abrir o modelo. O primeiro teste carrega o modelo na memória e pode demorar; se falhar, o app continua nos provedores remotos.</p></div></div>
     <details class="modelos-card">
       <summary>Onde baixar modelos <code>.task</code> compatíveis</summary>
       <p class="dica">A IA local deste app usa a API <b>MediaPipe LLM Inference</b> (<code>com.google.mediapipe:tasks-genai</code>). Só serve modelo empacotado nesse formato — um GGUF comum não carrega. O APK não inclui modelo: você importa o arquivo uma vez, ele fica no armazenamento privado e pode ser apagado.</p>

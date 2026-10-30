@@ -1,4 +1,17 @@
-# J.A.R.V.I.S. Nova 1.23.1
+# J.A.R.V.I.S. Nova 1.24.0
+
+## O que mudou na 1.24.0
+
+- **IA local corrigida na causa**: o runtime MediaPipe subiu de `0.10.14` para **`0.10.24`**. A versão antiga
+  não entende Gemma 3 e abortava o processo ao abrir o `.task` — era isso que fechava o app ao testar ou enviar
+  mensagem, embora o mesmo modelo abrisse no Google AI Edge Gallery.
+- **Prompt dentro do contexto**: o modelo tem 2048 tokens e recebia o prompt completo da nuvem. Agora o caminho
+  local usa persona condensada, histórico curto e teto de 6000 caracteres, com erro claro se passar.
+- **Sem fechar a engine no meio da geração**: o `onDestroy` agenda o fechamento na mesma thread da inferência;
+  respostas voltam para a UI thread; backend em CPU, sem delegate GPU.
+- **Estados honestos**: importado ≠ validado ≠ testado ≠ pronto; "Testar modelo" mostra o tempo real e só então
+  o status vira PRONTO. Novo botão **Descarregar** libera a RAM sem apagar o arquivo; GGUF renomeado é recusado
+  antes de tocar no código nativo.
 
 ## O que mudou na 1.23.1
 

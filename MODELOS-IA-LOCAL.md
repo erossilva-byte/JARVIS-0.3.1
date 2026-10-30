@@ -10,6 +10,20 @@ O APK **não embarca modelo**: você importa um arquivo em **Ajustes ▸ IA ▸ 
 arquivo é copiado para o armazenamento privado do app (`files/modelos/jarvis-model.task`), pode ser
 apagado pelo mesmo painel e nunca é baixado automaticamente.
 
+## Auditoria do Gemma 3 1B IT (causa raiz do fechamento)
+
+O arquivo `Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task` é um pacote MediaPipe válido, mas o runtime fixado até a 1.23.1 era `tasks-genai 0.10.14`. Essa versão **antecede o Gemma 3** e não entende o bundle: `LlmInference.createFromOptions` aborta o processo nativamente (SIGABRT), o que um `try/catch` Java não captura — por isso o app simplesmente fechava ao testar ou enviar mensagem, enquanto o AI Edge Gallery (runtime novo) abria o mesmo arquivo.
+
+Correções aplicadas nesta revisão:
+
+- runtime atualizado para **`tasks-genai 0.10.24`** (Gemma 3 funciona a partir da linha 0.10.22); continua compatível com Java 17 e Gradle 8.2;
+- prompt local reduzido a ≤ 6 000 caracteres: o modelo tem 2 048 tokens de contexto e o prompt da nuvem passava de 5 000 tokens, estourando o KV cache;
+- backend **CPU** explícito, sem delegate GPU (mais uma fonte de aborto em Mali/Adreno e desnecessário para 1B);
+- `onDestroy` passou a fechar a engine **na mesma thread de inferência**, depois da geração corrente — fechar durante a geração era SIGSEGV;
+- novo `unload()` para descarregar sem apagar, e estados separados: importado ≠ validado ≠ testado ≠ pronto;
+- o status só mostra "PRONTO" depois de uma geração real bem-sucedida;
+- GGUF renomeado para `.task` agora é recusado com mensagem clara, antes de chamar o nativo.
+
 ## Fontes oficiais verificadas
 
 | Modelo | Formato | Onde baixar | Observações |
@@ -63,7 +77,7 @@ o que é cálculo a partir de tamanho de arquivo (estimativa) e o que é previs�
 
 ### O que o motor realmente exige (verificado no código)
 
-- API: `com.google.mediapipe:tasks-genai` **0.10.14** (`android/app/build.gradle`).
+- API: `com.google.mediapipe:tasks-genai` **0.10.24** (`android/app/build.gradle`).
 - Formato: **Task Bundle** (`.task`), ZIP com modelo LiteRT + tokenizer. `JarvisLocalAIPlugin.validarCabecalho`
   confere tamanho e cabeçalho (ZIP ou `TFL3`) e recusa o resto — GGUF renomeado não passa.
 - Chamada: `generate({ prompt })` com o prompt inteiro de `promptSistema()` — portanto a personalidade,

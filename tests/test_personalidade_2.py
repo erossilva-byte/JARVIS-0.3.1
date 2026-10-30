@@ -65,7 +65,7 @@ checar('Cita o aparelho de referência', 'Poco X7, 8 GB' in doc)
 checar('Traz as quatro classificações',
       all(x in doc for x in ['COMPATÍVEL COM ADAPTAÇÕES', 'PARCIALMENTE COMPATÍVEL', 'INCOMPATÍVEL']))
 checar('Explica que GGUF não carrega', 'GGUF' in doc and 'INCOMPATÍVEL' in doc)
-checar('Registra a versão do motor', '0.10.14' in doc)
+checar('Registra a versão do motor', '0.10.24' in doc)
 
 # ---------- 5. Suíte ----------
 pkg = json.loads(texto('package.json'))

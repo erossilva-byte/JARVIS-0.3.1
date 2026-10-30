@@ -30,7 +30,13 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
+
+      - name: Garantir Android SDK 35
+        run: |
+          SDKM="$(command -v sdkmanager || true)"
+          [ -n "$SDKM" ] || SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" "platforms;android-35" "build-tools;35.0.0" >/dev/null
 
       - name: Verificar código-fonte na raiz
         run: |
@@ -132,6 +138,14 @@ jobs:
             “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
+
+            **Novidades da 1.24.0:** a **IA local** deixou de fechar o aplicativo. O runtime MediaPipe subiu de
+            `0.10.14` para **`0.10.24`** porque a versão antiga não suporta Gemma 3 e abortava o processo ao abrir
+            o `.task` (SIGABRT nativo, invisível para try/catch Java). O prompt local agora cabe nos 2048 tokens do
+            modelo (persona condensada + histórico curto, teto de 6000 caracteres), a engine é fechada apenas depois
+            da geração e na mesma thread, o backend é CPU e as respostas voltam na UI thread. A área de IA local mostra
+            importado ≠ validado ≠ testado ≠ pronto, mede o tempo do teste, ganhou **Descarregar** e recusa GGUF
+            renomeado com mensagem clara. Nenhum provedor remoto, voz, memória ou recurso do Windows foi alterado.
 
             **Novidades da 1.23.1:** corrigido o erro `store is not defined` que abortava a
             inicialização (o bloco da opção de efeitos estava fora do escopo do app); corrigido o texto

@@ -1,6 +1,7 @@
 """Revisão 1.23.1 — store no escopo certo, diagnóstico horizontal e anexos no chat."""
 import json
 import pathlib
+import re
 import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
@@ -59,14 +60,16 @@ checar('Render sem innerHTML', 'innerHTML' not in trecho and 'textContent' in tr
 checar('Estilo dos anexos', '.anexo-item' in css and 'button.anexo' in css)
 
 # ---------- 4. Versão e suíte ----------
-checar('VERSAO.json em 1.23.1', meta.get('version') == '1.23.1' and meta.get('versionCode') == 10231)
-checar('package.json em 1.23.1', pkg.get('version') == '1.23.1')
-checar('app.js em 1.23.1', "const VERSAO_APP = '1.23.1';" in app)
-checar('interface na 1.23.1', 'v1.23.1' in html and 'v1.23.0' not in html)
-checar('CHANGELOG e LEIA-ME na 1.23.1',
-      '## 1.23.1' in texto('CHANGELOG.md') and '# J.A.R.V.I.S. Nova 1.23.1' in texto('LEIA-ME.md'))
-checar('Workflows na 1.23.1', '1.23.1' in texto('.github/workflows/build-apk.yml')
-      and '1.23.1' in texto('.github/workflows/release-apk.yml'))
+V = meta.get('version', '')
+partes = tuple(int(x) for x in V.split('.')) if re.fullmatch(r'\d+\.\d+\.\d+', V) else (0,)
+checar('VERSAO.json em 1.23.1 ou posterior', partes >= (1, 23, 1) and meta.get('versionCode') >= 10231)
+checar('package.json acompanha a versão', pkg.get('version') == V)
+checar('app.js acompanha a versão', ("const VERSAO_APP = '%s';" % V) in app)
+checar('interface acompanha a versão', ('v' + V) in html and 'v1.23.0' not in html)
+checar('CHANGELOG e LEIA-ME preservam a 1.23.1',
+      '## 1.23.1' in texto('CHANGELOG.md') and '1.23.1' in texto('LEIA-ME.md'))
+checar('Workflows acompanham a versão', V in texto('.github/workflows/build-apk.yml')
+      and V in texto('.github/workflows/release-apk.yml'))
 checar('Suíte roda este teste', 'python3 tests/test_v1_23_1.py' in pkg['scripts']['test:all'])
 checar('Limites declarados no changelog',
       'CADe SIMU' in texto('CHANGELOG.md') and 'alarme do Windows' in texto('CHANGELOG.md'))

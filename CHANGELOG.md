@@ -10,6 +10,20 @@
 - **Auditoria de IA local documentada** em `MODELOS-IA-LOCAL.md`, separando verificado no código,
   estimativa e previsão — nenhum modelo foi anexado nesta revisão, então nada foi medido.
 
+## 1.24.0 — 2026-10-30
+
+## IA local: Gemma 3 1B IT deixa de derrubar o aplicativo
+
+- **Causa raiz**: `tasks-genai 0.10.14` antecede o Gemma 3; `createFromOptions` abortava o processo
+  nativamente (SIGABRT) e nenhum `try/catch` Java pegava. Dependência atualizada para **0.10.24**.
+- **Contexto**: prompt local reduzido de ~5 mil para menos de 1.500 tokens (teto de 6000 caracteres),
+  cabendo nos 2048 do `.task` q4_ekv2048.
+- **Ciclo de vida**: engine fechada só depois da geração, no mesmo worker; `resolve`/`reject` na UI thread;
+  CPU explícito; memória checada com margem para pesos + KV cache.
+- **Interface**: estados importado/validado/testado/pronto, teste com tempo medido, botão **Descarregar**,
+  recusa de GGUF e mensagens específicas de erro. Nenhum provedor remoto, voz, memória ou recurso do Windows
+  foi alterado.
+
 ## 1.23.1 — 2026-10-30
 
 ## Correções de inicialização, diagnóstico e anexos no chat
