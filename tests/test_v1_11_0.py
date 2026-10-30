@@ -69,7 +69,7 @@ checagens = {
         "humor >= 40 && !tom.serio && !tom.pressa" in app
         and "if (tomDoTurno(perguntaAtual).serio) return 'Agora não é o melhor momento" in app),
     "Preferência de humor continua lida do armazenamento": (
-        "const humor = Math.max(0, Math.min(100, Number(store.get('humor', '40'))))" in app),
+        "const humor = Math.max(0, Math.min(100, Number(store.get('humor', '90'))))" in app),
 
     # 5. Recursos e ciclo de vida
     "Histórico com limite de memória": "while (hist.length > 120) hist.shift();" in app,

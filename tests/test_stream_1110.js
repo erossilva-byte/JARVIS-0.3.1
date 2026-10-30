@@ -166,7 +166,7 @@ const chk = (nome, cond) => { ok.push([nome, !!cond]); };
   /* ---------- 7. integração com o prompt e com o app ---------- */
   const srcPrompt = bloco('function promptSistema() {', '// Degraus de compatibilidade', 'de promptSistema');
   chk('o prompt recebe o contexto do turno', /\$\{tomTurno\}/.test(srcPrompt) && /CONTEXTO DO TURNO/.test(srcPrompt));
-  chk('o prompt ainda lê o nível de humor salvo', /const humor = Math\.max\(0, Math\.min\(100, Number\(store\.get\('humor', '40'\)\)\)\)/.test(app));
+  chk('o prompt ainda lê o nível de humor salvo', /const humor = Math\.max\(0, Math\.min\(100, Number\(store\.get\('humor', '90'\)\)\)\)/.test(app));
   chk('a piada respeita assunto sensível', /tomDoTurno\(perguntaAtual\)\.serio/.test(app));
   chk('o caminho normal continua existindo como fallback', /let r = await tentarProvedor\(p\);/.test(app) && /await chamar\(texto, contaminado, \(f\) => falar\(f, false\)\)/.test(app));
   chk('o gravador não promete ficar pendurado', /return new Promise\(\(resolve, reject\) => \{/.test(bloco('function gravar() {', 'function dicaWhisper', 'de gravar')) && /catch \(e\) \{ falhar\(e\); \}/.test(app));

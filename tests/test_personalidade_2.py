@@ -42,13 +42,13 @@ for k in ['sarcasmo', 'brincadeiras', 'ironia', 'espontaneidade', 'provocacao', 
     checar('Eixo no HTML: ' + k, ('id="c-pers-%s"' % k) in html)
     checar('Eixo no padrão: ' + k, ('%s:' % k) in app)
     checar('Eixo persistido: ' + k, ("store.set('pers_' + k" in app) and ("store.get('pers_' + k" in app))
-checar('Padrões favorecem humor', "sarcasmo: 80" in app and "ironia: 80" in app
-      and "brincadeiras: 75" in app and "formalidade: 20" in app)
+checar('Padrões favorecem humor', "sarcasmo: 90" in app and "ironia: 90" in app
+      and "brincadeiras: 85" in app and "formalidade: 15" in app)
 checar('Botão de restaurar padrão', 'id="c-pers-padrao"' in html and 'PERFIL_PADRAO[k]' in app)
 checar('Calibragem entra no prompt', '${perfilHumor()}' in app)
 checar('Formalidade muda o tom', 'frases medidas' in app and 'conversa solta' in app)
 checar('Valores limitados a 0-100', 'Math.max(0, Math.min(100' in app)
-checar('Humor padrão em 70', "store.get('humor', '70')" in app and 'value="70"' in html)
+checar('Humor padrão em 90', "store.get('humor', '90')" in app and 'value="90"' in html)
 
 # ---------- 3. Interface ----------
 checar('Bloco de ajuste fino presente', 'pers-controles' in html and '.pers-controles' in css)

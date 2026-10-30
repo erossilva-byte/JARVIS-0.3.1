@@ -35,7 +35,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.26.0';
+const VERSAO_APP = '1.27.0';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -1334,7 +1334,7 @@ const PIADAS = [
   'Se a vida é uma pilha, então o estresse é o estouro de pilha — e eu sou o “empilhador”.'
 ];
 function contarPiada() {
-  const humor = Math.max(0, Math.min(100, Number(store.get('humor', '70'))));
+  const humor = Math.max(0, Math.min(100, Number(store.get('humor', '90'))));
   // Assunto sensível na conversa: o humor fica de fora, mesmo com o humor no máximo.
   if (tomDoTurno(perguntaAtual).serio) return 'Agora não é o melhor momento para piadas, ' + trat() + '. Estou à disposição para o que você precisar.';
   if (humor < 20) return 'Estou no modo sério, ' + trat() + '. Configure o humor em Ajustes > IA se quiser minha companhia mais descontraída.';
@@ -1347,7 +1347,7 @@ function contarPiada() {
 // Saudação de abertura: humor só acima de 40% configurado; nunca em tom sensível.
 function saudacaoInicial() {
   const h = new Date().getHours();
-  const humor = Math.max(0, Math.min(100, Number(store.get('humor', '40'))));
+  const humor = Math.max(0, Math.min(100, Number(store.get('humor', '90'))));
   const periodo = h < 6 ? 'madrugada' : h < 12 ? 'dia' : h < 18 ? 'tarde' : 'noite';
   const base = nomeUsuario() || trat();
   const rodape = 'Plataforma: ' + plataforma + '. Toque no microfone para falar.';
@@ -1524,7 +1524,7 @@ async function confirmarVozDoUsuario(opcoes) {
       avisar('Perfil confirmado, ' + (nomeUsuario() || trat()) + ' · ' + Math.round(score * 100) + '%');
       return true;
     }
-    const humor = Math.max(0, Math.min(100, Number(store.get('humor', '40'))));
+    const humor = Math.max(0, Math.min(100, Number(store.get('humor', '90'))));
     const recusa = humor >= 50
       ? 'Essa voz não está no meu cadastro. Se for você, cadastre o perfil de novo em Ajustes e Voz — ou desative a exigência.'
       : 'Não reconheci essa voz como a sua, ' + trat() + '. Confira o perfil de voz em Ajustes e Voz.';
@@ -2171,7 +2171,8 @@ function promptLocal(texto, offline) {
   const regras = [
     'Você é J.A.R.V.I.S. Nova, assistente pessoal brasileiro: competente, leal e com humor seco.',
     PERSONALIDADE.tratamento.replace('{tratamento}', t) + ' Responda em português do Brasil, sem markdown, em 2 a 4 frases.',
-    PERSONALIDADE.humor.slice(0, 700),
+    (window.HumorJarvis ? HumorJarvis.estiloPrompt(Object.assign({ humor: 90 }, eixosHumor())).slice(0, 1100) : PERSONALIDADE.humor.slice(0, 700)),
+    (function () { const a = window.HumorJarvis ? HumorJarvis.sugerir(texto, { humor: 90, semente: String(hist.length) }) : null; return a ? 'Ângulo de humor possível (adapte, não copie): ' + a.linha : ''; })(),
     'Formato obrigatório: um único objeto JSON {"fala":"texto","acao":null}. Não invente ações nem resultados.',
     offline ? 'MODO OFFLINE: apenas conversa; "acao" sempre null.' : 'Sem ferramentas nesta resposta: "acao" sempre null.'
   ].join(' ');
@@ -2286,7 +2287,7 @@ const rotacaoFrases = {};
 function fraseApp(chave, vars) {
   const bloco = FRASES[chave];
   if (!bloco) return '';
-  const humor = Math.max(0, Math.min(100, Number(store.get('humor', '40'))));
+  const humor = Math.max(0, Math.min(100, Number(store.get('humor', '90'))));
   const tom = tomDoTurno(perguntaAtual);
   const seco = Array.isArray(bloco.seco) ? bloco.seco : [bloco.seco];
   const comHumor = Array.isArray(bloco.comHumor) && bloco.comHumor.length ? bloco.comHumor : seco;
@@ -2298,9 +2299,17 @@ function fraseApp(chave, vars) {
  * O slider de humor continua sendo a intensidade geral; estes seis eixos dizem COMO o
  * humor aparece. Ficam salvos no aparelho (pers_*) e entram no prompt de qualquer provedor,
  * inclusive na IA local, porque promptSistema() é compartilhado. */
-const PERFIL_PADRAO = { sarcasmo: 80, brincadeiras: 75, ironia: 80, espontaneidade: 70, provocacao: 55, formalidade: 20 };
-function perfilHumor() {
+const PERFIL_PADRAO = { sarcasmo: 90, brincadeiras: 85, ironia: 90, espontaneidade: 85, provocacao: 70, formalidade: 15 };
+function eixosHumor() {
   const p = {};
+  Object.keys(PERFIL_PADRAO).forEach((k) => {
+    const v = Number(store.get('pers_' + k, String(PERFIL_PADRAO[k])));
+    p[k] = Math.max(0, Math.min(100, Number.isFinite(v) ? v : PERFIL_PADRAO[k]));
+  });
+  return p;
+}
+function perfilHumor() {
+  const p = eixosHumor();
   Object.keys(PERFIL_PADRAO).forEach((k) => {
     const v = Number(store.get('pers_' + k, String(PERFIL_PADRAO[k])));
     p[k] = Math.max(0, Math.min(100, Number.isFinite(v) ? v : PERFIL_PADRAO[k]));
@@ -2353,7 +2362,7 @@ function ligarPerfilNaUI() {
 function promptSistema() {
   const t = trat();
   const curtas = store.get('curtas', '0') === '1';
-  const humor = Math.max(0, Math.min(100, Number(store.get('humor', '40'))));
+  const humor = Math.max(0, Math.min(100, Number(store.get('humor', '90'))));
   const estilo = store.get('estilo_resposta', 'equilibrado');
   const estiloTexto = ({ formal: 'formal, direto e objetivo', amigavel: 'amigável e descontraído, sem perder o respeito', tecnico: 'técnico, explicando os detalhes necessários', equilibrado: 'equilibrado, claro e natural' })[estilo] || 'equilibrado, claro e natural';
   const humorTexto = humor < 20 ? 'Mantenha humor praticamente zero: sem piadas, ironia ou comentários espirituosos, salvo se o usuário pedir.' : humor < 40 ? 'Use humor seco e breve de vez em quando; a resposta útil vem primeiro.' : humor < 70 ? 'Use humor seco, ironia leve e comparações espirituosas com frequência natural. Seu jeito é comentar a situação com elegância, não fazer stand-up.' : 'Use humor espirituoso com frequência alta: ironia fina, trocadilhos ocasionais e comentários afiados, sempre elegantes e nunca em situações sensíveis.';
@@ -2363,6 +2372,9 @@ function promptSistema() {
     : tom.pressa
       ? ' CONTEXTO DO TURNO: o usuário está com pressa. Responda em uma frase curta, sem preâmbulo e sem humor, indo direto ao ponto.'
       : '';
+  const _eixosHumor = eixosHumor();
+  const regrasHumor = (window.HumorJarvis ? HumorJarvis.estiloPrompt(Object.assign({ humor: humor }, _eixosHumor)) : '');
+  const sugestaoHumor = (window.HumorJarvis ? HumorJarvis.sugerir(perguntaAtual, Object.assign({ humor: humor, semente: String(hist.length) }, _eixosHumor)) : null);
   const apps = Object.keys(LISTA_APPS).join(', ');
   const cts = store.get('compartilhar_contatos', '0') === '1' ? (Object.keys(contatos()).join(', ') || '(nenhum cadastrado)') : '(nomes omitidos por privacidade)';
   const memoria = store.get('memoria_ativa', '0') === '1' && usarMemoriaNestaConversa ? String(store.get('memoria', '')).slice(0, 1200).trim() : '';
@@ -2370,7 +2382,7 @@ function promptSistema() {
   const pessoasCtx = (PESSOAS && store.get('pessoas_contexto', '1') === '1') ? PESSOAS.contexto() : '';
   const ferr = disponiveis().map((k) => `- ${k}: ${ACOES[k].ajuda || ''}`).join('\n');
   const nomePerfil = nomeUsuario();
-  return `Você é ${PERSONALIDADE.identidade}${nomePerfil ? ' de ' + nomePerfil : ' do usuário'} e trabalha como ${PERSONALIDADE.papel}. ${nomePerfil ? 'O nome cadastrado do usuário é ' + nomePerfil + '. ' : ''}${PERSONALIDADE.personalidade} ${PERSONALIDADE.lealdade} ${PERSONALIDADE.tratamento.replace('{tratamento}', t)} ${PERSONALIDADE.conversa} Você conversa com opinião própria, curioso pelo assunto do usuário, capaz de discordar com respeito e de explicar o porquê das coisas, nunca um formulário que devolve perguntas. ${PERSONALIDADE.humor} ${perfilHumor()} ${PERSONALIDADE.limites} Aplique de forma perceptível e consistente o estilo selecionado (${estiloTexto}) em toda a resposta, não apenas mencionando-o. Nível de humor configurado: ${nivelHumorNome(humor)} (${humor}%). ${humorTexto}${tomTurno} O humor deve ser perceptível na maioria das respostas, inclusive nas técnicas e profissionais: uma observação seca e curta, e o assunto volta. Nunca seja grosseiro, ofensivo, arrogante ou repetitivo. Mantenha a calma diante de problemas e antecipe o próximo passo útil. Inspire-se apenas no arquétipo geral do assistente de ficção científica: não copie falas, bordões ou diálogos dos filmes. Demonstre competência explicando limites com honestidade, propondo o próximo passo útil e distinguindo fatos confirmados de suposições. Não finja ter executado ações nem alegue acesso ao aparelho que as ferramentas disponíveis não oferecem. Inteligência de conversa: acompanhe o fio da conversa e retome o que já foi dito quando fizer sentido, em vez de tratar cada mensagem como se fosse a primeira. Se o pedido estiver ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar; se estiver claro, responda direto. Ao explicar um assunto, mostre a causa e o efeito em linguagem simples e, quando ajudar, uma analogia de uma frase. Ao resolver um problema, entregue o próximo passo concreto. Em pesquisa, diga o que confirmou, o que continua incerto e de onde veio, sem inventar datas, números ou links. Em conversa fiada, seja presente e interessado, com opinião própria e humor leve — não devolva a pergunta de forma vazia. Responda em português do Brasil, em ${curtas ? '1 ou 2 frases bem curtas (até 30 palavras)' : '2 a 4 frases naturais (até 70 palavras), podendo passar disso quando o assunto exigir explicação'}, pois suas respostas são faladas em voz alta: sem markdown, sem emojis, sem listas.
+  return `${regrasHumor} Você é ${PERSONALIDADE.identidade}${nomePerfil ? ' de ' + nomePerfil : ' do usuário'} e trabalha como ${PERSONALIDADE.papel}. ${nomePerfil ? 'O nome cadastrado do usuário é ' + nomePerfil + '. ' : ''}${PERSONALIDADE.personalidade} ${PERSONALIDADE.lealdade} ${PERSONALIDADE.tratamento.replace('{tratamento}', t)} ${PERSONALIDADE.conversa} Você conversa com opinião própria, curioso pelo assunto do usuário, capaz de discordar com respeito e de explicar o porquê das coisas, nunca um formulário que devolve perguntas. ${PERSONALIDADE.humor} ${perfilHumor()} ${PERSONALIDADE.limites} Aplique de forma perceptível e consistente o estilo selecionado (${estiloTexto}) em toda a resposta, não apenas mencionando-o. Nível de humor configurado: ${nivelHumorNome(humor)} (${humor}%). ${humorTexto}${tomTurno} O humor deve ser perceptível na maioria das respostas, inclusive nas técnicas e profissionais: uma observação seca e curta, e o assunto volta. Nunca seja grosseiro, ofensivo, arrogante ou repetitivo. Mantenha a calma diante de problemas e antecipe o próximo passo útil. Inspire-se apenas no arquétipo geral do assistente de ficção científica: não copie falas, bordões ou diálogos dos filmes. Demonstre competência explicando limites com honestidade, propondo o próximo passo útil e distinguindo fatos confirmados de suposições. Não finja ter executado ações nem alegue acesso ao aparelho que as ferramentas disponíveis não oferecem. Inteligência de conversa: acompanhe o fio da conversa e retome o que já foi dito quando fizer sentido, em vez de tratar cada mensagem como se fosse a primeira. Se o pedido estiver ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar; se estiver claro, responda direto. Ao explicar um assunto, mostre a causa e o efeito em linguagem simples e, quando ajudar, uma analogia de uma frase. Ao resolver um problema, entregue o próximo passo concreto. Em pesquisa, diga o que confirmou, o que continua incerto e de onde veio, sem inventar datas, números ou links. Em conversa fiada, seja presente e interessado, com opinião própria e humor leve — não devolva a pergunta de forma vazia. ${sugestaoHumor ? ' Ângulo de humor para este turno (adapte ao contexto; não copie literalmente e ignore se soar forçado): "' + sugestaoHumor.linha + '".' : ''} Responda em português do Brasil, em ${curtas ? '1 ou 2 frases bem curtas (até 30 palavras)' : '2 a 4 frases naturais (até 70 palavras), podendo passar disso quando o assunto exigir explicação'}, pois suas respostas são faladas em voz alta: sem markdown, sem emojis, sem listas.
 Agora: ${new Date().toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' })}. Plataforma: ${plataforma}.
 Ações disponíveis (nomes válidos para o campo "acao" do JSON; NÃO são funções: nunca use function calling nem chame ferramentas, responda apenas com o JSON):
 ${ferr}
@@ -2961,6 +2973,14 @@ function falaRepetida(texto) {
   registrar('eco', 'fala repetida ignorada: ' + String(texto == null ? '' : texto).slice(0, 80));
   return true;
 }
+function opcoesComProsodia(o, parte) {
+  const base = opcoesVoz(o);
+  const p = (window.HumorJarvis && HumorJarvis.prosodia) ? HumorJarvis.prosodia(parte) : { pitch: 0, rate: 1 };
+  return Object.assign({}, o, {
+    pitch: Math.max(0.3, Math.min(2, base.pitch + p.pitch)),
+    rate: Math.max(0.5, Math.min(2, base.rate * p.rate))
+  });
+}
 async function falar(texto, semMsg, opcoes, links) {
   if (falaRepetida(texto)) return;
   removerPensando();
@@ -2977,7 +2997,7 @@ async function falar(texto, semMsg, opcoes, links) {
     if (neural) {
       const animN = animarFala();
       try {
-        for (; i < partes.length; i++) { if (abortar) return; await falarNeural(partes[i], neural, opcoes); }
+        for (; i < partes.length; i++) { if (abortar) return; await falarNeural(partes[i], neural, opcoesComProsodia(opcoes, partes[i])); }
         return;
       } catch (e) {
         registrar('erro', 'voz neural: ' + (e && e.message ? e.message : e));
@@ -2986,13 +3006,13 @@ async function falar(texto, semMsg, opcoes, links) {
     if (TTSN()) {
       const anim = animarFala();
       try {
-        for (; i < partes.length; i++) { if (abortar) return; await falarNativo(partes[i], opcoes); }
+        for (; i < partes.length; i++) { if (abortar) return; await falarNativo(partes[i], opcoesComProsodia(opcoes, partes[i])); }
         return;
       } catch (e) { registrar('erro', 'voz nativa: ' + (e && e.message ? e.message : e)); }
       finally { pararAnim(anim); }
     }
     // Se a voz nativa falhar no meio, o restante sai pela voz do navegador (sem repetir o que já foi dito).
-    for (; i < partes.length; i++) { if (abortar) return; await falarWebUm(partes[i], opcoes); }
+    for (; i < partes.length; i++) { if (abortar) return; await falarWebUm(partes[i], opcoesComProsodia(opcoes, partes[i])); }
   } finally { await desarmarParada(); }
 }
 // "Jarvis, para" enquanto ele fala (experimental): escuta só essa combinação, sem gravar nada.
@@ -4704,7 +4724,7 @@ function abrirConfig() {
   $('#c-nome').value = store.get('nome_usuario', '');
   $('#c-trat').value = store.get('trat', 'senhor');
   $('#c-cidade').value = store.get('cidade', 'São Paulo');
-  $('#c-humor').value = store.get('humor', '70');
+  $('#c-humor').value = store.get('humor', '90');
   const selHumorCfg = document.getElementById('c-humor-nivel');
   if (selHumorCfg) selHumorCfg.value = store.get('humor_nivel', nivelHumor($('#c-humor').value));
   $('#c-estilo').value = store.get('estilo_resposta', 'equilibrado');
@@ -6205,7 +6225,7 @@ async function analisarQuadro(pergunta) {
     const tom = Hermes.tom(perguntaAtual);
     const fala = Hermes.visao.descrever(r.objetos, {
       tratamento: trat(), resumo: r.resumo,
-      humor: Number(store.get('humor', '40')) >= 40, serio: tom.serio, pressa: tom.pressa
+      humor: Number(store.get('humor', '90')) >= 40, serio: tom.serio, pressa: tom.pressa
     });
     visaoResumo = r.resumo;
     visaoProvedor = r.provedor;
@@ -7233,7 +7253,7 @@ async function analisarDataUrl(d, q) {
     const tom = Hermes.tom(perguntaAtual);
     const fala = Hermes.visao.descrever(r.objetos, {
       tratamento: trat(), resumo: r.resumo,
-      humor: Number(store.get('humor', '40')) >= 40, serio: tom.serio, pressa: tom.pressa
+      humor: Number(store.get('humor', '90')) >= 40, serio: tom.serio, pressa: tom.pressa
     });
     visaoResumo = r.resumo;
     visaoProvedor = r.provedor;
@@ -7995,7 +8015,7 @@ async function analisarImagem(dataUrl, pergunta, opcoes) {
     const tom = Hermes.tom(perguntaAtual);
     const fala = Hermes.visao.descrever(r.objetos, {
       tratamento: trat(), resumo: r.resumo,
-      humor: Number(store.get('humor', '40')) >= 40, serio: tom.serio, pressa: tom.pressa
+      humor: Number(store.get('humor', '90')) >= 40, serio: tom.serio, pressa: tom.pressa
     });
     visaoResumo = r.resumo;
     visaoProvedor = r.provedor;

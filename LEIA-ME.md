@@ -1,4 +1,4 @@
-# J.A.R.V.I.S. Nova 1.26.0
+# J.A.R.V.I.S. Nova 1.27.0
 
 ## 1.26.0 — Reconhecimento de locutor
 
@@ -565,3 +565,10 @@ encontrou em vez de inventar.
 - Nada é enviado a serviços externos: o cofre é lido e gravado localmente.
 - O teste de SAF, biometria e 3D depende de aparelho físico; a suíte automatizada cobre
   a lógica, o parser, a coerência da interface e a compilação.
+\n\n## 1.27.0 — Personalidade e voz
+
+O humor agora é identidade, não enfeite: o prompt exige personalidade em toda resposta, os padrões subiram para 90%,
+e um banco contextual sugere ângulos por assunto sem repetir. A IA local recebe as mesmas regras. A voz aplica
+prosódia por frase (ironia mais grave, exclamação mais viva, pergunta com subida de tom). Em assunto sensível,
+o humor é zerado.
+

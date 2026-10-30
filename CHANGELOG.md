@@ -1,3 +1,12 @@
+## 1.27.0 — Personalidade permanente e voz expressiva
+
+- **Humor obrigatório em toda resposta**: prompt abre com regras de personalidade, proíbe aberturas neutras e exige observação contextual integrada.
+- **Padrões elevados**: humor 90%, sarcasmo 90, ironia 90, brincadeiras 85, espontaneidade 85, provocação 70, formalidade 15.
+- **Banco contextual** (`humor.js`) por assunto, com detecção de tema sério e escolha sem repetir ângulos recentes.
+- **IA local incluída**: persona condensada e ângulo de humor também no prompt do Gemma 3.
+- **Voz com prosódia**: ironia mais grave/lenta, exclamação mais aguda/rápida, pergunta com subida de tom.
+- **Silêncio em assunto sensível**: emergência, saúde, luto, violência, segurança e dinheiro perdido têm humor zero.
+
 ## 1.26.0 — Reconhecimento de locutor local
 
 - **Motor de voz próprio** (`voz_motor.js`): VAD adaptativo, FFT/mel, pitch por HPS, formantes, prosódia e embedding de 59 dimensões.

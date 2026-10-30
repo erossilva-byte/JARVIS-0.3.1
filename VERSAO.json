@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.26.0",
-  "versionCode": 10260,
+  "version": "1.27.0",
+  "versionCode": 10270,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-10-30",
-  "status": "1.26.0: reconhecimento de locutor local de verdade — VAD, pitch (HPS), formantes, embedding de 59 dimensões, três estados (compatível/diferente/inconclusivo), perfis com consentimento, limiar configurável e captura com cancelamento de eco, supressão de ruído e AGC.",
+  "status": "1.27.0: personalidade permanente e humor contextual em toda resposta — prompt obrigatório, padrões em 90%, ângulos por assunto, IA local incluída, voz com prosódia por frase e silêncio total em assunto sensível.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.26.0 (2026-10-30). O reconhecimento de locutor saiu do vetor experimental de 6 números para um motor local (`voz_motor.js`): reamostragem para 16 kHz, pré-ênfase, quadros de 25 ms, FFT de 512 pontos, banco de 24 filtros mel, média e desvio por banda, pitch por HPS, formantes pelos picos do espectro médio, ZCR, centroide, planicidade e estatísticas de fala (duração, segmentos, pausas). O vetor tem 59 dimensões e a comparação pondera espectro, formantes, pitch, centroide e ZCR — o cosseno espectral sozinho aprovava vozes diferentes. O VAD usa piso de ruído e pico com histerese; a qualidade recusa áudio curto, saturado ou com SNR baixo. O cadastro é guiado em três frases, exige consentimento explícito, média os vetores e guarda apenas o embedding e metadados — nunca o áudio. É possível manter até cinco perfis, escolher o ativo, atualizar, apagar e testar a identificação entre eles, com margem entre o primeiro e o segundo candidato; empate ou proximidade do limiar resulta em inconclusivo. A captura usa getUserMedia com echoCancellation, noiseSuppression e autoGainControl configuráveis, medidor de nível em tempo real, relatório de SNR/clipping/pitch/formantes e diagnóstico do motor. Um indício fraco de replay (SNR altíssimo e pitch sem variação) é mostrado como aviso, nunca como bloqueio. O perfil antigo de 6 números fica preservado como backup, mas precisa ser recadastrado. A ativação por voz, os provedores remotos, a memória, as pessoas, a IA local Gemma 3 e o Windows continuam intactos; o núcleo (HUD, plasma e órbita 3D) e a animação seguem iguais. Testes: 24 verificações com vozes sintéticas (mesma voz, outra voz, ruído, clipping, áudio curto, identificação e ambiguidade) e contrato da interface; a validação com microfone real e a calibração final dos limiares dependem de gravações no aparelho, que este ambiente não possui.",
+  "notas": "Revisão 1.27.0 (2026-10-30). O humor não era ocasional por falta de texto: a persona entrava tarde no prompt, competia com instruções neutras e os padrões (70% e eixos 80/75/80/70/55/20) deixavam margem para respostas convencionais. Agora existe um módulo próprio (`humor.js`) com banco de ângulos por assunto — saudação, matemática, código, bug, instalação, agradecimento, arquivo, tarefa, pesquisa, sucesso, erro e geral —, detecção de assunto sensível e escolha sem repetir o que já foi usado na conversa. O prompt de sistema abre com regras de personalidade obrigatória, proíbe aberturas neutras (“Claro!”, “Entendido.”, “Como posso ajudar?”), exige uma observação espirituosa integrada por resposta, manda variar o alvo e proíbe copiar falas de filmes. O ângulo sugerido entra como inspiração, não como fala pronta, e a IA local recebe a mesma persona condensada. Os padrões subiram para humor 90%, sarcasmo 90, ironia 90, brincadeiras 85, espontaneidade 85, provocação 70 e formalidade 15. A voz ganhou prosódia por frase: comentário irônico fica levemente mais grave e lento, exclamação mais rápida e aguda, pergunta sobe o tom — no TTS nativo, no Web Speech e na voz neural. Em emergência, saúde, luto, violência, segurança ou dinheiro perdido, o humor é zerado antes de qualquer sugestão. O núcleo (HUD, plasma e órbita 3D), a animação, a memória, as pessoas, a IA local, o reconhecimento de locutor e o Windows seguem intactos. Testes: módulo de humor, contrato de personalidade, suíte completa e compilação do APK. A avaliação de naturalidade com um modelo real e a audição da prosódia dependem de aparelho/rede, que este ambiente não possui.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,12 +16,12 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "9578be013c38c2727bd36d1ab568e7b7030f832ec956dd01f1b09dc742ce05e7",
-    "bytes": 81056829,
-    "arquivo": "jarvis-nova-1.26.0-10260.apk",
+    "sha256": "e85d1faf7aabc1e737e462aceac7316bd5de78702ca4ffa9ab229fb7ace61176",
+    "bytes": 81061997,
+    "arquivo": "jarvis-nova-1.27.0-10270.apk",
     "data": "2026-10-30",
     "ambiente": "compilação local (JDK 21 + AGP 8.7.3 + Gradle 8.9 + Android SDK 35; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.26.0 com voz_motor.js, MediaPipe 0.10.24 e o painel de Desenvolvimento de Arquivos. Suíte com 1513 verificações aprovada. Sem microfone nem aparelho físico neste ambiente: a captura real, a calibração do limiar e a comparação entre pessoas precisam ser testadas no Poco X7."
+    "observacao": "APK 1.27.0 com humor.js, voz_motor.js, arquivos_dev.js e MediaPipe 0.10.24. Suíte com 1543 verificações aprovada. Sem aparelho/rede neste ambiente: naturalidade das respostas e audição da prosódia precisam ser conferidas no Poco X7."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",
