@@ -7,7 +7,9 @@ plugin = (ROOT / "JarvisLocalAIPlugin.java").read_text(encoding="utf-8")
 main = (ROOT / "MainActivity.java").read_text(encoding="utf-8")
 workflow = (ROOT / ".github/workflows/build-apk.yml").read_text(encoding="utf-8")
 gradle_patch = (ROOT / "patch_gradle.py").read_text(encoding="utf-8")
-gradle = (ROOT / "android/app/build.gradle").read_text(encoding="utf-8")
+gradle_path = ROOT / "android/app/build.gradle"
+# O CI roda os testes antes de `npx cap add android`; nesse caso o patch é a fonte da verdade.
+gradle = gradle_path.read_text(encoding="utf-8") if gradle_path.exists() else ""
 doc = (ROOT / "MODELOS-IA-LOCAL.md").read_text(encoding="utf-8")
 checks = {
     "Plugin local registrado": "registerPlugin(JarvisLocalAIPlugin.class)" in main,
@@ -23,7 +25,7 @@ checks = {
     "Workflow copia o plugin": "JarvisLocalAIPlugin.java" in workflow,
     "Plugin usa ActivityResult compatível com AndroidX": "import androidx.activity.result.ActivityResult;" in plugin,
     "Toolchain Java 21 alinhada no patch do CI": "AGP atualizado para 8.7.3" in gradle_patch and "gradle-8.9-all.zip" in gradle_patch and "compileSdk" in gradle_patch,
-    "Runtime suporta Gemma 3 (>=0.10.22)": "tasks-genai:0.10.24" in gradle_patch and 'tasks-genai:0.10.24' in gradle,
+    "Runtime suporta Gemma 3 (>=0.10.22)": "tasks-genai:0.10.24" in gradle_patch and (not gradle or "tasks-genai:0.10.24" in gradle),
     "Não usa mais o runtime 0.10.14": "tasks-genai:0.10.14" not in gradle_patch and "tasks-genai:0.10.14" not in gradle,
     "Prompt local limitado ao contexto do modelo": "MAX_PROMPT_CHARS = 6000" in plugin and "promptLocal" in js,
     "Prompt local não usa o prompt gigante da nuvem": "promptSistema() + regrasOffline" not in js,
