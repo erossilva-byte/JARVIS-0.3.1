@@ -982,6 +982,84 @@ const ACOES = {
       if (!l) return { info: 'Não há esse link da última pesquisa.' };
       await abrirLink(l.url);
     } },
+  /* ---------- Arquivos reais do computador: a IA executa, não só descreve ----------
+   * Só no desktop: o motor de arquivos vive no processo principal do Electron. No
+   * Android estas ações NÃO entram em `disponiveis()`, então o modelo nem as vê.
+   * Leitura de arquivo é conteúdo não confiável; gravação é risco 2 (confirmação),
+   * sempre com cópia .bak e conferência de SHA-256 feita pelo próprio motor. */
+  arquivos_listar: { risco: 0, disp: ['desktop'], ajuda: 'args {"pasta":"~/Jarvis"} (opcional). Lista os arquivos REAIS da pasta do usuário, com tipo e tamanho.',
+    prep: (a) => ({ args: { caminho: String((a && (a.pasta || a.caminho)) || '~/Jarvis').slice(0, 200) }, desc: 'Listar os arquivos da pasta pedida.' }),
+    run: async (a) => {
+      const r = await nativo('arq_listar', { caminho: a.caminho });
+      if (!r.itens.length) return { info: 'A pasta ' + r.relativo + ' está vazia.' };
+      const itens = r.itens.slice(0, 40).map((i) => i.nome + (i.pasta ? '/' : ' (' + (i.descricao || i.formato) + ', ' + i.bytes + ' B)'));
+      return { info: 'Pasta ' + r.relativo + ', ' + r.itens.length + ' item(ns): ' + itens.join('; ') + (r.itens.length > 40 ? '; …' : '') };
+    } },
+  arquivo_ler: { risco: 1, disp: ['desktop'], ajuda: 'args {"caminho":"~/Jarvis/nota.md"}. Lê o conteúdo real de um arquivo de texto. Binário (PDF/DOCX/imagem/ZIP) é identificado e recusado com o motivo.',
+    prep: (a) => { const c = String((a && a.caminho) || '').trim(); return c ? { args: { caminho: c.slice(0, 300) }, desc: 'Ler ' + c.slice(0, 120) + '.' } : { erro: 'Informe o caminho do arquivo, por exemplo ~/Jarvis/nota.md.' }; },
+    run: async (a) => {
+      const r = await nativo('arq_ler', { caminho: a.caminho });
+      if (r.binario) return { info: r.relativo + ': ' + r.descricao + '. Não é texto, então não há conteúdo para ler — use a prévia do painel.' };
+      const t = String(r.texto || '');
+      return {
+        info: 'Arquivo ' + r.relativo + ' (' + r.formato + ', ' + r.bytes + ' B):\n' + t.slice(0, 6000) + (t.length > 6000 ? '\n[conteúdo cortado em 6 mil caracteres]' : ''),
+        naoConfiavel: true
+      };
+    } },
+  arquivo_pesquisar: { risco: 1, disp: ['desktop'], ajuda: 'args {"termo":"texto","pasta":"~/Jarvis"}. Procura o termo dentro dos arquivos de texto e devolve caminho e linha.',
+    prep: (a) => { const t = String((a && a.termo) || '').trim(); return t.length >= 2 ? { args: { termo: t.slice(0, 120), pasta: String((a && a.pasta) || '~/Jarvis').slice(0, 200) }, desc: 'Pesquisar "' + t.slice(0, 60) + '" nos arquivos.' } : { erro: 'A busca precisa de pelo menos 2 caracteres.' }; },
+    run: async (a) => {
+      const r = await nativo('arq_pesquisar', { termo: a.termo, pasta: a.pasta, limite: 30 });
+      if (!r.achados.length) return { info: 'Nenhuma ocorrência de "' + a.termo + '" em ' + r.varridos + ' arquivo(s) lido(s).' };
+      return { info: r.achados.map((x) => x.caminho + ':' + x.linha + ' — ' + x.trecho).join('\n'), naoConfiavel: true };
+    } },
+  arquivo_verificar: { risco: 0, disp: ['desktop'], ajuda: 'args {"caminho":"~/Jarvis/peca.stl"}. Confere a estrutura interna (ZIP, JSON, PDF, STL, CSV) e devolve problemas reais.',
+    prep: (a) => { const c = String((a && a.caminho) || '').trim(); return c ? { args: { caminho: c.slice(0, 300) }, desc: 'Verificar a integridade de ' + c.slice(0, 120) + '.' } : { erro: 'Informe o caminho do arquivo.' }; },
+    run: async (a) => { const r = await nativo('arq_verificar', { caminho: a.caminho }); return { info: r.relativo + ': ' + r.resumo }; } },
+  arquivo_criar: { risco: 2, disp: ['desktop'], ajuda: 'args {"caminho":"~/Jarvis/plano.md","texto":"..."}. Cria ou grava um arquivo de TEXTO; se já existir, guarda cópia .bak antes e relê o disco para conferir.',
+    prep: (a) => {
+      const c = String((a && a.caminho) || '').trim();
+      const t = String((a && a.texto) == null ? '' : a.texto);
+      if (!c) return { erro: 'Informe o caminho do arquivo a criar, por exemplo ~/Jarvis/nota.md.' };
+      if (!t.trim()) return { erro: 'O conteúdo está vazio: não crio arquivo em branco sem o usuário pedir.' };
+      if (t.length > 60000) return { erro: 'Conteúdo acima de 60 mil caracteres: peça ao usuário dividir em partes.' };
+      return { args: { caminho: c.slice(0, 300), texto: t }, desc: 'Gravar ' + c.slice(0, 120) + ' (' + t.length + ' caracteres)' + (t.length > 4000 ? ', sobrescrevendo com cópia de segurança' : '') + '.' };
+    },
+    run: async (a) => {
+      const r = await nativo('arq_salvar', { caminho: a.caminho, texto: a.texto, backup: true });
+      registrar('arquivos', 'IA gravou ' + r.relativo + ' (' + r.bytes + ' B)');
+      return { info: 'Arquivo gravado e conferido: ' + r.relativo + ', ' + r.bytes + ' bytes' + (r.backup ? '; versão anterior em ' + r.backup : '') + '.' };
+    } },
+  arquivo_editar: { risco: 2, disp: ['desktop'], ajuda: 'args {"caminho":"~/Jarvis/app.js","texto":"conteúdo novo completo"}. Substitui o conteúdo de um arquivo de texto existente. Leia antes com arquivo_ler; a versão atual vai para .bak e o original é conferido por hash.',
+    prep: (a) => {
+      const c = String((a && a.caminho) || '').trim();
+      const t = String((a && a.texto) == null ? '' : a.texto);
+      if (!c) return { erro: 'Informe o caminho do arquivo a editar.' };
+      if (!t) return { erro: 'O novo conteúdo está vazio. Para apagar o arquivo existe uma ação própria — não vou esvaziar por engano.' };
+      if (t.length > 60000) return { erro: 'Conteúdo acima de 60 mil caracteres: divida a edição em partes.' };
+      return { args: { caminho: c.slice(0, 300), texto: t }, desc: 'Substituir o conteúdo de ' + c.slice(0, 120) + ' (' + t.length + ' caracteres), com cópia .bak.' };
+    },
+    run: async (a) => {
+      const atual = await nativo('arq_ler', { caminho: a.caminho });
+      if (atual.binario) return { info: atual.relativo + ' é ' + atual.descricao + ': não edito binário por aqui.' };
+      // O hash da leitura vai junto: se alguém mudou o arquivo entre a confirmação e a
+      // gravação, o motor recusa em vez de perder a alteração alheia.
+      const r = await nativo('arq_salvar', { caminho: a.caminho, texto: a.texto, backup: true, hashEsperado: atual.hash });
+      registrar('arquivos', 'IA editou ' + r.relativo + ' (' + r.bytes + ' B)');
+      return { info: 'Arquivo editado e conferido: ' + r.relativo + ', ' + r.bytes + ' bytes; versão anterior em ' + (r.backup || '(sem cópia)') + '.' };
+    } },
+  arquivo_compactar: { risco: 1, disp: ['desktop'], ajuda: 'args {"destino":"~/Jarvis/pacote.zip","arquivos":["~/Jarvis/a.md","~/Jarvis/b.txt"]}. Gera um ZIP real com os arquivos pedidos.',
+    prep: (a) => {
+      const d = String((a && a.destino) || '').trim();
+      const lista = Array.isArray(a && a.arquivos) ? a.arquivos.map((x) => String(x).slice(0, 300)) : [];
+      if (!d) return { erro: 'Informe o destino do ZIP, por exemplo ~/Jarvis/pacote.zip.' };
+      if (!lista.length) return { erro: 'Informe os arquivos que entram no ZIP.' };
+      return { args: { destino: d.slice(0, 300), arquivos: lista.slice(0, 50) }, desc: 'Compactar ' + lista.length + ' arquivo(s) em ' + d.slice(0, 120) + '.' };
+    },
+    run: async (a) => {
+      const r = await nativo('arq_compactar', { destino: a.destino, arquivos: a.arquivos.map((c) => ({ caminho: c })) });
+      return { info: 'ZIP criado e conferido: ' + r.relativo + ', ' + r.entradas + ' arquivo(s), ' + r.bytes + ' bytes.' };
+    } },
   cancelar_lembretes: { risco: 0, disp: ['android'], ajuda: 'sem args. Cancela todos os lembretes, alarmes e timers pendentes.',
     run: async () => { const fala = await cancelarAgendamentos(); return { info: fala, fala }; } }
 };
