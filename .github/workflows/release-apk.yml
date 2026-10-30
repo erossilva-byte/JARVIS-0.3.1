@@ -60,7 +60,7 @@ jobs:
           # Todo recurso web do app precisa estar aqui: sem hermes.js o app.js recusa
           # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
           cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
-          cp identidade.js identidade_ui.js www/
+          cp identidade.js identidade_ui.js escuta.js www/
           cp arquivos_dev.js www/
           cp voz_motor.js www/
           cp humor.js www/
@@ -144,6 +144,11 @@ jobs:
             “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
+
+            **Novidades da 1.29.0:** captura de voz com **pré-roll de 600 ms** e **fim por silêncio** (1,2 s), com piso de ruído
+            adaptativo e confirmação de 160 ms contra blips. A primeira sílaba não é mais cortada, o microfone fica aberto menos
+            tempo e o teste de voz fica mais rápido. Inclui o relatório comparativo dos oito repositórios de referência, com
+            arquitetura, licenças e o que é adotável sem copiar código.
 
             **Novidades da 1.28.0:** a aba **Identificação de Pessoas** passou a ser um sistema completo: cadastro com foto
             (galeria ou câmera, recorte e prévia), nome, apelido, nascimento com idade calculada, altura, profissão, relação,

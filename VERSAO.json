@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.28.0",
-  "versionCode": 10280,
+  "version": "1.29.0",
+  "versionCode": 10290,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-10-30",
-  "status": "1.28.0: identificação de pessoas — perfis completos com foto, voz por pessoa, reconhecimento local com confiança, consentimento, histórico e integração com a IA.",
+  "status": "1.29.0: captura de fala com pré-roll, piso de ruído adaptativo e fim por silêncio; análise comparativa dos oito repositórios de referência.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.28.0 (2026-10-30). A aba Pessoas virou Identificação de Pessoas: cada perfil tem foto com recorte, nome/apelido, nascimento com idade calculada, altura, profissão, relação, telefone, e-mail, endereço, cidade, descrição, preferências, interesses, observações, contexto e até 12 campos personalizados. O perfil de voz é individual: três a oito amostras guiadas passam pelo VAD/FFT/formantes do voz_motor.js, com recusa de áudio curto, ruidoso ou saturado, e viram um vetor de características — o áudio nunca é guardado. A identificação é open-set: compara todos os perfis autorizados com limiar e margem, responde IDENTIFICADO, NÃO IDENTIFICADO ou INCONCLUSIVO e nunca associa uma voz desconhecida a um cadastro. A voz reconhecida na ativação entra no contexto da IA com os campos permitidos (telefone, e-mail, endereço e biometria ficam fora do prompt). Consentimento é separado para voz e referência visual, revogável, e a biometria é cifrada em repouso com AES-GCM (chave local; não substitui Keystore). A referência visual opcional usa dHash e é declarada como semelhança de imagem, nunca prova de identidade. Há histórico de alterações por perfil, exportação sem biometria, importação, migração do cadastro anterior e uma aba própria em Configurações com limiar (mínimo seguro de 68%), margem, qualidade mínima, testes de microfone e reconhecimento e exclusão de toda a biometria. O que não foi possível testar aqui: captura real de microfone/câmera, naturalidade com vozes humanas e falsos positivos em campo. Os testes de voz usam sinais sintéticos; a validação real depende do aparelho. O núcleo visual (HUD, plasma e órbita 3D), a animação, a memória, a visão, a IA local e o Windows seguem intactos.",
+  "notas": "Revisão 1.29.0 (2026-10-30). Primeira fase da evolução baseada na análise dos oito repositórios de referência (relatório em docs/ANALISE-REFERENCIAS.md). A captura de voz deixou de gravar quatro segundos fixos: um módulo puro (escuta.js) mantém 600 ms de pré-roll, mede o piso de ruído pelos primeiros 400 ms, confirma fala com 160 ms de energia e encerra após 1,2 s de silêncio, com teto rígido de duração. Isso evita cortar a primeira sílaba e encurta o tempo de microfone aberto em perfis de voz, verificação na ativação e testes. A análise comparativa cobre arquitetura Android, reconhecimento de voz, segundo plano, automação, interface, memória e orquestração de agentes, com licenças e o que é adotável sem copiar código. O núcleo (HUD, plasma e órbita 3D), a animação, o humor, a memória, a identificação de pessoas, a visão, a IA local e o Windows seguem intactos. O que não foi possível testar aqui: microfone, câmera, aparelho Android, Windows e vozes humanas. Os testes do VAD usam sinais sintéticos; naturalidade e falsos positivos em campo dependem de teste no aparelho.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,12 +16,12 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "34a58b09c69d0b9e0125ffca10d2568cfc77c185390c8e97fc61eb5d1560b454",
-    "bytes": 81089170,
-    "arquivo": "jarvis-nova-1.28.0-10280.apk",
+    "sha256": "3ff808efbdad6aa76f52a90dcc35297b807bf5d176ec3ff13ecfe61a2d5c750b",
+    "bytes": 81092219,
+    "arquivo": "jarvis-nova-1.29.0-10290.apk",
     "data": "2026-10-30",
     "ambiente": "compilação local (JDK 21 + AGP 8.7.3 + Gradle 8.9 + Android SDK 35; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.28.0 com identidade.js, identidade_ui.js, voz_motor.js e humor.js; suíte com 1596 verificações aprovada. Sem aparelho, microfone ou câmera neste ambiente: captura real, naturalidade com vozes humanas e falsos positivos em campo precisam ser conferidos no aparelho."
+    "observacao": "APK 1.29.0 com escuta.js, identidade.js, identidade_ui.js, voz_motor.js e humor.js; suíte com 1601 verificações aprovada. Sem aparelho/microfone neste ambiente: captura real e falsos positivos precisam ser conferidos no aparelho."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

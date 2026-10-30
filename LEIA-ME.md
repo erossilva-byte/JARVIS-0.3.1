@@ -1,4 +1,18 @@
-# J.A.R.V.I.S. Nova 1.28.0
+# J.A.R.V.I.S. Nova 1.29.0
+
+## 1.29.0 — Captura de fala e análise de referências
+
+A captura de voz parou de gravar quatro segundos fixos. Um VAD local mantém **600 ms de pré-roll**, aprende o ruído da sala,
+confirma fala com 160 ms de energia e encerra após 1,2 s de silêncio, com teto de segurança. Na prática: a primeira sílaba
+não é cortada, o microfone fica aberto menos tempo e a resposta chega mais rápido. Vale para o cadastro de voz das pessoas,
+a verificação na ativação e o teste de microfone.
+
+O relatório `docs/ANALISE-REFERENCIAS.md` compara os oito repositórios pedidos — arquitetura Android, voz, segundo plano,
+automação, interface, memória, agentes e licenças — e separa o que é adotável do que é apenas referência. Nenhum código foi
+copiado; as ideias foram reimplementadas no núcleo próprio.
+
+**Limitação:** sem microfone ou aparelho aqui, o VAD foi validado com sinais sintéticos. A naturalidade e os falsos positivos
+em campo precisam ser medidos no Poco X7.
 
 ## 1.28.0 — Identificação de Pessoas
 

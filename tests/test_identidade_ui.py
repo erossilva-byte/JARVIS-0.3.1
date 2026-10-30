@@ -17,9 +17,9 @@ def checar(nome, ok):
         falhas.append(nome)
 
 
-checar('versão 1.28.0', pkg['version'] == '1.28.0' and versao['version'] == '1.28.0')
-checar('versionCode 10280', versao['versionCode'] == 10280)
-checar('app.js na mesma versão', "VERSAO_APP = '1.28.0'" in app)
+checar('versão corrente', pkg['version'] == versao['version'])
+checar('versionCode >= 10280', versao['versionCode'] >= 10280)
+checar('app.js na mesma versão', ("VERSAO_APP = '%s'" % versao['version']) in app)
 checar('identidade.js no pacote desktop', 'identidade.js' in pkg['build']['files'])
 checar('identidade_ui.js no pacote desktop', 'identidade_ui.js' in pkg['build']['files'])
 checar('testes novos na suíte', 'tests/test_identidade.js' in pkg['scripts']['test:all'] and

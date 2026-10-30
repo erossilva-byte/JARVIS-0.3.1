@@ -410,7 +410,7 @@
         if (!c.ok) throw new Error(c.erro);
         p = c.perfil;
       }
-      statusVoz('Gravando 4 segundos. Leia a frase em voz normal…', '');
+      statusVoz('Gravando: leia a frase em voz normal. Paro sozinho após 1,2 s de silêncio.', '');
       var audio = await deps.capturarAmostraVoz(4000);
       var analise = m.analisar(audio.samples, audio.sampleRate);
       var r = await IDENT.adicionarVoz(p.id, analise);
@@ -438,7 +438,7 @@
     if (!IDENT.perfisVoz().length) { statusVoz('Nenhuma pessoa tem perfil de voz autorizado.', 'warn'); return; }
     estado.ocupado = true;
     try {
-      statusVoz('Gravando 4 segundos para comparar com os perfis…', '');
+      statusVoz('Gravando: fale normalmente e faça uma pausa curta ao final.', '');
       var audio = await deps.capturarAmostraVoz(4000);
       var analise = m.analisar(audio.samples, audio.sampleRate);
       var r = await IDENT.identificar(analise);

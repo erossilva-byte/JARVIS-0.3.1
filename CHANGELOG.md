@@ -1,3 +1,11 @@
+## 1.29.0 — Captura de fala com pré-roll e análise de referências
+
+- **VAD de captura** (`escuta.js`): pré-roll de 600 ms, piso de ruído adaptativo, confirmação de 160 ms, fim após 1,2 s de silêncio e teto rígido.
+- **Integração**: perfis de voz, verificação na ativação e testes usam a captura inteligente; a primeira sílaba deixa de ser cortada.
+- **Análise comparativa** dos oito repositórios em `docs/ANALISE-REFERENCIAS.md`, com arquitetura, licenças, pontos fortes e matriz de adoção.
+- **Nada removido**: personalidade, identificação de pessoas, memória, visão, IA local e Windows preservados.
+- **Testes**: `test_escuta.js` com sinais sintéticos (pré-roll, silêncio, teto, blip, reinício) e suíte completa.
+
 ## 1.28.0 — Identificação de Pessoas
 
 - **Aba completa**: cartões com foto, busca, adicionar/editar/excluir, detalhes individuais e selo de estado da voz.

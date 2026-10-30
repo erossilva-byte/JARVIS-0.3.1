@@ -35,7 +35,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.28.0';
+const VERSAO_APP = '1.29.0';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -5410,6 +5410,14 @@ async function capturarAmostraVoz(ms) {
   });
   let ctx, source, processor, silent;
   const pedacos = [];
+  const limite = Math.max(1500, Number(ms) || 4000);
+  // Pré-roll + fim de fala: para de gravar quando a pessoa cala, em vez de
+  // segurar o microfone por quatro segundos inteiros. O anel de 600 ms evita
+  // cortar a primeira sílaba, que era o defeito da captura de duração fixa.
+  const escuta = (typeof EscutaJarvis !== 'undefined')
+    ? EscutaJarvis.criar({ maxMs: limite, semFalaMs: limite, minFalaMs: 1200, silencioMs: 1200, preRollMs: 600 })
+    : null;
+  let encerrado = false;
   try {
     ctx = new AC();
     if (ctx.state === 'suspended') await ctx.resume();
@@ -5422,15 +5430,32 @@ async function capturarAmostraVoz(ms) {
       let soma = 0;
       for (let i = 0; i < a.length; i++) soma += a[i] * a[i];
       vozNivel(Math.min(100, Math.round(Math.sqrt(soma / a.length) * 320)));
+      if (escuta && !encerrado) {
+        const r = escuta.processar(a, ctx.sampleRate);
+        if (r.estado === 'fim') encerrado = true;
+      }
     };
     source.connect(processor); processor.connect(silent); silent.connect(ctx.destination);
-    await new Promise((r) => setTimeout(r, ms || 4000));
-    const total = pedacos.reduce((n, a) => n + a.length, 0);
-    const samples = new Float32Array(total);
-    let off = 0;
-    pedacos.forEach((a) => { samples.set(a, off); off += a.length; });
-    if (!total) throw new Error('Não recebi áudio do microfone.');
-    return { samples: samples, sampleRate: ctx.sampleRate };
+    await new Promise((resolve) => {
+      const inicio = Date.now();
+      const timer = setInterval(() => {
+        if (encerrado || Date.now() - inicio >= limite + 250) { clearInterval(timer); resolve(); }
+      }, 60);
+    });
+    const fim = escuta ? escuta.resultado() : null;
+    let samples, taxa = ctx.sampleRate;
+    if (fim && fim.amostras.length) {
+      samples = fim.amostras;
+      taxa = fim.sampleRate || taxa;
+      registrar('voz', 'captura encerrada por ' + fim.motivo + ' com ' + fim.falaMs + ' ms de fala');
+    } else {
+      const total = pedacos.reduce((n, a) => n + a.length, 0);
+      samples = new Float32Array(total);
+      let off = 0;
+      pedacos.forEach((a) => { samples.set(a, off); off += a.length; });
+    }
+    if (!samples.length) throw new Error('Não recebi áudio do microfone.');
+    return { samples: samples, sampleRate: taxa, motivo: fim ? fim.motivo : 'tempo', falaMs: fim ? fim.falaMs : 0 };
   } finally {
     try { if (processor) processor.disconnect(); if (source) source.disconnect(); if (silent) silent.disconnect(); if (ctx) await ctx.close(); } catch (_) {}
     stream.getTracks().forEach((t) => t.stop());
@@ -5518,7 +5543,7 @@ if (btnVozCadastrar) btnVozCadastrar.onclick = async () => {
   if (!consent || !consent.checked) { statusPerfilAcustico('Marque o consentimento antes de gravar sua voz.'); return; }
   btnVozCadastrar.disabled = true;
   try {
-    statusPerfilAcustico('Gravando amostra ' + (vozPendentes.length + 1) + ' de 3 por 4 segundos…');
+    statusPerfilAcustico('Gravando amostra ' + (vozPendentes.length + 1) + ' de 3. Leia a frase; a captura termina sozinha após uma pausa curta.');
     const a = await capturarAmostraVoz(4000);
     const m = vozMotor();
     if (!m) throw new Error('O motor de voz não carregou.');
@@ -5566,7 +5591,7 @@ if (btnVozVerificar) btnVozVerificar.onclick = async () => {
   try {
     const perfis = vozPerfis();
     if (!perfis.length) throw new Error('Salve um perfil antes de testar o reconhecimento.');
-    statusPerfilAcustico('Gravando 4 segundos para comparar com o perfil…');
+    statusPerfilAcustico('Gravando para comparar com o perfil. Fale e faça uma pausa curta ao terminar.');
     const a = await capturarAmostraVoz(4000);
     const m = vozMotor();
     if (!m) throw new Error('O motor de voz não carregou.');

@@ -1,4 +1,4 @@
-name: Build e testes do J.A.R.V.I.S. Nova 1.28.0
+name: Build e testes do J.A.R.V.I.S. Nova 1.29.0
 
 on:
   workflow_dispatch:
@@ -10,6 +10,7 @@ on:
       - 'app.js'
       - 'identidade.js'
       - 'identidade_ui.js'
+      - 'escuta.js'
       - 'apps.js'
       - 'main.js'
       - 'hermes.js'
@@ -91,7 +92,7 @@ jobs:
         run: |
           mkdir -p www
           cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
-          cp identidade.js identidade_ui.js www/
+          cp identidade.js identidade_ui.js escuta.js www/
           cp arquivos_dev.js www/
           cp voz_motor.js www/
           cp humor.js www/
