@@ -1,3 +1,13 @@
+## 1.30.0 — Agentes especializados e recibos de execução
+
+- **Agentes especializados** (`agentes.js`): nove domínios classificam cada ferramenta — conversa, pesquisa, dispositivo, arquivos, memória, pessoas, visão, computador e sistema — sem duplicar o roteamento do Hermes.
+- **Recibos verificáveis**: cada ação nasce `aberto` e termina em `ok`, `incerto`, `falhou`, `bloqueado` ou `cancelado`. Só é `ok` quando o adaptador confirma o efeito; “Solicitei a abertura” e “preparei a mensagem” ficam `incerto`.
+- **Ponto único**: `executarSeguro` fecha o recibo em todos os caminhos (offline, ação inválida, modo seguro, PIN ausente, cancelamento, exceção e retorno vazio).
+- **Privacidade do registro**: persistem apenas ação, agente, estado, duração e **nomes** dos argumentos; valores como telefone, texto de mensagem e caminho nunca entram no recibo. Histórico limitado aos 80 mais recentes.
+- **Diagnóstico**: nova linha com confirmados, incertos, falhas, bloqueios, cancelamentos e taxa de verificação de efeito.
+- **Testes**: `tests/test_agentes.js` cobre mapeamento dos nove agentes, classificação, cancelamento, bloqueio, persistência, limite e ausência de valores sensíveis.
+- **Preservado**: Hermes, rotinas, confirmação de risco, modo offline, PIN, memória, pessoas, visão, voz/VAD, IA local e Windows seguem intactos.
+
 ## 1.29.0 — Captura de fala com pré-roll e análise de referências
 
 - **VAD de captura** (`escuta.js`): pré-roll de 600 ms, piso de ruído adaptativo, confirmação de 160 ms, fim após 1,2 s de silêncio e teto rígido.

@@ -5,6 +5,9 @@ const store = {
   get: (k, d = '') => { const v = localStorage.getItem('jv_' + k); return v === null ? d : v; },
   set: (k, v) => localStorage.setItem('jv_' + k, v)
 };
+// Agentes especializados + recibos de execução (1.30.0): toda ferramenta passa por aqui.
+const AGENTES = (typeof window !== 'undefined' && window.AgentesJarvis) ? window.AgentesJarvis : null;
+if (AGENTES) { try { AGENTES.configurar({ store }); } catch (e) { /* recibo opcional não derruba o app */ } }
 const nativoDesk = window.jarvisNative || null;
 const Cap = window.Capacitor;
 const ehAndroid = !!(Cap && typeof Cap.isNativePlatform === 'function' && Cap.isNativePlatform());
@@ -35,7 +38,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.29.0';
+const VERSAO_APP = '1.30.0';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -1070,30 +1073,57 @@ const disponiveis = () => Object.keys(ACOES).filter((k) => ACOES[k].disp.include
 
 async function executarSeguro(acao) {
   const nome = acao.nome;
+  const rec = AGENTES ? AGENTES.abrir(nome, acao.args) : null;
+  // fim() fecha o recibo em TODOS os caminhos. O resultado devolvido à conversa
+  // carrega o recibo, então a UI e o diagnóstico sabem se o efeito foi observado.
+  const fim = (res, motivo) => {
+    if (!rec) return res;
+    let r = null;
+    try { r = (res === null) ? AGENTES.cancelar(rec.id, motivo) : AGENTES.fechar(rec.id, res); }
+    catch (e) { r = null; }
+    if (res && typeof res === 'object' && !Array.isArray(res) && r) res.recibo = r;
+    if (r && (r.estado === 'falhou' || r.estado === 'bloqueado')) registrar('recibo', r.acao + ' · ' + r.agente + ' · ' + r.estado);
+    return res;
+  };
   if (store.get('offline', '0') === '1' && ['pesquisar', 'clima'].includes(nome)) {
     registrar('offline', 'ação online bloqueada: ' + nome);
-    return { info: 'Esse recurso precisa de internet. O modo offline está ativo.' };
+    return fim({ info: 'Esse recurso precisa de internet. O modo offline está ativo.', bloqueado: true });
   }
   const def = ACOES[nome];
-  if (!def || !disponiveis().includes(nome)) { registrar('bloqueado', 'ação inexistente: ' + nome); return { info: fraseApp('acaoIndisponivel') }; }
+  if (!def || !disponiveis().includes(nome)) {
+    registrar('bloqueado', 'ação inexistente: ' + nome);
+    return fim({ info: fraseApp('acaoIndisponivel'), bloqueado: true });
+  }
   let args = acao.args && typeof acao.args === 'object' ? acao.args : {};
   let desc = nome;
   if (def.prep) {
     const p = def.prep(args);
-    if (p.erro) { registrar('recusado', nome + ': ' + p.erro); return { info: p.erro }; }
+    if (p.erro) { registrar('recusado', nome + ': ' + p.erro); return fim({ info: p.erro, falhou: true }); }
     args = p.args; desc = p.desc;
   }
   if (def.risco >= 2) {
-    if (store.get('seguro', '1') === '1') { registrar('bloqueado', 'modo seguro: ' + nome); return { info: 'O modo seguro está bloqueando essa ação. Desative o bloqueio nos Ajustes para continuar; a confirmação continuará obrigatória.' }; }
-    if (Date.now() - ultimaCritica < 8000) { registrar('bloqueado', 'limite de frequência: ' + nome); return { info: 'Ação crítica recente demais. Aguarde alguns segundos.' }; }
-    if (def.risco >= 3 && !store.get('pin_hash')) return { info: 'Defina um PIN nos Ajustes antes de usar ações desse nível.' };
+    if (store.get('seguro', '1') === '1') {
+      registrar('bloqueado', 'modo seguro: ' + nome);
+      return fim({ info: 'O modo seguro está bloqueando essa ação. Desative o bloqueio nos Ajustes para continuar; a confirmação continuará obrigatória.', bloqueado: true });
+    }
+    if (Date.now() - ultimaCritica < 8000) {
+      registrar('bloqueado', 'limite de frequência: ' + nome);
+      return fim({ info: 'Ação crítica recente demais. Aguarde alguns segundos.', bloqueado: true });
+    }
+    if (def.risco >= 3 && !store.get('pin_hash')) return fim({ info: 'Defina um PIN nos Ajustes antes de usar ações desse nível.', bloqueado: true });
     const ok = await confirmar(desc, def.risco >= 3);
-    if (!ok) { registrar('cancelado', desc); await falar('Cancelado.'); return null; }
+    if (!ok) { registrar('cancelado', desc); await falar('Cancelado.'); return fim(null, 'cancelado pelo usuário'); }
     ultimaCritica = Date.now();
   }
   registrar('executado', desc);
-  try { return (await def.run(args)) || null; }
-  catch (e) { registrar('erro', nome + ': ' + e.message); return { info: 'A ação falhou: ' + e.message }; }
+  try {
+    const res = await def.run(args);
+    // Ferramenta que não devolve nada não pode ser anunciada como concluída.
+    return fim(res === undefined ? { info: 'A ação foi disparada, mas o sistema não devolveu confirmação.' } : res);
+  } catch (e) {
+    registrar('erro', nome + ': ' + e.message);
+    return fim({ info: 'A ação falhou: ' + e.message, falhou: true });
+  }
 }
 
 /* ---------- Lembretes, alarmes e timers (Android) ---------- */
@@ -4485,6 +4515,15 @@ async function executarDiagnostico() {
     if (ehAndroid) diagLinha('ok', 'Pacote instalado', 'Versão ' + VERSAO_APP + ' · appId com.jarvis.nova · executando do APK instalado. Integridade, assinatura e conteúdo do .apk são conferidos na compilação, não aqui.');
     else diagLinha('nig', 'Pacote instalado', 'Versão ' + VERSAO_APP + ' em execução, mas este ambiente não é o APK: identidade, assinatura e conteúdo do pacote não podem ser conferidos aqui.',
       { orientacao: 'Abra o diagnóstico no aplicativo Android instalado para ver o pacote real.' });
+    // ---------- Recibos: ação disparada não é o mesmo que efeito confirmado ----------
+    if (AGENTES) {
+      const rc = AGENTES.resumo();
+      const detalhe = rc.total
+        ? rc.total + ' recibo(s): ' + rc.ok + ' confirmado(s), ' + rc.incerto + ' incerto(s), ' + rc.falhou + ' falha(s), ' + rc.bloqueado + ' bloqueado(s), ' + rc.cancelado + ' cancelado(s). Verificação de efeito: ' + rc.taxaVerificacao + '%.'
+        : 'Nenhuma ferramenta executada nesta instalação; o registro começa na primeira ação.';
+      diagLinha(rc.falhou ? 'fail' : rc.incerto ? 'cfg' : 'ok', 'Recibos de execução', detalhe,
+        rc.falhou ? { impacto: 'Algumas ferramentas não concluíram o efeito pedido.', orientacao: 'Abra o registro e repita a ação; se persistir, confira permissões do Android.' } : {});
+    }
     // ---------- Persistência de verdade: grava, lê e apaga ----------
     let persistOk = false, persistDetalhe = '';
     try {

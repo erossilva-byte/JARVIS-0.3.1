@@ -1,4 +1,21 @@
-# J.A.R.V.I.S. Nova 1.29.0
+# J.A.R.V.I.S. Nova 1.30.0
+
+## 1.30.0 — Agentes especializados e recibos de execução
+
+Toda ferramenta agora passa por um **recibo**: o app registra qual agente executou, quanto tempo levou e, principalmente,
+se o **efeito foi confirmado**. Abrir um aplicativo, preparar uma mensagem ou solicitar uma chamada deixa o recibo como
+**incerto** — ação disparada não é o mesmo que tarefa concluída. Falhas, bloqueios por segurança/offline e cancelamentos
+também ficam registrados. O diagnóstico mostra a taxa de verificação e a distribuição dos estados.
+
+O registro é deliberadamente mínimo: guarda o nome da ação e as **chaves** dos argumentos, nunca o texto da mensagem, o
+telefone, o caminho do arquivo ou o conteúdo da memória. Os 80 recibos mais recentes ficam no armazenamento local.
+
+Nove agentes classificam as ferramentas: conversa, pesquisa, dispositivo, arquivos, memória, pessoas, visão, computador e
+sistema. Isso organiza a expansão futura sem substituir o roteamento do Hermes nem as habilidades existentes.
+
+**Limitação:** a confirmação de efeito depende do que cada adaptador nativo devolve. Onde o Android só permite abrir um
+app ou preparar uma mensagem, o recibo permanece honestamente **incerto**; não há como afirmar que o usuário concluiu a
+ação sem uma API de leitura do estado final.
 
 ## 1.29.0 — Captura de fala e análise de referências
 

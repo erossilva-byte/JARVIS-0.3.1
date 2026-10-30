@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.29.0",
-  "versionCode": 10290,
+  "version": "1.30.0",
+  "versionCode": 10300,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-10-30",
-  "status": "1.29.0: captura de fala com pré-roll, piso de ruído adaptativo e fim por silêncio; análise comparativa dos oito repositórios de referência.",
+  "status": "1.30.0: agentes especializados e recibos de execução verificáveis; VAD com pré-roll preservado.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.29.0 (2026-10-30). Primeira fase da evolução baseada na análise dos oito repositórios de referência (relatório em docs/ANALISE-REFERENCIAS.md). A captura de voz deixou de gravar quatro segundos fixos: um módulo puro (escuta.js) mantém 600 ms de pré-roll, mede o piso de ruído pelos primeiros 400 ms, confirma fala com 160 ms de energia e encerra após 1,2 s de silêncio, com teto rígido de duração. Isso evita cortar a primeira sílaba e encurta o tempo de microfone aberto em perfis de voz, verificação na ativação e testes. A análise comparativa cobre arquitetura Android, reconhecimento de voz, segundo plano, automação, interface, memória e orquestração de agentes, com licenças e o que é adotável sem copiar código. O núcleo (HUD, plasma e órbita 3D), a animação, o humor, a memória, a identificação de pessoas, a visão, a IA local e o Windows seguem intactos. O que não foi possível testar aqui: microfone, câmera, aparelho Android, Windows e vozes humanas. Os testes do VAD usam sinais sintéticos; naturalidade e falsos positivos em campo dependem de teste no aparelho.",
+  "notas": "Revisão 1.30.0 (2026-10-30). Segunda fase da evolução baseada nos oito repositórios de referência. O novo módulo agentes.js cria nove agentes especializados (conversa, pesquisa, dispositivo, arquivos, memória, pessoas, visão, computador e sistema) e um recibo para cada ferramenta executada. O recibo nasce aberto e termina em ok, incerto, falhou, bloqueado ou cancelado; só é ok quando o adaptador confirma o efeito. Textos como \"Solicitei a abertura\" ou \"preparei a mensagem\" ficam como incerto, impedindo que uma ação apenas disparada seja anunciada como concluída. O ponto único executarSeguro fecha o recibo em todos os caminhos: modo offline, ação inválida, modo seguro, PIN ausente, cancelamento do usuário, exceção e retorno vazio. O registro persiste apenas ação, agente, estado, duração e nomes dos argumentos; nunca valores como telefone, texto de mensagem ou caminho, e fica limitado aos 80 mais recentes. O diagnóstico ganhou uma linha com confirmados, incertos, falhas, bloqueios, cancelamentos e taxa de verificação. O núcleo (HUD, plasma e órbita 3D), a animação, a personalidade, o humor, a memória, a identificação de pessoas, a visão, o VAD, a IA local e o Windows seguem intactos. O que não foi possível testar aqui: aparelho Android, microfone, câmera, Windows e efeitos nativos reais; os recibos foram validados com resultados sintéticos e os adaptadores continuam dependentes do que o Android devolve.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,12 +16,12 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "3ff808efbdad6aa76f52a90dcc35297b807bf5d176ec3ff13ecfe61a2d5c750b",
-    "bytes": 81092219,
-    "arquivo": "jarvis-nova-1.29.0-10290.apk",
+    "sha256": "f1eab073d697eaa6ab013a6831d814b8415d149e022d6499ae56a9591ef3b7d2",
+    "bytes": 81096701,
+    "arquivo": "jarvis-nova-1.30.0-10300.apk",
     "data": "2026-10-30",
     "ambiente": "compilação local (JDK 21 + AGP 8.7.3 + Gradle 8.9 + Android SDK 35; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.29.0 com escuta.js, identidade.js, identidade_ui.js, voz_motor.js e humor.js; suíte com 1601 verificações aprovada. Sem aparelho/microfone neste ambiente: captura real e falsos positivos precisam ser conferidos no aparelho."
+    "observacao": "APK 1.30.0 com agentes.js, app.js, escuta.js, identidade.js, identidade_ui.js, voz_motor.js e humor.js; suíte npm run test:all exit 0, incluindo 30 verificações novas de agentes e recibos. Sem aparelho/microfone neste ambiente: efeitos nativos reais e captura de voz precisam ser conferidos no aparelho."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",
