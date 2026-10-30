@@ -1,3 +1,16 @@
+## 1.25.0 — Desenvolvimento de Arquivos, voz em três estados
+
+- **Nova aba Desenvolvimento de Arquivos**: recebe vários arquivos ou projeto `.zip`, lista idioma/tamanho/linhas,
+  analisa JSON inválido, importações ausentes, duplicatas, segredos, conflitos, `eval`/`innerHTML`, HTTP sem TLS,
+  indentação e símbolos desbalanceados — sem executar o código recebido.
+- **Correções com original preservado**: formatar JSON válido, normalizar CRLF/LF, remover espaços e BOM; histórico
+  local das 30 últimas operações e download individual ou do pacote `.zip`.
+- **Criação de formatos reais**: PDF com xref, DOCX/XLSX OOXML válidos, CSV a partir de JSON, ZIP com CRC32 e pastas;
+  instrução “crie um projeto Python chamado X” gera README, `main.py` executável e `requirements.txt`.
+- **Voz em três estados**: compatível, diferente ou inconclusivo, com margem em torno do limiar; o texto deixa claro
+  que timbre não é prova de identidade.
+- Testes novos: motor em Node, formatos validados externamente com `zipfile`/XML/`csv` do Python e contrato da aba no CI.
+
 ## Não lançado — Personalidade 2.0
 
 - **Humor na maioria das respostas**, inclusive pesquisa, código, diagnóstico e conversa profissional:

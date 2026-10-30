@@ -35,7 +35,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.24.0';
+const VERSAO_APP = '1.25.0';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -4586,9 +4586,9 @@ async function executarDiagnostico() {
   // O resumo falado é montado pelo núcleo Hermes — o mesmo usado por voz: "verifique o sistema".
   return { itens, resumo: Hermes.resumoDiagnostico(itens, { tratamento: trat() }) };
 }
-const PAINEIS_ESSENCIAIS = !!($('#painel-config') && $('#painel-memoria') && $('#painel-tarefas') && $('#painel-visao') && $('#painel-info') && $('#painel-arquivos') && $('#painel-pessoas'));
+const PAINEIS_ESSENCIAIS = !!($('#painel-config') && $('#painel-memoria') && $('#painel-tarefas') && $('#painel-visao') && $('#painel-info') && $('#painel-arquivos') && $('#painel-pessoas') && $('#painel-dev'));
 const H = (typeof history !== 'undefined') ? history : null;
-const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas', '#painel-visao', '#painel-info', '#painel-memoria', '#painel-arquivos', '#painel-pessoas', '#painel-pc'];
+const PAINEIS = ['#painel-config', '#painel-log', '#painel-tarefas', '#painel-visao', '#painel-info', '#painel-memoria', '#painel-arquivos', '#painel-pessoas', '#painel-dev', '#painel-pc'];
 const estadoPainelJarvis = (estado) => Boolean(estado && estado.jarvisPainel === true);
 function algumPainelAberto() {
   return PAINEIS.some((sel) => { const el = $(sel); return Boolean(el && !el.hidden); });
@@ -4937,6 +4937,7 @@ document.querySelectorAll('[data-lat]').forEach((b) => {
     if (alvo === 'visao') { abrirVisao(); return; }
     if (alvo === 'memoria') { abrirMemoria(); return; }
     if (alvo === 'pessoas') { abrirPessoas(); return; }
+    if (alvo === 'dev') { devAbrir(); return; }
     if (alvo === 'arquivos') { abrirArquivos(); return; }
     // Painel do computador: só existe no Electron; pc.js se registra em window.PcPainel.
     if (alvo === 'pc') { if (window.PcPainel) window.PcPainel.abrir(); return; }
@@ -5376,7 +5377,7 @@ function similaridadeVoz(a, b) {
 const btnVozCadastrar=document.getElementById('c-voz-cadastrar'), btnVozVerificar=document.getElementById('c-voz-verificar'), btnVozApagar=document.getElementById('c-voz-apagar-perfil');
 function atualizarStatusPerfilVoz(){const p=lerPerfilAcustico();statusPerfilAcustico(p?`Perfil experimental salvo com ${p.samples} amostra(s). Comparação indicativa, não autenticação.`:'Nenhuma amostra cadastrada. Cadastre três amostras em ambiente silencioso.');}
 if(btnVozCadastrar) btnVozCadastrar.onclick=async()=>{btnVozCadastrar.disabled=true;try{const v=await capturarVetorVoz();const p=lerPerfilAcustico();const samples=p&&p.samples<3?p.samples+1:1;let vec=v;if(p&&p.samples<3)vec=v.map((x,i)=>(p.v[i]*p.samples+x)/(p.samples+1));store.set(VOZ_PERFIL_KEY,JSON.stringify({v:vec,samples,updated:new Date().toISOString()}));atualizarStatusPerfilVoz();registrar('voz','amostra acústica local cadastrada');}catch(e){statusPerfilAcustico(e.message||'Não foi possível capturar a amostra.');}finally{btnVozCadastrar.disabled=false;}};
-if(btnVozVerificar) btnVozVerificar.onclick=async()=>{btnVozVerificar.disabled=true;try{const p=lerPerfilAcustico();if(!p||p.samples<3)throw new Error('Cadastre três amostras antes de comparar.');const v=await capturarVetorVoz();const score=similaridadeVoz(p.v,v);statusPerfilAcustico(`Similaridade acústica indicativa: ${Math.round(Math.max(0,score)*100)}% (limiar ${Math.round(Number(store.get('wake_perfil_limiar','0.6'))*100)}%). Comparação grosseira de timbre: não confirma identidade e pode aceitar outra pessoa ou rejeitar a sua voz.`);registrar('voz','comparação acústica experimental executada');}catch(e){statusPerfilAcustico(e.message||'Não foi possível comparar a voz.');}finally{btnVozVerificar.disabled=false;}};
+if(btnVozVerificar) btnVozVerificar.onclick=async()=>{btnVozVerificar.disabled=true;try{const p=lerPerfilAcustico();if(!p||p.samples<3)throw new Error('Cadastre três amostras antes de comparar.');const v=await capturarVetorVoz();const score=similaridadeVoz(p.v,v);const limiar=Number(store.get('wake_perfil_limiar','0.6'));const margem=0.08;const pct=Math.round(Math.max(0,score)*100);let veredito='INCONCLUSIVO — amostra ambígua; repita a captura em local silencioso.';if(score>=limiar+margem)veredito='COMPATÍVEL com a referência cadastrada (indicativo, não é prova de identidade).';else if(score<=limiar-margem)veredito='DIFERENTE da referência cadastrada (pode ser outra pessoa ou ruído).';statusPerfilAcustico(`${veredito} Similaridade ${pct}%, limiar ${Math.round(limiar*100)}%. Comparação grosseira de timbre: não confirma identidade e pode errar.`);registrar('voz','comparação acústica experimental executada');}catch(e){statusPerfilAcustico(e.message||'Não foi possível comparar a voz.');}finally{btnVozVerificar.disabled=false;}};
 if(btnVozApagar) btnVozApagar.onclick=()=>{if(!confirm('Apagar o perfil acústico salvo neste aparelho?'))return;store.set(VOZ_PERFIL_KEY,'');store.set('wake_perfil_sessao','');atualizarStatusPerfilVoz();};
 if(document.getElementById('c-voz-perfil-status')) atualizarStatusPerfilVoz();
 
@@ -8320,6 +8321,305 @@ if (btnAnexo && inputAnexo) {
   btnAnexo.onclick = () => inputAnexo.click();
   inputAnexo.addEventListener('change', () => { receberAnexos(inputAnexo.files); inputAnexo.value = ''; });
 }
+
+/* ---------------- Desenvolvimento de Arquivos ---------------- */
+const DEV = (typeof ArquivosDev !== 'undefined') ? ArquivosDev : null;
+const DEV_HIST_KEY = 'jv_dev_hist';
+let devArquivos = [];
+let devResultados = [];
+function devStatus(txt, erro) {
+  const el = document.getElementById('dev-status');
+  if (el) { el.textContent = txt; el.classList.toggle('erro', Boolean(erro)); }
+}
+function devTamanho(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1).replace('.', ',') + ' KB';
+  return (n / (1024 * 1024)).toFixed(1).replace('.', ',') + ' MB';
+}
+function devHistLer() {
+  try { const l = JSON.parse(store.get(DEV_HIST_KEY, '[]')); return Array.isArray(l) ? l : []; } catch (_) { return []; }
+}
+function devHistAdd(acao, nomes, estado) {
+  const l = devHistLer();
+  l.unshift({ quando: new Date().toISOString(), acao: acao, arquivos: (nomes || []).slice(0, 8), estado: estado || '' });
+  store.set(DEV_HIST_KEY, JSON.stringify(l.slice(0, 30)));
+  devRenderHistorico();
+}
+function devRenderHistorico() {
+  const caixa = document.getElementById('dev-historico');
+  if (!caixa) return;
+  caixa.textContent = '';
+  const lista = devHistLer();
+  if (!lista.length) { const p = document.createElement('p'); p.className = 'dica'; p.textContent = 'Nenhuma operação ainda.'; caixa.appendChild(p); return; }
+  lista.forEach((h) => {
+    const item = document.createElement('div'); item.className = 'dev-hist-item';
+    const esq = document.createElement('span');
+    esq.textContent = h.acao + ' · ' + (h.arquivos || []).join(', ');
+    const dir = document.createElement('small');
+    const q = h.quando ? new Date(h.quando) : null;
+    dir.textContent = (h.estado ? h.estado + ' · ' : '') + (q && !isNaN(q) ? q.toLocaleString('pt-BR') : '');
+    item.append(esq, dir); caixa.appendChild(item);
+  });
+}
+async function devInflar(bytes) {
+  if (typeof DecompressionStream === 'undefined') throw new Error('Este WebView não descompacta ZIP. Atualize o Android System WebView.');
+  const fluxo = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(fluxo).arrayBuffer());
+}
+function devIncluir(nome, texto, origem) {
+  let final = nome || 'arquivo.txt';
+  let n = 2;
+  while (devArquivos.some((a) => a.nome === final)) {
+    final = nome.replace(/(\.[^.]*)$/, '') + '-' + n + (/(\.[^.]*)$/.exec(nome) || [''])[0];
+    n++;
+  }
+  devArquivos.push({ nome: final, texto: texto, original: texto, modificado: false, origem: origem || 'recebido' });
+}
+async function devReceberArquivos(lista) {
+  if (!DEV) { devStatus('O módulo de arquivos não carregou neste aparelho.', true); return; }
+  const arquivos = Array.from(lista || []);
+  let aceitos = 0;
+  for (const f of arquivos) {
+    if (devArquivos.length >= 80) { devStatus('Limite de 80 arquivos por operação.', true); break; }
+    try {
+      if (DEV.extensao(f.name) === 'zip') {
+        const entradas = await DEV.descompactar(new Uint8Array(await f.arrayBuffer()), devInflar);
+        let uteis = 0;
+        entradas.forEach((e) => {
+          if (e.nome.slice(-1) === '/') return;
+          const txt = DEV.textoDeBytes(e.bytes);
+          if (txt.indexOf('\u0000') >= 0) return;
+          devIncluir(f.name.replace(/\.zip$/i, '') + '/' + e.nome, txt, 'zip');
+          uteis++;
+        });
+        aceitos += uteis;
+        if (!uteis) devStatus('O ZIP não tem arquivos de texto legíveis.', true);
+      } else {
+        if (f.size > DEV.LIMITE_TEXTO) throw new Error(f.name + ' passa de 2 MB; envie um trecho ou um ZIP.');
+        const texto = await f.text();
+        if (texto.indexOf('\u0000') >= 0) throw new Error(f.name + ' é binário; aqui só leio texto e código.');
+        devIncluir(f.name, texto, 'recebido');
+        aceitos++;
+      }
+    } catch (e) {
+      devStatus((e && e.message) ? e.message : 'Falha ao ler ' + f.name, true);
+    }
+  }
+  devRenderLista();
+  if (aceitos) devStatus(aceitos + ' arquivo(s) recebido(s) e prontos para analisar.');
+}
+function devRenderLista() {
+  const caixa = document.getElementById('dev-lista');
+  if (!caixa) return;
+  caixa.textContent = '';
+  if (!devArquivos.length) return;
+  devArquivos.forEach((a, i) => {
+    const item = document.createElement('div'); item.className = 'dev-item';
+    const info = document.createElement('div');
+    const nome = document.createElement('b'); nome.textContent = a.nome;
+    if (a.modificado) { const selo = document.createElement('span'); selo.className = 'dev-selo modificado'; selo.textContent = 'modificado'; nome.appendChild(selo); }
+    const meta = document.createElement('small');
+    const bytes = DEV && DEV.bytesDeTexto ? DEV.bytesDeTexto(a.texto).length : a.texto.length;
+    meta.textContent = (DEV ? DEV.detectar(a.nome, a.texto) : 'texto') + ' · ' + devTamanho(bytes) + ' · ' + a.texto.split('\n').length + ' linha(s)' + (a.origem === 'zip' ? ' · do ZIP' : '');
+    info.append(nome, meta);
+    const acoes = document.createElement('div'); acoes.className = 'dev-acoes';
+    const ver = document.createElement('button'); ver.type = 'button'; ver.className = 'secundario'; ver.textContent = a.aberto ? 'Ocultar' : 'Ver';
+    ver.onclick = () => { a.aberto = !a.aberto; devRenderLista(); };
+    const baixar = document.createElement('button'); baixar.type = 'button'; baixar.className = 'secundario'; baixar.textContent = 'Baixar';
+    baixar.onclick = () => devBaixar(a.nome, DEV.bytesDeTexto(a.texto));
+    const remover = document.createElement('button'); remover.type = 'button'; remover.className = 'secundario perigo'; remover.textContent = 'Remover';
+    remover.onclick = () => { devArquivos.splice(i, 1); devRenderLista(); devStatus(devArquivos.length + ' arquivo(s) na lista.'); };
+    acoes.append(ver, baixar, remover);
+    item.append(info, acoes);
+    if (a.aberto) {
+      const pre = document.createElement('pre');
+      pre.textContent = a.texto.slice(0, 5000) + (a.texto.length > 5000 ? '\n[… trecho inicial de 5000 caracteres]' : '');
+      item.appendChild(pre);
+    }
+    caixa.appendChild(item);
+  });
+}
+function devBaixar(nome, bytes) {
+  try {
+    const blob = new Blob([bytes], { type: DEV ? DEV.mime(nome) : 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nome; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    devStatus('Download iniciado: ' + nome);
+    return true;
+  } catch (e) {
+    devStatus('Não consegui baixar ' + nome + '. Use "Baixar tudo (.zip)" ou o PC.', true);
+    return false;
+  }
+}
+function devRenderRelatorio(rel) {
+  const caixa = document.getElementById('dev-relatorio');
+  if (!caixa) return;
+  caixa.textContent = '';
+  if (!rel) return;
+  const resumo = document.createElement('div'); resumo.className = 'dev-resumo';
+  [rel.resumo.arquivos + ' arquivo(s)', rel.resumo.erros + ' erro(s)', rel.resumo.avisos + ' aviso(s)', rel.resumo.infos + ' informação(ões)'].forEach((t) => { const s = document.createElement('span'); s.textContent = t; resumo.appendChild(s); });
+  caixa.appendChild(resumo);
+  if (!rel.problemas.length) { const p = document.createElement('p'); p.className = 'dica'; p.textContent = 'Nenhum problema pelas regras estáticas. Isso não prova que o projeto funciona: importações externas e execução não foram testadas.'; caixa.appendChild(p); return; }
+  rel.problemas.slice(0, 80).forEach((p) => {
+    const div = document.createElement('div'); div.className = 'dev-problema ' + p.gravidade;
+    const regra = document.createElement('b'); regra.textContent = p.regra;
+    const onde = document.createElement('small'); onde.textContent = p.arquivo + (p.linha ? ':' + p.linha : '');
+    const msg = document.createElement('p'); msg.textContent = p.mensagem;
+    div.append(regra, onde, msg); caixa.appendChild(div);
+  });
+  if (rel.problemas.length > 80) { const p = document.createElement('p'); p.className = 'dica'; p.textContent = 'Mostrando 80 de ' + rel.problemas.length + ' ocorrências.'; caixa.appendChild(p); }
+}
+function devAnalisar() {
+  if (!devArquivos.length) { devStatus('Adicione ao menos um arquivo antes de analisar.', true); return; }
+  if (!DEV) { devStatus('O módulo de arquivos não carregou.', true); return; }
+  const rel = DEV.analisar(devArquivos.map((a) => ({ nome: a.nome, texto: a.texto })));
+  devRenderRelatorio(rel);
+  devStatus('Análise concluída: ' + rel.resumo.erros + ' erro(s), ' + rel.resumo.avisos + ' aviso(s).');
+  devHistAdd('análise', devArquivos.map((a) => a.nome), rel.resumo.erros + ' erro(s)');
+}
+function devCorrigir(acao) {
+  if (!DEV || !devArquivos.length) { devStatus('Adicione arquivos antes de corrigir.', true); return; }
+  let alterados = 0, erros = 0;
+  devArquivos.forEach((a) => {
+    if (acao === 'json' && DEV.extensao(a.nome) !== 'json') return;
+    const r = DEV.corrigir(a.texto, acao);
+    if (r.erro) { erros++; return; }
+    if (r.alterado) { a.texto = r.texto; a.modificado = true; alterados++; }
+  });
+  devRenderLista();
+  devStatus(alterados + ' arquivo(s) corrigido(s)' + (erros ? '; ' + erros + ' sem correção possível' : '') + '. O original continua guardado nesta sessão.');
+  devHistAdd('correção ' + acao, devArquivos.filter((a) => a.modificado).map((a) => a.nome), alterados + ' alterado(s)');
+  if (alterados) devAnalisar();
+}
+function devProjeto(descricao) {
+  const t = String(descricao || '').toLowerCase();
+  const py = /python|flask|django|\.py\b/.test(t);
+  const web = /html|site|web|javascript|página/.test(t);
+  if (py) {
+    return [
+      { nome: 'README.md', texto: '# Projeto Python\n\n' + descricao + '\n\n## Como executar\n\n```bash\npython main.py\n```\n' },
+      { nome: 'main.py', texto: '"""Projeto criado pelo J.A.R.V.I.S. Nova.\n\n' + descricao + '\n"""\n\n\ndef main():\n    print("Projeto pronto. Edite main.py para adicionar as funções.")\n\n\nif __name__ == "__main__":\n    main()\n' },
+      { nome: 'requirements.txt', texto: '# dependências do projeto (uma por linha)\n' }
+    ];
+  }
+  if (web) {
+    return [
+      { nome: 'README.md', texto: '# Projeto web\n\n' + descricao + '\n\nAbra index.html no navegador.\n' },
+      { nome: 'index.html', texto: '<!DOCTYPE html>\n<html lang="pt-BR">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <title>Projeto</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <main>\n    <h1>Projeto</h1>\n    <p>' + String(descricao || '').replace(/[<>&]/g, '') + '</p>\n    <button id="acao" type="button">Executar</button>\n    <p id="saida" aria-live="polite"></p>\n  </main>\n  <script src="app.js"></script>\n</body>\n</html>\n' },
+      { nome: 'style.css', texto: 'body{margin:0;font-family:system-ui,sans-serif;background:#06131f;color:#dff6ff;display:grid;place-items:center;min-height:100vh}main{max-width:36rem;padding:2rem}button{padding:.6rem 1rem;border-radius:.6rem;border:1px solid #4fd1ff;background:#0b2a3d;color:#dff6ff;cursor:pointer}\n' },
+      { nome: 'app.js', texto: "const botao = document.getElementById('acao');\nconst saida = document.getElementById('saida');\nif (botao && saida) {\n  botao.addEventListener('click', () => { saida.textContent = 'Função executada.'; });\n}\n" }
+    ];
+  }
+  return [{ nome: 'README.md', texto: '# ' + (descricao || 'Projeto') + '\n' }];
+}
+function devCriarProjeto(descricao, plano) {
+  if (!DEV) return;
+  try {
+    const nome = (plano && plano.nome) || 'projeto';
+    const entradas = devProjeto(descricao);
+    const r = DEV.criar('zip', nome.replace(/\.zip$/i, '') + '.zip', '', { entradas: entradas });
+    devResultados.unshift({ nome: r.nome, bytes: r.bytes, formato: 'zip', criado: true });
+    devRenderResultados();
+    devBaixar(r.nome, r.bytes);
+    devStatus('Projeto criado com ' + entradas.length + ' arquivo(s): ' + r.nome);
+    devHistAdd('projeto por instrução', entradas.map((e) => e.nome), 'ZIP gerado');
+  } catch (e) { devStatus('Não consegui criar o projeto: ' + (e.message || e), true); }
+}
+function devCriarArquivo() {
+  if (!DEV) return;
+  const formato = document.getElementById('dev-formato').value;
+  const nome = document.getElementById('dev-nome').value.trim();
+  const conteudo = document.getElementById('dev-conteudo').value;
+  try {
+    const r = DEV.criar(formato, nome || ('arquivo.' + formato), conteudo);
+    devResultados.unshift({ nome: r.nome, bytes: r.bytes, formato: r.formato, criado: true });
+    devRenderResultados();
+    devBaixar(r.nome, r.bytes);
+    devStatus('Arquivo ' + r.formato.toUpperCase() + ' criado: ' + r.nome + ' (' + devTamanho(r.bytes.length) + ').');
+    devHistAdd('criação ' + r.formato, [r.nome], 'baixado');
+  } catch (e) { devStatus((e && e.message) ? e.message : 'Não consegui criar o arquivo.', true); }
+}
+function devRenderResultados() {
+  const caixa = document.getElementById('dev-resultados');
+  if (!caixa) return;
+  caixa.textContent = '';
+  devResultados.forEach((r, i) => {
+    const item = document.createElement('div'); item.className = 'dev-item';
+    const info = document.createElement('div');
+    const nome = document.createElement('b'); nome.textContent = r.nome;
+    const selo = document.createElement('span'); selo.className = 'dev-selo criado'; selo.textContent = r.formato; nome.appendChild(selo);
+    const meta = document.createElement('small'); meta.textContent = devTamanho(r.bytes.length) + ' · integridade conferida na geração';
+    info.append(nome, meta);
+    const acoes = document.createElement('div'); acoes.className = 'dev-acoes';
+    const baixar = document.createElement('button'); baixar.type = 'button'; baixar.className = 'secundario'; baixar.textContent = 'Baixar';
+    baixar.onclick = () => devBaixar(r.nome, r.bytes);
+    const remover = document.createElement('button'); remover.type = 'button'; remover.className = 'secundario perigo'; remover.textContent = 'Descartar';
+    remover.onclick = () => { devResultados.splice(i, 1); devRenderResultados(); };
+    acoes.append(baixar, remover); item.append(info, acoes); caixa.appendChild(item);
+  });
+}
+function devZipTudo() {
+  if (!DEV) return;
+  const entradas = [];
+  devArquivos.forEach((a) => entradas.push({ nome: a.nome, texto: a.texto }));
+  devResultados.forEach((r) => entradas.push({ nome: r.nome, bytes: r.bytes }));
+  if (!entradas.length) { devStatus('Nada para compactar ainda.', true); return; }
+  const r = DEV.criar('zip', 'jarvis-arquivos.zip', '', { entradas: entradas });
+  devResultados.unshift({ nome: r.nome, bytes: r.bytes, formato: 'zip', criado: true });
+  devRenderResultados();
+  devBaixar(r.nome, r.bytes);
+  devStatus('Pacote com ' + entradas.length + ' arquivo(s) gerado.');
+  devHistAdd('pacote ZIP', entradas.map((e) => e.nome), entradas.length + ' arquivo(s)');
+}
+function devAbrir() {
+  devRenderLista(); devRenderHistorico(); devRenderResultados();
+  const sel = document.getElementById('dev-formato');
+  if (sel && DEV && !sel.options.length) {
+    DEV.formatos().forEach((f) => { const o = document.createElement('option'); o.value = f.id; o.textContent = f.rotulo + ' (.' + f.ext + ')'; sel.appendChild(o); });
+  }
+  abrirPainel('#painel-dev');
+}
+const devEscolher = document.getElementById('dev-escolher');
+const devInput = document.getElementById('dev-input');
+const devDrop = document.getElementById('dev-drop');
+if (devEscolher && devInput) devEscolher.onclick = () => devInput.click();
+if (devInput) devInput.addEventListener('change', () => { devReceberArquivos(devInput.files); devInput.value = ''; });
+if (devDrop && devInput) {
+  devDrop.onclick = () => devInput.click();
+  devDrop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); devInput.click(); } });
+  ['dragenter', 'dragover'].forEach((n) => devDrop.addEventListener(n, (e) => { e.preventDefault(); devDrop.classList.add('arrastando'); }));
+  ['dragleave', 'drop'].forEach((n) => devDrop.addEventListener(n, () => devDrop.classList.remove('arrastando')));
+  devDrop.addEventListener('drop', (e) => { e.preventDefault(); devReceberArquivos(e.dataTransfer.files); });
+}
+const devLimpar = document.getElementById('dev-limpar');
+if (devLimpar) devLimpar.onclick = () => { if (devArquivos.length && !confirm('Remover os arquivos desta operação? Os originais baixados continuam com você.')) return; devArquivos = []; devRenderLista(); devStatus('Lista limpa.'); };
+const devAnalisarBtn = document.getElementById('dev-analisar');
+if (devAnalisarBtn) devAnalisarBtn.onclick = devAnalisar;
+const devCorrigirBtn = document.getElementById('dev-corrigir');
+if (devCorrigirBtn) devCorrigirBtn.onclick = () => devCorrigir(document.getElementById('dev-correcao').value);
+const devExecutarBtn = document.getElementById('dev-executar');
+if (devExecutarBtn) devExecutarBtn.onclick = () => {
+  if (!DEV) return;
+  const txt = document.getElementById('dev-instrucao').value.trim();
+  if (!txt) { devStatus('Escreva a instrução primeiro.', true); return; }
+  const plano = DEV.instrucao(txt, devArquivos);
+  if (plano.acao === 'criar') { devCriarProjeto(txt, plano); return; }
+  if (plano.acao === 'zip') { devZipTudo(); return; }
+  if (plano.acao === 'corrigir') { devCorrigir(plano.formato === 'json' ? 'json' : 'espacos'); return; }
+  devAnalisar();
+};
+const devCriarBtn = document.getElementById('dev-criar');
+if (devCriarBtn) devCriarBtn.onclick = devCriarArquivo;
+const devZipBtn = document.getElementById('dev-zip');
+if (devZipBtn) devZipBtn.onclick = devZipTudo;
+const devHistLimpar = document.getElementById('dev-historico-limpar');
+if (devHistLimpar) devHistLimpar.onclick = () => { if (!confirm('Limpar o histórico de operações?')) return; store.set(DEV_HIST_KEY, '[]'); devRenderHistorico(); };
+const devFechar = document.getElementById('dev-fechar');
+if (devFechar) devFechar.onclick = () => fecharPaineis();
+
 
 ligarPerfilNaUI();
 

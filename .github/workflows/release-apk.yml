@@ -60,6 +60,7 @@ jobs:
           # Todo recurso web do app precisa estar aqui: sem hermes.js o app.js recusa
           # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
           cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
+          cp arquivos_dev.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
 
@@ -138,6 +139,16 @@ jobs:
             “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
+
+            **Novidades da 1.25.0:** nova aba **Desenvolvimento de Arquivos**, separada da conversa: recebe vários
+            arquivos ou um projeto `.zip`,
+            mostra idioma/tamanho/linhas e analisa de verdade JSON inválido, importações ausentes, duplicatas,
+            segredos, marcadores de conflito e símbolos desbalanceados — sem executar o código recebido. Correções
+            (JSON, CRLF/LF, espaços, BOM) guardam o original e entram no histórico; a criação gera **PDF, DOCX, XLSX,
+            CSV, JSON e ZIP** com estrutura real, e “crie um projeto Python chamado X” monta README, `main.py` e
+            `requirements.txt`. Exportação individual ou do projeto em `.zip`. A comparação de voz agora responde
+            compatível, diferente ou inconclusivo, com margem em torno do limiar e o aviso de que timbre não é prova
+            de identidade. Pessoas, memória, visão, IA local e Windows seguem intactos.
 
             **Novidades da 1.24.0:** a **IA local** deixou de fechar o aplicativo. O runtime MediaPipe subiu de
             `0.10.14` para **`0.10.24`** porque a versão antiga não suporta Gemma 3 e abortava o processo ao abrir

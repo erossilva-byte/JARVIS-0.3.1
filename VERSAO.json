@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.24.0",
-  "versionCode": 10240,
+  "version": "1.25.0",
+  "versionCode": 10250,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-10-30",
-  "status": "1.24.0: IA local Gemma 3 1B IT corrigida de verdade — MediaPipe 0.10.24 no lugar do 0.10.14 (que abortava o processo ao abrir o .task), prompt local dentro dos 2048 tokens de contexto, engine fechada só depois da geração e estados importado/validado/testado/pronto na interface.",
+  "status": "1.25.0: central de Desenvolvimento de Arquivos — recebe texto/código/projeto .zip, analisa de verdade (JSON inválido, importações ausentes, duplicatas, segredos, conflitos e desequilíbrio), corrige preservando o original e cria PDF/DOCX/XLSX/CSV/JSON/ZIP com estrutura real, além de histórico, download individual e pacote do projeto. Comparação de voz agora responde compatível, diferente ou inconclusivo.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.24.0 (2026-10-30). A IA local fechava o aplicativo por três causas somadas. Primeira: `com.google.mediapipe:tasks-genai:0.10.14` é anterior ao Gemma 3 e o runtime nativo aborta o processo (SIGABRT) ao abrir `Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task`; um try/catch Java não intercepta isso, e o app parecia \"fechar sozinho\" ao testar ou enviar mensagem, enquanto o AI Edge Gallery, com runtime novo, abria o mesmo arquivo. A dependência subiu para 0.10.24 (Gemma 3 é suportado a partir da linha 0.10.22) mantendo Java 17 e Gradle 8.2. Segunda: o prompt local herdava o prompt de sistema completo mais seis mensagens de 1800 caracteres, passando de 5 mil tokens num modelo de 2048; agora há um prompt local condensado (persona + humor + histórico de duas mensagens + pedido), com teto de 6000 caracteres conferido também no plugin. Terceira: `handleOnDestroy` fechava a engine nativa durante a geração e o retorno de `generate` era resolvido fora da UI thread; o fechamento passou a ser enfileirado na mesma thread de inferência e as respostas são entregues na thread principal. O backend é CPU explícito (sem delegate GPU, outra fonte de aborto em Mali/Adreno). Entraram `unload` para descarregar sem apagar, recusa de GGUF renomeado antes de chamar o nativo, checagem de memória com margem para pesos e KV cache, mensagens de erro específicas e estados separados: importado, validado, testado e pronto — \"pronto\" só aparece depois de uma geração real bem-sucedida, com tempo medido. O núcleo (HUD, plasma e órbita 3D) e a animação da 1.23.0 continuam intactos; provedores remotos, voz, memória e Windows não foram alterados. Testes: suíte estática completa e compilação do APK neste ambiente; a inferência real no Poco X7 depende de instalar o APK e importar o modelo, porque aqui não há aparelho, emulador nem o arquivo .task.",
+  "notas": "Revisão 1.25.0 (2026-10-30). Entrou a aba própria **Desenvolvimento de Arquivos**, separada da conversa: recebe vários arquivos ou um projeto `.zip` (lido no aparelho, inclusive pastas), mostra idioma, tamanho e linhas, e analisa com regras determinísticas — JSON inválido com linha, importações relativas que não existem no conjunto, arquivos duplicados por impressão digital, segredos/chaves privadas, `eval`, `innerHTML`, HTTP sem TLS, marcadores de conflito de merge, indentação misturada no Python, HTML sem fechamento e símbolos desbalanceados. Nada do código recebido é executado. Correções seguras (formatar JSON válido, normalizar CRLF/LF, remover espaços supérfluos e BOM) alteram uma cópia e mantêm o original na sessão; o histórico local registra as 30 últimas operações. A criação gera formatos reais: PDF com objetos/xref, DOCX e XLSX como pacotes OOXML válidos, CSV a partir de lista JSON, ZIP com CRC32 e estrutura de pastas; instruções como “crie um projeto Python chamado X” montam um projeto inicial com README, código executável e requirements. Exportação individual e pacote `.zip`, com confirmação do que foi gerado. A comparação de voz passou a classificar em **compatível**, **diferente** ou **inconclusivo**, com margem em torno do limiar configurável, deixando explícito que timbre não é prova de identidade. O núcleo (HUD, plasma e órbita 3D) e a animação da 1.23.0 continuam intactos. O cadastro de pessoas, a memória, a visão, os provedores remotos, a IA local Gemma 3 (MediaPipe 0.10.24) e o Windows continuam intactos. Testes: suíte estática (incluindo auditoria externa dos formatos com zipfile/XML/csv do Python) e compilação do APK neste ambiente; teste em aparelho físico, microfone real e abertura dos arquivos no Office/Adobe continuam pendentes de um dispositivo.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,12 +16,12 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "79d4ce339c551195860facf2aa31bd4a3f7393ca4dac5879482d08a61157b7a1",
-    "bytes": 81020766,
-    "arquivo": "jarvis-nova-1.24.0-10240.apk",
+    "sha256": "cdb1ef30e8e897427d40f985b95354d6ccab72dee5c39c757cea961b9e1011e4",
+    "bytes": 81046317,
+    "arquivo": "jarvis-nova-1.25.0-10250.apk",
     "data": "2026-10-30",
     "ambiente": "compilação local (JDK 21 + AGP 8.7.3 + Gradle 8.9 + Android SDK 35; npx cap copy + gradlew assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.24.0 com MediaPipe tasks-genai 0.10.24 e libs nativas arm64-v8a/armeabi-v7a (81 MB). Suíte com 1324 verificações aprovada antes do empacotamento. Sem aparelho físico, emulador ou arquivo .task neste ambiente: a inferência real precisa ser confirmada no Poco X7."
+    "observacao": "APK 1.25.0 (81 MB) com MediaPipe tasks-genai 0.10.24, arquivos_dev.js e o painel de Desenvolvimento de Arquivos. Suíte com 1443 verificações aprovada antes do empacotamento, incluindo auditoria externa de PDF/DOCX/XLSX/ZIP. Sem aparelho físico ou microfone neste ambiente: recebimento real, download no Android, abertura no Office/Adobe e comparação de voz precisam ser confirmados no aparelho."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

@@ -60,6 +60,7 @@
   <button type="button" class="lat-btn" data-lat="visao" title="Visão: câmera, sessão e reconhecimento de objetos"><span aria-hidden="true">⌖</span>Visão</button>
   <button type="button" class="lat-btn" data-lat="tarefas" title="Lista de tarefas"><span aria-hidden="true">▤</span>Tarefas</button>
   <button type="button" class="lat-btn" data-lat="pessoas" title="Cadastro de pessoas conhecidas"><span aria-hidden="true">♟</span>Pessoas</button>
+  <button type="button" class="lat-btn" data-lat="dev" title="Desenvolvimento de arquivos: receber, analisar, corrigir, criar e exportar"><span aria-hidden="true">▦</span>Dev. Arquivos</button>
   <button type="button" class="lat-btn" data-lat="rotinas" title="Rotinas automáticas"><span aria-hidden="true">⚡</span>Rotinas</button>
   <button type="button" class="lat-btn" data-lat="celular" title="Status do celular"><span aria-hidden="true">▰</span>Celular</button>
   <button type="button" class="lat-btn" data-lat="info" title="Aparelho, clima e manchetes do momento"><span aria-hidden="true">ⓘ</span>Informações</button>
@@ -113,7 +114,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.24.0</span>
+      <span class="orb-sub" aria-hidden="true">v1.25.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -203,7 +204,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.24.0</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.25.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -794,6 +795,54 @@
   </div>
 </div>
 
+<aside id="painel-dev" class="painel painel-dev" hidden aria-label="Desenvolvimento de arquivos do J.A.R.V.I.S. Nova">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · DESENVOLVIMENTO</p><h2>Desenvolvimento de Arquivos</h2></div><span class="versao-chip">local · com original preservado</span></div>
+  <section class="grupo">
+    <p class="dica">Receba arquivos de texto, código ou um projeto <code>.zip</code>. A análise é real: estrutura, JSON inválido, importações que faltam, duplicatas, segredos e marcadores de conflito. Nada é executado e nada sai do aparelho sem você mandar.</p>
+    <div id="dev-drop" class="dev-drop" tabindex="0" role="button" aria-label="Adicionar arquivos ao desenvolvimento">
+      <b>Adicionar arquivos</b>
+      <small>selecione vários, arraste aqui ou envie um projeto .zip</small>
+    </div>
+    <input id="dev-input" type="file" multiple hidden accept=".txt,.md,.json,.csv,.xml,.yml,.yaml,.html,.css,.js,.mjs,.ts,.py,.java,.kt,.c,.h,.cpp,.cs,.go,.rs,.sh,.bat,.ps1,.sql,.zip">
+    <div class="botoes"><button id="dev-escolher" type="button" class="primario">Escolher arquivos</button><button id="dev-limpar" type="button" class="secundario">Limpar lista</button></div>
+    <p id="dev-status" class="dica" role="status" aria-live="polite">Nenhum arquivo recebido ainda.</p>
+    <div id="dev-lista" class="dev-lista"></div>
+  </section>
+  <section class="grupo">
+    <h3>Instrução em português</h3>
+    <label>O que fazer<textarea id="dev-instrucao" rows="3" maxlength="1200" placeholder="Ex.: analise todos os arquivos e encontre conflitos; corrija o JSON; crie um projeto Python chamado controle-voz"></textarea></label>
+    <div class="botoes">
+      <button id="dev-analisar" type="button" class="primario">Analisar arquivos</button>
+      <button id="dev-executar" type="button" class="secundario">Executar instrução</button>
+    </div>
+    <label>Correção segura<select id="dev-correcao">
+      <option value="json">Formatar JSON válido</option>
+      <option value="eol">Normalizar fins de linha</option>
+      <option value="espacos">Remover espaços e linhas extras</option>
+      <option value="bom">Remover BOM</option>
+    </select></label>
+    <button id="dev-corrigir" type="button" class="secundario">Aplicar correção (mantém o original)</button>
+    <div id="dev-relatorio" class="dev-relatorio" aria-live="polite"></div>
+  </section>
+  <section class="grupo">
+    <h3>Criar arquivo real</h3>
+    <div class="dev-linha">
+      <label>Formato<select id="dev-formato"></select></label>
+      <label>Nome<input id="dev-nome" type="text" maxlength="80" autocomplete="off" placeholder="relatorio"></label>
+    </div>
+    <label>Conteúdo ou descrição<textarea id="dev-conteudo" rows="4" maxlength="20000" placeholder="Texto, JSON, CSV (uma linha por registro) ou a descrição do projeto"></textarea></label>
+    <button id="dev-criar" type="button" class="primario">Criar e baixar</button>
+    <p class="dica">PDF, DOCX, XLSX e ZIP são gerados na estrutura real do formato — não é texto renomeado. Projetos por instrução criam um pacote com README e arquivos-base.</p>
+  </section>
+  <section class="grupo">
+    <h3>Resultados e histórico</h3>
+    <div id="dev-resultados" class="dev-lista"></div>
+    <div class="botoes"><button id="dev-zip" type="button" class="secundario">Baixar tudo (.zip)</button><button id="dev-historico-limpar" type="button" class="secundario perigo">Limpar histórico</button></div>
+    <div id="dev-historico" class="dev-historico"></div>
+  </section>
+  <div class="botoes barra"><button id="dev-fechar" type="button">Fechar</button></div>
+</aside>
+
 <aside id="painel-pc" class="painel painel-pc" hidden aria-label="Computador: arquivos, CAD, tarefas e diagnóstico">
   <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · COMPUTADOR</p><h2>Área do PC</h2></div><span class="versao-chip" id="pcx-plat">desktop</span></div>
   <div class="pcx-abas" role="tablist" aria-label="Seções do computador">
@@ -909,6 +958,7 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="apps.js"></script>
 <!-- Núcleo de linguagem e decisão: precisa vir antes de app.js. -->
 <script src="hermes.js"></script>
+<script src="arquivos_dev.js"></script>
 <script src="app.js"></script>
 <script src="pc.js" defer></script>
 </body>

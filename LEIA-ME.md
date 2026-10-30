@@ -1,4 +1,12 @@
-# J.A.R.V.I.S. Nova 1.24.0
+# J.A.R.V.I.S. Nova 1.25.0
+
+## 1.25.0 — Desenvolvimento de Arquivos
+
+A aba **Dev. Arquivos** recebe texto, código e projetos `.zip`, analisa o conjunto (JSON, importações, duplicatas,
+segredos, conflitos) e gera arquivos reais (PDF, DOCX, XLSX, CSV, JSON e ZIP). Correções mantêm o original na sessão,
+e o histórico guarda as últimas operações. A comparação de voz agora responde **compatível**, **diferente** ou
+**inconclusivo** — é indicação de timbre, não autenticação.
+
 
 ## O que mudou na 1.24.0
 

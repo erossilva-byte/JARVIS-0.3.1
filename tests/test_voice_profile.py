@@ -8,6 +8,7 @@ checks={
   'Perfil persiste somente vetor acústico e contagem': "store.set(VOZ_PERFIL_KEY,JSON.stringify({v:vec,samples,updated:new Date().toISOString()}))" in js and "{v:vec,samples,updated:new Date().toISOString()}" in js,
   'Aviso de que não é autenticação segura': 'não é biometria profissional nem prova de identidade' in html and 'não confirma identidade' in js,
   'Usuário pode apagar o perfil': "store.set(VOZ_PERFIL_KEY,'')" in js,
+  'Comparação devolve três estados': all(x in js for x in ['INCONCLUSIVO','COMPATÍVEL com a referência','DIFERENTE da referência']),
 }
 for k,v in checks.items(): print(('OK' if v else 'FALHA')+': '+k)
 if not all(checks.values()): raise SystemExit(1)

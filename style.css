@@ -1496,3 +1496,37 @@ button.anexo{width:44px;min-width:44px;height:44px;min-height:44px;border-radius
 .pers-controles input[type=range]{width:100%}
 .pers-controles output{color:var(--cor);font-weight:700;font-variant-numeric:tabular-nums}
 .pers-controles button{margin-top:12px;width:100%}
+
+/* ---------- Desenvolvimento de Arquivos ---------- */
+.painel-dev{width:min(100vw,720px)}
+#painel-dev{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#painel-dev .grupo{display:grid;gap:12px}
+.dev-drop{display:grid;place-items:center;gap:4px;padding:22px 14px;border:1px dashed rgba(120,220,255,.45);border-radius:14px;background:rgba(10,30,48,.35);text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+.dev-drop:focus-visible,.dev-drop.arrastando{outline:2px solid rgba(120,220,255,.7);outline-offset:2px;background:rgba(18,52,78,.5)}
+.dev-drop b{font-size:.95rem;letter-spacing:.04em}
+.dev-drop small{opacity:.72;font-size:.78rem}
+.dev-lista{display:grid;gap:8px}
+.dev-item{display:grid;grid-template-columns:1fr auto;gap:6px 10px;padding:10px 12px;border:1px solid rgba(120,220,255,.18);border-radius:12px;background:rgba(8,24,38,.55)}
+.dev-item b{font-size:.88rem;overflow-wrap:anywhere}
+.dev-item small{display:block;opacity:.72;font-size:.75rem}
+.dev-item .dev-acoes{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.dev-item .dev-acoes button{padding:5px 9px;font-size:.72rem}
+.dev-item .dev-selo{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:.66rem;letter-spacing:.05em;text-transform:uppercase;background:rgba(120,220,255,.14);border:1px solid rgba(120,220,255,.3)}
+.dev-item .dev-selo.modificado{background:rgba(255,200,80,.14);border-color:rgba(255,200,80,.4);color:#ffd87a}
+.dev-item .dev-selo.criado{background:rgba(120,255,170,.12);border-color:rgba(120,255,170,.35);color:#9dffc4}
+.dev-item .dev-selo.erro{background:rgba(255,110,110,.14);border-color:rgba(255,110,110,.4);color:#ff9d9d}
+.dev-item pre{grid-column:1/-1;max-height:220px;overflow:auto;margin:4px 0 0;padding:8px;border-radius:8px;background:rgba(0,0,0,.35);font-size:.74rem;white-space:pre-wrap;overflow-wrap:anywhere}
+.dev-relatorio{display:grid;gap:8px}
+.dev-resumo{display:flex;flex-wrap:wrap;gap:8px}
+.dev-resumo span{padding:3px 10px;border-radius:999px;font-size:.72rem;border:1px solid rgba(120,220,255,.25);background:rgba(120,220,255,.08)}
+.dev-problema{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;padding:7px 9px;border-left:3px solid rgba(120,220,255,.35);background:rgba(0,0,0,.22);border-radius:0 8px 8px 0}
+.dev-problema.erro{border-left-color:#ff6e6e}
+.dev-problema.aviso{border-left-color:#ffd166}
+.dev-problema.info{border-left-color:#7ad7ff}
+.dev-problema b{font-size:.74rem;letter-spacing:.04em;text-transform:uppercase;opacity:.8}
+.dev-problema small{opacity:.72;font-size:.72rem}
+.dev-problema p{grid-column:1/-1;margin:2px 0 0;font-size:.8rem}
+.dev-historico{display:grid;gap:6px;max-height:240px;overflow-y:auto}
+.dev-historico .dev-hist-item{display:flex;gap:8px;justify-content:space-between;padding:6px 9px;border-radius:8px;background:rgba(0,0,0,.2);font-size:.76rem}
+.dev-linha{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.dev-linha{grid-template-columns:1fr}.painel-dev{width:100vw}.dev-item{grid-template-columns:1fr}.dev-item .dev-acoes{justify-content:flex-start}}
