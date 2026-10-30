@@ -114,7 +114,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.27.0</span>
+      <span class="orb-sub" aria-hidden="true">v1.28.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -204,7 +204,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.27.0</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.28.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -215,6 +215,7 @@
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="celular">Celular</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="atualizacao">Atualização</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="diagnostico">Diagnóstico</button>
+    <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="identificacao">Identificação</button>
   </nav>
 
   <section class="grupo" data-category="ia" role="tabpanel">
@@ -497,6 +498,23 @@
     <p class="dica">Este diagnóstico não substitui o teste em um aparelho físico. O funcionamento de wake word, tela bloqueada, serviço em segundo plano e permissões precisa ser validado no Android alvo.</p>
   </section>
 
+  <section class="grupo" data-category="identificacao" role="tabpanel" hidden>
+    <h3>Identificação e reconhecimento</h3>
+    <p class="dica">Controle o que o J.A.R.V.I.S. pode comparar neste aparelho. Os limites mínimos são seguros: o limiar nunca fica abaixo de 68% e a voz só entra com qualidade mínima. Desligar um recurso não apaga os cadastros; apagar a biometria não apaga nomes, fotos e informações.</p>
+    <label class="linha"><input id="idp-cfg-voz" type="checkbox"><span>Reconhecimento de voz<small>Compara a voz de quem fala com os perfis autorizados. Sem isso, a identificação por voz fica desligada.</small></span></label>
+    <label class="linha"><input id="idp-cfg-rosto" type="checkbox"><span>Referência visual<small>Semelhança de imagem por hash, não biometria facial. Nunca identifica sozinha.</small></span></label>
+    <label class="linha"><input id="idp-cfg-contexto" type="checkbox"><span>Usar perfis como contexto da IA<small>Envia somente nome, apelido, relação, profissão, cidade, descrição, preferências e observações. Telefone, e-mail, endereço e biometria nunca entram no prompt.</small></span></label>
+    <label class="linha"><input id="idp-cfg-confirmar" type="checkbox"><span>Confirmar antes de usar dados do perfil<small>Quando uma voz é reconhecida, o J.A.R.V.I.S. pede confirmação antes de tratar aquela pessoa como identificada em ações sensíveis.</small></span></label>
+    <label>Limiar mínimo de confiança <output id="idp-cfg-limiar-valor">78%</output><input id="idp-cfg-limiar" type="range" min="0.68" max="0.92" step="0.01" value="0.78"></label>
+    <label>Margem entre o primeiro e o segundo candidato <output id="idp-cfg-margem-valor">7%</output><input id="idp-cfg-margem" type="range" min="0.04" max="0.15" step="0.01" value="0.07"></label>
+    <label>Fala mínima por amostra <output id="idp-cfg-fala-valor">1.5 s</output><input id="idp-cfg-fala" type="range" min="1" max="5" step="0.5" value="1.5"></label>
+    <label>Relação sinal/ruído mínima <output id="idp-cfg-snr-valor">10 dB</output><input id="idp-cfg-snr" type="range" min="6" max="30" step="1" value="10"></label>
+    <div class="botoes"><button id="idp-cfg-pessoas" type="button" class="secundario">Gerenciar pessoas cadastradas</button><button id="idp-cfg-mic" type="button" class="secundario">Testar microfone</button><button id="idp-cfg-testar" type="button" class="secundario">Testar reconhecimento</button></div>
+    <div class="botoes"><button id="idp-cfg-apagar-bio" type="button" class="secundario perigo">Apagar toda a biometria</button></div>
+    <p id="idp-cfg-status" class="dica" role="status" aria-live="polite">Nenhuma verificação nesta sessão.</p>
+    <p class="dica">As referências de voz são cifradas com AES-GCM no armazenamento local. Isso protege contra leitura casual do armazenamento e de backups, mas não substitui o cofre de hardware do aparelho. A identificação é indicativa e não serve como senha ou prova de identidade.</p>
+  </section>
+
   <div class="botoes barra"><button id="c-fechar" type="button">Fechar</button><button id="c-salvar" type="button" class="primario">Salvar alterações</button></div>
 </aside>
 
@@ -585,28 +603,106 @@
   <div class="botoes barra"><button id="visao-fechar" type="button">Fechar</button></div>
 </aside>
 
-<aside id="painel-pessoas" class="painel painel-pessoas" hidden aria-label="Cadastro de pessoas conhecidas pelo J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · PESSOAS</p><h2>Pessoas conhecidas</h2></div><span class="versao-chip">salvo neste aparelho</span></div>
-  <section class="grupo">
-    <p class="dica">Perfis separados por pessoa (Pessoa 1, Ana, “meu irmão”…). Só entra o que você escrever: o app não identifica ninguém por foto, voz ou nome parecido. Com dois nomes parecidos, o J.A.R.V.I.S. pergunta qual é em vez de adivinhar. Os números de contato não vão para a IA.</p>
-    <label>Nome ou identificação<input id="pessoa-nome" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: Ana"></label>
-    <label>Apelido<input id="pessoa-apelido" type="text" maxlength="40" autocomplete="off" placeholder="Ex.: Aninha"></label>
-    <label>Relação com você<input id="pessoa-relacao" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: irmã, colega de trabalho"></label>
-    <label>Descrição<textarea id="pessoa-descricao" rows="2" maxlength="400" placeholder="Quem é essa pessoa"></textarea></label>
-    <label>Preferências<textarea id="pessoa-preferencias" rows="2" maxlength="400" placeholder="Ex.: prefere café sem açúcar"></textarea></label>
-    <label>Observações<textarea id="pessoa-observacoes" rows="3" maxlength="800" placeholder="Anotações que você quer lembrar"></textarea></label>
-    <label>Contato autorizado (opcional)<input id="pessoa-contato" type="text" maxlength="120" autocomplete="off" placeholder="Ex.: +55 11 90000-0000"></label>
-    <div class="botoes"><button id="pessoa-salvar" type="button" class="primario">Salvar perfil</button><button id="pessoa-novo" type="button" class="secundario">Novo perfil</button></div>
-    <p id="pessoa-status" class="dica" role="status" aria-live="polite">Nenhum perfil cadastrado ainda.</p>
-    <label class="linha"><input id="pessoa-contexto" type="checkbox" checked><span>Usar os perfis como contexto da IA<small>Envia apenas nome, apelido, relação e preferências ao provedor escolhido quando a conversa precisa desse contexto. Desligado, os perfis ficam só neste aparelho.</small></span></label>
-    <div class="divider-small"></div>
-    <label>Buscar por nome ou apelido<input id="pessoa-busca" type="search" autocomplete="off" placeholder="digite para filtrar"></label>
-    <div id="pessoa-lista" class="pessoas-lista"></div>
-    <div class="botoes"><button id="pessoa-exportar" type="button" class="secundario">Exportar perfis (.json)</button><button id="pessoa-apagar-tudo" type="button" class="secundario perigo">Apagar todos os perfis</button></div>
-    <div class="botoes"><button id="pessoa-copiar-export" type="button" class="secundario">Copiar JSON da exportação</button></div>
+<aside id="painel-pessoas" class="painel painel-pessoas" hidden aria-label="Identificação de pessoas do J.A.R.V.I.S. Nova">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · IDENTIFICAÇÃO DE PESSOAS</p><h2>Pessoas</h2></div><span class="versao-chip">v1.28.0 · local</span></div>
+  <section class="grupo" id="idp-inicio">
+    <p class="dica">Cada pessoa tem um perfil próprio: foto, informações, campos personalizados e perfil de voz. O reconhecimento compara vetores de características no aparelho — o áudio nunca é guardado e nada é enviado a provedores sem sua autorização. Em dúvida, o J.A.R.V.I.S. responde “inconclusivo” em vez de adivinhar.</p>
+    <div class="idp-barra-topo">
+      <label class="idp-busca">Buscar<input id="pessoa-busca" type="search" autocomplete="off" placeholder="nome, apelido, profissão ou relação"></label>
+      <button id="idp-novo" type="button" class="primario">Adicionar pessoa</button>
+    </div>
+    <div class="botoes">
+      <button id="idp-abrir-config" type="button" class="secundario">Identificação e reconhecimento</button>
+      <button id="idp-exportar" type="button" class="secundario">Exportar perfis</button>
+      <button id="idp-importar" type="button" class="secundario">Importar perfis</button>
+      <input id="idp-importar-arquivo" type="file" accept="application/json" hidden>
+    </div>
+    <p id="pessoa-status" class="dica" role="status" aria-live="polite">Nenhuma pessoa cadastrada. Só o nome é obrigatório para começar.</p>
+    <div id="pessoa-lista" class="idp-grid" aria-live="polite"></div>
     <pre id="pessoa-exportacao" class="pessoa-exportacao" hidden aria-live="polite"></pre>
-    <p class="dica">Excluir um perfil é definitivo neste aparelho. A exportação é um arquivo JSON; no Android, se o download não aparecer, o mesmo JSON fica acima para copiar.</p>
   </section>
+
+  <section class="grupo" id="idp-editor" hidden>
+    <div class="idp-editor-topo"><h3 id="idp-editor-titulo">Nova pessoa</h3><button id="idp-cancelar" type="button" class="mini">voltar</button></div>
+    <div class="idp-foto-bloco">
+      <div class="idp-foto-moldura"><img id="idp-foto-preview" alt="Prévia da foto do perfil" hidden><span id="idp-foto-vazio">sem foto</span></div>
+      <div class="idp-foto-acoes">
+        <label class="botao-arquivo">Escolher da galeria<input id="idp-foto-arquivo" type="file" accept="image/*"></label>
+        <label class="botao-arquivo">Tirar fotografia<input id="idp-foto-camera" type="file" accept="image/*" capture="user"></label>
+        <button id="idp-foto-remover" type="button" class="secundario perigo">Remover foto</button>
+      </div>
+      <div id="idp-foto-recorte" class="idp-recorte" hidden>
+        <canvas id="idp-foto-canvas" width="320" height="320" aria-label="Prévia do recorte da foto"></canvas>
+        <label>Zoom<input id="idp-foto-zoom" type="range" min="1" max="3" step="0.05" value="1"></label>
+        <label>Horizontal<input id="idp-foto-x" type="range" min="-1" max="1" step="0.05" value="0"></label>
+        <label>Vertical<input id="idp-foto-y" type="range" min="-1" max="1" step="0.05" value="0"></label>
+        <button id="idp-foto-aplicar" type="button" class="secundario">Aplicar recorte</button>
+      </div>
+    </div>
+
+    <fieldset class="idp-bloco"><legend>Informações pessoais</legend>
+      <label>Nome ou identificação *<input id="pessoa-nome" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: Ana"></label>
+      <label>Apelido<input id="pessoa-apelido" type="text" maxlength="40" autocomplete="off" placeholder="Ex.: Aninha"></label>
+      <div class="idp-dupla">
+        <label>Data de nascimento<input id="pessoa-nascimento" type="date"></label>
+        <label>Idade calculada<input id="idp-idade" type="text" readonly placeholder="—"></label>
+      </div>
+      <div class="idp-dupla">
+        <label>Altura (cm)<input id="pessoa-alturaCm" type="number" min="30" max="250" maxlength="3" inputmode="numeric" placeholder="Ex.: 172"></label>
+        <label>Profissão<input id="pessoa-profissao" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: arquiteta"></label>
+      </div>
+      <label>Relação com você<input id="pessoa-relacao" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: irmã, colega de trabalho"></label>
+      <label>Telefone<input id="pessoa-telefone" type="tel" maxlength="24" autocomplete="off" placeholder="opcional"></label>
+      <label>E-mail<input id="pessoa-email" type="email" maxlength="90" autocomplete="off" placeholder="opcional"></label>
+      <label>Endereço<input id="pessoa-endereco" type="text" maxlength="120" autocomplete="off" placeholder="opcional"></label>
+      <label>Cidade<input id="pessoa-cidade" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: São Paulo"></label>
+      <label>Descrição<textarea id="pessoa-descricao" rows="2" maxlength="500" placeholder="Quem é essa pessoa"></textarea></label>
+    </fieldset>
+
+    <fieldset class="idp-bloco"><legend>Informações complementares</legend>
+      <label>Preferências<textarea id="pessoa-preferencias" rows="2" maxlength="500" placeholder="Ex.: prefere café sem açúcar"></textarea></label>
+      <label>Interesses<textarea id="pessoa-interesses" rows="2" maxlength="500" placeholder="Ex.: fotografia, corrida"></textarea></label>
+      <label>Observações<textarea id="pessoa-observacoes" rows="3" maxlength="900" placeholder="Anotações que você quer lembrar"></textarea></label>
+      <label>Contexto de relacionamento<textarea id="pessoa-contexto" rows="2" maxlength="500" placeholder="Ex.: nos conhecemos na faculdade"></textarea></label>
+      <h4>Campos personalizados</h4>
+      <p class="dica">Crie os campos que fizerem sentido para você. Eles ficam no perfil e não são enviados à IA.</p>
+      <div id="idp-campos" class="idp-campos"></div>
+      <div class="idp-dupla">
+        <label>Nome do campo<input id="idp-campo-rotulo" type="text" maxlength="40" autocomplete="off" placeholder="Ex.: placa do carro"></label>
+        <label>Valor<input id="idp-campo-valor" type="text" maxlength="240" autocomplete="off" placeholder="Ex.: ABC-1D23"></label>
+      </div>
+      <button id="idp-campo-add" type="button" class="secundario">Adicionar campo personalizado</button>
+    </fieldset>
+
+    <fieldset class="idp-bloco"><legend>Consentimento e privacidade</legend>
+      <p class="dica">Nada de voz ou imagem é usado para identificação sem autorização. A autorização pode ser revogada a qualquer momento e apaga a biometria correspondente.</p>
+      <label class="linha"><input id="idp-consent-voz" type="checkbox"><span>A pessoa autoriza o cadastro da voz<small>Finalidade: comparar a voz dela com este perfil neste aparelho. O áudio não é armazenado; só um vetor de características.</small></span></label>
+      <label class="linha"><input id="idp-consent-rosto" type="checkbox"><span>A pessoa autoriza a referência visual<small>Opcional. Usa um hash da foto para semelhança de imagem — não é reconhecimento facial biométrico nem prova de identidade.</small></span></label>
+    </fieldset>
+
+    <fieldset class="idp-bloco"><legend>Perfil de voz</legend>
+      <p id="idp-voz-status" class="dica" role="status" aria-live="polite">Salve o perfil antes de cadastrar a voz.</p>
+      <p id="idp-voz-frase" class="dica">Frase 1 de 3: “Jarvis, esta é a minha voz e eu autorizo o cadastro neste aparelho.”</p>
+      <div class="botoes">
+        <button id="idp-voz-gravar" type="button" class="primario">Cadastrar voz (4 s)</button>
+        <button id="idp-voz-testar" type="button" class="secundario">Testar reconhecimento</button>
+        <button id="idp-voz-apagar" type="button" class="secundario perigo">Apagar amostras</button>
+      </div>
+      <div id="idp-voz-amostras" class="idp-amostras"></div>
+    </fieldset>
+
+    <fieldset class="idp-bloco"><legend>Referência visual (opcional)</legend>
+      <p id="idp-rosto-status" class="dica" role="status" aria-live="polite">Adicione uma foto para criar a referência visual.</p>
+      <div class="botoes"><button id="idp-rosto-criar" type="button" class="secundario">Criar referência visual</button><button id="idp-rosto-remover" type="button" class="secundario perigo">Remover referência</button></div>
+    </fieldset>
+
+    <fieldset class="idp-bloco"><legend>Histórico de alterações</legend>
+      <div id="idp-historico" class="idp-historico"></div>
+    </fieldset>
+
+    <div class="botoes"><button id="pessoa-salvar" type="button" class="primario">Salvar pessoa</button><button id="idp-excluir" type="button" class="secundario perigo">Excluir perfil</button></div>
+  </section>
+
   <div class="botoes barra"><button id="pessoa-fechar" type="button">Fechar</button></div>
 </aside>
 
@@ -969,6 +1065,8 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="cad_projeto.js"></script>
 <script src="visao.js"></script>
 <script src="pessoas.js"></script>
+<script src="identidade.js"></script>
+<script src="identidade_ui.js"></script>
 <script src="apps.js"></script>
 <!-- Núcleo de linguagem e decisão: precisa vir antes de app.js. -->
 <script src="hermes.js"></script>

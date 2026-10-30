@@ -1,3 +1,16 @@
+## 1.28.0 — Identificação de Pessoas
+
+- **Aba completa**: cartões com foto, busca, adicionar/editar/excluir, detalhes individuais e selo de estado da voz.
+- **Cadastro ampliado**: nascimento com idade calculada, altura, profissão, relação, telefone, e-mail, endereço, cidade, descrição, preferências, interesses, observações, contexto e até 12 campos personalizados.
+- **Foto**: galeria ou câmera, prévia, recorte com zoom/deslocamento, substituição e remoção; persistida no aparelho.
+- **Voz por pessoa**: três a oito amostras guiadas, análise real do `voz_motor.js`, recusa de áudio curto/ruidoso/saturado, vetor de 59 dimensões salvo e áudio nunca guardado.
+- **Identificação open-set**: limiar e margem, estados identificado/não identificado/inconclusivo; voz desconhecida não vira cadastro.
+- **Consentimento e privacidade**: autorização separada para voz e referência visual, revogável; biometria cifrada em repouso (AES-GCM, chave local); contato fora do prompt; exportação sem biometria.
+- **Referência visual opcional**: hash de imagem, desligada por padrão, declarada como semelhança e nunca prova de identidade.
+- **Configurações**: aba Identificação com limiar mínimo seguro, margem, qualidade mínima, testes de microfone e reconhecimento, gestão de perfis e exclusão de biometria.
+- **Integração com a IA e a voz**: contexto da pessoa identificada, comandos de consulta/lista/identificação, verificação na ativação e migração do cadastro anterior.
+- **Testes**: núcleo em Node (CRUD, cifragem, identificação, ambiguidade, foto, rosto, histórico, migração) e contratos estáticos da interface; suíte completa executada.
+
 ## 1.27.0 — Personalidade permanente e voz expressiva
 
 - **Humor obrigatório em toda resposta**: prompt abre com regras de personalidade, proíbe aberturas neutras e exige observação contextual integrada.

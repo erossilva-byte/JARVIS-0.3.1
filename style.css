@@ -1530,3 +1530,46 @@ button.anexo{width:44px;min-width:44px;height:44px;min-height:44px;border-radius
 .dev-historico .dev-hist-item{display:flex;gap:8px;justify-content:space-between;padding:6px 9px;border-radius:8px;background:rgba(0,0,0,.2);font-size:.76rem}
 .dev-linha{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:520px){.dev-linha{grid-template-columns:1fr}.painel-dev{width:100vw}.dev-item{grid-template-columns:1fr}.dev-item .dev-acoes{justify-content:flex-start}}
+
+/* J.A.R.V.I.S. Nova 1.28.0 — Identificação de Pessoas */
+#painel-pessoas{width:min(680px,100vw);max-width:100vw;overflow-x:hidden;overflow-y:auto}
+#painel-pessoas .grupo{gap:12px}
+.idp-barra-topo{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.idp-busca{flex:1 1 220px;min-width:180px}
+.idp-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));align-items:stretch}
+.idp-card{display:flex;gap:11px;padding:12px;border:1px solid var(--linha);border-radius:14px;background:linear-gradient(160deg,rgba(20,36,58,.75),rgba(8,16,28,.9));min-width:0}
+.idp-foto{flex:0 0 62px;width:62px;height:62px;border-radius:12px;overflow:hidden;background:#0a1524;display:flex;align-items:center;justify-content:center;border:1px solid rgba(117,177,219,.22)}
+.idp-foto img{width:100%;height:100%;object-fit:cover;display:block}
+.idp-iniciais{font-size:19px;font-weight:700;color:var(--cor);letter-spacing:.04em}
+.idp-corpo{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.idp-nome{font-size:15px;line-height:1.2;overflow-wrap:anywhere}
+.idp-apelido{font-size:12px;color:var(--suave)}
+.idp-meta{font-size:11.5px;color:#91a8ba;line-height:1.35;overflow-wrap:anywhere}
+.idp-selo{align-self:flex-start;margin-top:3px;font-size:10.5px;padding:2px 7px;border-radius:99px;border:1px solid rgba(117,177,219,.28);color:#a9bccd}
+.idp-selo.ok{border-color:rgba(76,220,160,.55);color:#8ff0c5;background:rgba(76,220,160,.08)}
+.idp-selo.warn{border-color:rgba(255,196,86,.5);color:#ffd58a;background:rgba(255,196,86,.07)}
+.idp-acoes{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.idp-editor-topo{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.idp-foto-bloco{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.idp-foto-moldura{width:96px;height:96px;border-radius:14px;overflow:hidden;border:1px solid rgba(117,177,219,.28);background:#0a1524;display:flex;align-items:center;justify-content:center;color:var(--suave);font-size:12px}
+.idp-foto-moldura img{width:100%;height:100%;object-fit:cover}
+.idp-foto-acoes{display:flex;flex-direction:column;gap:6px;min-width:170px;flex:1}
+.botao-arquivo{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 12px;border:1px solid rgba(117,177,219,.3);border-radius:10px;color:var(--texto);font-size:12.5px;cursor:pointer;background:rgba(11,23,40,.85)}
+.botao-arquivo input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.idp-recorte{display:flex;flex-direction:column;gap:6px;flex:1 1 100%;padding:10px;border:1px solid rgba(117,177,219,.18);border-radius:12px;background:rgba(8,16,28,.7)}
+.idp-recorte canvas{width:160px;height:160px;border-radius:10px;align-self:center;background:#050b14}
+.idp-bloco{border:1px solid rgba(117,177,219,.16);border-radius:14px;padding:12px;margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}
+.idp-bloco legend{padding:0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--cor)}
+.idp-bloco h4{margin:4px 0 0;font-size:13px;color:var(--texto)}
+.idp-dupla{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.idp-campos{display:flex;flex-direction:column;gap:6px}
+.idp-campo{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid rgba(117,177,219,.16);border-radius:10px;font-size:12px;min-width:0}
+.idp-campo b{flex:0 0 auto;max-width:40%}
+.idp-campo span{flex:1;min-width:0;overflow-wrap:anywhere;color:var(--suave)}
+.idp-amostras{display:flex;flex-direction:column;gap:5px}
+.idp-amostra{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;padding:6px 9px;border:1px solid rgba(117,177,219,.16);border-radius:9px}
+.idp-historico{display:flex;flex-direction:column;gap:5px;max-height:190px;overflow-y:auto}
+.idp-hist{display:flex;flex-direction:column;gap:1px;font-size:11.5px;color:var(--suave);border-left:2px solid rgba(117,177,219,.25);padding-left:8px}
+.idp-hist small{color:#7f96a8;font-size:10.5px}
+#painel-pessoas label.linha span{min-width:0}
+@media(max-width:560px){.idp-grid{grid-template-columns:1fr}.idp-dupla{grid-template-columns:1fr}#painel-pessoas{width:100vw}.idp-foto{flex-basis:54px;width:54px;height:54px}}

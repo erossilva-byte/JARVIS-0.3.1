@@ -60,9 +60,12 @@ jobs:
           # Todo recurso web do app precisa estar aqui: sem hermes.js o app.js recusa
           # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
           cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
+          cp identidade.js identidade_ui.js www/
           cp arquivos_dev.js www/
           cp voz_motor.js www/
           cp humor.js www/
+          cp identidade.js www/
+          cp identidade_ui.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
 
@@ -141,6 +144,17 @@ jobs:
             “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
+
+            **Novidades da 1.28.0:** a aba **Identificação de Pessoas** passou a ser um sistema completo: cadastro com foto
+            (galeria ou câmera, recorte e prévia), nome, apelido, nascimento com idade calculada, altura, profissão, relação,
+            telefone, e-mail, endereço, cidade, descrição, preferências, interesses, observações, contexto e campos personalizados.
+            Cada pessoa tem **perfil de voz próprio**: três a oito amostras guiadas, análise real de VAD/FFT, mel, pitch, formantes
+            e prosódia, recusa de áudio curto/ruidoso/saturado e apenas o vetor guardado — o áudio nunca. A identificação compara
+            todos os perfis com limiar e margem e responde **identificado**, **não identificado** ou **inconclusivo**, sem adivinhar.
+            Consentimento separado para voz e referência visual, histórico de alterações, exportação sem biometria, migração do
+            cadastro antigo e uma aba **Identificação** em Configurações com limiar mínimo seguro, qualidade mínima, testes de
+            microfone/reconhecimento e exclusão de toda a biometria. A biometria é cifrada em repouso (AES-GCM, chave local).
+            A referência visual usa hash de imagem e é declarada como semelhança, nunca prova de identidade.
 
             **Novidades da 1.27.0:** o humor virou **personalidade permanente**. O prompt abre com regras obrigatórias,
             proíbe aberturas neutras e exige uma observação contextual integrada em toda resposta; um banco por assunto

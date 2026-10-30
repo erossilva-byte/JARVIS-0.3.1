@@ -1,4 +1,31 @@
-# J.A.R.V.I.S. Nova 1.27.0
+# J.A.R.V.I.S. Nova 1.28.0
+
+## 1.28.0 — Identificação de Pessoas
+
+A aba **Pessoas** virou um sistema de identificação. Cada perfil tem foto com recorte (galeria ou câmera),
+nome, apelido, nascimento com idade calculada, altura, profissão, relação, telefone, e-mail, endereço, cidade,
+descrição, preferências, interesses, observações, contexto e até 12 campos personalizados.
+
+**Voz por pessoa:** três a oito amostras guiadas passam pelo motor local (VAD, FFT/mel, pitch, formantes,
+prosódia) e viram um vetor de 59 dimensões. Áudio curto, ruidoso ou saturado é recusado e o áudio bruto nunca
+é guardado. A identificação compara todos os perfis autorizados com limiar e margem e responde **identificado**,
+**não identificado** ou **inconclusivo** — uma voz desconhecida nunca é associada a um cadastro por chute.
+
+**Privacidade:** consentimento separado e revogável para voz e referência visual; vetores cifrados em repouso
+com AES-GCM (chave local, não Keystore); telefone, e-mail, endereço e biometria ficam fora do prompt da IA;
+exportação sem biometria; histórico de alterações; exclusão de perfil apaga as referências. A referência
+visual opcional usa hash de imagem e é declarada como semelhança, nunca prova de identidade.
+
+**Configurações:** aba **Identificação** com ativar/desativar voz e rosto, limiar (mínimo seguro de 68%),
+margem, qualidade mínima de fala e SNR, teste de microfone, teste de reconhecimento, gerenciamento de perfis
+e exclusão de toda a biometria. O cadastro anterior é migrado na primeira abertura.
+
+**Integração:** “quem está falando”, “quem é a Bia”, “quais pessoas estão cadastradas”, “identifique essa
+pessoa” e “adicione uma nova pessoa” passam pelo cadastro real; a voz reconhecida na ativação entra no
+contexto com os campos permitidos. Nada é alterado por suposição.
+
+**Limitação honesta:** este ambiente não tem microfone, câmera nem aparelho. A captura real, a naturalidade
+com vozes humanas e os falsos positivos em campo não foram medidos; os testes de voz usam sinais sintéticos.
 
 ## 1.26.0 — Reconhecimento de locutor
 

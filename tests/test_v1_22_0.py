@@ -73,8 +73,8 @@ checar('áudio não é declarado como analisado', 'O áudio não é analisado' i
 # ---------- 6. Cadastro de pessoas ----------
 for marca in ['data-lat="pessoas"', 'id="painel-pessoas"', 'id="pessoa-nome"', 'id="pessoa-apelido"',
               'id="pessoa-relacao"', 'id="pessoa-descricao"', 'id="pessoa-preferencias"',
-              'id="pessoa-observacoes"', 'id="pessoa-contato"', 'id="pessoa-lista"',
-              'id="pessoa-busca"', 'id="pessoa-contexto"', 'id="pessoa-exportar"']:
+              'id="pessoa-observacoes"', 'id="pessoa-telefone"', 'id="pessoa-lista"',
+              'id="pessoa-busca"', 'id="idp-exportar"', 'id="idp-consent-voz"']:
     checar('pessoas: ' + marca, marca in html)
 checar('painel entra na navegação', "'#painel-pessoas'" in app and "alvo === 'pessoas'" in app)
 checar('persistência com chave própria', "CHAVE = 'jv_pessoas'" in (RAIZ / 'pessoas.js').read_text(encoding='utf-8'))
@@ -86,17 +86,18 @@ checar('perfis entram no prompt quando autorizado',
       'pessoasCtx' in app and "store.get('pessoas_contexto', '1')" in app and
       'Perfis de pessoas cadastrados' in app)
 checar('desligar remove os perfis do contexto', "store.set('pessoas_contexto'" in app)
-checar('sem biometria no cadastro', 'biometr' not in html.split('id="painel-pessoas"')[1].split('</aside>')[0].lower())
+checar('biometria com consentimento explícito', 'idp-consent-voz' in html and 'idp-consent-rosto' in html and
+      'autoriza' in html.split('id="painel-pessoas"')[1].split('</aside>')[0].lower())
 
 # ---------- 7. Diagnóstico e testes ----------
 checar('módulos novos no diagnóstico', 'Visão 2.0 (balões sem sobreposição' in app and
       'Cadastro de pessoas' in app)
 checar('testes novos na suíte', 'test_visao_nova.js' in pkg['scripts']['test:all'] and
       'test_pessoas.js' in pkg['scripts']['test:all'] and 'test_v1_22_0.py' in pkg['scripts']['test:all'])
-checar('estilos do painel de pessoas', '.pessoa-card{' in css.replace(' ', ''))
+checar('estilos do painel de pessoas', '.idp-card{' in css.replace(' ', ''))
 checar('reduced motion cobre os novos elementos',
       '@media(prefers-reduced-motion:reduce)' in css.replace(' ', '') and
-      '.pessoa-card' in css.replace(' ', '') and '.visao-video-item' in css.replace(' ', ''))
+      '.idp-card' in css.replace(' ', '') and '.visao-video-item' in css.replace(' ', ''))
 
 # ---------- 8. Segurança: nada de segredo no código ----------
 import re
