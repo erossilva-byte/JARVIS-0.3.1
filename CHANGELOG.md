@@ -1,3 +1,15 @@
+## Não lançado — Personalidade 2.0
+
+- **Humor na maioria das respostas**, inclusive pesquisa, código, diagnóstico e conversa profissional:
+  a persona ganhou ângulos de piada por contexto, com a informação sempre antes da graça.
+- **Seis controles independentes** em Ajustes ▸ IA: sarcasmo, ironia, brincadeiras, espontaneidade,
+  provocação e formalidade, salvos no aparelho (`pers_*`) e injetados no prompt de qualquer provedor,
+  inclusive a IA local. Padrões altos (80/80/75/70/55/20) e botão de restaurar.
+- **Proteções mantidas:** humor zero em assunto sensível/emergência, proibição de piada com pessoa real,
+  e variação obrigatória para não repetir bordão.
+- **Auditoria de IA local documentada** em `MODELOS-IA-LOCAL.md`, separando verificado no código,
+  estimativa e previsão — nenhum modelo foi anexado nesta revisão, então nada foi medido.
+
 ## 1.23.1 — 2026-10-30
 
 ## Correções de inicialização, diagnóstico e anexos no chat

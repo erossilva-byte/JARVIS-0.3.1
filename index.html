@@ -243,8 +243,19 @@
     <label>Como o JARVIS deve te chamar<input id="c-trat" type="text" maxlength="40" placeholder="senhor"></label>
     <p class="dica">O nome identifica seu perfil nas respostas; o tratamento é independente e pode continuar como “senhor”, ou ser alterado quando quiser.</p>
     <label>Nível de humor<select id="c-humor-nivel"><option value="discreto">Discreto — quase sempre sério, cordial e direto</option><option value="equilibrado">Equilibrado — ironia fina de vez em quando</option><option value="avancado">Avançado — sarcasmo elegante e deboche leve sempre que couber</option></select></label>
-    <label>Humor do JARVIS <output id="c-humor-valor">40%</output><input id="c-humor" type="range" min="0" max="100" step="10" value="40"></label>
-    <p class="dica">0% = profissional e sério; 40% ou mais já rende ironia fina no dia a dia; 100% = humor afiado e frequente. O humor é suspenso em assuntos sensíveis.</p>
+    <label>Humor do JARVIS <output id="c-humor-valor">70%</output><input id="c-humor" type="range" min="0" max="100" step="10" value="70"></label>
+    <p class="dica">0% = profissional e sério; 70% (padrão) rende ironia fina na maioria das respostas, inclusive nas técnicas; 100% = humor afiado. O humor é suspenso em assuntos sensíveis.</p>
+    <details class="pers-controles" open>
+      <summary>Ajuste fino da personalidade (humor, ironia e deboche)</summary>
+      <p class="dica">Os valores padrão já deixam o JARVIS debochado e irônico. Diminua um eixo se quiser um tom mais contido; nada aqui é aplicado em assunto sensível.</p>
+      <label>Sarcasmo <output id="c-pers-sarcasmo-valor">80%</output><input id="c-pers-sarcasmo" type="range" min="0" max="100" step="5" value="80"></label>
+      <label>Ironia <output id="c-pers-ironia-valor">80%</output><input id="c-pers-ironia" type="range" min="0" max="100" step="5" value="80"></label>
+      <label>Frequência de brincadeiras <output id="c-pers-brincadeiras-valor">75%</output><input id="c-pers-brincadeiras" type="range" min="0" max="100" step="5" value="75"></label>
+      <label>Espontaneidade <output id="c-pers-espontaneidade-valor">70%</output><input id="c-pers-espontaneidade" type="range" min="0" max="100" step="5" value="70"></label>
+      <label>Provocação amistosa <output id="c-pers-provocacao-valor">55%</output><input id="c-pers-provocacao" type="range" min="0" max="100" step="5" value="55"></label>
+      <label>Formalidade <output id="c-pers-formalidade-valor">20%</output><input id="c-pers-formalidade" type="range" min="0" max="100" step="5" value="20"></label>
+      <button id="c-pers-padrao" type="button" class="secundario">Restaurar personalidade padrão</button>
+    </details>
     <div id="c-personalidade-preview" class="personalidade-preview" aria-live="polite"><b>Prévia da personalidade</b><p>Altere o humor ou o estilo para ver como o J.A.R.V.I.S. deve responder.</p></div>
     <label>Estilo de resposta<select id="c-estilo"><option value="equilibrado">Equilibrado</option><option value="formal">Formal e objetivo</option><option value="amigavel">Amigável e descontraído</option><option value="tecnico">Técnico e detalhado</option></select></label>
     <label>Cidade usada para o clima<input id="c-cidade" type="text" placeholder="São Paulo"></label>

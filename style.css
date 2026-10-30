@@ -1487,3 +1487,12 @@ body.efeitos-reduzidos #scrim{backdrop-filter:none}
 button.anexo{width:44px;min-width:44px;height:44px;min-height:44px;border-radius:50%;
   border-color:rgba(var(--rgb),.35);background:rgba(var(--rgb),.08);color:var(--cor)}
 @media(max-width:420px){.anexo-item small{display:none}}
+
+/* ---- Personalidade 2.0: ajuste fino ---- */
+.pers-controles{border:1px solid var(--linha);border-radius:14px;padding:12px 14px;background:rgba(var(--rgb),.045)}
+.pers-controles summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--texto)}
+.pers-controles[open] summary{margin-bottom:8px}
+.pers-controles label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--suave);margin-top:8px}
+.pers-controles input[type=range]{width:100%}
+.pers-controles output{color:var(--cor);font-weight:700;font-variant-numeric:tabular-nums}
+.pers-controles button{margin-top:12px;width:100%}

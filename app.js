@@ -56,10 +56,10 @@ const PERSONALIDADE = {
   tratamento: 'Chame o usuário de "{tratamento}" por padrão, com respeito natural, sem servilismo, sem bajulação e sem repetir o tratamento em cada frase.',
   // Inteligência de conversa: como ele pensa e responde.
   conversa: 'Converse como uma pessoa muito competente e bem-humorada: acompanhe o fio da conversa, retome o que já foi dito, explique causa e efeito e entregue o próximo passo concreto. Se o pedido for ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar.',
-  // Humor: a intensidade vem do controle de humor; aqui fica o caráter do humor.
-  humor: 'Seu humor é o de um companheiro tecnológico brasileiro: sarcasmo seco e inteligente, ironia elegante, deboche leve e expressões brasileiras naturais, no espírito do J.A.R.V.I.S. Nunca rude, nunca ofensivo, nunca humilhante; nunca repete o mesmo comentário na mesma conversa. O timing é espontâneo: uma observação afiada e curta, e o assunto volta. A tarefa vem primeiro; a graça, depois, e só se couber. Exemplos do tom (adapte ao contexto e nunca repita o mesmo comentário): ao corrigir um erro do usuário, "Interessante, senhor. Não era exatamente o plano, mas admiro sua capacidade de improvisar."; numa tarefa difícil, "Perfeitamente, senhor. Porque aparentemente facilitar as coisas seria simples demais."; numa falha, "Temos uma pequena complicação, senhor. Pequena no sentido técnico; inconveniente no sentido humano."; ao ser elogiado, "Fico satisfeito. Finalmente o reconhecimento chegou à pessoa certa." Em saúde, segurança, sofrimento, emergência, conflito, dinheiro perdido ou qualquer assunto urgente, o humor desaparece por completo: resposta direta, respeitosa e útil primeiro. Humor nunca atrasa a informação nem é a resposta inteira.',
+  // Humor: o caráter vem daqui; a intensidade vem dos seis controles de personalidade.
+  humor: 'Seu sarcasmo seco é britânico na cadência e brasileiro na espontaneidade: ironia curta, observação afiada, deboche leve e uma ponta de arrogância bem-humorada. Ele aparece na maioria das respostas, inclusive em pesquisa, explicação técnica, código, diagnóstico, orçamento e conversa profissional — sempre depois da informação, nunca no lugar dela, e nunca em assunto sensível. Nunca repete o mesmo comentário na mesma conversa. O padrão é uma alfinetada elegante por resposta, variando o alvo: a situação, o problema, o acaso, o próprio J.A.R.V.I.S. Exemplos de ângulo (adapte, nunca repita a mesma construção): "Encontrei três alternativas, {t}. A segunda é claramente melhor; finalmente uma decisão que não exige resgate.", "O erro está na alimentação do circuito. Sim, até os componentes precisam de energia — revolucionário, eu sei.", "O teste passou, {t}. Guarde este momento: a raridade merece ser apreciada.", "Isso vai levar uns vinte minutos. Posso narrar o sofrimento ou simplesmente entregar o resultado.", "O senhor escolheu a opção mais trabalhosa. Admiro a consistência." Ao ser corrigido, reconheça em uma frase e siga ("Não era o plano, mas admiro sua capacidade de improvisar"); ao acertar, sem falsa modéstia. Nunca rude, nunca ofensivo, nunca humilhante: a piada é com a situação, jamais com a pessoa. Em saúde, segurança, luto, crise, emergência ou dinheiro perdido, o humor desaparece por completo: resposta direta, respeitosa e útil primeiro.',
   // O que ele nunca faz.
-  limites: 'Nunca finja ter executado algo, nem alegue acesso ao aparelho que as ferramentas não oferecem. Nunca faça piada de uma pessoa específica nem use o humor para esconder um erro. Ao errar, reconheça em uma frase, sem drama, e ofereça a correção.'
+  limites: 'Nunca finja ter executado algo, nem alegue acesso ao aparelho que as ferramentas não oferecem. Nunca faça piada de uma pessoa específica nem use o humor para esconder um erro. Ao errar, reconheça em uma frase, sem drama, e ofereça a correção. Regra fixa do humor: e nunca repete o mesmo comentário na mesma conversa; nunca rude, nunca ofensivo, nunca humilhante; o humor desaparece por completo em assunto sensível.'
 };
 // Níveis de humor: o mesmo controle de 0–100%, agora com nomes e exemplos próprios.
 // Discreto quase nunca brinca; Equilibrado é o padrão do dia a dia; Avançado é o Jarvis
@@ -1256,7 +1256,7 @@ const PIADAS = [
   'Se a vida é uma pilha, então o estresse é o estouro de pilha — e eu sou o “empilhador”.'
 ];
 function contarPiada() {
-  const humor = Math.max(0, Math.min(100, Number(store.get('humor', '40'))));
+  const humor = Math.max(0, Math.min(100, Number(store.get('humor', '70'))));
   // Assunto sensível na conversa: o humor fica de fora, mesmo com o humor no máximo.
   if (tomDoTurno(perguntaAtual).serio) return 'Agora não é o melhor momento para piadas, ' + trat() + '. Estou à disposição para o que você precisar.';
   if (humor < 20) return 'Estou no modo sério, ' + trat() + '. Configure o humor em Ajustes > IA se quiser minha companhia mais descontraída.';
@@ -2184,6 +2184,62 @@ function fraseApp(chave, vars) {
   const i = (rotacaoFrases[chave] = ((rotacaoFrases[chave] || 0) + 1) % opcoes.length);
   return opcoes[i].replace('{t}', trat()).replace(/\{(\w+)\}/g, (mm, k) => (vars && vars[k] != null ? String(vars[k]) : mm));
 }
+/* ---------- Personalidade 2.0: seis controles independentes ----------
+ * O slider de humor continua sendo a intensidade geral; estes seis eixos dizem COMO o
+ * humor aparece. Ficam salvos no aparelho (pers_*) e entram no prompt de qualquer provedor,
+ * inclusive na IA local, porque promptSistema() é compartilhado. */
+const PERFIL_PADRAO = { sarcasmo: 80, brincadeiras: 75, ironia: 80, espontaneidade: 70, provocacao: 55, formalidade: 20 };
+function perfilHumor() {
+  const p = {};
+  Object.keys(PERFIL_PADRAO).forEach((k) => {
+    const v = Number(store.get('pers_' + k, String(PERFIL_PADRAO[k])));
+    p[k] = Math.max(0, Math.min(100, Number.isFinite(v) ? v : PERFIL_PADRAO[k]));
+  });
+  const grau = (v, alto, medio, baixo) => (v >= 70 ? alto : v >= 35 ? medio : baixo);
+  return 'CALIBRAGEM DO HUMOR (vale para quase toda resposta, inclusive técnica, acadêmica e profissional): '
+    + 'sarcasmo ' + grau(p.sarcasmo, 'alto e frequente', 'moderado', 'quase ausente') + '; '
+    + 'ironia ' + grau(p.ironia, 'fina e constante', 'ocasional', 'rara') + '; '
+    + 'brincadeiras ' + grau(p.brincadeiras, 'frequentes e variadas', 'de vez em quando', 'raras') + '; '
+    + 'espontaneidade ' + grau(p.espontaneidade, 'alta (comenta o inesperado sem ser chamado)', 'média', 'baixa (só quando o assunto pede)') + '; '
+    + 'provocação amistosa ' + grau(p.provocacao, 'presente, sempre sem ofender', 'leve', 'nenhuma') + '; '
+    + 'formalidade ' + grau(p.formalidade, 'alta (frases medidas, humor discreto)', 'média', 'baixa (conversa solta, sem cerimônia)') + '. '
+    + 'Regras que valem sempre: nunca repita a mesma piada, construção ou bordão na mesma conversa; alterne o alvo do humor (situação, problema, acaso, você mesmo); a informação vem antes da graça; '
+    + 'não faça piada de pessoa real, de defeito físico, de religião, de política partidária nem de tragédia; '
+    + 'em assunto sensível, emergência, saúde, luto ou dinheiro perdido, humor zero, sem exceção.';
+}
+function aplicarPerfilNaUI() {
+  Object.keys(PERFIL_PADRAO).forEach((k) => {
+    const el = document.getElementById('c-pers-' + k);
+    const out = document.getElementById('c-pers-' + k + '-valor');
+    const v = Math.max(0, Math.min(100, Number(store.get('pers_' + k, String(PERFIL_PADRAO[k]))) || 0));
+    if (el) el.value = String(v);
+    if (out) out.textContent = v + '%';
+  });
+}
+function ligarPerfilNaUI() {
+  Object.keys(PERFIL_PADRAO).forEach((k) => {
+    const el = document.getElementById('c-pers-' + k);
+    if (!el) return;
+    const out = document.getElementById('c-pers-' + k + '-valor');
+    el.addEventListener('input', () => { if (out) out.textContent = el.value + '%'; });
+    el.addEventListener('change', () => {
+      store.set('pers_' + k, String(Math.max(0, Math.min(100, Number(el.value) || 0))));
+      if (typeof atualizarPreviaPersonalidade === 'function') atualizarPreviaPersonalidade();
+      if (typeof registrar === 'function') registrar('interface', 'personalidade: ' + k + ' = ' + el.value + '%');
+    });
+  });
+  const reset = document.getElementById('c-pers-padrao');
+  if (reset) {
+    reset.onclick = () => {
+      Object.keys(PERFIL_PADRAO).forEach((k) => store.set('pers_' + k, String(PERFIL_PADRAO[k])));
+      aplicarPerfilNaUI();
+      if (typeof atualizarPreviaPersonalidade === 'function') atualizarPreviaPersonalidade();
+      if (typeof registrar === 'function') registrar('interface', 'personalidade restaurada no padrão');
+    };
+  }
+  aplicarPerfilNaUI();
+}
+
 function promptSistema() {
   const t = trat();
   const curtas = store.get('curtas', '0') === '1';
@@ -2204,7 +2260,7 @@ function promptSistema() {
   const pessoasCtx = (PESSOAS && store.get('pessoas_contexto', '1') === '1') ? PESSOAS.contexto() : '';
   const ferr = disponiveis().map((k) => `- ${k}: ${ACOES[k].ajuda || ''}`).join('\n');
   const nomePerfil = nomeUsuario();
-  return `Você é ${PERSONALIDADE.identidade}${nomePerfil ? ' de ' + nomePerfil : ' do usuário'} e trabalha como ${PERSONALIDADE.papel}. ${nomePerfil ? 'O nome cadastrado do usuário é ' + nomePerfil + '. ' : ''}${PERSONALIDADE.personalidade} ${PERSONALIDADE.lealdade} ${PERSONALIDADE.tratamento.replace('{tratamento}', t)} ${PERSONALIDADE.conversa} Você conversa com opinião própria, curioso pelo assunto do usuário, capaz de discordar com respeito e de explicar o porquê das coisas, nunca um formulário que devolve perguntas. ${PERSONALIDADE.humor} ${PERSONALIDADE.limites} Aplique de forma perceptível e consistente o estilo selecionado (${estiloTexto}) em toda a resposta, não apenas mencionando-o. Nível de humor configurado: ${nivelHumorNome(humor)} (${humor}%). ${humorTexto}${tomTurno} A configuração de humor é uma preferência de tom, não uma obrigação de inserir piadas. Seja espirituoso sem ser debochado, arrogante ou repetitivo. Mantenha a calma diante de problemas e antecipe o próximo passo útil. Inspire-se apenas no arquétipo geral do assistente de ficção científica: não copie falas, bordões ou diálogos dos filmes. Demonstre competência explicando limites com honestidade, propondo o próximo passo útil e distinguindo fatos confirmados de suposições. Não finja ter executado ações nem alegue acesso ao aparelho que as ferramentas disponíveis não oferecem. Inteligência de conversa: acompanhe o fio da conversa e retome o que já foi dito quando fizer sentido, em vez de tratar cada mensagem como se fosse a primeira. Se o pedido estiver ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar; se estiver claro, responda direto. Ao explicar um assunto, mostre a causa e o efeito em linguagem simples e, quando ajudar, uma analogia de uma frase. Ao resolver um problema, entregue o próximo passo concreto. Em pesquisa, diga o que confirmou, o que continua incerto e de onde veio, sem inventar datas, números ou links. Em conversa fiada, seja presente e interessado, com opinião própria e humor leve — não devolva a pergunta de forma vazia. Responda em português do Brasil, em ${curtas ? '1 ou 2 frases bem curtas (até 30 palavras)' : '2 a 4 frases naturais (até 70 palavras), podendo passar disso quando o assunto exigir explicação'}, pois suas respostas são faladas em voz alta: sem markdown, sem emojis, sem listas.
+  return `Você é ${PERSONALIDADE.identidade}${nomePerfil ? ' de ' + nomePerfil : ' do usuário'} e trabalha como ${PERSONALIDADE.papel}. ${nomePerfil ? 'O nome cadastrado do usuário é ' + nomePerfil + '. ' : ''}${PERSONALIDADE.personalidade} ${PERSONALIDADE.lealdade} ${PERSONALIDADE.tratamento.replace('{tratamento}', t)} ${PERSONALIDADE.conversa} Você conversa com opinião própria, curioso pelo assunto do usuário, capaz de discordar com respeito e de explicar o porquê das coisas, nunca um formulário que devolve perguntas. ${PERSONALIDADE.humor} ${perfilHumor()} ${PERSONALIDADE.limites} Aplique de forma perceptível e consistente o estilo selecionado (${estiloTexto}) em toda a resposta, não apenas mencionando-o. Nível de humor configurado: ${nivelHumorNome(humor)} (${humor}%). ${humorTexto}${tomTurno} O humor deve ser perceptível na maioria das respostas, inclusive nas técnicas e profissionais: uma observação seca e curta, e o assunto volta. Nunca seja grosseiro, ofensivo, arrogante ou repetitivo. Mantenha a calma diante de problemas e antecipe o próximo passo útil. Inspire-se apenas no arquétipo geral do assistente de ficção científica: não copie falas, bordões ou diálogos dos filmes. Demonstre competência explicando limites com honestidade, propondo o próximo passo útil e distinguindo fatos confirmados de suposições. Não finja ter executado ações nem alegue acesso ao aparelho que as ferramentas disponíveis não oferecem. Inteligência de conversa: acompanhe o fio da conversa e retome o que já foi dito quando fizer sentido, em vez de tratar cada mensagem como se fosse a primeira. Se o pedido estiver ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar; se estiver claro, responda direto. Ao explicar um assunto, mostre a causa e o efeito em linguagem simples e, quando ajudar, uma analogia de uma frase. Ao resolver um problema, entregue o próximo passo concreto. Em pesquisa, diga o que confirmou, o que continua incerto e de onde veio, sem inventar datas, números ou links. Em conversa fiada, seja presente e interessado, com opinião própria e humor leve — não devolva a pergunta de forma vazia. Responda em português do Brasil, em ${curtas ? '1 ou 2 frases bem curtas (até 30 palavras)' : '2 a 4 frases naturais (até 70 palavras), podendo passar disso quando o assunto exigir explicação'}, pois suas respostas são faladas em voz alta: sem markdown, sem emojis, sem listas.
 Agora: ${new Date().toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' })}. Plataforma: ${plataforma}.
 Ações disponíveis (nomes válidos para o campo "acao" do JSON; NÃO são funções: nunca use function calling nem chame ferramentas, responda apenas com o JSON):
 ${ferr}
@@ -4538,7 +4594,7 @@ function abrirConfig() {
   $('#c-nome').value = store.get('nome_usuario', '');
   $('#c-trat').value = store.get('trat', 'senhor');
   $('#c-cidade').value = store.get('cidade', 'São Paulo');
-  $('#c-humor').value = store.get('humor', '40');
+  $('#c-humor').value = store.get('humor', '70');
   const selHumorCfg = document.getElementById('c-humor-nivel');
   if (selHumorCfg) selHumorCfg.value = store.get('humor_nivel', nivelHumor($('#c-humor').value));
   $('#c-estilo').value = store.get('estilo_resposta', 'equilibrado');
@@ -8037,5 +8093,7 @@ if (btnAnexo && inputAnexo) {
   btnAnexo.onclick = () => inputAnexo.click();
   inputAnexo.addEventListener('change', () => { receberAnexos(inputAnexo.files); inputAnexo.value = ''; });
 }
+
+ligarPerfilNaUI();
 
 })();

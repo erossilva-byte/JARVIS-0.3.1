@@ -55,3 +55,49 @@ Os nomes acima foram lidos da API pública do repositório em 2026-10-29. O repo
 
 O diagnóstico em **Ajustes ▸ Diagnóstico ▸ Inteligência artificial** mostra se o aparelho suporta a API e
 se há modelo importado — inclusive quando o estado é “não configurado”, que não é falha.
+
+## Auditoria de compatibilidade — como é feita e o que já foi verificado
+
+**Estado desta revisão (1.23.1):** nenhum arquivo de modelo foi anexado à conversa, então **nenhum modelo foi carregado, executado ou medido**. O que segue separa o que foi verificado no código (fato),
+o que é cálculo a partir de tamanho de arquivo (estimativa) e o que é previsão de desempenho.
+
+### O que o motor realmente exige (verificado no código)
+
+- API: `com.google.mediapipe:tasks-genai` **0.10.14** (`android/app/build.gradle`).
+- Formato: **Task Bundle** (`.task`), ZIP com modelo LiteRT + tokenizer. `JarvisLocalAIPlugin.validarCabecalho`
+  confere tamanho e cabeçalho (ZIP ou `TFL3`) e recusa o resto — GGUF renomeado não passa.
+- Chamada: `generate({ prompt })` com o prompt inteiro de `promptSistema()` — portanto a personalidade,
+  a calibragem de humor, a memória e os perfis chegam ao modelo local igual aos provedores remotos.
+- Sem streaming, sem function calling: o app usa o campo JSON `acao`, interpretado por `hermes.js`.
+- Armazenamento: `files/modelos/jarvis-model.task` no espaço privado; importação manual, sem download automático.
+
+### Critérios de classificação
+
+| Resultado | Significado |
+|---|---|
+| **COMPATÍVEL** | Roda no motor atual sem mudança de código e cabe no aparelho de referência. |
+| **COMPATÍVEL COM ADAPTAÇÕES** | Precisa de importação/conversão ou ajuste de contexto/`maxTokens`. |
+| **PARCIALMENTE COMPATÍVEL** | Roda, mas com risco real de RAM, lentidão ou respostas curtas demais. |
+| **INCOMPATÍVEL** | Formato ou arquitetura não atendida pelo motor atual. |
+
+### Candidatos (estimativas, não medições)
+
+Referência de hardware: **Poco X7, 8 GB de RAM**, Android com o app em primeiro plano e voz ativa
+(TTS + serviço) consumindo parte da memória.
+
+| Modelo | Formato | RAM estimada | Poco X7 (8 GB) | Classificação |
+|---|---|---|---|---|
+| Gemma 3 1B IT, `q4_ekv2048` | `.task` | ~0,9–1,4 GB | viável; respostas curtas, ~5–12 tok/s (previsão) | **COMPATÍVEL COM ADAPTAÇÕES** |
+| Gemma 3 1B IT, `q8_ekv2048` | `.task` | ~1,6–2,2 GB | funciona, mas competindo com o app; risco de fechamento por memória | **PARCIALMENTE COMPATÍVEL** |
+| Modelos 2B–4B em `.task` | `.task` | ~2,5–5 GB | inviável com o app aberto em 8 GB | **PARCIALMENTE COMPATÍVEL** (não recomendado) |
+| Qualquer GGUF (Llama, Qwen, Phi, Mistral) | `.gguf` | — | formato recusado pelo motor | **INCOMPATÍVEL** |
+| Safetensors / ONNX crus | outros | — | exigem conversão para Task Bundle | **INCOMPATÍVEL** sem conversão |
+
+As faixas de RAM e velocidade são **previsões** baseadas no tamanho do arquivo e no comportamento
+conhecido do MediaPipe LLM Inference; não foram medidas neste ambiente (sem Android e sem o arquivo).
+
+### Como enviar um modelo para auditoria
+
+Anexe o `.task` (ou informe nome, origem, tamanho e SHA-256). A auditoria então verifica: cabeçalho,
+tamanho, RAM estimada, resposta em português, aderência à personalidade, contexto útil e estabilidade.
+Sem o arquivo, qualquer número seria invenção.
