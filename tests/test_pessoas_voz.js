@@ -4,7 +4,7 @@
 const assert = require('assert');
 const fs = require('fs');
 
-const fonte = fs.readFileSync(__dirname + '/../app.js', 'utf8');
+// O checkout do Windows pode converter LF para CRLF; normalize antes de localizar blocos.\nconst fonte = fs.readFileSync(__dirname + '/../app.js', 'utf8').replace(/\\r\\n/g, '\\n');
 const inicio = fonte.indexOf('function responderPessoaPorVoz');
 assert.ok(inicio > 0, 'função de voz encontrada no app.js');
 const fim = fonte.indexOf('\n}\n', inicio) + 3;
