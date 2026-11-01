@@ -39,3 +39,164 @@
 .core-rec > b { min-width: 80px; }
 .core-rec.ok { border-color: rgba(109,255,194,.3); }
 .core-rec.falhou { border-color: rgba(255,107,107,.3); color: #ff9a8a; }
+
+
+/* J.A.R.V.I.S. Nova 1.39 — HUD de comando refinado.
+   Camada estritamente visual: não altera IDs, rotas, ações ou estados dos módulos. */
+:root {
+  --jv-hud-cyan: #65eaff;
+  --jv-hud-blue: #3b9dff;
+  --jv-hud-line: rgba(101, 234, 255, .22);
+  --jv-hud-glass: rgba(5, 19, 32, .88);
+}
+body {
+  background:
+    radial-gradient(ellipse at 50% 24%, rgba(26, 157, 211, .14), transparent 48%),
+    radial-gradient(ellipse at 8% 82%, rgba(13, 91, 145, .10), transparent 38%),
+    linear-gradient(rgba(75, 202, 235, .026) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(75, 202, 235, .026) 1px, transparent 1px),
+    #030914;
+  background-size: auto, auto, 34px 34px, 34px 34px, auto;
+}
+header {
+  position: relative;
+  z-index: 8;
+  border-bottom: 1px solid rgba(101, 234, 255, .16);
+  background: linear-gradient(180deg, rgba(7, 22, 37, .96), rgba(4, 13, 25, .86));
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .22);
+}
+.marca b {
+  color: #e4fbff;
+  text-shadow: 0 0 16px rgba(71, 215, 255, .32);
+  letter-spacing: .2em;
+}
+.marca .ponto, .lat-dot {
+  box-shadow: 0 0 9px var(--jv-hud-cyan), 0 0 20px rgba(101, 234, 255, .36);
+}
+#lateral {
+  background: linear-gradient(180deg, rgba(5, 19, 33, .97), rgba(3, 11, 22, .97));
+  border-right: 1px solid var(--jv-hud-line);
+  box-shadow: 14px 0 40px rgba(0, 0, 0, .22);
+}
+#lateral .lat-btn {
+  position: relative;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+#lateral .lat-btn.ativo {
+  color: #e4fbff;
+  border-color: rgba(101, 234, 255, .27);
+  background: linear-gradient(100deg, rgba(35, 174, 220, .18), rgba(35, 174, 220, .035));
+  box-shadow: inset 2px 0 0 var(--jv-hud-cyan), 0 0 18px rgba(35, 174, 220, .07);
+}
+#lateral .lat-btn:focus-visible, .area-card:focus-visible, .area-acao:focus-visible {
+  outline: 2px solid var(--jv-hud-cyan);
+  outline-offset: 2px;
+}
+.lat-grupo {
+  color: rgba(113, 204, 226, .68);
+  letter-spacing: .19em;
+}
+.lat-rodape {
+  border-top: 1px solid rgba(101, 234, 255, .13);
+}
+.topo {
+  isolation: isolate;
+}
+.hud {
+  filter: drop-shadow(0 0 22px rgba(27, 175, 231, .16));
+}
+.hud::before {
+  border-color: rgba(101, 234, 255, .28);
+}
+.chip.estado {
+  border-color: rgba(101, 234, 255, .25);
+  background: rgba(3, 17, 31, .82);
+  color: #d9f8ff;
+}
+.area-card, .core-hero, .dash-card, .info-card, .nucleo-card {
+  border-color: rgba(101, 234, 255, .19);
+  background: linear-gradient(145deg, rgba(9, 34, 52, .88), rgba(4, 14, 27, .92));
+}
+.area-card:active, .area-acao:active {
+  border-color: rgba(101, 234, 255, .55);
+  background: rgba(13, 66, 91, .55);
+}
+.area-card-icone {
+  background: rgba(30, 178, 220, .09);
+  box-shadow: inset 0 0 16px rgba(30, 178, 220, .06);
+}
+.painel {
+  background: linear-gradient(155deg, rgba(7, 23, 39, .985), rgba(3, 11, 22, .99));
+  border-left-color: rgba(101, 234, 255, .22);
+  box-shadow: -18px 0 48px rgba(0, 0, 0, .28);
+}
+.painel-topo {
+  background: linear-gradient(90deg, rgba(24, 104, 137, .10), transparent 72%);
+}
+.painel h2, .painel h3 {
+  text-shadow: 0 0 18px rgba(101, 234, 255, .08);
+}
+.painel .grupo {
+  border-bottom-color: rgba(101, 234, 255, .10);
+}
+.painel input:focus-visible, .painel select:focus-visible, .painel textarea:focus-visible,
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid rgba(101, 234, 255, .72);
+  outline-offset: 2px;
+}
+button.primario {
+  background: linear-gradient(115deg, #65eaff, #4c9fff);
+  border-color: #65eaff;
+  color: #03111d;
+  box-shadow: 0 5px 18px rgba(54, 175, 226, .16);
+}
+button.secundario {
+  border-color: rgba(101, 234, 255, .30);
+}
+#scrim {
+  background: rgba(1, 7, 15, .76);
+}
+@media (min-width: 900px) {
+  #lateral .lat-btn { min-height: 42px; }
+  .area-card { min-height: 126px; }
+  .area-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(101, 234, 255, .46);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .18), inset 0 0 22px rgba(101, 234, 255, .035);
+  }
+}
+@media (max-width: 640px) {
+  body { background-size: auto, auto, 28px 28px, 28px 28px, auto; }
+  header { padding-left: 10px; padding-right: 10px; }
+  .marca b { letter-spacing: .12em; }
+  #lateral { box-shadow: 8px 0 24px rgba(0, 0, 0, .24); }
+  .painel { width: min(100vw, 520px); max-width: 100vw; }
+  .painel-topo { padding-left: 16px; padding-right: 16px; }
+  .painel .grupo { padding-left: 16px; padding-right: 16px; }
+  .area-card { min-height: 104px; padding: 11px; }
+}
+@media (max-width: 360px) {
+  .marca b { letter-spacing: .07em; font-size: 11px; }
+  .area-card { padding: 9px; }
+  .area-card-nome { font-size: 11.5px; }
+}
+@media (update: slow), (max-width: 640px) {
+  .painel, #lateral, .config-tabs, .chip, .msg.eu {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #lateral .lat-btn, .area-card, .hud, button {
+    transition: none !important;
+  }
+  .area-card:hover { transform: none !important; }
+}
+body.efeitos-reduzidos .hud,
+body.efeitos-reduzidos .area-card,
+body.efeitos-reduzidos .painel {
+  filter: none !important;
+  box-shadow: none;
+}
