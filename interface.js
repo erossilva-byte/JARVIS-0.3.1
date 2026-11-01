@@ -208,6 +208,7 @@
       b.appendChild(topo);
       b.appendChild(el('span', 'area-card-desc', area.desc));
       b.appendChild(el('span', 'area-card-meta', area.acoes.length + ' acesso(s)'));
+      b.addEventListener('click', function () { abrirArea(area.id); });
       grade.appendChild(b);
     });
     grade.setAttribute('data-pronto', '1');
@@ -221,6 +222,7 @@
     var voltar = el('button', 'areas-voltar', '‹ Áreas');
     voltar.type = 'button';
     voltar.setAttribute('data-area-voltar', '1');
+    voltar.addEventListener('click', function () { abrirArea(''); });
     topo.appendChild(voltar);
     var titulo = el('div');
     titulo.appendChild(el('p', 'eyebrow', 'J.A.R.V.I.S. NOVA · ÁREA'));
@@ -237,6 +239,7 @@
       b.appendChild(el('b', '', a.rot));
       b.appendChild(el('small', '', a.desc));
       b.appendChild(el('span', 'area-acao-seta', '›'));
+      b.addEventListener('click', function () { acao(a.acao); });
       lista.appendChild(b);
     });
     caixa.appendChild(lista);
@@ -254,6 +257,7 @@
         b.appendChild(el('span', '', m.icone));
         b.appendChild(el('b', '', m.nome));
         b.appendChild(el('small', '', m.desc));
+        b.addEventListener('click', function () { aplicarModo(id); });
         modos.appendChild(b);
       });
       caixa.appendChild(modos);
@@ -279,33 +283,52 @@
   }
 
   function acao(nome) {
-    if (raiz.JarvisNavegacao && typeof raiz.JarvisNavegacao.acao === 'function') {
-      raiz.JarvisNavegacao.acao(nome);
-      return;
-    }
     var st = doc.getElementById('areas-status');
-    if (st) st.textContent = 'O núcleo ainda está carregando. Tente novamente em alguns segundos.';
+    if (!raiz.JarvisNavegacao || typeof raiz.JarvisNavegacao.acao !== 'function') {
+      if (st) st.textContent = 'O núcleo ainda está carregando. Tente novamente em alguns segundos.';
+      return false;
+    }
+    try {
+      var resultado = raiz.JarvisNavegacao.acao(nome);
+      if (resultado === false) {
+        if (st) st.textContent = 'Este recurso não está disponível nesta plataforma ou ainda não foi implementado.';
+        return false;
+      }
+      if (st) st.textContent = 'Acesso solicitado: ' + nome + '.';
+      return true;
+    } catch (erro) {
+      if (st) st.textContent = 'Não foi possível abrir este recurso: ' + ((erro && erro.message) || erro);
+      return false;
+    }
   }
 
   function init() {
     montarGrade();
     aplicarModo(lerModo(), { salvar: false });
-    doc.addEventListener('click', function (e) {
-      var alvo = e.target.closest ? e.target : null;
-      if (!alvo) return;
-      var modo = alvo.closest('[data-modo]');
-      if (modo) { aplicarModo(modo.getAttribute('data-modo')); return; }
-      var area = alvo.closest('[data-area]');
-      if (area && !area.hasAttribute('data-area-acao')) { abrirArea(area.getAttribute('data-area')); return; }
-      var voltar = alvo.closest('[data-area-voltar]');
-      if (voltar) { abrirArea(''); return; }
-      var acaoEl = alvo.closest('[data-area-acao]');
-      if (acaoEl) { acao(acaoEl.getAttribute('data-area-acao')); return; }
-      var abrir = alvo.closest('[data-abrir-areas]');
-      if (abrir && raiz.JarvisNavegacao) raiz.JarvisNavegacao.abrirAreas();
-    });
+
+    // Cada controle recebe sua própria ação. Isso evita depender de bubbling global
+    // em WebView Android e mantém os botões dinâmicos funcionais após re-renderização.
+    var modos = doc.querySelectorAll('[data-modo]');
+    for (var i = 0; i < modos.length; i++) {
+      (function (botao) {
+        botao.addEventListener('click', function () {
+          aplicarModo(botao.getAttribute('data-modo'));
+        });
+      })(modos[i]);
+    }
+    var atalhos = doc.querySelectorAll('[data-abrir-areas]');
+    for (var j = 0; j < atalhos.length; j++) {
+      atalhos[j].addEventListener('click', function () {
+        if (raiz.JarvisNavegacao && typeof raiz.JarvisNavegacao.abrirAreas === 'function') {
+          raiz.JarvisNavegacao.abrirAreas();
+        } else {
+          var status = doc.getElementById('areas-status');
+          if (status) status.textContent = 'O núcleo de navegação ainda está inicializando. Tente novamente.';
+        }
+      });
+    }
     raiz.addEventListener('jarvis:modo', function (e) {
-      if (!e || !e.detail) return;
+      if (!e || !e.detail || !MODOS[e.detail.modo]) return;
       var st = doc.getElementById('modo-status');
       if (st) st.textContent = MODOS[e.detail.modo].nome + ' · ' + MODOS[e.detail.modo].desc;
     });
