@@ -28,22 +28,23 @@ checks = {
     "transcrição fica fora do menu principal": "body:not(.modo-conversa) .chat-area" in css and "body.modo-conversa .dash" in css,
     "botões de área aceitam toque e foco": "touch-action:manipulation" in css and ".area-card:focus-visible" in css,
     "bloqueio opcional e memória continuam na configuração": 'data-config-tab="memoria"' in html and 'data-category="seguranca"' in html,
-    "emulador tem tempo suficiente para iniciar": bool(re.search(r"timeout-minutes:\\s*(?:30|[3-9][0-9])", workflow)),
+    "emulador tem tempo suficiente para iniciar": any(line.strip() == "timeout-minutes: 30" for line in workflow.splitlines()),
     "teste de interação incluído na suíte completa": "tests/test_v1_40_interactions.py" in package["scripts"]["test:all"],
 }
 
-ids = re.findall(r'\\bid="([^"]+)"', html)
+ids = re.findall('id="([^"]+)"', html)
 checks["HTML sem IDs duplicados"] = len(ids) == len(set(ids))
 
-area_actions = set(re.findall(r"acao: '([^']+)'", interface))
+area_actions = set(re.findall("acao: '([^']+)'", interface))
 router_start = app.find("function acaoNavegacao(nome)")
-router_end = app.find("\\n}", router_start)
+router_end = app.find(chr(10) + "}", router_start)
 router = app[router_start:router_end + 2] if router_start >= 0 and router_end >= 0 else ""
-routes = set(re.findall(r"case '([^']+)':", router))
+routes = set(re.findall("case '([^']+)':", router))
 checks["todas as ações das áreas têm rota no núcleo"] = bool(area_actions) and area_actions <= routes
 
 for label, ok in checks.items():
     print(("OK: " if ok else "FALHOU: ") + label)
 if not all(checks.values()):
     raise SystemExit(1)
-print("\\nInterações 1.40: contratos de navegação, toque, histórico e regressão verificados.")
+print()
+print("Interações 1.40: contratos de navegação, toque, histórico e regressão verificados.")
