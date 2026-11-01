@@ -1,4 +1,51 @@
-# J.A.R.V.I.S. Nova 1.31.2
+# J.A.R.V.I.S. Nova 1.38.0
+
+## 1.38.0 — Avatar 3D, plano persistente e executores
+
+Esta revisão acrescenta um **avatar holográfico procedural** escolhível em Aparência do núcleo, desenhado localmente com Three.js e fallback em Canvas 2D. Os olhos piscam e a boca abre conforme a **amplitude real** da fala ou do microfone; não há modelo facial baixado nem visemas por fonema, e a interface diz isso.
+
+O comando “planeje …” agora converte o plano validado em uma **tarefa persistente** do Sistema. Cada etapa tem checkpoint, pausa e retomada sem repetir etapa concluída; a etapa interna não pede confirmação duplicada, mas a ação real continua passando pelo `executarSeguro`. O Core ganhou executores de leitura para **voz**, **automação**, **atualização** e **planejamento**.
+
+A auditoria de IA e o inventário do repertório estão em `docs/IA-1.38.0.md` e `docs/REPERTORIO-1.38.0.md`. O APK 1.38.0 foi compilado e conferido por hash/aapt (81196059 bytes; SHA-256 `3fbe237a672eca13f308a266c86e0503d13ddcfa54fdd4e75308bb0b8cae27ba`); **não foi instalado nem executado em aparelho físico nesta máquina**. Instalação, microfone, wake word, acessibilidade, segundo plano, notificações e avatar em tela real continuam pendentes de validação no Poco X7. Voz, câmera, Windows, ESP32/Home Assistant e inferência com chave/modelo reais não foram simulados.
+
+## 1.37.0 — Retomada segura e pausa
+
+Uma tarefa pausada por efeito incerto agora continua **sem reexecutar** a etapa que pode já ter sido disparada. Também é possível pausar manualmente entre etapas: a ferramenta em curso termina, mas a próxima não começa, e o checkpoint permanece. A tela de tarefas descreve corretamente o lembrete de prazo às 09:00 no Android.
+
+Pausa não é cancelamento: ela não interrompe um efeito já iniciado. Voz, câmera, wake word, notificações, Windows, ESP32/Home Assistant e instalação em aparelho continuam dependendo de validação física.
+
+## 1.36.0 — Aprendizado explícito
+
+Esta revisão adiciona um módulo local de aprendizado que só registra instruções claras do usuário (“prefiro”, “evite”, “lembre”, “corrija”). Tudo é revisável em Memória, pode ser removido, desfeito, exportado ou apagado, e conteúdo sensível é recusado. O aprendizado entra no prompt como preferência de estilo, nunca como autorização para contornar segurança, permissões ou confirmações.
+
+Aprendizado automático de hábitos, permissões por pessoa, canal autenticado Android↔Windows, ESP32/Home Assistant e reformulação visual completa continuam pendentes e não foram simulados.
+
+## 1.35.0 — Confiabilidade, autodiagnóstico e recuperação
+
+Esta revisão fortalece o Core sem remover a 1.34.0. Falhas agora têm causa provável, evidência e orientação; a delegação faz pré-checagem de dependências; componentes podem declarar uma recuperação segura, executada com timeout, rechecagem, espera e limite de tentativas. O automático só ocorre quando o próprio componente autoriza. Nada reinicia serviços Android nem contorna permissões.
+
+O diagnóstico integrado mostra o Core, e o painel do Core mostra o histórico de recuperação. RAM JavaScript e bateria só aparecem quando a WebView fornece o dado; o uso de CPU não é inventado. A validação em aparelho físico, microfone, câmera, acessibilidade real, segundo plano, RAM, bateria e instalação continua pendente.
+
+## 1.34.0 — Core, agentes e contexto
+
+Esta revisão acrescenta o **JARVIS Core** sem remover a camada de áreas da 1.33.0. O Core registra 12 agentes descritivos, escolhe o agente por sinais explícitos, mantém último pedido/agente/decisões, gerencia projetos e tarefas e verifica resultados de forma conservadora. Sem executor registrado, a delegação devolve `nao_configurado` e não finge execução. O painel mostra status, agentes, projetos, saúde e habilidades; o watchdog diagnostica sem reiniciar serviços em loop.
+
+O APK 1.34.0 mantém a instalação por cima quando usa a mesma assinatura de CI. A validação em aparelho físico, microfone, câmera, acessibilidade real, RAM, bateria e instalação continua pendente. MCP remoto, RAG vetorial, tutorial, visão de tela ampla, pareamento PC/TV/ESP32 e atualização modular não foram implementados; a classificação completa está em `docs/EVOLUCAO-1.34.0.md`.
+
+## 1.33.0 — Auditoria, áreas e reconstrução da experiência
+
+Esta revisão audita os 13 tópicos da evolução, organiza a interface em dez áreas, cria quatro modos de uso persistentes, conecta atividades reais à página inicial e faz o núcleo 3D reagir à execução de ferramentas. A auditoria completa está em `docs/AUDITORIA-1.33.0.md`; a limpeza está em `docs/LIMPEZA-1.33.0.md`. O APK 1.33.0 foi gerado e verificado por dentro; a instalação em aparelho físico continua pendente. O APK 1.32.0 permanece como referência.
+
+## 1.32.0 — Núcleo operacional, ferramentas e acessibilidade
+
+O `sistema.js` adiciona um catálogo de ferramentas com permissões, traces, tarefas com checkpoint e detecção de
+injeção. A voz resolve calculadora, conversão, senha e status do núcleo sem chamar a nuvem. A nova central
+**Sistema** mostra tudo isso. No Android, um AccessibilityService opt-in permite ler a tela, clicar por texto,
+digitar, rolar e esperar — sempre com confirmação, campos de senha omitidos e botão **Parar tudo**.
+
+O microfone ganhou seleção de entrada e um diagnóstico de 1,2 s que mede nível, ruído, pico e clipes sem gravar.
+O que não foi possível validar aqui: aparelho físico, microfone real, wake word em segundo plano, TTS, automação
+de UI e instalação do APK. O relatório de rastreabilidade está em `docs/AUDITORIA-1.33.0.md`.
 
 ## 1.31.2 — Consentimento e coerência
 
