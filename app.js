@@ -487,6 +487,10 @@ function msg(tipo, texto, links) {
     d.appendChild(caixa);
   }
   chat.appendChild(d);
+  if (tipo === 'jv' || tipo === 'sis') {
+    const resposta = $('#nucleo-resposta');
+    if (resposta) resposta.textContent = String(texto == null ? '' : texto).replace(/\\s+/g, ' ').slice(0, 240);
+  }
   while (chat.children && chat.children.length > 80 && chat.firstChild) chat.removeChild(chat.firstChild);
   if (perto) chat.scrollTop = chat.scrollHeight || 1e9;
   // Segunda passada depois do layout: link, fonte ou bloco que ganha altura em seguida
@@ -5297,11 +5301,12 @@ function acaoNavegacao(nome) {
       break;
     case 'pc':
       if (window.PcPainel) window.PcPainel.abrir();
-      else msg('sis', 'O painel do computador só está disponível no aplicativo Electron.');
+      else { msg('sis', 'O painel do computador só está disponível no aplicativo Electron.'); return false; }
       break;
     case 'parar': sisPararTudo(); break;
-    default: msg('sis', 'Esta área ainda não possui uma ação conectada.');
+    default: msg('sis', 'Esta área ainda não possui uma ação conectada: ' + nome + '.'); return false;
   }
+  return true;
 }
 window.JarvisNavegacao = {
   abrirPainel: abrirPainel,
@@ -5916,7 +5921,8 @@ $('#btn-config').onclick = abrirConfig;
 const btnVisaoTopo = $('#btn-visao'); if (btnVisaoTopo) btnVisaoTopo.onclick = () => abrirVisao();
 const cardVisao = $('#dash-visao'); if (cardVisao) cardVisao.onclick = () => abrirVisao();
 // Central de comando: conversa (tela própria) e menu de informações.
-$('#btn-conversa').onclick = alternarTelaConversa;
+const btnHistorico = $('#btn-historico');
+if (btnHistorico) btnHistorico.onclick = alternarTelaConversa;
 const cardConversa = $('#dash-conversa');
 if (cardConversa) cardConversa.onclick = () => entrarConversa();
 const cardInfo = $('#dash-info');
@@ -7247,15 +7253,13 @@ function definirConversa(ativo, ampliado) {
   const ligado = Boolean(ativo);
   document.body.classList.toggle('modo-conversa', ligado);
   if (ligado) definirChatAmpliado(Boolean(ampliado));
-  const b = $('#btn-conversa');
+  const b = $('#btn-historico');
   if (b) {
     b.setAttribute('aria-pressed', String(ligado));
-    b.textContent = ligado ? 'Central' : 'Conversa';
-    b.title = ligado ? 'Voltar à central de comando' : 'Abrir a conversa';
+    b.title = ligado ? 'Voltar ao núcleo principal' : 'Abrir histórico e transcrição';
     b.setAttribute('aria-label', b.title);
+    b.classList.toggle('ativo', ligado);
   }
-  const card = $('#dash-conversa');
-  if (card) card.classList.toggle('ativo', ligado);
   if (ligado) {
     const chat = $('#chat');
     if (chat) requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight || 0; });
