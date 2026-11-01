@@ -27,7 +27,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: jarvis-audit-v4-${{ github.ref }}
+  group: jarvis-audit-v5-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -181,8 +181,21 @@ jobs:
       - name: Instalar dependências
         run: npm install --ignore-scripts --legacy-peer-deps
 
-      - name: Testar sintaxe e módulos
-        run: npm run test:all
+      - name: Testes de sintaxe e módulos compartilhados
+        run: npm run test:syntax
+
+      - name: Testes específicos do Windows
+        shell: pwsh
+        run: |
+          node --check platforms/desktop/main.js
+          node --check platforms/desktop/preload.js
+          node --check platforms/desktop/arquivos.js
+          node --check platforms/desktop/cad_pc.js
+          node --check pc.js
+          node tests/test_pc_arquivos.js
+          node tests/test_pc_cad.js
+          python tests/test_arquivos_sistema.py
+          python tests/test_pc_windows.py
 
       - name: Gerar instalador Windows
         run: npm run dist:win
