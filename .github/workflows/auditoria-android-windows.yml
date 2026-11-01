@@ -27,7 +27,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: jarvis-audit-${{ github.ref }}
+  group: jarvis-audit-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -110,6 +110,7 @@ jobs:
 
       - name: Inicializar emulador e testar instalação, abertura e estabilidade
         uses: reactivecircus/android-emulator-runner@v2
+        timeout-minutes: 10
         with:
           api-level: 35
           target: google_apis
@@ -130,10 +131,10 @@ jobs:
             adb shell monkey -p com.jarvis.nova 1
             sleep 35
             adb shell pidof com.jarvis.nova
-            adb shell dumpsys activity activities > "$GITHUB_WORKSPACE/artifacts/android/activities.txt"
-            adb shell uiautomator dump /sdcard/jarvis-window.xml || true
-            adb pull /sdcard/jarvis-window.xml "$GITHUB_WORKSPACE/artifacts/android/window.xml" || true
-            adb exec-out screencap -p > "$GITHUB_WORKSPACE/artifacts/android/home.png"
+            timeout 15s adb shell dumpsys activity activities > "$GITHUB_WORKSPACE/artifacts/android/activities.txt" || true
+            timeout 15s adb shell uiautomator dump /sdcard/jarvis-window.xml || true
+            timeout 10s adb pull /sdcard/jarvis-window.xml "$GITHUB_WORKSPACE/artifacts/android/window.xml" || true
+            timeout 10s adb exec-out screencap -p > "$GITHUB_WORKSPACE/artifacts/android/home.png"
             adb logcat -d -v threadtime > "$GITHUB_WORKSPACE/artifacts/android/logcat.txt"
             if grep -E -i 'FATAL EXCEPTION|Fatal signal|ANR in com\\.jarvis\\.nova' "$GITHUB_WORKSPACE/artifacts/android/logcat.txt"; then
               echo "Crash/ANR detectado durante o smoke test." >&2
@@ -163,6 +164,9 @@ jobs:
   windows-build:
     name: Compilação Windows
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: 'utf-8'
     timeout-minutes: 45
     steps:
       - name: Checkout
