@@ -8021,12 +8021,15 @@ function liberarApp() {
   const jaLivre = bootConcluido && (!tela || tela.hidden);
   if (jaLivre) return;
   bootConcluido = true;
+  // O bloqueio é decidido antes de retirar o splash. Assim, a tela principal nunca
+  // aparece por um instante quando o bloqueio opcional está ativado.
   document.body.classList.remove('travado');
+  try { iniciarBloqueioSeAtivo(); }
+  catch (e) { registrar('erro', 'bloqueio: ' + ((e && e.message) || e)); }
   if (tela && !tela.hidden) {
     tela.classList.add('saindo');
     setTimeout(() => { tela.hidden = true; tela.classList.remove('saindo'); }, 450);
   }
-  setTimeout(() => { try { iniciarBloqueioSeAtivo(); } catch (e) { registrar('erro', 'bloqueio: ' + ((e && e.message) || e)); } }, 520);
 }
 async function finalizarBoot(motivo) {
   bootProgresso(100, motivo || 'Sistemas prontos.');
