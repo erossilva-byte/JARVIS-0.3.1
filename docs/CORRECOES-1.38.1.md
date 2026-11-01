@@ -38,6 +38,14 @@ Esta rodada não adiciona recurso novo. Ela corrige defeitos encontrados na audi
 
 **Correção:** a preparação é envolvida em `try/catch`, registra `recusado` e devolve `{ falhou: true }` com mensagem clara.
 
+### 6. GitHub Actions executava os testes antes de gerar o Android
+
+**Sintoma:** o workflow de release falhou na `v1.38.0` em “Testes estáticos e regressão”, com `FileNotFoundError: android/app/build.gradle`.
+
+**Causa:** `npm run test:all` era executado antes de `npx cap add android`; o contrato 1.37 lê o `build.gradle` nativo, que ainda não existia.
+
+**Correção:** os workflows de build e release agora geram o projeto Android, aplicam `patch_gradle.py`/`patch_android_version.py` e só então executam a suíte. O workflow de build também aceita o nome real `JARVIS-Nova-*-fonte.zip` (além do antigo `JARVIS-NOVA-*`), que antes não disparava por diferença de caixa, e remove a pasta `android/` extraída da fonte antes de `npx cap add`.
+
 ## O que foi preservado
 
 Identidade, voz, personalidade, humor, memória, pessoas, agentes, Core, planos, tarefas persistentes, avatar, HUD/plasma/órbita, acessibilidade, PC, aprendizado explícito e confirmações. Nenhum provedor, painel ou ferramenta foi removido.
@@ -49,6 +57,7 @@ Identidade, voz, personalidade, humor, memória, pessoas, agentes, Core, planos,
 - `npm run test:all` — suíte completa; resultado registrado no relatório final da entrega.
 - `python3 tests/test_v1_38_1.py` — contrato da versão após o build.
 - Compilação Android e `aapt`/`apksigner` — resultados no relatório de release.
+- Workflows: falha da `v1.38.0` reproduzida pelo log do Actions; ordem corrigida e YAML conferido. A execução nova da `v1.38.1` não foi aguardada nesta máquina.
 
 ## Limitações que continuam
 

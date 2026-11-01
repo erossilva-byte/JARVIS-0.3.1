@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'JARVIS-Nova-*-fonte.zip'
       - 'JARVIS-NOVA-*-fonte.zip'
       - '.github/workflows/build-apk.yml'
       - 'app.js'
@@ -63,7 +64,7 @@ jobs:
 
       - name: Extrair código-fonte enviado ao repositório
         run: |
-          ZIP="$(find . -maxdepth 1 -type f -name 'JARVIS-NOVA-*-fonte.zip' -print | sort | tail -n 1)"
+          ZIP="$(find . -maxdepth 1 -type f \( -name 'JARVIS-Nova-*-fonte.zip' -o -name 'JARVIS-NOVA-*-fonte.zip' \) -print | sort | tail -n 1)"
           if [ -n "$ZIP" ]; then
             mkdir -p /tmp/jarvis-source
             unzip -q "$ZIP" -d /tmp/jarvis-source
@@ -88,9 +89,6 @@ jobs:
           mkdir -p "$HOME/.android"
           cp ci/debug.keystore "$HOME/.android/debug.keystore"
 
-      - name: Testes estáticos e regressão
-        run: npm run test:all
-
       - name: Preparar os recursos web do aplicativo
         run: |
           mkdir -p www
@@ -108,6 +106,9 @@ jobs:
           cp identidade_ui.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
+
+      - name: Limpar projeto Android gerado
+        run: rm -rf android
 
       - name: Gerar estrutura nativa do Android
         run: |
@@ -133,6 +134,9 @@ jobs:
           python3 patch_gradle.py android/app/build.gradle
           python3 patch_android_version.py android/app/build.gradle VERSAO.json
           python3 patch_visual.py android
+
+      - name: Testes estáticos e regressão
+        run: npm run test:all
 
       - name: Compilar APK debug
         working-directory: android

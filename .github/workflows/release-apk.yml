@@ -51,9 +51,6 @@ jobs:
           mkdir -p "$HOME/.android"
           cp ci/debug.keystore "$HOME/.android/debug.keystore"
 
-      - name: Testes estáticos e regressão
-        run: npm run test:all
-
       - name: Preparar os recursos web do aplicativo
         run: |
           mkdir -p www
@@ -73,6 +70,9 @@ jobs:
           cp identidade_ui.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
+
+      - name: Limpar projeto Android gerado
+        run: rm -rf android
 
       - name: Gerar estrutura nativa do Android
         run: |
@@ -101,6 +101,9 @@ jobs:
           python3 patch_gradle.py android/app/build.gradle
           python3 patch_android_version.py android/app/build.gradle VERSAO.json
           python3 patch_visual.py android
+
+      - name: Testes estáticos e regressão
+        run: npm run test:all
 
       - name: Compilar APK
         working-directory: android
