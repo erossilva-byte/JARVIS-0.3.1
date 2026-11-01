@@ -525,9 +525,14 @@
     this.desejado = true;
     this.rodando = true;
     this.ultimo = 0;
-    var self = this, laco = function (t) {
+    var self = this, ultimoQuadro = 0;
+    var intervalo = (raiz.innerWidth || 400) < 640 ? (1000 / 30) : (1000 / 50);
+    var laco = function (t) {
       if (!self.rodando) return;
       self.raf = raiz.requestAnimationFrame(laco);
+      t = Number.isFinite(t) ? t : (raiz.performance ? raiz.performance.now() : Date.now());
+      if (t - ultimoQuadro < intervalo) return;
+      ultimoQuadro = t;
       self.quadro(t);
     };
     this.raf = raiz.requestAnimationFrame(laco);
