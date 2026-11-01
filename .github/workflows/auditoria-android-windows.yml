@@ -137,14 +137,8 @@ jobs:
             gtimeout 20s adb shell uiautomator dump /sdcard/jarvis-window.xml || true
             gtimeout 20s adb pull /sdcard/jarvis-window.xml "$GITHUB_WORKSPACE/artifacts/android/window.xml" || true
             gtimeout 20s adb exec-out screencap -p > "$GITHUB_WORKSPACE/artifacts/android/home.png" || true
-            if ! grep -Eq '[0-9]+' "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt"; then
-              echo "O processo com.jarvis.nova não permaneceu ativo após a inicialização." >&2
-              exit 1
-            fi
-            if grep -E -i 'FATAL EXCEPTION|Fatal signal|ANR in com\.jarvis\.nova' "$GITHUB_WORKSPACE/artifacts/android/logcat.txt"; then
-              echo "Crash/ANR detectado durante o smoke test." >&2
-              exit 1
-            fi
+            grep -Eq '[0-9]+' "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt" || { echo "O processo com.jarvis.nova não permaneceu ativo após a inicialização." >&2; exit 1; }
+            ! grep -E -i 'FATAL EXCEPTION|Fatal signal|ANR in com\\.jarvis\\.nova' "$GITHUB_WORKSPACE/artifacts/android/logcat.txt" || { echo "Crash/ANR detectado durante o smoke test." >&2; exit 1; }
             test -s "$GITHUB_WORKSPACE/artifacts/android/home.png"
 
       - name: Coletar logs mesmo em caso de falha
@@ -155,6 +149,15 @@ jobs:
           gtimeout 20s adb logcat -d -v threadtime > artifacts/android/logcat-final.txt 2>&1 || true
           gtimeout 15s adb shell dumpsys meminfo com.jarvis.nova > artifacts/android/meminfo.txt 2>&1 || true
           gtimeout 15s adb shell dumpsys activity activities > artifacts/android/activities-final.txt 2>&1 || true
+
+      - name: Publicar APK Android para download
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-nova-android-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Publicar evidências Android
         if: always()
