@@ -27,7 +27,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: jarvis-audit-v2-${{ github.ref }}
+  group: jarvis-audit-v3-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
