@@ -16,6 +16,7 @@ checks = {
     "menu principal oculto durante a inicialização": '<body data-state="idle" class="travado">' in html and "visibility:hidden;pointer-events:none;opacity:0" in css,
     "bloqueio é verificado antes de esconder o splash": app.find("try { iniciarBloqueioSeAtivo(); }") < app.find("tela.classList.add('saindo')"),
     "opção Conversa removida do cabeçalho": 'id="btn-conversa"' not in html,
+    "referência antiga do cartão Conversa removida do JavaScript": "$('#dash-conversa')" not in app,
     "atalho Conversa removido do dashboard": 'id="dash-conversa"' not in html,
     "histórico continua acessível por botão secundário": 'id="btn-historico"' in html and "btnHistorico.onclick = alternarTelaConversa" in app,
     "transcrição e campo de comando preservados": 'id="chat"' in html and 'id="entrada"' in html and 'id="btn-enviar"' in html,
