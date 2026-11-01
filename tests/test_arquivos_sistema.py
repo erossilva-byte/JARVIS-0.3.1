@@ -12,6 +12,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import shutil
 import zipfile
 import xml.etree.ElementTree as ET
 
@@ -41,7 +42,12 @@ def check(nome, condicao, detalhe=''):
 
 
 def caminho(rel):
-    return os.path.join(home, rel.replace('~/', '', 1))
+    # O motor usa o separador nativo: aceite ~/ no Unix e ~\\ no Windows.
+    if rel == '~':
+        return home
+    if rel.startswith('~/') or rel.startswith('~\\'):
+        rel = rel[2:]
+    return os.path.join(home, rel)
 
 
 arquivos = {a['nome']: a for a in dados['arquivos']}
@@ -132,7 +138,7 @@ check('Temporário órfão antigo é removido', dados['extras']['limpeza']['remo
 check('Nenhum .tmp sobra depois das gravações', dados['extras']['temporariosRestantes'] == [],
       dados['extras']['temporariosRestantes'])
 
-os.system('rm -rf ' + tmp)
+shutil.rmtree(tmp, ignore_errors=True)
 if falhas:
     print('\n%d verificação(ões) do sistema de arquivos falharam.' % len(falhas))
     for f in falhas:
