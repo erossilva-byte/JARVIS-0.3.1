@@ -150,6 +150,8 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
+            **Novidades da 1.38.1:** correção do cancelamento de tarefa durante a etapa em voo, remoção das declarações duplicadas da Visão 2.0, reset da análise ao reabrir a Visão, tratamento de exceções na preparação de ações e sorteio uniforme no gerador de senha. O roteador também descarta provedores desconhecidos.
+
             **Novidades da 1.38.0:** **avatar 3D procedural** no núcleo: rosto holográfico desenhado localmente
             com Three.js, olhos que piscam e boca que abre pela **amplitude real da voz** — não é visema por fonema
             nem modelo facial baixado. O plano validado agora vira **tarefa persistente** do núcleo, com checkpoint,

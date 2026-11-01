@@ -220,12 +220,15 @@
   }
 
   /* ---------- Ferramentas locais ---------- */
-  function aleatorioSeguro(n) {
+  /** Sorteio uniforme com rejeição: `% 256` sozinho favorece os primeiros itens. */
+  function inteiroSeguro(max) {
     const c = globalThis.crypto;
     if (!c || typeof c.getRandomValues !== 'function') throw new Error('Este ambiente não oferece gerador criptográfico seguro.');
-    const bytes = new Uint8Array(n);
-    c.getRandomValues(bytes);
-    return bytes;
+    if (!Number.isInteger(max) || max < 1 || max > 256) throw new Error('Faixa de sorteio inválida.');
+    const limite = Math.floor(256 / max) * max;
+    const b = new Uint8Array(1);
+    do { c.getRandomValues(b); } while (b[0] >= limite);
+    return b[0] % max;
   }
   function gerarSenha(args) {
     const tamanho = Math.max(8, Math.min(128, Math.round(numero(args && args.tamanho, 20))));
@@ -234,12 +237,11 @@
     const sim = '!@#$%&*+-=?';
     const grupos = [minus, mais, nums].concat(simbolos ? [sim] : []);
     const todos = grupos.join('');
-    const b = aleatorioSeguro(tamanho + 8);
     const letras = [];
-    for (let i = 0; i < grupos.length; i++) letras.push(grupos[i][b[i] % grupos[i].length]);
-    for (let i = grupos.length; i < tamanho; i++) letras.push(todos[b[i] % todos.length]);
+    for (let i = 0; i < grupos.length; i++) letras.push(grupos[i][inteiroSeguro(grupos[i].length)]);
+    for (let i = grupos.length; i < tamanho; i++) letras.push(todos[inteiroSeguro(todos.length)]);
     for (let i = letras.length - 1; i > 0; i--) {
-      const j = b[tamanho + (i % 8)] % (i + 1);
+      const j = inteiroSeguro(i + 1);
       const t = letras[i]; letras[i] = letras[j]; letras[j] = t;
     }
     return { senha: letras.join(''), tamanho, simbolos, fala: 'Gerei uma senha de ' + tamanho + ' caracteres. Ela não foi salva nem enviada a nenhum serviço.' };
@@ -483,7 +485,9 @@
     function obterTarefa(id) { const t = tarefas.find((x) => x.id === id); return t ? clone(t) : null; }
     function cancelarTarefa(id) {
       const t = tarefas.find((x) => x.id === id); if (!t) return false;
-      emExecucao.delete(id); pausasSolicitadas.delete(id); t.estado = 'cancelada'; t.atualizadaEm = iso(); persistirTarefas(); emitir('tarefa:cancelada', { id }); return true;
+      // A trava só pode ser liberada no finally da execução em voo: removê-la aqui
+      // permitiria um novo execute antes de a ação atual terminar.
+      pausasSolicitadas.delete(id); t.estado = 'cancelada'; t.atualizadaEm = iso(); persistirTarefas(); emitir('tarefa:cancelada', { id }); return true;
     }
     /** Pede pausa entre etapas. Durante uma ferramenta em curso, não interrompe o efeito
      *  já iniciado: apenas impede que a próxima etapa comece. */
@@ -499,7 +503,7 @@
       emitir('tarefa:pausa', { id, solicitada: false });
       return true;
     }
-    function cancelarTodas() { tarefas.forEach((t) => { if (['pendente', 'executando', 'pausada'].indexOf(t.estado) >= 0) { t.estado = 'cancelada'; t.atualizadaEm = iso(); } }); emExecucao.clear(); pausasSolicitadas.clear(); persistirTarefas(); emitir('tarefa:cancelada', { todas: true }); return true; }
+    function cancelarTodas() { tarefas.forEach((t) => { if (['pendente', 'executando', 'pausada'].indexOf(t.estado) >= 0) { t.estado = 'cancelada'; t.atualizadaEm = iso(); } }); pausasSolicitadas.clear(); persistirTarefas(); emitir('tarefa:cancelada', { todas: true }); return true; }
     function limparTarefas() { tarefas = []; emExecucao.clear(); pausasSolicitadas.clear(); persistirTarefas(); return true; }
     async function executarTarefa(id, ctx) {
       const c = ctx || {};
@@ -533,6 +537,17 @@
             continue;
           }
           const r = await executar(p.ferramenta, p.args, Object.assign({}, c, { agente: c.agente || 'tarefa', origem: c.origem || 'tarefa' }));
+          // Cancelar durante a etapa não pode ser sobrescrito pelo resultado que chega
+          // depois. O efeito pode ter ocorrido, então a etapa fica incerta; a tarefa
+          // permanece cancelada e o finally libera a trava.
+          if (t.estado === 'cancelada') {
+            p.estado = 'incerto';
+            p.resultado = 'cancelada durante a execução; o efeito pode ter ocorrido';
+            p.em = iso();
+            t.atualizadaEm = iso(); persistirTarefas();
+            emitir('tarefa:passo', { id, passo: p.id, estado: p.estado });
+            return { ok: false, codigo: 'CANCELADA', erro: 'Tarefa cancelada durante a etapa; o efeito pode ter ocorrido.', tarefa: clone(t) };
+          }
           if (!r.ok) {
             p.estado = r.codigo === 'CANCELADO' || r.codigo === 'CONFIRMACAO_NECESSARIA' ? 'incerto' : 'falhou';
             p.resultado = r.erro || r.codigo; p.em = iso();
@@ -548,6 +563,9 @@
           p.estado = 'ok'; p.resultado = limitar((r.resultado && (r.resultado.fala || r.resultado.info || r.resultado.resumo)) || 'concluída', 300) + (incerto ? ' (incerto, autorizado)' : ''); p.em = iso();
           if (incerto) t.incerto = (t.incerto || 0) + 1;
           t.atualizadaEm = iso(); persistirTarefas(); emitir('tarefa:passo', { id, passo: p.id, estado: p.estado });
+        }
+        if (t.estado === 'cancelada') {
+          return { ok: false, codigo: 'CANCELADA', erro: 'Tarefa cancelada antes da conclusão.', tarefa: clone(t) };
         }
         t.estado = 'concluida'; t.atualizadaEm = iso(); persistirTarefas(); emitir('tarefa:fim', { id, estado: t.estado });
         return { ok: true, tarefa: clone(t) };

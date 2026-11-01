@@ -1,3 +1,11 @@
+## 1.38.1 — Auditoria corretiva
+
+- `sistema.js`: cancelamento durante etapa em voo não pode ser sobrescrito por `concluida`; a etapa fica incerta e a trava só é liberada no `finally`.
+- `sistema.js`: sorteio uniforme com rejeição para senhas, sem viés de módulo.
+- `app.js`: removidas as declarações mortas duplicadas da Visão 2.0; reabrir a Visão limpa balões/texto anterior; `prep` de ação agora trata exceção e devolve falha explícita.
+- `hermes.js`: roteador descarta IDs de provedor desconhecidos e duplicados; não estoura com lista inválida.
+- Testes: `test_sistema.js` com cancelamento em voo e senha; `test_hermes.js` com provedor inválido; contrato `test_v1_38_1.py`.
+
 ## 1.38.0 — Avatar 3D, plano persistente e executores
 
 - `avatar.js`: rosto holográfico procedural com Three.js, boca por amplitude de voz, piscada, estados e fallback Canvas 2D; opção Avatar em Aparência do núcleo.

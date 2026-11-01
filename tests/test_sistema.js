@@ -150,6 +150,35 @@ a('pausa manual entre etapas retoma sem repetir a etapa concluída', async () =>
   assert.strictEqual(chamadas, 2, 'a etapa já concluída não roda de novo');
   assert.strictEqual(r2.tarefa.passos[0].resultado, 'etapa 1');
 });
+a('cancelar durante a última etapa não vira tarefa concluída', async () => {
+  const n7 = S.criarNucleo({ armazenamento: arm, confirmar: async () => true });
+  let liberar, iniciou = false;
+  const porta = new Promise((r) => { liberar = r; });
+  n7.registrarFerramenta({ id: 'etapa_em_voo', nivel: 'leitura', executar: async () => {
+    iniciou = true; await porta; return { info: 'ação terminou depois do cancelamento' };
+  } });
+  const tr = n7.criarTarefa('cancelamento em voo', [{ ferramenta: 'etapa_em_voo', args: {} }]);
+  const execucao = n7.executarTarefa(tr.id, {});
+  await new Promise((r) => setTimeout(r, 20));
+  assert.strictEqual(iniciou, true, 'a etapa precisa estar em execução');
+  assert.strictEqual(n7.cancelarTarefa(tr.id), true);
+  liberar();
+  const r = await execucao;
+  assert.strictEqual(r.ok, false);
+  assert.strictEqual(r.codigo, 'CANCELADA');
+  assert.strictEqual(r.tarefa.estado, 'cancelada');
+  assert.strictEqual(n7.obterTarefa(tr.id).estado, 'cancelada');
+  assert.strictEqual(n7.obterTarefa(tr.id).passos[0].estado, 'incerto', 'o efeito possível não pode ser marcado como ok');
+});
+a('gerador de senha respeita tamanho e grupos', async () => {
+  const r = await n.executar('senha', { tamanho: 24, simbolos: true });
+  assert.strictEqual(r.ok, true);
+  assert.strictEqual(r.resultado.senha.length, 24);
+  assert.match(r.resultado.senha, /[a-z]/);
+  assert.match(r.resultado.senha, /[A-Z]/);
+  assert.match(r.resultado.senha, /[0-9]/);
+  assert.match(r.resultado.senha, /[!@#$%&*+\-=?]/);
+});
 t('cancelar todas interrompe tarefas pendentes', () => {
   const n4 = S.criarNucleo({ armazenamento: arm, confirmar: async () => true });
   const tr = n4.criarTarefa('cancelar', [{ ferramenta: 'calc', args: { expressao: '1+1' } }]);

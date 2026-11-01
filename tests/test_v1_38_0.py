@@ -13,9 +13,9 @@ def check(nome, ok):
     print(('OK: ' if ok else 'FALHA: ') + nome)
     if not ok: falhas.append(nome)
 
-check('versão 1.38.0 e versionCode 10380', meta.get('version') == '1.38.0' and meta.get('versionCode') == 10380)
-check('app, pacote, lock e Gradle acompanham', "const VERSAO_APP = '1.38.0';" in app and pkg.get('version') == '1.38.0' and lock.get('version') == '1.38.0' and 'versionCode 10380' in ler('android/app/build.gradle'))
-check('interface mostra a versão nova', html.count('v1.38.0') >= 5)
+check('versão 1.38.0 ou posterior e versionCode >= 10380', [int(x) for x in meta.get('version', '0').split('.')] >= [1, 38, 0] and meta.get('versionCode', 0) >= 10380)
+check('app, pacote, lock e Gradle acompanham', ("const VERSAO_APP = '%s';" % meta['version']) in app and pkg.get('version') == meta['version'] and lock.get('version') == meta['version'] and ('versionCode %s' % meta['versionCode']) in ler('android/app/build.gradle'))
+check('interface mostra a versão nova', html.count('v' + meta['version']) >= 5)
 check('avatar existe e é carregado depois da órbita e antes do app', (RAIZ / 'avatar.js').is_file() and 'src="orbita.js"' in html and 'src="avatar.js"' in html and html.index('src="orbita.js"') < html.index('src="avatar.js"') < html.index('src="app.js"'))
 check('seletor oferece Avatar 3D', 'value="avatar"' in html and 'Avatar 3D — rosto holográfico' in html)
 check('prévia e cartão do avatar são reais', 'np-avatar' in html and '<b>Avatar 3D procedural</b>' in html and 'Ainda não implementado' not in html[html.index('Avatar 3D procedural'):html.index('Avatar 3D procedural')+800])

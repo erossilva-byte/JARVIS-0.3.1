@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.38.0';
+const VERSAO_APP = '1.38.1';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -1278,7 +1278,13 @@ async function executarSeguro(acao, opcoes) {
   let args = acao.args && typeof acao.args === 'object' ? acao.args : {};
   let desc = nome;
   if (def.prep) {
-    const p = def.prep(args);
+    let p;
+    try { p = def.prep(args); }
+    catch (e) {
+      const msgPrep = 'Não consegui validar os argumentos desta ação: ' + ((e && e.message) || e);
+      registrar('recusado', nome + ': ' + msgPrep);
+      return fim({ info: msgPrep, falhou: true });
+    }
     if (p.erro) { registrar('recusado', nome + ': ' + p.erro); return fim({ info: p.erro, falhou: true }); }
     args = p.args; desc = p.desc;
   }
@@ -7015,19 +7021,6 @@ function pararCamera() {
   visaoAnalisando = false;
 }
 
-function abrirVisao() {
-  document.querySelectorAll('[data-lat]').forEach((x) => x.classList.toggle('ativo', x.dataset.lat === 'visao'));
-  abrirPainel('#painel-visao');
-  const painel = document.getElementById('painel-visao');
-  if (!painel) return;
-  limparBaloes();
-  const ch = VIS_CANVAS();
-  if (ch) ch.hidden = true;
-  if (VIS_VIDEO()) VIS_VIDEO().hidden = false;
-  const painelConfig = document.getElementById('painel-config');
-  if (painelConfig) painelConfig.hidden = true;
-  ligarCamera();
-}
 
 function capturarQuadro() {
   const v = VIS_VIDEO(), ch = VIS_CANVAS();
@@ -7044,61 +7037,6 @@ function capturarQuadro() {
   return dados;
 }
 
-function limparBaloes() {
-  const caixa = document.getElementById('visao-baloes');
-  if (caixa) caixa.textContent = '';
-  const lista = document.getElementById('visao-lista');
-  if (lista) lista.textContent = '';
-  const detalhe = document.getElementById('visao-detalhe');
-  if (detalhe) { detalhe.textContent = ''; detalhe.hidden = true; }
-  visaoObjetos = [];
-  visaoResumo = '';
-}
-
-/** Um balão por objeto, posicionado pela caixa normalizada devolvida pelo modelo. */
-function desenharBaloes(objetos) {
-  limparBaloes();
-  visaoObjetos = Array.isArray(objetos) ? objetos : [];
-  const caixa = document.getElementById('visao-baloes');
-  const lista = document.getElementById('visao-lista');
-  visaoObjetos.forEach((o, i) => {
-    const botao = document.createElement('button');
-    botao.type = 'button';
-    botao.className = 'balao' + (o.caixa ? '' : ' balao-lista');
-    botao.textContent = (i + 1) + '. ' + o.nome;
-    botao.title = o.info || o.nome;
-    if (o.caixa && caixa) {
-      // Centro do objeto, dentro da área visível (o balão nunca sai da tela).
-      const cx = Math.min(92, Math.max(8, (o.caixa.x + o.caixa.w / 2) * 100));
-      const cy = Math.min(90, Math.max(8, (o.caixa.y + o.caixa.h / 2) * 100));
-      botao.style.left = cx + '%';
-      botao.style.top = cy + '%';
-      caixa.appendChild(botao);
-    } else if (lista) {
-      lista.appendChild(botao);
-    }
-    botao.addEventListener('click', () => selecionarObjeto(i));
-  });
-  const semCaixa = visaoObjetos.filter((o) => !o.caixa).length;
-  if (lista && semCaixa) {
-    const aviso = document.createElement('p');
-    aviso.className = 'dica';
-    aviso.textContent = 'Estes não vieram com posição na imagem: toque para ouvir a informação.';
-    lista.appendChild(aviso);
-  }
-}
-
-function selecionarObjeto(i) {
-  const o = visaoObjetos[i];
-  if (!o) return;
-  const detalhe = document.getElementById('visao-detalhe');
-  if (detalhe) {
-    detalhe.hidden = false;
-    detalhe.textContent = o.nome + (o.info ? ' — ' + o.info : ' — sem detalhes além do nome.');
-  }
-  const fala = o.nome + (o.info ? '. ' + o.info : '.');
-  falar(fala, true);
-}
 
 /** Envia UM quadro ao provedor que enxerga, na ordem que o roteador do núcleo definiu. */
 async function pedirVisaoIA(dataUrl, pergunta) {
@@ -7157,42 +7095,6 @@ async function pedirVisaoIA(dataUrl, pergunta) {
   throw new Error(falhas.join(' · ') || 'nenhum provedor respondeu');
 }
 
-/** Captura, analisa e desenha. Devolve {fala, objetos} sem falar — quem chama decide. */
-async function analisarQuadro(pergunta) {
-  if (visaoAnalisando) return null;
-  const dataUrl = capturarQuadro();
-  if (!dataUrl) {
-    visaoStatus('Não consegui capturar a imagem. Abra a câmera e tente de novo.', 'fail');
-    return null;
-  }
-  visaoAnalisando = true;
-  const v = VIS_VIDEO(), ch = VIS_CANVAS();
-  if (ch) ch.hidden = false;
-  if (v) v.hidden = true;
-  visaoStatus('Analisando a imagem…', 'carregando');
-  try {
-    const r = await pedirVisaoIA(dataUrl, pergunta || '');
-    const tom = Hermes.tom(perguntaAtual);
-    const fala = Hermes.visao.descrever(r.objetos, {
-      tratamento: trat(), resumo: r.resumo,
-      humor: Number(store.get('humor', '90')) >= 40, serio: tom.serio, pressa: tom.pressa
-    });
-    visaoResumo = r.resumo;
-    visaoProvedor = r.provedor;
-    desenharBaloes(r.objetos);
-    visaoStatus('Análise de ' + r.provedor + ' em ' + (r.ms / 1000).toFixed(1).replace('.', ',') + ' s · ' +
-      (r.objetos.length ? r.objetos.length + ' objeto(s) identificado(s)' : 'nenhum objeto identificado') +
-      '. Toque em um balão para ouvir os detalhes.', r.objetos.length ? 'ok' : 'warn');
-    registrar('visão', r.objetos.length + ' objeto(s) por ' + r.provedor + ' em ' + r.ms + ' ms');
-    return { fala, objetos: r.objetos, resumo: r.resumo, provedor: r.provedor };
-  } catch (e) {
-    visaoStatus('Não consegui analisar agora: ' + ((e && e.message) || e), 'fail');
-    registrar('erro', 'visão: ' + ((e && e.message) || e));
-    return null;
-  } finally {
-    visaoAnalisando = false;
-  }
-}
 
 /** Habilidade do núcleo: abre a câmera e, se estiver pronta, já analisa o que está à frente. */
 async function analisarVisao(opcoes) {
@@ -9053,6 +8955,9 @@ function abrirVisao() {
   abrirPainel('#painel-visao');
   const painel = document.getElementById('painel-visao');
   if (!painel) return;
+  // Reabrir não pode mostrar balões, texto ou seleção da análise anterior.
+  limparBaloes();
+  visaoProgressoFechar();
   const ch = VIS_CANVAS();
   if (ch) ch.hidden = true;
   const foto = document.getElementById('visao-foto');

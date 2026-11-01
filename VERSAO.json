@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.38.0",
-  "versionCode": 10380,
+  "version": "1.38.1",
+  "versionCode": 10381,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-11-01",
-  "status": "1.38.0: avatar 3D procedural, plano persistente, executores do Core e auditorias; APK compilado, assinado e conferido por aapt.",
+  "status": "1.38.1: auditoria de cancelamento, Visão, senha e roteador; APK compilado, assinado e conferido por aapt/apksigner.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.38.0 (2026-11-01). Adiciona avatar 3D procedural local com boca reagindo à amplitude da voz e fallback Canvas 2D, sem modelo externo nem visemas fonéticos. Planos validados passam a virar tarefas persistentes do SISTEMA, com checkpoint, pausa e retomada sem repetir etapa; a etapa interna não duplica a confirmação da ação real. O Core ganha executores de leitura para voz, automação, atualização e planejamento. Auditorias de IA e do repertório documentadas. Preservados: identidade, voz, memória, núcleo 3D, HUD/plasma/órbita, Core, agentes, planos, aprendizado explícito, PC, acessibilidade e confirmações. Limitações: instalação e testes em aparelho físico, microfone, wake word, notificações, acessibilidade real e avatar em tela não foram validados; voz/câmera/Windows/ESP32/Home Assistant e inferência com chaves/modelos reais não foram simulados. Preservados também: núcleo 3D, plasma e animação do núcleo.",
+  "notas": "Revisão 1.38.1 (2026-11-01). Corrige cancelamento de tarefa durante a última etapa (o resultado tardio não pode marcar a tarefa como concluída), remove declarações duplicadas da Visão 2.0, limpa a análise anterior ao reabrir o painel de Visão, trata exceções na preparação de ações e elimina o viés de módulo do gerador de senha. O roteador de IA agora descarta IDs de provedor desconhecidos em vez de aceitá-los. Preservados identidade, voz, memória, personalidade, agentes, núcleo 3D, avatar, planos, confirmações e recursos anteriores. Limitações: instalação, microfone, wake word, câmera, acessibilidade, segundo plano e avatar em tela não foram validados em aparelho; chaves/modelos reais, Windows, ESP32 e Home Assistant não foram testados. Preservados também: HUD, plasma, órbita e animação do núcleo.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,12 +16,12 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "3fbe237a672eca13f308a266c86e0503d13ddcfa54fdd4e75308bb0b8cae27ba",
-    "bytes": 81196059,
-    "arquivo": "jarvis-nova-1.38.0-10380.apk",
+    "sha256": "28a87cb3ec4eaa6d890047406c481190ff8868d080391ce679a0cf832ca8af5b",
+    "bytes": 81195283,
+    "arquivo": "jarvis-nova-1.38.1-10381.apk",
     "data": "2026-11-01",
     "ambiente": "build local: Android SDK 35, build-tools 35.0.0, JDK 21, Gradle 8.9, assembleDebug",
-    "observacao": "APK 1.38.0 com avatar.js, app.js, sistema.js e auditorias no repositório; versionCode 10380, minSdk 26, targetSdk 34, assinatura v2. Sem instalação em aparelho físico."
+    "observacao": "APK 1.38.1 com as correções da auditoria; versionCode 10381, minSdk 26, targetSdk 34, assinatura v2. Sem instalação em aparelho físico."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

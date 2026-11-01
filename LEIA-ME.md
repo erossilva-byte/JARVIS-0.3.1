@@ -1,4 +1,10 @@
-# J.A.R.V.I.S. Nova 1.38.0
+# J.A.R.V.I.S. Nova 1.38.1
+
+## 1.38.1 — Auditoria corretiva
+
+Esta revisão corrige quatro defeitos encontrados na auditoria: uma tarefa cancelada durante a última etapa podia terminar como concluída; a Visão 2.0 tinha declarações antigas duplicadas e não limpava a análise ao reabrir; a preparação de algumas ações podia lançar exceção sem resposta; e o gerador de senha usava módulo tendencioso. O roteador de IA também passou a descartar IDs de provedor desconhecidos. Não há recurso novo nem remoção de funcionalidade.
+
+O APK 1.38.1 tem 81.195.283 bytes e SHA-256 `28a87cb3ec4eaa6d890047406c481190ff8868d080391ce679a0cf832ca8af5b`; é debug/CI e está descrito abaixo; a instalação, o microfone, a câmera, a acessibilidade, o segundo plano e o avatar em tela real continuam pendentes de validação no Poco X7. Esta é uma correção de engenharia, não uma declaração de teste de campo.
 
 ## 1.38.0 — Avatar 3D, plano persistente e executores
 
