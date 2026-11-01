@@ -316,6 +316,12 @@
         });
       })(modos[i]);
     }
+    var fecharAreas = doc.getElementById('areas-fechar');
+    if (fecharAreas) fecharAreas.addEventListener('click', function () {
+      if (raiz.JarvisNavegacao && typeof raiz.JarvisNavegacao.fecharPaineis === 'function') {
+        raiz.JarvisNavegacao.fecharPaineis();
+      }
+    });
     var atalhos = doc.querySelectorAll('[data-abrir-areas]');
     for (var j = 0; j < atalhos.length; j++) {
       atalhos[j].addEventListener('click', function () {
