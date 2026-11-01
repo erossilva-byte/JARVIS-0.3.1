@@ -5921,11 +5921,9 @@ $('#btn-config').onclick = abrirConfig;
 // Visão também pelo cabeçalho e pelo painel inicial: no celular a barra lateral não aparece.
 const btnVisaoTopo = $('#btn-visao'); if (btnVisaoTopo) btnVisaoTopo.onclick = () => abrirVisao();
 const cardVisao = $('#dash-visao'); if (cardVisao) cardVisao.onclick = () => abrirVisao();
-// Central de comando: conversa (tela própria) e menu de informações.
+// O histórico é secundário; a tela principal mantém o núcleo e o campo de comando.
 const btnHistorico = $('#btn-historico');
 if (btnHistorico) btnHistorico.onclick = alternarTelaConversa;
-const cardConversa = $('#dash-conversa');
-if (cardConversa) cardConversa.onclick = () => entrarConversa();
 const cardInfo = $('#dash-info');
 if (cardInfo) cardInfo.onclick = abrirInformacoesUI;
 $('#info-atualizar').onclick = abrirInformacoesUI;
