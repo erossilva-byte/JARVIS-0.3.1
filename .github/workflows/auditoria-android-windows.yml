@@ -27,13 +27,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: jarvis-audit-v5-${{ github.ref }}
+  group: jarvis-audit-v6-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   android-emulator:
     name: Testes Android API 35 (emulador x86_64)
-    runs-on: macos-14
+    runs-on: macos-15-intel
     timeout-minutes: 60
     steps:
       - name: Checkout
