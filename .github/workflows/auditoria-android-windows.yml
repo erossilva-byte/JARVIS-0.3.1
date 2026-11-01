@@ -120,7 +120,6 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim -camera-back none
           script: |
             set -euo pipefail
-            APK="$GITHUB_WORKSPACE/android/app/build/outputs/apk/debug/app-debug.apk"
             mkdir -p "$GITHUB_WORKSPACE/artifacts/android"
             gtimeout 60s adb wait-for-device
             adb devices -l | tee "$GITHUB_WORKSPACE/artifacts/android/adb-devices.txt"
@@ -128,17 +127,17 @@ jobs:
             gtimeout 20s adb shell settings put global transition_animation_scale 0
             gtimeout 20s adb shell settings put global window_animation_scale 0
             gtimeout 20s adb logcat -c
-            gtimeout 60s adb install -r "$APK"
+            test -s "$GITHUB_WORKSPACE/android/app/build/outputs/apk/debug/app-debug.apk"
+            gtimeout 60s adb install -r "$GITHUB_WORKSPACE/android/app/build/outputs/apk/debug/app-debug.apk"
             gtimeout 30s adb shell monkey -p com.jarvis.nova 1
             sleep 35
-            APP_PID="$(gtimeout 20s adb shell pidof com.jarvis.nova 2>&1 || true)"
-            printf '%s\n' "$APP_PID" | tee "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt"
+            gtimeout 20s adb shell pidof com.jarvis.nova > "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt" 2>&1 || true
             gtimeout 30s adb logcat -d -v threadtime > "$GITHUB_WORKSPACE/artifacts/android/logcat.txt" || true
             gtimeout 30s adb shell dumpsys activity activities > "$GITHUB_WORKSPACE/artifacts/android/activities.txt" 2>&1 || true
             gtimeout 20s adb shell uiautomator dump /sdcard/jarvis-window.xml || true
             gtimeout 20s adb pull /sdcard/jarvis-window.xml "$GITHUB_WORKSPACE/artifacts/android/window.xml" || true
             gtimeout 20s adb exec-out screencap -p > "$GITHUB_WORKSPACE/artifacts/android/home.png" || true
-            if [ -z "$APP_PID" ]; then
+            if ! grep -Eq '[0-9]+' "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt"; then
               echo "O processo com.jarvis.nova não permaneceu ativo após a inicialização." >&2
               exit 1
             fi
