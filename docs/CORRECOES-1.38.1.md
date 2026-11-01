@@ -44,7 +44,7 @@ Esta rodada não adiciona recurso novo. Ela corrige defeitos encontrados na audi
 
 **Causa:** `npm run test:all` era executado antes de `npx cap add android`; o contrato 1.37 lê o `build.gradle` nativo, que ainda não existia.
 
-**Correção:** os workflows de build e release agora geram o projeto Android, aplicam `patch_gradle.py`/`patch_android_version.py` e só então executam a suíte. O workflow de build também aceita o nome real `JARVIS-Nova-*-fonte.zip` (além do antigo `JARVIS-NOVA-*`), que antes não disparava por diferença de caixa, e remove a pasta `android/` extraída da fonte antes de `npx cap add`.
+**Correção:** os workflows de build e release agora geram o projeto Android, aplicam `patch_gradle.py`/`patch_android_version.py` e só então executam a suíte. `patch_gradle.py` passou a fixar no `variables.gradle` gerado `minSdkVersion 26`, `compileSdkVersion 35` e `targetSdkVersion 34`; antes o template ficava em `minSdk 23` e o teste 1.18 falhava. O workflow de build também aceita o nome real `JARVIS-Nova-*-fonte.zip` (além do antigo `JARVIS-NOVA-*`), que antes não disparava por diferença de caixa, e remove a pasta `android/` extraída da fonte antes de `npx cap add`.
 
 ## O que foi preservado
 

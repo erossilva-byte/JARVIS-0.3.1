@@ -143,9 +143,9 @@ trecho = musica[musica.index('public void onDestroy()'):musica.index('public voi
 for campo in ('tocando = false;', 'tituloAtual = "";', 'artistaAtual = "";', 'indiceAtual = -1;', 'totalAtual = 0;'):
     assert campo in trecho, 'onDestroy do player não limpa ' + campo
 
-# A pasta android/ é gerada pelo `npx cap add android` (o CI faz isso DEPOIS dos testes),
-# então a fonte de verdade aqui são os patches; os arquivos gerados são conferidos quando
-# existem na cópia local.
+# A pasta android/ é gerada pelo `npx cap add android`; o CI agora gera e aplica os
+# patches antes dos testes. A fonte de verdade continua sendo os patches, e os arquivos
+# gerados são conferidos quando existem na cópia local.
 assert 'minSdkVersion 26' in texto('patch_gradle.py')
 assert 'usesCleartextTraffic' in texto('patch_manifest.py')
 assert 'allowBackup' in texto('patch_manifest.py')

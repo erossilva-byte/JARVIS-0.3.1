@@ -195,9 +195,11 @@ def alinhar_toolchain():
     if variaveis.exists():
         t = variaveis.read_text(encoding="utf-8")
         novo = re.sub(r"(?m)^(\s*compileSdkVersion\s*=\s*)\d+", r"\g<1>35", t)
+        novo = re.sub(r"(?m)^(\s*minSdkVersion\s*=\s*)\d+", r"\g<1>26", novo)
+        novo = re.sub(r"(?m)^(\s*targetSdkVersion\s*=\s*)\d+", r"\g<1>34", novo)
         if novo != t:
             variaveis.write_text(novo, encoding="utf-8")
-            print(f"compileSdk atualizado para 35: {variaveis}")
+            print(f"SDKs atualizados (min 26, compile 35, target 34): {variaveis}")
     wrapper = raiz / "gradle/wrapper/gradle-wrapper.properties"
     if wrapper.exists():
         t = wrapper.read_text(encoding="utf-8")
