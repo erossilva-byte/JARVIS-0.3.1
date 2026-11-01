@@ -27,7 +27,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: jarvis-audit-v6-${{ github.ref }}
+  group: jarvis-audit-v7-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -198,7 +198,7 @@ jobs:
           python tests/test_pc_windows.py
 
       - name: Gerar instalador Windows
-        run: npm run dist:win
+        run: npm run dist:win -- --publish never
 
       - name: Publicar artefatos Windows
         if: always()
