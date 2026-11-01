@@ -489,7 +489,7 @@ function msg(tipo, texto, links) {
   chat.appendChild(d);
   if (tipo === 'jv' || tipo === 'sis') {
     const resposta = $('#nucleo-resposta');
-    if (resposta) resposta.textContent = String(texto == null ? '' : texto).replace(/\\s+/g, ' ').slice(0, 240);
+    if (resposta) resposta.textContent = String(texto == null ? '' : texto).split(' ').filter(Boolean).join(' ').slice(0, 240);
   }
   while (chat.children && chat.children.length > 80 && chat.firstChild) chat.removeChild(chat.firstChild);
   if (perto) chat.scrollTop = chat.scrollHeight || 1e9;
