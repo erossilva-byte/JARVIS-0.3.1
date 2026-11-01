@@ -69,7 +69,7 @@
 
     this.renderer = new T.WebGLRenderer({ canvas: canvas, alpha: true, antialias: false, powerPreference: 'high-performance' });
     this.renderer.setClearColor(0x000000, 0);
-    this.renderer.setPixelRatio(Math.min(raiz.devicePixelRatio || 1, 2));
+    this.renderer.setPixelRatio(Math.min(raiz.devicePixelRatio || 1, (raiz.innerWidth || 400) < 640 ? 1.25 : 1.6));
     this.cena = new T.Scene();
     this.camera = new T.PerspectiveCamera(34, 1, 0.1, 50);
     this.camera.position.set(0, 0, 4.5);
@@ -177,7 +177,7 @@
     var w = Math.max(1, Math.round(r.width || 300)), h = Math.max(1, Math.round(r.height || 300));
     if (w === this.largura && h === this.altura) return;
     this.largura = w; this.altura = h;
-    this.renderer.setPixelRatio(Math.min(raiz.devicePixelRatio || 1, w < 640 ? 1.5 : 2));
+    this.renderer.setPixelRatio(Math.min(raiz.devicePixelRatio || 1, w < 640 ? 1.25 : 1.6));
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
@@ -186,9 +186,14 @@
   Render3D.prototype.iniciar = function () {
     if (this.rodando) return;
     this.desejado = true; this.rodando = true; this.ultimo = 0;
-    var self = this, laco = function (t) {
+    var self = this, ultimoQuadro = 0;
+    var intervalo = (raiz.innerWidth || 400) < 640 ? (1000 / 30) : (1000 / 50);
+    var laco = function (t) {
       if (!self.rodando) return;
       self.raf = raiz.requestAnimationFrame(laco);
+      t = Number.isFinite(t) ? t : (raiz.performance ? raiz.performance.now() : Date.now());
+      if (t - ultimoQuadro < intervalo) return;
+      ultimoQuadro = t;
       self.quadro(t);
     };
     this.raf = raiz.requestAnimationFrame(laco);
