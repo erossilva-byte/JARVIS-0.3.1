@@ -34,7 +34,7 @@
       <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3"/></svg><span>Parar</span>
     </button>
     <button id="btn-areas" class="wake-toggle areas-toggle" type="button" title="Abrir as áreas do sistema" aria-label="Abrir as áreas do sistema">Áreas</button>
-    <button id="btn-conversa" class="wake-toggle" type="button" title="Abrir a conversa" aria-label="Abrir a conversa" aria-pressed="false">Conversa</button>
+    <button id="btn-historico" class="icone" type="button" title="Abrir histórico e transcrição" aria-label="Abrir histórico e transcrição" aria-pressed="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button>
     <button id="btn-wake-toggle" class="wake-toggle" type="button" title="Pausar ativação por voz" aria-label="Pausar ativação por voz" aria-pressed="false" hidden><span class="wake-dot"></span><span id="wake-toggle-text">Escuta ativa</span></button>
     <button id="btn-chat-ampliado" class="icone" type="button" title="Ampliar a conversa" aria-label="Ampliar a conversa" aria-pressed="false">
       <svg class="ic-expandir" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/><path d="M3 3l6 6M21 3l-6 6M3 21l6-6M21 21l-6-6"/></svg>
@@ -133,6 +133,7 @@
     </div>
     <div class="relogio"><span id="hora">--:--</span><span id="data"></span></div>
     <div class="chip estado" id="chip-estado" role="status" aria-live="polite">em espera</div>
+    <p id="nucleo-resposta" class="nucleo-resposta" role="status" aria-live="polite">Pronto para receber comandos.</p>
     <div class="chips">
       <span class="chip" id="chip-ia">IA: --</span>
       <span class="chip" id="chip-temp">-- °C</span>
@@ -181,8 +182,7 @@
       </div>
     </div>
     <div class="dash-card atalhos">
-      <div class="dash-head"><span class="dash-eyebrow">CONVERSA E INFORMAÇÕES</span></div>
-      <button id="dash-conversa" class="atalho-dash" type="button"><b>Conversa</b><small id="dash-ultima">O histórico completo fica na tela de conversa.</small></button>
+      <div class="dash-head"><span class="dash-eyebrow">INFORMAÇÕES E SISTEMA</span></div>
       <button id="dash-visao" class="atalho-dash" type="button"><b>Visão</b><small>Câmera, sessão contínua, troca frontal/traseira e captura de tela do PC</small></button>
       <button id="dash-info" class="atalho-dash" type="button"><b>Informações</b><small>Bateria · memória · armazenamento · conexões · clima · manchetes</small></button>
     </div>
