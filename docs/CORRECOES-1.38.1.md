@@ -57,7 +57,7 @@ Identidade, voz, personalidade, humor, memória, pessoas, agentes, Core, planos,
 - `npm run test:all` — suíte completa; resultado registrado no relatório final da entrega.
 - `python3 tests/test_v1_38_1.py` — contrato da versão após o build.
 - Compilação Android e `aapt`/`apksigner` — resultados no relatório de release.
-- Workflows: falha da `v1.38.0` reproduzida pelo log do Actions; ordem corrigida e YAML conferido. A execução nova da `v1.38.1` não foi aguardada nesta máquina.
+- Workflows: falha da `v1.38.0` reproduzida pelo log do Actions; ordem corrigida e YAML conferido. A execução `41306961944` da `v1.38.1` concluiu com sucesso (testes, compilação e publicação) após as correções.
 
 ## Limitações que continuam
 

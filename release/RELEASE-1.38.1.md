@@ -21,7 +21,7 @@
 - Roteador descarta provedores desconhecidos/duplicados e não estoura com lista inválida.
 - Gerador de senha com sorteio uniforme e sem viés de módulo.
 - Preparação de ação com exceção devolve falha explícita, em vez de escapar sem recibo.
-- GitHub Actions: testes movidos para depois da geração/patch do Android; `patch_gradle.py` agora fixa `minSdk 26`, `compileSdk 35` e `targetSdk 34` no `variables.gradle` gerado. O workflow de build aceita `JARVIS-Nova-*-fonte.zip` e `JARVIS-NOVA-*-fonte.zip`. A falha da `v1.38.0` era `android/app/build.gradle` ausente.
+- GitHub Actions: testes movidos para depois da geração/patch do Android; `patch_gradle.py` agora fixa `minSdk 26`, `compileSdk 35` e `targetSdk 34` no `variables.gradle` gerado. O workflow de build aceita `JARVIS-Nova-*-fonte.zip` e `JARVIS-NOVA-*-fonte.zip`. A falha da `v1.38.0` era `android/app/build.gradle` ausente; a execução `41306961944` da `v1.38.1` terminou com sucesso.
 
 ## Limitações declaradas
 
