@@ -5266,6 +5266,7 @@ function abrirPainel(sel) {
 }
 
 function abrirAreas() {
+  if (window.JarvisAreas && typeof window.JarvisAreas.abrir === 'function') window.JarvisAreas.abrir('');
   abrirPainel('#painel-areas');
 }
 function acaoNavegacao(nome) {
