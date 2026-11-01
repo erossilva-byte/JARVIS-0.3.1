@@ -117,20 +117,21 @@ jobs:
             set -euo pipefail
             APK="$GITHUB_WORKSPACE/android/app/build/outputs/apk/debug/app-debug.apk"
             mkdir -p "$GITHUB_WORKSPACE/artifacts/android"
-            adb wait-for-device
-            adb shell settings put global animator_duration_scale 0
-            adb shell settings put global transition_animation_scale 0
-            adb shell settings put global window_animation_scale 0
-            adb logcat -c
-            adb install -r "$APK"
-            adb shell monkey -p com.jarvis.nova 1
+            timeout 60s adb wait-for-device
+            adb devices -l | tee "$GITHUB_WORKSPACE/artifacts/android/adb-devices.txt"
+            timeout 20s adb shell settings put global animator_duration_scale 0
+            timeout 20s adb shell settings put global transition_animation_scale 0
+            timeout 20s adb shell settings put global window_animation_scale 0
+            timeout 20s adb logcat -c
+            timeout 60s adb install -r "$APK"
+            timeout 30s adb shell monkey -p com.jarvis.nova 1
             sleep 35
-            adb shell pidof com.jarvis.nova
-            adb shell dumpsys activity activities > "$GITHUB_WORKSPACE/artifacts/android/activities.txt"
-            adb shell uiautomator dump /sdcard/jarvis-window.xml || true
-            adb pull /sdcard/jarvis-window.xml "$GITHUB_WORKSPACE/artifacts/android/window.xml" || true
-            adb exec-out screencap -p > "$GITHUB_WORKSPACE/artifacts/android/home.png"
-            adb logcat -d -v threadtime > "$GITHUB_WORKSPACE/artifacts/android/logcat.txt"
+            timeout 20s adb shell pidof com.jarvis.nova | tee "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt"
+            timeout 30s adb shell dumpsys activity activities > "$GITHUB_WORKSPACE/artifacts/android/activities.txt"
+            timeout 20s adb shell uiautomator dump /sdcard/jarvis-window.xml || true
+            timeout 20s adb pull /sdcard/jarvis-window.xml "$GITHUB_WORKSPACE/artifacts/android/window.xml" || true
+            timeout 20s adb exec-out screencap -p > "$GITHUB_WORKSPACE/artifacts/android/home.png"
+            timeout 30s adb logcat -d -v threadtime > "$GITHUB_WORKSPACE/artifacts/android/logcat.txt"
             if grep -E -i 'FATAL EXCEPTION|Fatal signal|ANR in com\.jarvis\.nova' "$GITHUB_WORKSPACE/artifacts/android/logcat.txt"; then
               echo "Crash/ANR detectado durante o smoke test." >&2
               exit 1
@@ -141,9 +142,10 @@ jobs:
         if: always()
         run: |
           mkdir -p artifacts/android
-          adb logcat -d -v threadtime > artifacts/android/logcat-final.txt 2>&1 || true
-          adb shell dumpsys meminfo com.jarvis.nova > artifacts/android/meminfo.txt 2>&1 || true
-          adb shell dumpsys activity activities > artifacts/android/activities-final.txt 2>&1 || true
+          adb devices -l > artifacts/android/adb-devices-final.txt 2>&1 || true
+          timeout 20s adb logcat -d -v threadtime > artifacts/android/logcat-final.txt 2>&1 || true
+          timeout 15s adb shell dumpsys meminfo com.jarvis.nova > artifacts/android/meminfo.txt 2>&1 || true
+          timeout 15s adb shell dumpsys activity activities > artifacts/android/activities-final.txt 2>&1 || true
 
       - name: Publicar evidências Android
         if: always()
