@@ -18,7 +18,7 @@ def ler(p):
 
 app = ler('app.js')
 html = ler('index.html')
-css = ler('style.css')
+css = ler('style.css') + ler('core.css')
 hermes = ler('hermes.js')
 ativacao_java = ler('JarvisAtivacao.java')
 versao = json.loads(ler('VERSAO.json'))
