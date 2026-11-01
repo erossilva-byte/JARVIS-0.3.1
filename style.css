@@ -801,8 +801,8 @@ body[data-state=thinking] .hud-meta{color:rgba(var(--rgb),.8)}
 @keyframes bnGira{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes bnPulsa{0%,100%{opacity:.55}50%{opacity:1}}
 
-/* Enquanto a abertura não termina, o resto da interface fica visível mas inerte — é o
-   "libera as demais opções" do reconhecimento de voz. */
+/* A interface principal permanece oculta até o splash terminar; isso evita o flash do menu
+   antes da abertura e impede toques em controles ainda não inicializados. */
 body.travado header,body.travado nav,body.travado main,body.travado footer{visibility:hidden;pointer-events:none;opacity:0}
 
 @media (prefers-reduced-motion:reduce){
