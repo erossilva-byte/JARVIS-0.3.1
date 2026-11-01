@@ -27,7 +27,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: jarvis-audit-v7-${{ github.ref }}
+  group: jarvis-audit-v8-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -51,15 +51,10 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Instalar SDK e imagem do emulador Android
-        shell: bash
-        run: |
-          set -euo pipefail
-          SDKM="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort | tail -n 1)"
-          test -x "$SDKM"
-          yes | "$SDKM" --licenses >/dev/null || true
-          "$SDKM" "platforms;android-35" "build-tools;35.0.0" "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64"
-          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+      - name: Configurar Android SDK sem pacote legado
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools emulator'
 
       - name: Instalar dependências
         run: npm install --ignore-scripts --legacy-peer-deps
