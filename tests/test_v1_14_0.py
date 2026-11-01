@@ -78,10 +78,10 @@ checagens = {
         and 'abrirInformacoes()' in app),
 
     # 3. Chat: histórico inteiro e conversa em tela própria
-    "Chat saiu do menu: conversa tem tela própria": (
+    "Histórico fica em interface secundária, sem botão Conversa no menu": (
         'body:not(.modo-conversa) .chat-area' in css and 'body.modo-conversa #chat{max-height:none' in css
-        and 'function definirConversa' in app and 'id="btn-conversa"' in html
-        and 'id="dash-conversa"' in html),
+        and 'function definirConversa' in app and 'id="btn-historico"' in html
+        and 'id="btn-conversa"' not in html and 'id="dash-conversa"' not in html),
     "Rolagem não é mais limitada por dvh nem por clip de pintura": (
         '#chat{contain:none;' in css
         and css.count('body:not(.modo-conversa) #chat{max-height:') == 4
