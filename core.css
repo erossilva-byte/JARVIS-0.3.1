@@ -200,3 +200,37 @@ body.efeitos-reduzidos .painel {
   filter: none !important;
   box-shadow: none;
 }
+
+
+/* 1.40 — interação real das áreas e transcrição secundária */
+.painel-areas{z-index:7;pointer-events:auto}
+.painel-areas .areas-shell,
+.painel-areas #areas-grid,
+.painel-areas #areas-detalhe{position:relative;pointer-events:auto}
+.area-card,.area-acao,.areas-voltar{
+  position:relative;z-index:1;pointer-events:auto;touch-action:manipulation;
+  -webkit-tap-highlight-color:rgba(45,221,224,.18);cursor:pointer;
+}
+.area-card:focus-visible,.area-acao:focus-visible,.areas-voltar:focus-visible{
+  outline:2px solid var(--jv-hud-cyan,#42e8ed);outline-offset:3px;
+}
+.nucleo-resposta{
+  width:min(92vw,620px);min-height:1.4em;margin:3px auto 0;padding:0 12px;
+  color:#c7f8f7;font-size:clamp(11px,1.7vh,13px);line-height:1.45;
+  text-align:center;text-wrap:pretty;overflow-wrap:anywhere;
+  text-shadow:0 0 12px rgba(45,221,224,.16);
+}
+body:not(.modo-conversa) .chat-area,
+body:not(.modo-conversa) .context-tools{display:none!important}
+body.modo-conversa .topo,
+body.modo-conversa .dash{display:none!important}
+body.modo-conversa .chat-area{
+  display:flex!important;width:min(900px,100%);min-height:0;flex:1 1 auto;
+  margin:0 auto;padding:0 14px;
+}
+body.modo-conversa .context-tools{display:flex!important}
+#btn-historico.ativo{color:var(--jv-hud-cyan,#42e8ed);border-color:rgba(45,221,224,.35);background:rgba(45,221,224,.08)}
+@media(max-width:520px){
+  .nucleo-resposta{max-width:94vw;font-size:11px}
+  body.modo-conversa .chat-area{width:100%;padding-inline:10px}
+}
