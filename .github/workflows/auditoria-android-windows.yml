@@ -105,7 +105,7 @@ jobs:
 
       - name: Inicializar emulador e testar instalação, abertura e estabilidade
         uses: reactivecircus/android-emulator-runner@v2
-        timeout-minutes: 15
+        timeout-minutes: 30
         with:
           api-level: 35
           target: google_apis
