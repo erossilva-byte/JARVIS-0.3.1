@@ -12,6 +12,9 @@ workflow = (ROOT / ".github/workflows/auditoria-android-windows.yml").read_text(
 package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
 
 checks = {
+    "splash já visível no primeiro quadro": '<div id="boot" class="boot">' in html and '<div id="boot" class="boot" hidden>' not in html,
+    "menu principal oculto durante a inicialização": '<body data-state="idle" class="travado">' in html and "visibility:hidden;pointer-events:none;opacity:0" in css,
+    "bloqueio é verificado antes de esconder o splash": app.find("try { iniciarBloqueioSeAtivo(); }") < app.find("tela.classList.add('saindo')"),
     "opção Conversa removida do cabeçalho": 'id="btn-conversa"' not in html,
     "atalho Conversa removido do dashboard": 'id="dash-conversa"' not in html,
     "histórico continua acessível por botão secundário": 'id="btn-historico"' in html and "btnHistorico.onclick = alternarTelaConversa" in app,
