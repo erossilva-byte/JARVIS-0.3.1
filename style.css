@@ -803,7 +803,7 @@ body[data-state=thinking] .hud-meta{color:rgba(var(--rgb),.8)}
 
 /* Enquanto a abertura não termina, o resto da interface fica visível mas inerte — é o
    "libera as demais opções" do reconhecimento de voz. */
-body.travado header,body.travado nav,body.travado main,body.travado footer{pointer-events:none;opacity:.35;transition:opacity .4s ease}
+body.travado header,body.travado nav,body.travado main,body.travado footer{visibility:hidden;pointer-events:none;opacity:0}
 
 @media (prefers-reduced-motion:reduce){
   .bn1,.bn2,.bn3,.bn-nucleo,.boot-voz{animation:none!important}
