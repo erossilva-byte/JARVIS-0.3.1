@@ -155,12 +155,12 @@ jobs:
             contra exceções que antes fechavam o app.
 
             **Novidades da 1.42.0:** captura de comando com VAD testável e WAV PCM como caminho principal,
-teto de 20 s, reamostragem para 16 kHz e controles reais de eco/ruído/AGC; seletor de motor STT
-(Automático, Groq, Android e Android local) com fallback turbo explícito; wake word não é mais
-consumida por parcial contendo apenas “Jarvis”; diagnóstico com duração, bytes e métricas de
-captura/upload. A precisão acústica em aparelho físico continua não medida.
+            teto de 20 s, reamostragem para 16 kHz e controles reais de eco/ruído/AGC; seletor de motor STT
+            (Automático, Groq, Android e Android local) com fallback turbo explícito; wake word não é mais
+            consumida por parcial contendo apenas “Jarvis”; diagnóstico com duração, bytes e métricas de
+            captura/upload. A precisão acústica em aparelho físico continua não medida.
 
-**Novidades da 1.41.0:** confiança e hipóteses alternativas do Android
+            **Novidades da 1.41.0:** confiança e hipóteses alternativas do Android
             preservadas no caminho real; comandos de ação abaixo do limiar pedem repetição;
             filtro high-pass/compressor na captura e no perfil; WAV PCM de emergência;
             bloqueio de identidade com indício de replay; teste de transcrição com WER e
