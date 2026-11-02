@@ -105,19 +105,21 @@ jobs:
 
       - name: Inicializar emulador e testar instalação, abertura e estabilidade
         uses: reactivecircus/android-emulator-runner@v2
-        timeout-minutes: 30
+        timeout-minutes: 45
         with:
           api-level: 35
+          emulator-boot-timeout: 1800
           target: google_apis
           arch: x86_64
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -camera-back none -gpu swiftshader_indirect
           script: |
-            set -euo pipefail
+            set -eu
             mkdir -p "$GITHUB_WORKSPACE/artifacts/android"
             timeout 60s adb wait-for-device
-            adb devices -l | tee "$GITHUB_WORKSPACE/artifacts/android/adb-devices.txt"
+            adb devices -l > "$GITHUB_WORKSPACE/artifacts/android/adb-devices.txt"
+            cat "$GITHUB_WORKSPACE/artifacts/android/adb-devices.txt"
             timeout 20s adb shell settings put global animator_duration_scale 0
             timeout 20s adb shell settings put global transition_animation_scale 0
             timeout 20s adb shell settings put global window_animation_scale 0
