@@ -1,3 +1,49 @@
+## 1.42.0 — Voz, memória semântica e auditoria do Core
+
+- Voz: captura de comando passou a usar o VAD testável e WAV PCM como caminho principal, com teto de 20 s e reamostragem para 16 kHz; o `MediaRecorder` ficou como reserva. Os controles de eco, ruído, AGC e filtro agora chegam ao gravador normal.
+- Voz: seletor real de motor STT (Automático, Groq, Android e Android local) com fallback explícito; 400 do Groq tenta o turbo uma vez, 429 não é repetido. Parcial da wake word contendo apenas “Jarvis” não consome mais a ativação.
+- Voz: diagnóstico passou a registrar duração do áudio, bytes enviados, captura média e upload médio; WAV de 48 kHz caiu para 16 kHz (cerca de 3× menos dados).
+- `core.js`: um `ok: true` não confirma mais um resultado quando o próprio texto diz “não consegui”, “falhou”, “sem permissão” ou equivalente; texto explícito de falha vence recibo otimista. Regressão em `tests/test_core.js`.
+- Auditoria de runtime em jsdom: 18 abas e 287 botões acionados, zero exceções no subconjunto de scripts carregado; o mapa do auditor passou a reconhecer Áreas, Core, Pessoas e Dev, e “Central” é testada como ação de fechamento.
+- `app.js`: `fecharPaineis()` não usa mais `history.back()` assíncrono; o estado é limpo com `replaceState`, evitando que um `popstate` atrasado feche o painel recém-aberto. Um guardião visual também remove `scrim`/`travado` órfãos.
+- A abertura demorada mostra “Continuar sem reconhecer” após 8 s; o guardião visual não mexe no corpo com modal de confirmação aberto e revalida ao voltar do segundo plano.
+
+- `memoria.js`: busca híbrida com embedding lexical local de 128 dimensões, sinônimos em português, corte de stopwords e limite relativo para não mandar notas irrelevantes ao RAG.
+- Prioridade por importância, recência e frequência de uso; o RAG registra as notas efetivamente usadas.
+- Histórico de até três versões, restauração e conflito de importação do Obsidian sem sobrescrever a nota original.
+- Painel mostra “Buscar por significado”, relevância e conflitos preservados.
+- Novo `tests/test_memoria_semantica.js`, incluído em `test:all`; suíte completa com `EXIT:0`.
+- Ainda não é um modelo neural nem uma sincronização automática bidirecional; os demais módulos da evolução continuam pendentes.
+
+## 1.41.0
+
+- Android passa a devolver confiança e até cinco alternativas do `SpeechRecognizer`; o app avalia antes de executar.
+- Comando de ação abaixo de 45% pede repetição; confiança ausente ou zero não é convertida em 100% nem bloqueia tudo.
+- Filtro high-pass de 85 Hz + compressor no caminho do microfone e no cadastro do perfil de locutor.
+- Centroide de voz ponderado por SNR/duração; indício de replay bloqueia identidade e pede fala ao vivo.
+- Caminho WAV PCM de emergência para WebView sem `MediaRecorder`; Groq recebe o nome/extensão corretos.
+- Teste de transcrição esperado × reconhecido com WER, acerto, latência e histórico local apagável.
+- Corrigido `pistaReplay` lendo `pausaRatio` do objeto errado; a proteção antes nunca disparava.
+- Testes: `test_fala.js`, `test_audio_pcm.js`, `test_stt_avancado.py`, casos de replay em `test_identidade.js`.
+- Sem alegação de precisão de campo: microfone e aparelho físico continuam pendentes.
+
+## 1.40.0
+
+- Núcleo central protagonista, HUD holográfico, estados reais e cartão de última resposta.
+- Removida a opção independente Conversa do menu; chat, histórico, transcrição, voz e comandos preservados em tela secundária.
+- Corrigida a causa raiz do clique das áreas: `body[data-modo]` capturava toda a delegação; seletores restritos a `.modo-btn`, listeners diretos e suporte a nós de texto da WebView.
+- Corrigido o flash inicial: boot visível desde o primeiro quadro, corpo travado, início em 0 ms e bloqueio aberto antes de liberar o menu.
+- Teste de DOM com 10 áreas, 44 ações e retorno; contrato `tests/test_v1_40_0.py`.
+
+## 1.39.0
+
+- Camada cognitiva determinística: análise de intenção, complexidade, risco, referências e necessidade de ferramentas.
+- Plano interno de cinco etapas (compreender, contextualizar, decidir, responder e verificar).
+- Seleção de histórico por relevância, com suporte a referências conversacionais.
+- Verificação e revisão da fala: vazio, abertura genérica, repetição, humor em assunto sensível e alegação de execução não feita.
+- Controles persistidos de profundidade, iniciativa e comportamento conversacional.
+- Preservados os três níveis de humor, os seis eixos, Hermes, Core, SISTEMA, memória, voz, avatar e núcleo 3D.
+
 ## 1.38.1 — Auditoria corretiva
 
 - `sistema.js`: cancelamento durante etapa em voo não pode ser sobrescrito por `concluida`; a etapa fica incerta e a trava só é liberada no `finally`.

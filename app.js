@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.38.1';
+const VERSAO_APP = '1.42.0';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -199,6 +199,9 @@ const PESSOAS = IDENT || ((typeof window !== 'undefined' && window.PessoasJarvis
 // Aprendizado explícito (1.36.0): não infere hábitos, não altera permissões e é revisável em Memória.
 const APRENDIZADO = (typeof window !== 'undefined' && window.JarvisAprendizado) ? window.JarvisAprendizado : null;
 let pessoaAtual = null;
+// Camada cognitiva determinística (1.39.0): analisa o turno, propõe o plano interno,
+// seleciona contexto e revisa a fala. Não executa ferramentas nem substitui o Hermes.
+const COGNICAO = (typeof window !== 'undefined' && window.JarvisCognicao) ? window.JarvisCognicao : null;
 /* ---------- PERSONALIDADE: ponto único de ajuste ----------
  * Todo o tom do assistente sai daqui. Este objeto entra no prompt de sistema da IA
  * (nuvem e modelo local) e não interfere na palavra de ativação, no perfil de voz
@@ -407,8 +410,11 @@ const ROTULOS = { idle: 'em espera', listening: 'ouvindo', thinking: 'pensando',
 function setEstado(e) {
   document.body.dataset.state = e;
   const txt = (e === 'idle' && wakeAtivo) ? 'aguardando “Jarvis” · detector próprio' : ROTULOS[e];
-  $('#estado-txt').textContent = txt;
-  $('#chip-estado').textContent = txt;
+  const marca = $('#estado-txt'), chip = $('#chip-estado');
+  if (marca) marca.textContent = txt;
+  if (chip) chip.textContent = txt;
+  const resposta = document.getElementById('resposta-atual');
+  if (resposta) resposta.dataset.estado = e;
   if (window.NucleoOrbita) window.NucleoOrbita.estado(e);
   if (window.AvatarJarvis) window.AvatarJarvis.estado(e);
   if (e !== 'listening' && e !== 'speaking') setNivel(0);
@@ -654,6 +660,7 @@ function fecharBloqueio() {
   const tela = $('#bloqueio');
   if (bloqTimer) { clearInterval(bloqTimer); bloqTimer = 0; }
   document.body.classList.remove('bloqueado');
+  document.body.classList.remove('travado');
   store.set(BLOQ_TENT, '0');
   store.set(BLOQ_ATE, '0');
   store.set(BLOQ_ULTIMO, String(Date.now()));
@@ -2642,13 +2649,14 @@ function promptLocal(texto, offline) {
   const t = trat();
   const regras = [
     'Você é J.A.R.V.I.S. Nova, assistente pessoal brasileiro: competente, leal e com humor seco.',
+    (COGNICAO ? COGNICAO.promptPlano(analiseDoTurno(texto), Object.assign({}, configCognicao(), { compacto: true })) : ''),
     PERSONALIDADE.tratamento.replace('{tratamento}', t) + ' Responda em português do Brasil, sem markdown, em 2 a 4 frases.',
     (window.HumorJarvis ? HumorJarvis.estiloPrompt(Object.assign({ humor: 90 }, eixosHumor())).slice(0, 1100) : PERSONALIDADE.humor.slice(0, 700)),
     (function () { const a = window.HumorJarvis ? HumorJarvis.sugerir(texto, { humor: 90, semente: String(hist.length) }) : null; return a ? 'Ângulo de humor possível (adapte, não copie): ' + a.linha : ''; })(),
     'Formato obrigatório: um único objeto JSON {"fala":"texto","acao":null}. Não invente ações nem resultados.',
     offline ? 'MODO OFFLINE: apenas conversa; "acao" sempre null.' : 'Sem ferramentas nesta resposta: "acao" sempre null.'
   ].join(' ');
-  const recentes = (usarContextoNestaConversa ? hist.slice(-2) : [])
+  const recentes = (usarContextoNestaConversa ? historicoParaIA(3) : [])
     .filter((x) => x && x.content && x.role !== 'system')
     .map((x) => (x.role === 'user' ? 'Usuário: ' : 'J.A.R.V.I.S.: ') + String(x.content).slice(0, 300))
     .join('\n');
@@ -2772,6 +2780,42 @@ function fraseApp(chave, vars) {
  * humor aparece. Ficam salvos no aparelho (pers_*) e entram no prompt de qualquer provedor,
  * inclusive na IA local, porque promptSistema() é compartilhado. */
 const PERFIL_PADRAO = { sarcasmo: 90, brincadeiras: 85, ironia: 90, espontaneidade: 85, provocacao: 70, formalidade: 15 };
+const COG_PADRAO = { profundidade: 'equilibrada', iniciativa: 'normal', conversa: 'natural' };
+function configCognicao() {
+  const ler = (chave, validos) => {
+    const v = String(store.get('cog_' + chave, COG_PADRAO[chave]) || COG_PADRAO[chave]);
+    return validos.indexOf(v) >= 0 ? v : COG_PADRAO[chave];
+  };
+  return {
+    profundidade: ler('profundidade', ['curta', 'equilibrada', 'detalhada']),
+    iniciativa: ler('iniciativa', ['baixa', 'normal', 'alta']),
+    conversa: ler('conversa', ['natural', 'objetiva'])
+  };
+}
+function analiseDoTurno(texto) {
+  if (!COGNICAO || typeof COGNICAO.analisar !== 'function') return null;
+  const tom = tomDoTurno(texto);
+  return COGNICAO.analisar(texto, Object.assign({
+    serio: !!(tom && tom.serio), pressa: !!(tom && tom.pressa),
+    temContexto: hist.length > 0, humor: Math.max(0, Math.min(100, Number(store.get('humor', '90'))))
+  }, configCognicao()));
+}
+function historicoParaIA(limite) {
+  if (COGNICAO && typeof COGNICAO.selecionarHistorico === 'function') {
+    return COGNICAO.selecionarHistorico(hist, analiseDoTurno(perguntaAtual), limite || 10);
+  }
+  return hist.slice(-(limite || 10));
+}
+function revisarSaida(fala, texto, acao) {
+  if (!COGNICAO || typeof COGNICAO.verificarResposta !== 'function') return fala;
+  const analise = analiseDoTurno(texto);
+  const recentes = hist.slice(-8, -1).filter((x) => x && x.role === 'assistant')
+    .map((x) => String(x.content || '')).slice(-4);
+  const v = COGNICAO.verificarResposta(fala, analise, { recentes: recentes, acao: acao });
+  const revisada = COGNICAO.revisarFala(fala, analise, v.problemas);
+  if (!v.ok && typeof registrar === 'function') registrar('cognicao', 'resposta revisada: ' + v.problemas.join(', '));
+  return revisada;
+}
 function eixosHumor() {
   const p = {};
   Object.keys(PERFIL_PADRAO).forEach((k) => {
@@ -2857,7 +2901,8 @@ function promptSistema() {
   const pessoaAtualCtx = pessoaAtual ? ('Pessoa falando agora (identificação local; confirme antes de qualquer ação sensível): ' + pessoaAtual.nome + (pessoaAtual.apelido ? ' (“' + pessoaAtual.apelido + '”)' : '') + (pessoaAtual.relacao ? ' · ' + pessoaAtual.relacao : '') + '. Use somente os dados do perfil dela e não invente o que não está registrado.') : '';
   const ferr = disponiveis().map((k) => `- ${k}: ${ACOES[k].ajuda || ''}`).join('\n');
   const nomePerfil = nomeUsuario();
-  return `${regrasHumor} Você é ${PERSONALIDADE.identidade}${nomePerfil ? ' de ' + nomePerfil : ' do usuário'} e trabalha como ${PERSONALIDADE.papel}. ${nomePerfil ? 'O nome cadastrado do usuário é ' + nomePerfil + '. ' : ''}${PERSONALIDADE.personalidade} ${PERSONALIDADE.lealdade} ${PERSONALIDADE.tratamento.replace('{tratamento}', t)} ${PERSONALIDADE.conversa} Você conversa com opinião própria, curioso pelo assunto do usuário, capaz de discordar com respeito e de explicar o porquê das coisas, nunca um formulário que devolve perguntas. ${PERSONALIDADE.humor} ${perfilHumor()} ${PERSONALIDADE.limites} Aplique de forma perceptível e consistente o estilo selecionado (${estiloTexto}) em toda a resposta, não apenas mencionando-o. Nível de humor configurado: ${nivelHumorNome(humor)} (${humor}%). ${humorTexto}${tomTurno} O humor deve ser perceptível na maioria das respostas, inclusive nas técnicas e profissionais: uma observação seca e curta, e o assunto volta. Nunca seja grosseiro, ofensivo, arrogante ou repetitivo. Mantenha a calma diante de problemas e antecipe o próximo passo útil. Inspire-se apenas no arquétipo geral do assistente de ficção científica: não copie falas, bordões ou diálogos dos filmes. Demonstre competência explicando limites com honestidade, propondo o próximo passo útil e distinguindo fatos confirmados de suposições. Não finja ter executado ações nem alegue acesso ao aparelho que as ferramentas disponíveis não oferecem. Inteligência de conversa: acompanhe o fio da conversa e retome o que já foi dito quando fizer sentido, em vez de tratar cada mensagem como se fosse a primeira. Se o pedido estiver ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar; se estiver claro, responda direto. Ao explicar um assunto, mostre a causa e o efeito em linguagem simples e, quando ajudar, uma analogia de uma frase. Ao resolver um problema, entregue o próximo passo concreto. Em pesquisa, diga o que confirmou, o que continua incerto e de onde veio, sem inventar datas, números ou links. Em conversa fiada, seja presente e interessado, com opinião própria e humor leve — não devolva a pergunta de forma vazia. ${sugestaoHumor ? ' Ângulo de humor para este turno (adapte ao contexto; não copie literalmente e ignore se soar forçado): "' + sugestaoHumor.linha + '".' : ''} Responda em português do Brasil, em ${curtas ? '1 ou 2 frases bem curtas (até 30 palavras)' : '2 a 4 frases naturais (até 70 palavras), podendo passar disso quando o assunto exigir explicação'}, pois suas respostas são faladas em voz alta: sem markdown, sem emojis, sem listas.
+  const cognitivo = (COGNICAO ? COGNICAO.promptPlano(analiseDoTurno(perguntaAtual), configCognicao()) : '');
+  return `${regrasHumor} ${cognitivo} Você é ${PERSONALIDADE.identidade}${nomePerfil ? ' de ' + nomePerfil : ' do usuário'} e trabalha como ${PERSONALIDADE.papel}. ${nomePerfil ? 'O nome cadastrado do usuário é ' + nomePerfil + '. ' : ''}${PERSONALIDADE.personalidade} ${PERSONALIDADE.lealdade} ${PERSONALIDADE.tratamento.replace('{tratamento}', t)} ${PERSONALIDADE.conversa} Você conversa com opinião própria, curioso pelo assunto do usuário, capaz de discordar com respeito e de explicar o porquê das coisas, nunca um formulário que devolve perguntas. ${PERSONALIDADE.humor} ${perfilHumor()} ${PERSONALIDADE.limites} Aplique de forma perceptível e consistente o estilo selecionado (${estiloTexto}) em toda a resposta, não apenas mencionando-o. Nível de humor configurado: ${nivelHumorNome(humor)} (${humor}%). ${humorTexto}${tomTurno} O humor deve ser perceptível na maioria das respostas, inclusive nas técnicas e profissionais: uma observação seca e curta, e o assunto volta. Nunca seja grosseiro, ofensivo, arrogante ou repetitivo. Mantenha a calma diante de problemas e antecipe o próximo passo útil. Inspire-se apenas no arquétipo geral do assistente de ficção científica: não copie falas, bordões ou diálogos dos filmes. Demonstre competência explicando limites com honestidade, propondo o próximo passo útil e distinguindo fatos confirmados de suposições. Não finja ter executado ações nem alegue acesso ao aparelho que as ferramentas disponíveis não oferecem. Inteligência de conversa: acompanhe o fio da conversa e retome o que já foi dito quando fizer sentido, em vez de tratar cada mensagem como se fosse a primeira. Se o pedido estiver ambíguo de verdade, faça uma pergunta curta e específica em vez de adivinhar; se estiver claro, responda direto. Ao explicar um assunto, mostre a causa e o efeito em linguagem simples e, quando ajudar, uma analogia de uma frase. Ao resolver um problema, entregue o próximo passo concreto. Em pesquisa, diga o que confirmou, o que continua incerto e de onde veio, sem inventar datas, números ou links. Em conversa fiada, seja presente e interessado, com opinião própria e humor leve — não devolva a pergunta de forma vazia. ${sugestaoHumor ? ' Ângulo de humor para este turno (adapte ao contexto; não copie literalmente e ignore se soar forçado): "' + sugestaoHumor.linha + '".' : ''} Responda em português do Brasil, em ${curtas ? '1 ou 2 frases bem curtas (até 30 palavras)' : '2 a 4 frases naturais (até 70 palavras), podendo passar disso quando o assunto exigir explicação'}, pois suas respostas são faladas em voz alta: sem markdown, sem emojis, sem listas.
 Agora: ${new Date().toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' })}. Plataforma: ${plataforma}.
 Ações disponíveis (nomes válidos para o campo "acao" do JSON; NÃO são funções: nunca use function calling nem chame ferramentas, responda apenas com o JSON):
 ${ferr}
@@ -2875,7 +2920,7 @@ const ESTRATEGIAS = [{ json: true, rz: true }, { json: false, rz: true }, { json
 function corpoChat(modelo, e, stream) {
   const b = {
     model: modelo, temperature: 0.6, max_tokens: 1500,
-    messages: [{ role: 'system', content: promptSistema() }, ...(usarContextoNestaConversa ? hist.slice(-8) : hist.slice(-1))]
+    messages: [{ role: 'system', content: promptSistema() }, ...(usarContextoNestaConversa ? historicoParaIA(10) : hist.slice(-1))]
   };
   if (e.json) b.response_format = { type: 'json_object' };
   // Modelos gpt-oss "pensam" antes de responder; esforço baixo = mais rápido.
@@ -3069,10 +3114,10 @@ async function chamar(conteudo, ocultarNoHistorico, aoFalar) {
       const local = await gerarIALocal(conteudo, false);
       adicionarHist({ role: 'assistant', content: local.raw || local.fala });
       provAtivo = 'local'; updateLocalChip();
-      return { fala: local.fala, acao: local.acao };
+      return { fala: revisarSaida(local.fala, conteudo, local.acao), acao: local.acao };
     } catch (e) {
       const basica = await tentarBrainLocal(conteudo);
-      if (basica) return { fala: basica.fala, acao: null };
+      if (basica) return { fala: revisarSaida(basica.fala, conteudo, null), acao: null };
       removerUltimoHist();
       throw new Error('Nenhuma API está configurada e a IA local não está pronta. Cadastre uma chave em Ajustes ou importe um modelo .task. Detalhe: ' + e.message);
     }
@@ -3157,7 +3202,7 @@ async function chamar(conteudo, ocultarNoHistorico, aoFalar) {
       provAtivo = 'local'; updateLocalChip();
       msg('sis', 'APIs indisponíveis ou limitadas; usando o modelo local no aparelho.');
       registrar('config', 'fallback para IA local');
-      return { fala: local.fala, acao: local.acao };
+      return { fala: revisarSaida(local.fala, conteudo, local.acao), acao: local.acao };
     } catch (localError) {
       const basica = await tentarBrainLocal(conteudo);
       if (basica) { msg('sis', 'APIs e modelo local indisponíveis; respondi pelo cérebro local básico.'); return { fala: basica.fala, acao: null }; }
@@ -3195,7 +3240,7 @@ async function chamar(conteudo, ocultarNoHistorico, aoFalar) {
     frase: (chave) => fraseApp(chave)
   });
   if (decisao.aviso) registrar('núcleo', 'decisão ajustada — ' + decisao.aviso);
-  return { fala: decisao.fala, acao: decisao.acao };
+  return { fala: revisarSaida(decisao.fala, conteudo, decisao.acao), acao: decisao.acao };
 }
 
 /* ---------- Comandos do JARVIS Core (1.34.0) ----------
@@ -3533,6 +3578,7 @@ async function falar(texto, semMsg, opcoes, links) {
   if (falaRepetida(texto)) return;
   removerPensando();
   if (!semMsg) msg('jv', texto, links);
+  atualizarRespostaCentral(texto);
   // Modo silencioso: a resposta continua no chat e nos painéis, mas nenhuma fala é
   // iniciada. Isso não desliga alarmes, confirmações nem a escuta de ativação.
   if (document.body.dataset.modo === 'silencioso' && !(opcoes && opcoes.forcarVoz)) {
@@ -3619,73 +3665,119 @@ function mostrarNivelAudio(rms) {
   setNivel(pct / 100);
 }
 function criarDetector() {
-  let piso = 0, amostras = [], voz = 0, ouviu = false, t0 = null, ultimo = 0;
+  const E = window.EscutaJarvis;
+  const sens = Math.min(1.6, Math.max(0.7, Number(store.get('sensibilidade', '1')) || 1));
+  if (E && typeof E.criarDetectorRms === 'function') {
+    return E.criarDetectorRms({
+      sensibilidade: sens, calibracaoMs: 400, minRms: 0.006, ratio: 2.2,
+      confirmacaoMs: 180, minFalaMs: 200, silencioMs: 1000,
+      semFalaMs: 5000, maxMs: 20000
+    });
+  }
+  // Fallback mínimo para um WebView antigo que não carregou escuta.js.
+  let piso = 0, n = 0, voz = 0, ouviu = false, t0 = null, ultimo = 0;
   return function quadro(rms, agora) {
     if (t0 === null) { t0 = agora; ultimo = agora; }
-    if (agora - t0 < 350 && !ouviu) {
-      // O percentil baixo reduz o efeito de estalos e diminui o risco de a primeira sílaba
-      // inflar a média de ruído se o usuário começar a falar imediatamente.
-      amostras.push(rms);
-      const ordem = [...amostras].sort((a, b) => a - b);
-      piso = ordem[Math.floor((ordem.length - 1) * 0.30)] || 0;
-      return { ouviu: false, fim: false, limiar: 0 };
-    }
-    const sens = Math.min(1.6, Math.max(0.7, Number(store.get('sensibilidade', '1')) || 1));
-    const limiar = Math.min(0.09, Math.max(0.015, (piso * 2.2 + 0.01) / sens));
-    if (rms > limiar) { voz++; ultimo = agora; } else voz = Math.max(0, voz - 1);
+    if (agora - t0 < 400 && !ouviu) { piso = piso ? Math.min(piso, rms) : rms; n++; return { ouviu: false, fim: false, limiar: 0 }; }
+    if (n && !piso) piso = 0.003;
+    const limiar = Math.max(0.006, piso * 2.2) / sens;
+    if (rms >= limiar) { voz++; ultimo = agora; } else voz = Math.max(0, voz - 1);
     if (voz >= 4) ouviu = true;
-    const fim = (ouviu && agora - ultimo > 1100) || agora - t0 > 15000 || (!ouviu && agora - t0 > 6000);
+    const fim = (ouviu && agora - ultimo > 1000) || agora - t0 > 15000 || (!ouviu && agora - t0 > 5000);
     return { ouviu, fim, limiar };
   };
 }
+// Caminho de emergência sem MediaRecorder: o VAD já testado entrega o trecho de
+// fala e o codificador PCM grava um WAV local. É usado só quando o WebView não
+// oferece MediaRecorder; o caminho normal continua sendo o contêiner do sistema.
+let ultimaCapturaVoz = null;
+async function gravarWav() {
+  if (typeof window.AudioPcm === 'undefined' || typeof window.AudioPcm.wav !== 'function') return null;
+  const a = await capturarAmostraVoz(20000, { minFalaMs: 200, silencioMs: 1000, semFalaMs: 5000, maxMs: 20000 });
+  if (abortar || !a || !a.samples || !a.samples.length) return null;
+  // O VAD decide em 48 kHz; o envio ao STT é 16 kHz mono, taxa nativa do Whisper.
+  // A média de janela evita aliasing e reduz o upload em cerca de três vezes.
+  const alvo = 16000;
+  const amostras = typeof window.AudioPcm.reamostrar === 'function'
+    ? window.AudioPcm.reamostrar(a.samples, a.sampleRate, alvo)
+    : a.samples;
+  const taxa = amostras === a.samples ? a.sampleRate : alvo;
+  const bytes = window.AudioPcm.wav(amostras, taxa);
+  const blob = new Blob([bytes], { type: 'audio/wav' });
+  ultimaCapturaVoz = {
+    motor: 'wav-vad', duracaoMs: window.AudioPcm.duracaoMs(amostras, taxa),
+    bytes: blob.size, sampleRate: taxa, motivo: a.motivo, falaMs: a.falaMs
+  };
+  registrar('voz', 'captura WAV/VAD: ' + ultimaCapturaVoz.duracaoMs + ' ms, ' + blob.size + ' bytes, fim ' + a.motivo);
+  return blob;
+}
 function gravar() {
-  // O executor NÃO é async: se o AudioContext ou o MediaRecorder falhar depois do
-  // microfone abrir, o erro vira reject e o app segue (antes a promessa ficava pendurada
-  // para sempre em "ouvindo" e nada mais respondia).
+  // O caminho principal usa o VAD já testado (escuta.js): pré-roll, piso de ruído,
+  // confirmação de fala e fim por silêncio. O MediaRecorder só é usado se o WebView
+  // não oferecer ScriptProcessor/AudioPcm.
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (window.EscutaJarvis && window.AudioPcm && AC && AC.prototype && typeof AC.prototype.createScriptProcessor === 'function') {
+    return gravarWav();
+  }
+  if (typeof window.MediaRecorder !== 'function') return null;
   return new Promise((resolve, reject) => {
-    let stream = null, ctx = null, timer = null, rec = null, encerrado = false;
+    let stream = null, ctx = null, timer = null, rec = null, encerrado = false, destinoGravacao = null;
     const falhar = (e) => {
       if (encerrado) return;
       encerrado = true;
       if (timer) clearInterval(timer);
       try { if (rec && rec.state !== 'inactive') rec.stop(); } catch (x) { /* sem gravação */ }
       if (stream) stream.getTracks().forEach((t) => t.stop());
+      if (destinoGravacao) destinoGravacao.stream.getTracks().forEach((t) => t.stop());
       if (ctx) { try { ctx.close(); } catch (x) { /* já fechado */ } }
       recAtual = null;
       reject(e instanceof Error ? e : new Error('O microfone não pôde ser aberto.'));
     };
     (async () => {
     try {
-    const audioEscolhido = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 };
+    const mic = vozMicConfig();
+    const audioEscolhido = { echoCancellation: mic.echoCancellation, noiseSuppression: mic.noiseSuppression, autoGainControl: mic.autoGainControl, channelCount: 1 };
     const micSalvo = store.get('mic_dispositivo', '');
     if (micSalvo) audioEscolhido.deviceId = { exact: micSalvo };
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: audioEscolhido }); }
     catch (e) {
-      try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } }); }
-      catch (e2) { return reject(new Error('Sem acesso ao microfone. Permita nas configurações do aparelho.')); }
+      try {
+        delete audioEscolhido.deviceId;
+        stream = await navigator.mediaDevices.getUserMedia({ audio: audioEscolhido });
+      } catch (e2) { return reject(new Error('Sem acesso ao microfone. Permita nas configurações do aparelho.')); }
     }
     if (!segPlanoOk) atualizarSegundoPlano();
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx = new AC();
     const an = ctx.createAnalyser();
     an.fftSize = 512;
-    ctx.createMediaStreamSource(stream).connect(an);
+    const cadeia = ligarFiltrosMicrofone(ctx, stream, micFiltroAtivo());
+    cadeia.saida.connect(an);
+    let streamGravacao = stream;
+    if (cadeia.filtrado && typeof ctx.createMediaStreamDestination === 'function') {
+      try {
+        destinoGravacao = ctx.createMediaStreamDestination();
+        cadeia.saida.connect(destinoGravacao);
+        streamGravacao = destinoGravacao.stream;
+      } catch (e) { destinoGravacao = null; streamGravacao = stream; }
+    }
     const dados = new Uint8Array(an.fftSize);
-    rec = new MediaRecorder(stream, { audioBitsPerSecond: 64000 });
+    rec = new MediaRecorder(streamGravacao, { audioBitsPerSecond: 96000 });
     const det = criarDetector();
     const pedacos = [];
     recAtual = rec;
-    let ouviu = false, ultimo = Date.now();
+    let ouviu = false, ultimo = Date.now(), motivo = '';
     const t0 = ultimo;
     rec.ondataavailable = (e) => e.data.size && pedacos.push(e.data);
     timer = setInterval(() => {
       an.getByteTimeDomainData(dados);
-      let s = 0;
-      for (const v of dados) { const x = (v - 128) / 128; s += x * x; }
-      const rms = Math.sqrt(s / dados.length);
+      let soma = 0;
+      for (const v of dados) { const x = (v - 128) / 128; soma += x * x; }
+      const rms = Math.sqrt(soma / dados.length);
       mostrarNivelAudio(rms);
       const agora = Date.now();
       const q = det(rms, agora);
       ouviu = q.ouviu;
+      if (q.fim) motivo = q.motivo || 'silencio';
       if (q.fim || abortar) rec.stop();
     }, 50);
     rec.onstop = () => {
@@ -3693,9 +3785,12 @@ function gravar() {
       encerrado = true;
       clearInterval(timer);
       stream.getTracks().forEach((t) => t.stop());
+      if (destinoGravacao) destinoGravacao.stream.getTracks().forEach((t) => t.stop());
       try { ctx.close(); } catch (x) { /* já fechado */ }
       recAtual = null;
-      resolve(ouviu && !abortar ? new Blob(pedacos, { type: rec.mimeType }) : null);
+      const blob = ouviu && !abortar ? new Blob(pedacos, { type: rec.mimeType }) : null;
+      if (blob) ultimaCapturaVoz = { motor: 'mediarecorder', duracaoMs: Date.now() - t0, bytes: blob.size, motivo: motivo || 'fim' };
+      resolve(blob);
     };
     rec.start();
     } catch (e) { falhar(e); }
@@ -3706,7 +3801,14 @@ function gravar() {
 function dicaWhisper() {
   const apps = Object.keys(LISTA_APPS).map((k) => k.replace(/_/g, ' ')).slice(0, 14).join(', ');
   const cts = store.get('compartilhar_contatos', '0') === '1' ? Object.keys(contatos()).slice(0, 8).join(', ') : '';
-  return ('Jarvis, assistente pessoal em português do Brasil. Comandos: que horas são, como está o tempo, abre o ' + apps + ', me avise em dez minutos, alarme às sete, pesquise sobre.' + (cts ? ' Nomes de contatos autorizados pelo usuário: ' + cts + '.' : '')).slice(0, 600);
+  // Nomes autorizados e vocabulário técnico ajudam o Whisper a não trocar nomes próprios.
+  // É uma dica, não uma instrução: o texto reconhecido continua sendo a fonte da verdade.
+  let nomes = '';
+  try { nomes = (PESSOAS && typeof PESSOAS.listar === 'function') ? PESSOAS.listar().slice(0, 6).map((p) => p.nome).join(', ') : ''; } catch (e) { nomes = ''; }
+  return ('Jarvis, assistente pessoal em português do Brasil. Vocabulário: Jarvis, Obsidian, Wi-Fi, WhatsApp, YouTube, Spotify, Groq, Gemini, Cerebras, Mistral.' +
+    (nomes ? ' Nomes cadastrados pelo usuário: ' + nomes + '.' : '') +
+    ' Comandos: que horas são, como está o tempo, abre o ' + apps + ', me avise em dez minutos, alarme às sete, pesquise sobre.' +
+    (cts ? ' Contatos autorizados: ' + cts + '.' : '')).slice(0, 700);
 }
 // Descarta trechos que o Whisper "inventa" em silêncio ou ruído (ex.: "Legendas pela comunidade Amara.org").
 function limparTranscricao(j, dica) {
@@ -3725,19 +3827,37 @@ function limparTranscricao(j, dica) {
   if (n.indexOf('jarvis assistente pessoal') === 0) return '';
   return texto;
 }
-async function transcrever(blob) {
+/** Aplica a camada de fala sem esconder o que o motor devolveu. */
+function avaliarTranscricao(texto, meta) {
+  const F = window.FalaJarvis;
+  if (!F) return String(texto == null ? '' : texto).trim();
+  const r = F.avaliar(Object.assign({ texto: texto }, meta || {}));
+  ultimaTranscricaoAvaliada = r;
+  if (r.precisaRepetir) {
+    const aviso = 'Não entendi o comando com segurança' + (r.confiancaPct != null ? ' (' + r.confiancaPct + '%)' : '') + '. Repita devagar ou digite.';
+    msg('sis', aviso);
+    registrar('voz', 'transcrição recusada por baixa confiança: ' + r.texto.slice(0, 100));
+    return '';
+  }
+  if (r.confiancaPct != null) registrar('voz', 'transcrição ' + r.confiancaPct + '% · ' + r.motor + ' · ' + r.texto.slice(0, 100));
+  return r.texto;
+}
+async function transcrever(blob, opcoes) {
+  const o = opcoes || {};
+  const motorPedido = o.motor || 'auto';
+  const t0Transcricao = Date.now();
   if (store.get('offline', '0') === '1') throw new Error('Modo offline ativo: o áudio não será enviado a serviços online. Use o reconhecimento local do Android ou digite o comando.');
   await chavesProntas;
   if (store.get('offline', '0') === '1') throw new Error('Modo offline ativado antes do envio. O áudio foi mantido localmente.');
   const key = CHAVES.groq;
-  const modelo = store.get('precisa', '1') === '1' ? 'whisper-large-v3' : 'whisper-large-v3-turbo';
+  let modelo = store.get('precisa', '1') === '1' ? 'whisper-large-v3' : 'whisper-large-v3-turbo';
   const dica = dicaWhisper();
   let erroOnline = '', erroStatus = 0;
   if (key) {
     try {
       const enviar = (verbose) => {
         const fd = new FormData();
-        fd.append('file', blob, 'audio.webm');
+        fd.append('file', blob, /wav/i.test(blob.type || '') ? 'audio.wav' : 'audio.webm');
         fd.append('model', modelo);
         fd.append('language', 'pt');
         fd.append('temperature', '0');
@@ -3746,7 +3866,15 @@ async function transcrever(blob) {
         return fetch(GROQ + '/audio/transcriptions', { method: 'POST', signal: ctrlRede.signal, headers: { Authorization: 'Bearer ' + key }, body: fd });
       };
       let r = await enviar(true);
-      if (!r.ok && r.status === 400) r = await enviar(false);
+      if (!r.ok && r.status === 400) {
+        // O large-v3 pode ser recusado por cota/tamanho; tenta o turbo uma vez e,
+        // se o verbose_json for o problema, repete sem ele. Não repete 429.
+        if (modelo !== 'whisper-large-v3-turbo') {
+          modelo = 'whisper-large-v3-turbo';
+          r = await enviar(true);
+        }
+        if (!r.ok) r = await enviar(false);
+      }
       if (!r.ok) {
         erroStatus = r.status;
         const det = msgErro(await r.text()).slice(0, 160);
@@ -3755,7 +3883,7 @@ async function transcrever(blob) {
           : 'Transcrição Groq ' + r.status + ': ' + det;
       } else {
         const texto = limparTranscricao(await r.json(), dica);
-        if (texto) return texto;
+        if (texto) return avaliarTranscricao(texto, { motor: 'groq', latenciaMs: Date.now() - t0Transcricao });
         erroOnline = 'A transcrição online não encontrou fala confiável.';
       }
     } catch (e) {
@@ -3765,16 +3893,19 @@ async function transcrever(blob) {
     }
   } else { erroOnline = 'A chave da Groq não está configurada.'; erroStatus = 401; }
 
-  // A alternativa Android começa uma nova escuta; a pessoa precisa repetir a frase.
+  // O fallback Android começa uma nova escuta; só é permitido no automático.
   const P = plug('JarvisBackground');
-  // No teste da transcrição da Groq não vale abrir o reconhecedor do Android: o teste é da nuvem.
-  if (ehAndroid && !testandoTranscricaoGroq && P && typeof P.transcreverNativo === 'function' && !abortar) {
+  const permitirAndroid = o.permitirAndroid !== false && motorPedido !== 'groq' && !testandoTranscricaoGroq;
+  if (ehAndroid && permitirAndroid && P && typeof P.transcreverNativo === 'function' && !abortar) {
     msg('sis', 'A transcrição online falhou (' + erroOnline.slice(0, 100) + '). Repita o comando; vou tentar o reconhecimento do Android.');
     setEstado('listening');
     try {
-      const r = await P.transcreverNativo({ idioma: 'pt-BR', preferirLocal: true });
+      const r = await P.transcreverNativo({ idioma: 'pt-BR', preferirLocal: true, somenteLocal: store.get('offline', '0') === '1' });
       const texto = String((r && r.texto) || '').trim();
-      if (texto) return texto;
+      if (texto) return avaliarTranscricao(texto, {
+        motor: (r && r.mecanismo) || 'android', confianca: r && r.confianca,
+        alternativas: r && r.alternativas, latenciaMs: Date.now() - t0Transcricao
+      });
       throw new Error('O Android não reconheceu a frase. Digite o comando ou tente novamente.');
     } catch (e) {
       if (abortar) throw new Error('Cancelado.');
@@ -3788,32 +3919,57 @@ async function transcrever(blob) {
   }
   throw falha(erroOnline + ' Configure a chave da Groq ou digite o comando.');
 }
-async function ouvirUmaVez() {
-  setEstado('listening');
-  if (store.get('offline', '0') === '1' && !ehAndroid) throw new Error('Modo offline: reconhecimento local de voz não garantido nesta versão para computador. Digite o comando para manter o áudio privado.');
-  if (store.get('offline', '0') === '1' && ehAndroid) {
-    const P = plug('JarvisBackground');
-    if (!P || typeof P.transcreverNativo !== 'function') throw new Error('Modo offline: reconhecimento local não está disponível. Digite o comando ou desligue o modo offline.');
-    const r = await P.transcreverNativo({ idioma: 'pt-BR', preferirLocal: true, somenteLocal: true });
-    return String((r && r.texto) || '').trim();
+const STT_MOTORES = ['auto', 'groq', 'android', 'android-local'];
+function sttMotor() {
+  const v = String(store.get('stt_motor', 'auto') || 'auto');
+  return STT_MOTORES.includes(v) ? v : 'auto';
+}
+function sttMotorRotulo() {
+  return { auto: 'Automático', groq: 'Groq Whisper', android: 'Android', 'android-local': 'Android local' }[sttMotor()] || 'Automático';
+}
+async function transcreverAndroidApp(opcoes) {
+  const P = plug('JarvisBackground');
+  if (!P || typeof P.transcreverNativo !== 'function') {
+    throw new Error('O reconhecimento do Android não está disponível nesta compilação. Selecione Groq ou digite o comando.');
   }
-  if (ehAndroid && !CHAVES.groq) {
-    const PN = plug('JarvisBackground');
-    if (PN && typeof PN.transcreverNativo === 'function') {
-      const rn = await PN.transcreverNativo({ idioma: 'pt-BR', preferirLocal: false });
-      return String((rn && rn.texto) || '').trim();
+  const t0 = Date.now();
+  const r = await P.transcreverNativo(Object.assign({ idioma: 'pt-BR' }, opcoes || {}));
+  const texto = String((r && r.texto) || '').trim();
+  if (!texto) throw new Error('O Android não devolveu uma transcrição utilizável. Repita ou digite o comando.');
+  return avaliarTranscricao(texto, {
+    motor: (r && r.mecanismo) || 'android', confianca: r && r.confianca,
+    alternativas: r && r.alternativas, latenciaMs: Date.now() - t0
+  });
+}
+async function ouvirUmaVez() {
+  const t0Voz = Date.now();
+  ultimaCapturaVoz = null;
+  setEstado('listening');
+  const motor = sttMotor();
+  const offline = store.get('offline', '0') === '1';
+  if (offline && !ehAndroid) throw new Error('Modo offline: reconhecimento local de voz não garantido nesta versão para computador. Digite o comando para manter o áudio privado.');
+  if (motor === 'groq' && offline) throw new Error('Modo offline ativo: o motor Groq envia áudio à nuvem. Escolha Android local ou desligue o modo offline.');
+  if (motor === 'android' || motor === 'android-local') {
+    if (!ehAndroid) throw new Error('O motor Android só existe no APK Android. Escolha Groq ou Automático.');
+    if (motor === 'android-local') return transcreverAndroidApp({ preferirLocal: true, somenteLocal: true });
+    return transcreverAndroidApp({ preferirLocal: offline, somenteLocal: offline });
+  }
+  // Automático: com chave e rede, usa o Whisper; sem chave ou offline, usa o Android.
+  if (ehAndroid && motor === 'auto' && (!CHAVES.groq || offline)) {
+    try {
+      return await transcreverAndroidApp({ preferirLocal: true, somenteLocal: offline });
+    } catch (e) {
+      if (!CHAVES.groq) throw e;
+      registrar('voz', 'Android indisponível no automático; tentando Groq');
     }
   }
   const b = await gravar();
-  if (!b) return '';
-  // Microfone liberado: aquece em paralelo a conexão da IA e o motor de voz do Android,
-  // para a primeira resposta não pagar a inicialização dos dois.
+  if (!b || abortar) return '';
   aquecer();
   if (!neuralAtiva()) aquecerVoz(true);
   setEstado('thinking');
-  return transcrever(b);
+  return transcrever(b, { motor: motor });
 }
-
 /* ---------- Palavra de ativação local "Jarvis" (Android) ---------- */
 // O detector é próprio: nenhum SDK de terceiro, nenhuma chave. Quem ouve de verdade no
 // Android é o serviço em primeiro plano (JarvisService + JarvisAtivacao); aqui, no WebView,
@@ -3841,6 +3997,7 @@ const conversaLigada = () => store.get('conversa', '1') === '1';
 const escutaGroqLigada = () => store.get('escuta_groq', '0') === '1';
 let escutaGroqAtiva = false, escutaGroqStream = null, escutaGroqCtx = null, escutaGroqRec = null;
 let escutaGroqParar = false, escutaGroqFalhas = 0, testandoTranscricaoGroq = false;
+let ultimaTranscricaoAvaliada = null;
 const esperaMs = (ms) => new Promise((r) => setTimeout(r, ms));
 function escutaGroqStatus(texto, tipo, logar) {
   const el = document.getElementById('c-escuta-groq-status');
@@ -3948,7 +4105,7 @@ async function cicloEscutaGroq() {
     if (!trecho.voz) continue;   // porteiro de ruído: não manda silêncio para a nuvem
     let texto = '';
     try {
-      texto = await transcrever(trecho.blob);
+      texto = await transcrever(trecho.blob, { motor: 'groq' });
       escutaGroqFalhas = 0;
       escutaGroqStatus('Ouvindo pela Groq. Última transcrição: “' + String(texto).slice(0, 80) + '”.', 'ok', false);
     } catch (e) {
@@ -3992,7 +4149,7 @@ async function testarTranscricaoGroq() {
     escutaGroqStream = null;
     if (!trecho || !trecho.blob) { escutaGroqStatus('Não consegui gravar o trecho. Confira a permissão do microfone.', 'erro'); return; }
     if (!trecho.voz) { escutaGroqStatus('O microfone quase não registrou som (pico ' + Math.round(trecho.pico) + ' dB): fale mais perto ou aumente a sensibilidade da ativação.', 'erro'); return; }
-    const texto = await transcrever(trecho.blob);
+    const texto = await transcrever(trecho.blob, { motor: 'groq' });
     const achou = Hermes.ativacao.presente(texto, configAtivacaoAtual());
     escutaGroqStatus('A Groq transcreveu: “' + String(texto).slice(0, 120) + '”. ' + (achou
       ? 'A palavra de ativação foi reconhecida — a escuta pela Groq vai funcionar.'
@@ -4133,7 +4290,6 @@ function atualizarWake() {
 }
 async function aoAcordar(texto) {
   liberarApp();                       // o comando por voz tem prioridade sobre a animação de abertura
-  entrarConversa();
   mostrarWakeMini('Ativação detectada · preparando o microfone…');
   if (paradaAtiva) { // o detector identifica Jarvis; o reconhecimento completo só então procura o comando de parada
     paradaAtiva = false;
@@ -4208,7 +4364,6 @@ async function executar(fn) {
 }
 function ciclo() {
   vibrar(12);
-  entrarConversa();
   if (ocupado) {
     if (document.body.dataset.state === 'listening' && recAtual) recAtual.stop();
     else { reabrir = true; parar(); }   // tocar no microfone enquanto ele fala: para e já te escuta
@@ -4226,7 +4381,9 @@ function ciclo() {
 function enviarComando(t, extra) {
   t = String(t || '').trim();
   if (!t || ocupado) return;
-  entrarConversa();   // a resposta aparece na tela de conversa, não no menu
+  // O núcleo é a tela principal: o comando não troca de tela. A resposta aparece
+  // no cartão abaixo do núcleo e a transcrição completa fica a um toque de distância.
+  atualizarRespostaCentral('Processando o comando…', 'processando');
   msg('eu', t);
   aquecer();
   // Arquivos anexados entram como conteúdo do MESMO pedido (nome, tipo e texto), não como
@@ -5241,6 +5398,28 @@ const estadoPainelJarvis = (estado) => Boolean(estado && estado.jarvisPainel ===
 function algumPainelAberto() {
   return PAINEIS.some((sel) => { const el = $(sel); return Boolean(el && !el.hidden); });
 }
+/**
+ * Invariável visual: scrim e corpo travado só podem existir com uma camada real
+ * por cima (painel, boot ou bloqueio). Sem isso, uma corrida de navegação podia
+ * deixar a tela escurecida sem conteúdo — a "tela preta" intermitente.
+ */
+function garantirInterfaceVisivel() {
+  if (algumPainelAberto()) return false;
+  const bloqueio = $('#bloqueio');
+  if (bloqueio && !bloqueio.hidden) return false;
+  const boot = $('#boot');
+  if (boot && !boot.hidden) return false;
+  const modal = $('#modal');
+  if (modal && !modal.hidden) return false;
+  let corrigiu = false;
+  const scrim = $('#scrim');
+  if (scrim && !scrim.hidden) { scrim.hidden = true; corrigiu = true; }
+  if (document.body.classList.contains('travado')) {
+    document.body.classList.remove('travado');
+    corrigiu = true;
+  }
+  return corrigiu;
+}
 function abrirPainel(sel) {
   const alvo = $(sel);
   if (!alvo) { registrar('erro', 'painel inexistente: ' + sel); return; }
@@ -5311,6 +5490,23 @@ window.JarvisNavegacao = {
   acao: acaoNavegacao
 };
 
+function garantirVoltarPaineis() {
+  document.querySelectorAll('.painel').forEach((painel) => {
+    if (painel.querySelector('[data-painel-voltar]')) return;
+    const topo = painel.querySelector('.painel-topo');
+    if (!topo) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'painel-voltar';
+    b.setAttribute('data-painel-voltar', '1');
+    b.setAttribute('aria-label', 'Voltar ao núcleo');
+    b.title = 'Voltar ao núcleo';
+    b.textContent = '‹';
+    b.onclick = () => fecharPaineis();
+    topo.insertBefore(b, topo.firstChild);
+  });
+}
+
 function fecharPaineis(vindoDoHistorico) {
   const aberto = algumPainelAberto();
   PAINEIS.forEach((sel) => { const el = $(sel); if (el) el.hidden = true; });
@@ -5319,8 +5515,16 @@ function fecharPaineis(vindoDoHistorico) {
   const scrim = $('#scrim');
   if (scrim) scrim.hidden = true;
   if (aberto && !vindoDoHistorico && H && estadoPainelJarvis(H.state)) {
-    try { H.back(); } catch (e) { /* painéis já estão fechados; não interromper a interface */ }
+    try {
+      // Limpeza síncrona: H.back() disparava popstate depois de um novo painel abrir
+      // e fechava justamente o painel recém-aberto (volta inesperada à tela inicial).
+      const estado = Object.assign({}, H.state && typeof H.state === 'object' ? H.state : {});
+      delete estado.jarvisPainel;
+      delete estado.painel;
+      H.replaceState(estado, '');
+    } catch (e) { /* painéis já estão fechados; não interromper a interface */ }
   }
+  garantirInterfaceVisivel();
 }
 const vibrar = (ms) => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* sem vibração */ } };
 function atualizarOfflineUI() {
@@ -5407,6 +5611,10 @@ function abrirConfig() {
   const selHumorCfg = document.getElementById('c-humor-nivel');
   if (selHumorCfg) selHumorCfg.value = store.get('humor_nivel', nivelHumor($('#c-humor').value));
   $('#c-estilo').value = store.get('estilo_resposta', 'equilibrado');
+  const cogCfg = configCognicao();
+  if ($('#c-cog-profundidade')) $('#c-cog-profundidade').value = cogCfg.profundidade;
+  if ($('#c-cog-iniciativa')) $('#c-cog-iniciativa').value = cogCfg.iniciativa;
+  if ($('#c-cog-conversa')) $('#c-cog-conversa').value = cogCfg.conversa;
   $('#c-humor-valor').textContent = $('#c-humor').value + '%';
   atualizarPreviaPersonalidade();
   $('#c-contatos').value = store.get('contatos');
@@ -5485,6 +5693,9 @@ async function salvarConfig() {
   }
   store.set('humor', String(Math.max(0, Math.min(100, Number($('#c-humor').value) || 0))));
   store.set('estilo_resposta', $('#c-estilo').value || 'equilibrado');
+  if ($('#c-cog-profundidade')) store.set('cog_profundidade', $('#c-cog-profundidade').value || 'equilibrada');
+  if ($('#c-cog-iniciativa')) store.set('cog_iniciativa', $('#c-cog-iniciativa').value || 'normal');
+  if ($('#c-cog-conversa')) store.set('cog_conversa', $('#c-cog-conversa').value || 'natural');
   atualizarPreviaPersonalidade();
   store.set('contatos', $('#c-contatos').value);
   store.set('voz', $('#c-voz').value);
@@ -5915,10 +6126,12 @@ $('#btn-config').onclick = abrirConfig;
 // Visão também pelo cabeçalho e pelo painel inicial: no celular a barra lateral não aparece.
 const btnVisaoTopo = $('#btn-visao'); if (btnVisaoTopo) btnVisaoTopo.onclick = () => abrirVisao();
 const cardVisao = $('#dash-visao'); if (cardVisao) cardVisao.onclick = () => abrirVisao();
-// Central de comando: conversa (tela própria) e menu de informações.
-$('#btn-conversa').onclick = alternarTelaConversa;
-const cardConversa = $('#dash-conversa');
-if (cardConversa) cardConversa.onclick = () => entrarConversa();
+// Transcrição é uma tela secundária: não há botão "Conversa" no menu principal.
+const btnTranscricao = $('#btn-transcricao');
+if (btnTranscricao) btnTranscricao.onclick = () => alternarTelaConversa();
+const btnTranscricaoVoltar = $('#btn-transcricao-voltar');
+if (btnTranscricaoVoltar) btnTranscricaoVoltar.onclick = () => definirConversa(false);
+document.querySelectorAll('[data-abrir-transcricao]').forEach((b) => { b.onclick = () => entrarConversa(); });
 const cardInfo = $('#dash-info');
 if (cardInfo) cardInfo.onclick = abrirInformacoesUI;
 $('#info-atualizar').onclick = abrirInformacoesUI;
@@ -6179,6 +6392,10 @@ function atualizarPreviaPersonalidade() {
 }
 $('#c-humor').addEventListener('input', () => { $('#c-humor-valor').textContent = $('#c-humor').value + '%'; atualizarPreviaPersonalidade(); });
 $('#c-estilo').addEventListener('change', atualizarPreviaPersonalidade);
+[['c-cog-profundidade', 'cog_profundidade'], ['c-cog-iniciativa', 'cog_iniciativa'], ['c-cog-conversa', 'cog_conversa']].forEach(([id, chave]) => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', () => store.set(chave, el.value));
+});
 document.querySelectorAll('[data-abrir-voz]').forEach((b) => b.addEventListener('click', () => mudarCategoriaConfig('voz')));
 $('#c-pitch').addEventListener('input', atualizarValoresVoz);
 $('#c-rate').addEventListener('input', atualizarValoresVoz);
@@ -6247,56 +6464,82 @@ function vozMicConfig() {
     autoGainControl: store.get('mic_agc', '1') === '1'
   };
 }
+function micFiltroAtivo() { return store.get('mic_filtro', '1') === '1'; }
+/** High-pass + compressor no caminho do microfone; devolve os nós para desconectar. */
+function ligarFiltrosMicrofone(ctx, stream, ativo) {
+  const fonte = ctx.createMediaStreamSource(stream);
+  if (!ativo) return { fonte: fonte, saida: fonte, filtrado: false, nos: [fonte] };
+  try {
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 85; hp.Q.value = 0.7;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -24; comp.knee.value = 24; comp.ratio.value = 3;
+    comp.attack.value = 0.003; comp.release.value = 0.25;
+    fonte.connect(hp); hp.connect(comp);
+    return { fonte: fonte, saida: comp, filtrado: true, nos: [fonte, hp, comp] };
+  } catch (e) {
+    return { fonte: fonte, saida: fonte, filtrado: false, nos: [fonte] };
+  }
+}
 function vozNivel(nivel) {
   const val = document.getElementById('c-audio-value'), fill = document.getElementById('c-audio-meter-fill');
   if (val) val.textContent = nivel + '%';
   if (fill) fill.style.width = Math.max(2, nivel) + '%';
   if (fill && fill.parentElement) fill.parentElement.setAttribute('aria-valuenow', String(nivel));
 }
-async function capturarAmostraVoz(ms) {
+async function capturarAmostraVoz(ms, opcoes) {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !AC) {
     throw new Error('O microfone não está disponível neste WebView. Verifique a permissão do Android.');
   }
+  const o = opcoes || {};
   const cfg = vozMicConfig();
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: cfg.echoCancellation, noiseSuppression: cfg.noiseSuppression, autoGainControl: cfg.autoGainControl, channelCount: 1 },
     video: false
   });
-  let ctx, source, processor, silent;
+  let ctx, source, processor, silent, cadeiaVoz = null;
   const pedacos = [];
   const limite = Math.max(1500, Number(ms) || 4000);
-  // Pré-roll + fim de fala: para de gravar quando a pessoa cala, em vez de
-  // segurar o microfone por quatro segundos inteiros. O anel de 600 ms evita
-  // cortar a primeira sílaba, que era o defeito da captura de duração fixa.
   const escuta = (typeof EscutaJarvis !== 'undefined')
-    ? EscutaJarvis.criar({ maxMs: limite, semFalaMs: limite, minFalaMs: 1200, silencioMs: 1200, preRollMs: 600 })
+    ? EscutaJarvis.criar({
+        maxMs: limite,
+        semFalaMs: Number(o.semFalaMs) > 0 ? Number(o.semFalaMs) : limite,
+        minFalaMs: Number(o.minFalaMs) > 0 ? Number(o.minFalaMs) : 1200,
+        silencioMs: Number(o.silencioMs) > 0 ? Number(o.silencioMs) : 1200,
+        preRollMs: 600
+      })
     : null;
   let encerrado = false;
   try {
     ctx = new AC();
     if (ctx.state === 'suspended') await ctx.resume();
-    source = ctx.createMediaStreamSource(stream);
+    cadeiaVoz = ligarFiltrosMicrofone(ctx, stream, micFiltroAtivo());
+    source = cadeiaVoz.fonte;
     processor = ctx.createScriptProcessor(4096, 1, 1);
-    silent = ctx.createGain(); silent.gain.value = 0;
+    silent = ctx.createGain();
+    silent.gain.value = 0;
     processor.onaudioprocess = (e) => {
+      if (abortar || encerrado) return;
       const a = e.inputBuffer.getChannelData(0);
       pedacos.push(new Float32Array(a));
       let soma = 0;
       for (let i = 0; i < a.length; i++) soma += a[i] * a[i];
       vozNivel(Math.min(100, Math.round(Math.sqrt(soma / a.length) * 320)));
-      if (escuta && !encerrado) {
+      if (escuta) {
         const r = escuta.processar(a, ctx.sampleRate);
         if (r.estado === 'fim') encerrado = true;
       }
     };
-    source.connect(processor); processor.connect(silent); silent.connect(ctx.destination);
+    cadeiaVoz.saida.connect(processor); processor.connect(silent); silent.connect(ctx.destination);
     await new Promise((resolve) => {
       const inicio = Date.now();
       const timer = setInterval(() => {
+        if (abortar) encerrado = true;
         if (encerrado || Date.now() - inicio >= limite + 250) { clearInterval(timer); resolve(); }
       }, 60);
     });
+    if (abortar) throw new Error('Captura cancelada.');
     const fim = escuta ? escuta.resultado() : null;
     let samples, taxa = ctx.sampleRate;
     if (fim && fim.amostras.length) {
@@ -6312,7 +6555,7 @@ async function capturarAmostraVoz(ms) {
     if (!samples.length) throw new Error('Não recebi áudio do microfone.');
     return { samples: samples, sampleRate: taxa, motivo: fim ? fim.motivo : 'tempo', falaMs: fim ? fim.falaMs : 0 };
   } finally {
-    try { if (processor) processor.disconnect(); if (source) source.disconnect(); if (silent) silent.disconnect(); if (ctx) await ctx.close(); } catch (_) {}
+    try { if (processor) processor.disconnect(); if (silent) silent.disconnect(); if (cadeiaVoz) cadeiaVoz.nos.forEach((no) => { try { no.disconnect(); } catch (_) {} }); if (ctx) await ctx.close(); } catch (_) {}
     stream.getTracks().forEach((t) => t.stop());
     vozNivel(0);
   }
@@ -6378,12 +6621,31 @@ function atualizarStatusPerfilVoz() {
     ? 'Perfil ativo: ' + (p.nome || 'voz') + ' com ' + (p.samples || 1) + ' amostra(s). Comparação local indicativa; não é prova de identidade.'
     : 'Nenhum perfil vocal salvo. Marque o consentimento e grave três amostras guiadas.');
 }
+function sttMotorAjuda() {
+  const motor = sttMotor();
+  const base = {
+    auto: 'Automático: usa o Whisper da Groq quando há chave e internet; sem chave ou offline, usa o reconhecimento do Android.',
+    groq: 'Groq Whisper large-v3: envia o áudio à nuvem, exige chave e internet. É o motor de maior precisão disponível nesta build.',
+    android: 'Android: usa o serviço de reconhecimento do aparelho. Pode usar rede; a qualidade depende do fabricante e do pacote de português.',
+    'android-local': 'Android local: exige o pacote de português offline instalado (Android 12+). O áudio não sai do aparelho.'
+  }[motor] || '';
+  if ((motor === 'android' || motor === 'android-local') && !ehAndroid) return base + ' Este motor só está disponível no APK Android; no desktop use Groq.';
+  if (motor === 'groq' && !CHAVES.groq) return base + ' A chave da Groq ainda não está configurada.';
+  return base + ' Whisper local e sherpa-onnx STT ainda não estão empacotados nesta build.';
+}
+function atualizarSttMotorUI() {
+  const sel = document.getElementById('c-stt-motor');
+  if (sel) sel.value = sttMotor();
+  const st = document.getElementById('c-stt-motor-status');
+  if (st) st.textContent = sttMotorAjuda();
+}
 function vozAplicarConfigUI() {
   const lim = document.getElementById('c-voz-limiar');
   if (lim) { lim.value = String(vozLimiar()); document.getElementById('c-voz-limiar-valor').textContent = Math.round(vozLimiar() * 100) + '%'; }
   const ident = document.getElementById('c-voz-identificar');
   if (ident) ident.checked = store.get('voz_identificar', '1') === '1';
-  [['c-mic-ec', 'mic_ec'], ['c-mic-ns', 'mic_ns'], ['c-mic-agc', 'mic_agc']].forEach(([id, chave]) => {
+  atualizarSttMotorUI();
+  [['c-mic-ec', 'mic_ec'], ['c-mic-ns', 'mic_ns'], ['c-mic-agc', 'mic_agc'], ['c-mic-filtro', 'mic_filtro']].forEach(([id, chave]) => {
     const el = document.getElementById(id);
     if (el) el.checked = store.get(chave, '1') === '1';
   });
@@ -6484,11 +6746,69 @@ if (btnVozDiag) btnVozDiag.onclick = () => {
   const q = vozUltimaAnalise ? vozUltimaAnalise.qualidade : null;
   statusPerfilAcustico('Diagnóstico: motor ' + (m ? 'carregado (v' + m.VERSAO + ', ' + m.DIM + ' dimensões)' : 'AUSENTE') +
     ' · perfis ' + vozPerfis().length + ' · limiar ' + Math.round(vozLimiar() * 100) + '%' +
+    ' · motor STT ' + sttMotorRotulo() +
     ' · microfone ' + (navigator.mediaDevices ? 'disponível' : 'indisponível') +
-    ' · eco ' + (cfg.echoCancellation ? 'sim' : 'não') + ' · ruído ' + (cfg.noiseSuppression ? 'sim' : 'não') + ' · AGC ' + (cfg.autoGainControl ? 'sim' : 'não') +
+    ' · eco ' + (cfg.echoCancellation ? 'sim' : 'não') + ' · ruído ' + (cfg.noiseSuppression ? 'sim' : 'não') + ' · AGC ' + (cfg.autoGainControl ? 'sim' : 'não') + ' · filtro ' + (micFiltroAtivo() ? 'sim' : 'não') +
     (q ? ' · última captura: fala ' + q.falaSeg + ' s, SNR ' + q.snrDb + ' dB' : ' · nenhuma captura nesta sessão') +
     (p ? ' · perfil ativo com ' + p.samples + ' amostra(s)' : ' · sem perfil'));
 };
+const TESTES_VOZ_KEY = 'voz_testes_v1';
+function testesVoz() {
+  try {
+    const l = JSON.parse(store.get(TESTES_VOZ_KEY, '[]'));
+    return Array.isArray(l) ? l.filter((x) => x && typeof x.esperado === 'string' && typeof x.reconhecido === 'string').slice(-20) : [];
+  } catch (e) { return []; }
+}
+function pintarMetricasVoz() {
+  const el = document.getElementById('c-voz-metricas');
+  if (!el) return;
+  const F = window.FalaJarvis;
+  if (!F) { el.textContent = 'Camada de fala não carregou; o teste fica indisponível.'; return; }
+  const m = F.metricas(testesVoz());
+  if (!m.testes) { el.textContent = 'A precisão aparece só depois de comparar uma frase esperada com uma transcrição real.'; return; }
+  el.textContent = 'Testes: ' + m.testes + ' · acerto médio ' + (m.acertoMedio == null ? 'n/d' : Math.round(m.acertoMedio * 100) + '%') +
+    ' · latência média ' + (m.latenciaMediaMs == null ? 'n/d' : m.latenciaMediaMs + ' ms') +
+    (m.audioMedioMs == null ? '' : ' · captura média ' + m.audioMedioMs + ' ms') +
+    (m.bytesMedios == null ? '' : ' · upload médio ' + Math.round(m.bytesMedios / 1024) + ' KB') +
+    ' · último WER ' + (m.ultimoErro == null ? 'n/d' : Math.round(m.ultimoErro * 100) + '%') + '.';
+}
+function statusTesteVoz(texto) { const el = document.getElementById('c-voz-teste-status'); if (el) el.textContent = texto; }
+let testandoTranscricaoVoz = false;
+if (document.getElementById('c-voz-teste-transcrever')) document.getElementById('c-voz-teste-transcrever').onclick = async () => {
+  if (testandoTranscricaoVoz || ocupado) { statusTesteVoz('Pare a conversa atual antes de testar a transcrição.'); return; }
+  const esperado = (document.getElementById('c-voz-teste-esperado').value || '').trim();
+  if (!esperado) { statusTesteVoz('Digite a frase esperada antes de gravar.'); return; }
+  const btn = document.getElementById('c-voz-teste-transcrever');
+  testandoTranscricaoVoz = true; btn.disabled = true;
+  const t0 = Date.now();
+  try {
+    statusTesteVoz('Gravando… fale a frase e faça uma pausa curta.');
+    const reconhecido = await ouvirUmaVez();
+    if (!reconhecido) { statusTesteVoz('Nenhuma transcrição utilizável. Repita em local mais silencioso ou verifique o microfone.'); return; }
+    const latenciaMs = Date.now() - t0;
+    const F = window.FalaJarvis;
+    const acerto = F ? F.acerto(esperado, reconhecido) : null;
+    const erro = F ? F.wer(esperado, reconhecido) : null;
+    const av = ultimaTranscricaoAvaliada;
+    const cap = ultimaCapturaVoz;
+    const lista = testesVoz();
+    lista.push({ em: new Date().toISOString(), esperado: esperado, reconhecido: reconhecido, latenciaMs: latenciaMs, audioMs: cap ? cap.duracaoMs : null, bytes: cap ? cap.bytes : null, motor: av ? av.motor : '', confianca: av ? av.confianca : null });
+    store.set(TESTES_VOZ_KEY, JSON.stringify(lista.slice(-20)));
+    statusTesteVoz('Esperado: “' + esperado + '” · reconhecido: “' + reconhecido + '” · acerto ' +
+      (acerto == null ? 'n/d' : Math.round(acerto * 100) + '%') + ' · WER ' +
+      (erro == null ? 'n/d' : Math.round(erro * 100) + '%') + ' · ' + latenciaMs + ' ms' +
+      (av && av.confiancaPct != null ? ' · confiança ' + av.confiancaPct + '%' : ' · confiança não informada') +
+      (cap ? ' · áudio ' + cap.duracaoMs + ' ms / ' + Math.round(cap.bytes / 1024) + ' KB (' + cap.motor + ')' : ' · captura pelo motor Android, sem arquivo local'));
+    pintarMetricasVoz();
+    registrar('voz', 'teste de transcrição: acerto ' + (acerto == null ? 'n/d' : Math.round(acerto * 100) + '%'));
+  } catch (e) {
+    statusTesteVoz('Falha no teste: ' + ((e && e.message) || e));
+  } finally { testandoTranscricaoVoz = false; btn.disabled = false; }
+};
+if (document.getElementById('c-voz-teste-limpar')) document.getElementById('c-voz-teste-limpar').onclick = () => {
+  store.set(TESTES_VOZ_KEY, '[]'); pintarMetricasVoz(); statusTesteVoz('Histórico de testes limpo; nenhum áudio foi guardado.');
+};
+pintarMetricasVoz();
 const vozLimiarInput = document.getElementById('c-voz-limiar');
 if (vozLimiarInput) vozLimiarInput.oninput = () => {
   store.set('voz_limiar', vozLimiarInput.value);
@@ -6496,7 +6816,13 @@ if (vozLimiarInput) vozLimiarInput.oninput = () => {
 };
 const vozIdentificarInput = document.getElementById('c-voz-identificar');
 if (vozIdentificarInput) vozIdentificarInput.onchange = () => store.set('voz_identificar', vozIdentificarInput.checked ? '1' : '0');
-[['c-mic-ec', 'mic_ec'], ['c-mic-ns', 'mic_ns'], ['c-mic-agc', 'mic_agc']].forEach(([id, chave]) => {
+const sttMotorInput = document.getElementById('c-stt-motor');
+if (sttMotorInput) sttMotorInput.onchange = () => {
+  store.set('stt_motor', sttMotorInput.value);
+  atualizarSttMotorUI();
+  registrar('voz', 'motor de reconhecimento: ' + sttMotorRotulo());
+};
+[['c-mic-ec', 'mic_ec'], ['c-mic-ns', 'mic_ns'], ['c-mic-agc', 'mic_agc'], ['c-mic-filtro', 'mic_filtro']].forEach(([id, chave]) => {
   const el = document.getElementById(id);
   if (el) el.onchange = () => store.set(chave, el.checked ? '1' : '0');
 });
@@ -6820,6 +7146,10 @@ if (window.addEventListener) window.addEventListener('popstate', () => fecharPai
 $('#l-limpar').onclick = () => { store.set('log', '[]'); mostrarLog(); };
 if (!ehAndroid && 'speechSynthesis' in window) speechSynthesis.onvoiceschanged = carregarVozes;
 tictac(); setInterval(tictac, 1000);
+// Recuperação visual leve: nenhuma camada pode ficar presa sem conteúdo.
+setInterval(garantirInterfaceVisivel, 2000);
+if (window.addEventListener) window.addEventListener('pageshow', () => setTimeout(garantirInterfaceVisivel, 250));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(garantirInterfaceVisivel, 120); });
 if (store.get('auto_offline_habilitado', '1') === '1') { if (!navigator.onLine) alternarOfflinePorRede(true); else alternarOfflinePorRede(false); }
 atualizarOfflineUI(); renderTarefas(); renderAtividadesInicio();
 if (SISTEMA && typeof SISTEMA.ao === 'function') {
@@ -7247,15 +7577,13 @@ function definirConversa(ativo, ampliado) {
   const ligado = Boolean(ativo);
   document.body.classList.toggle('modo-conversa', ligado);
   if (ligado) definirChatAmpliado(Boolean(ampliado));
-  const b = $('#btn-conversa');
-  if (b) {
-    b.setAttribute('aria-pressed', String(ligado));
-    b.textContent = ligado ? 'Central' : 'Conversa';
-    b.title = ligado ? 'Voltar à central de comando' : 'Abrir a conversa';
-    b.setAttribute('aria-label', b.title);
+  const trans = $('#btn-transcricao');
+  if (trans) {
+    trans.setAttribute('aria-pressed', String(ligado));
+    trans.classList.toggle('ativo', ligado);
+    trans.title = ligado ? 'Voltar à central' : 'Abrir a transcrição';
+    trans.setAttribute('aria-label', trans.title);
   }
-  const card = $('#dash-conversa');
-  if (card) card.classList.toggle('ativo', ligado);
   if (ligado) {
     const chat = $('#chat');
     if (chat) requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight || 0; });
@@ -7266,19 +7594,27 @@ function definirConversa(ativo, ampliado) {
 }
 function entrarConversa(ampliado) { definirConversa(true, ampliado); }
 function alternarTelaConversa() { definirConversa(!document.body.classList.contains('modo-conversa')); }
-/** Prévia da última fala no card do menu: conferir sem abrir a conversa. */
+/** Resposta atual no centro: o menu acompanha a IA sem abrir a transcrição inteira. */
+function atualizarRespostaCentral(texto, estado) {
+  const caixa = document.getElementById('resposta-atual');
+  const alvo = document.getElementById('resposta-atual-texto');
+  if (!caixa || !alvo) return;
+  const limpo = String(texto == null ? '' : texto).replace(/\s+/g, ' ').trim();
+  if (!limpo) { caixa.hidden = true; return; }
+  alvo.textContent = limpo.length > 260 ? limpo.slice(0, 260) + '…' : limpo;
+  caixa.hidden = false;
+  if (estado) caixa.dataset.estado = estado;
+}
+/** Prévia da última fala: a central mostra a resposta, a transcrição guarda o histórico. */
 function atualizarUltimaConversa() {
-  const el = document.getElementById('dash-ultima');
-  if (!el) return;
   const ultimo = hist.slice().reverse().find((x) => x && x.role === 'assistant');
   let texto = '';
   if (ultimo) {
     try { const o = JSON.parse(ultimo.content); texto = String((o && o.fala) || ''); }
     catch (e) { texto = String(ultimo.content || ''); }
   }
-  el.textContent = texto
-    ? texto.replace(/\s+/g, ' ').slice(0, 110) + (texto.length > 110 ? '…' : '')
-    : 'O histórico completo fica na tela de conversa.';
+  if (texto) atualizarRespostaCentral(texto);
+  else { const caixa = document.getElementById('resposta-atual'); if (caixa) caixa.hidden = true; }
 }
 
 /* ---------- Animações: um conjunto coeso entre as telas ----------
@@ -7771,9 +8107,15 @@ function renderMemoria() {
   if (!lista) return;
   lista.textContent = '';
   const busca = String($('#mem-busca') ? $('#mem-busca').value : '').trim();
-  const notas = busca ? MEM.buscar(busca) : MEM.listar(memTemaAtual());
+  const achados = busca
+    ? (typeof MEM.buscarSemantica === 'function'
+      ? MEM.buscarSemantica(busca, 100)
+      : MEM.buscar(busca).map((n) => ({ nota: n, score: null })))
+    : MEM.listar(memTemaAtual()).map((n) => ({ nota: n, score: null }));
+  const notas = achados.map((x) => x.nota);
   const contagem = $('#mem-contagem');
-  if (contagem) contagem.textContent = notas.length + (notas.length === 1 ? ' nota' : ' notas') + (busca ? ' para “' + busca + '”' : ' em ' + MEM.temaNome(memTemaAtual()));
+  if (contagem) contagem.textContent = notas.length + (notas.length === 1 ? ' nota' : ' notas') +
+    (busca ? ' por significado para “' + busca + '”' : ' em ' + MEM.temaNome(memTemaAtual()));
   if (!notas.length) {
     const vazio = document.createElement('p');
     vazio.className = 'dica mem-vazio';
@@ -7781,7 +8123,8 @@ function renderMemoria() {
     lista.appendChild(vazio);
     return;
   }
-  notas.slice(0, 100).forEach((n) => {
+  achados.slice(0, 100).forEach((achado) => {
+    const n = achado.nota || achado;
     const item = document.createElement('article');
     item.className = 'mem-nota';
     const cab = document.createElement('div');
@@ -7801,7 +8144,10 @@ function renderMemoria() {
     const texto = document.createElement('p');
     texto.textContent = n.texto;
     const meta = document.createElement('small');
-    meta.textContent = new Date(n.atualizado).toLocaleString('pt-BR') + (n.tags.length ? ' · ' + n.tags.join(', ') : '') + ' · ' + (n.origem === 'voz' ? 'anotada por voz' : 'anotada no painel');
+    meta.textContent = new Date(n.atualizado).toLocaleString('pt-BR') +
+      (n.tags.length ? ' · ' + n.tags.join(', ') : '') +
+      ' · ' + (n.origem === 'voz' ? 'anotada por voz' : 'anotada no painel') +
+      (achado.score != null && busca ? ' · relevância ' + Math.round(achado.score * 100) + '%' : '');
     item.append(cab, texto, meta);
     lista.appendChild(item);
   });
@@ -8016,12 +8362,17 @@ function liberarApp() {
   const jaLivre = bootConcluido && (!tela || tela.hidden);
   if (jaLivre) return;
   bootConcluido = true;
-  document.body.classList.remove('travado');
+  if (tela) tela.setAttribute('aria-busy', 'false');
+  // O bloqueio é montado ANTES de liberar o corpo. Antes, o menu aparecia por 520 ms
+  // e só depois era coberto pela tela de bloqueio. O corpo continua travado enquanto
+  // o bloqueio estiver aberto e só é liberado em fecharBloqueio().
+  try { if (bloqueioAtivo()) abrirBloqueio(); }
+  catch (e) { registrar('erro', 'bloqueio: ' + ((e && e.message) || e)); }
+  if (!document.body.classList.contains('bloqueado')) document.body.classList.remove('travado');
   if (tela && !tela.hidden) {
     tela.classList.add('saindo');
-    setTimeout(() => { tela.hidden = true; tela.classList.remove('saindo'); }, 450);
+    setTimeout(() => { tela.hidden = true; tela.classList.remove('saindo'); garantirInterfaceVisivel(); }, 450);
   }
-  setTimeout(() => { try { iniciarBloqueioSeAtivo(); } catch (e) { registrar('erro', 'bloqueio: ' + ((e && e.message) || e)); } }, 520);
 }
 async function finalizarBoot(motivo) {
   bootProgresso(100, motivo || 'Sistemas prontos.');
@@ -8052,6 +8403,7 @@ async function iniciarSequenciaBoot() {
   if (!tela) return liberarApp();
   document.body.classList.add('travado');
   tela.hidden = false;
+  tela.setAttribute('aria-busy', 'true');
   const reduzido = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const pausa = reduzido ? 40 : 360;
   for (let i = 0; i < BOOT_ETAPAS.length && !bootConcluido; i++) {
@@ -8426,8 +8778,12 @@ async function obsReceber() {
     if (!textos.length) { obsStatus('Não consegui ler nenhum arquivo do cofre.', true); return; }
     const imp = MEM.importarMarkdown(textos.join('\n'));
     if (!imp.ok) { obsStatus(imp.erro, true); return; }
-    obsStatus('Lidos ' + lidos + ' arquivo(s): ' + imp.criadas + ' nova(s), ' + imp.repetidas + ' já existente(s), ' + imp.ignoradas + ' ignorada(s).');
-    obsDiag('Importação do cofre: ' + lidos + ' arquivo(s) · ' + new Date().toLocaleString('pt-BR'));
+    const conflitos = imp.conflitos ? imp.conflitos.length : 0;
+    obsStatus('Lidos ' + lidos + ' arquivo(s): ' + imp.criadas + ' nova(s), ' + imp.repetidas +
+      ' já existente(s), ' + imp.ignoradas + ' ignorada(s)' +
+      (conflitos ? ' · ' + conflitos + ' conflito(s) preservado(s), nada foi sobrescrito' : '') + '.',
+      false);
+    obsDiag('Importação do cofre: ' + lidos + ' arquivo(s) · ' + conflitos + ' conflito(s) · ' + new Date().toLocaleString('pt-BR'));
     renderMemoria(); renderObsTopicos();
   } catch (e) {
     obsStatus('Falha ao ler o cofre: ' + ((e && e.message) || e), true);
@@ -8539,7 +8895,9 @@ async function atualizarObsUI() {
     leitor.onload = () => {
       const imp = MEM.importarMarkdown(String(leitor.result || ''));
       if (!imp.ok) { obsStatus(imp.erro, true); return; }
-      obsStatus('Importadas: ' + imp.criadas + ' nova(s), ' + imp.repetidas + ' repetida(s), ' + imp.ignoradas + ' ignorada(s).');
+      const conflitos = imp.conflitos ? imp.conflitos.length : 0;
+      obsStatus('Importadas: ' + imp.criadas + ' nova(s), ' + imp.repetidas + ' repetida(s), ' +
+        imp.ignoradas + ' ignorada(s)' + (conflitos ? ', ' + conflitos + ' conflito(s) preservado(s)' : '') + '.');
       renderMemoria();
     };
     leitor.readAsText(f);
@@ -8549,6 +8907,7 @@ async function atualizarObsUI() {
 /* fim-obsidian */
 
 restaurarHistoricoUI();
+garantirVoltarPaineis();
 msg('sis', saudacaoInicial());
 chavesProntas.then(() => {
   atualizarChipIA();
@@ -8564,8 +8923,20 @@ setTimeout(() => {
   if (bootConcluido || ocupado) return liberarApp();
   try { iniciarSequenciaBoot(); }
   catch (e) { registrar('erro', 'abertura: ' + (e && e.message ? e.message : e)); liberarApp(); }
-}, 700);
+}, 0);
 setTimeout(() => { if (!bootConcluido) { registrar('erro', 'abertura: limite de 45 s atingido'); liberarApp(); } }, 45000);
+// Saída manual visível bem antes do limite duro: se a conferência de voz ou o
+// microfone travarem, o usuário não fica preso numa camada escura.
+setTimeout(() => {
+  if (bootConcluido) return;
+  const pular = $('#boot-pular');
+  if (pular && pular.hidden) {
+    pular.hidden = false;
+    const status = $('#boot-status');
+    if (status) status.textContent = 'A abertura está demorando. Toque em “Continuar sem reconhecer”.';
+    registrar('abertura', 'saída manual liberada após 8 s');
+  }
+}, 8000);
 
 /* ===================== 1.22.0 — Visão 2.0: balões, texto e fala =====================
  * Este bloco substitui as versões antigas de limparBaloes/desenharBaloes/selecionarObjeto

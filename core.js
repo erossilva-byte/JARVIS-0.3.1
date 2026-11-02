@@ -23,6 +23,9 @@
   const LIMITE_PEDIDOS = 32;
   const LIMITE_PROJETOS = 40;
   const LIMITE_DECISOES = 40;
+  // Texto de falha explícita vence um `ok: true` otimista. A lista é estreita de
+  // propósito: "concluído sem falhas" e "0 erros" não podem virar falha.
+  const FALHA_TEXTO = /n[ãa]o (?:foi poss[íi]vel|consegui|conseguimos|reconheci|reconhecemos|est[áa] dispon[íi]vel)|falhou|falha ao|bloquead[oa]|negad[oa]|sem permiss[ãa]o|indispon[íi]vel/i;
 
   const AGENTES = [
     { id: 'principal', nome: 'Principal', dominio: 'coordenação', cobertura: 'parcial',
@@ -275,6 +278,10 @@
       const limitacoes = [];
       if (resultado == null) return { status: 'falhou', evidencias, limitacoes: ['a operação não devolveu resultado'] };
       if (typeof resultado !== 'object') return { status: 'incerto', evidencias: [limitar(resultado, 120)], limitacoes: ['resultado não é um objeto verificável'] };
+      const textoResultado = String(resultado.info || resultado.fala || resultado.mensagem || resultado.resultado || '');
+      if (FALHA_TEXTO.test(textoResultado)) {
+        return { status: 'falhou', evidencias: [limitar(textoResultado, 180)], limitacoes: ['a própria ferramenta informou que não concluiu o efeito'] };
+      }
       const rec = resultado.recibo || null;
       if (rec && rec.estado) {
         if (rec.estado === 'ok') evidencias.push(rec.motivo || 'recibo confirmou o efeito');

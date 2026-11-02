@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.38.1",
-  "versionCode": 10381,
+  "version": "1.42.0",
+  "versionCode": 10420,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
-  "gerado": "2026-11-01",
-  "status": "1.38.1: auditoria de cancelamento, Visão, senha e roteador; APK compilado, assinado e conferido por aapt/apksigner.",
+  "gerado": "2026-11-02",
+  "status": "1.42.0: VAD/WAV 20 s e 16 kHz, seletor de motor STT, wake word parcial e métricas de captura; build CI pendente.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.38.1 (2026-11-01). Corrige cancelamento de tarefa durante a última etapa (o resultado tardio não pode marcar a tarefa como concluída), remove declarações duplicadas da Visão 2.0, limpa a análise anterior ao reabrir o painel de Visão, trata exceções na preparação de ações e elimina o viés de módulo do gerador de senha. O roteador de IA agora descarta IDs de provedor desconhecidos em vez de aceitá-los. Preservados identidade, voz, memória, personalidade, agentes, núcleo 3D, avatar, planos, confirmações e recursos anteriores. Limitações: instalação, microfone, wake word, câmera, acessibilidade, segundo plano e avatar em tela não foram validados em aparelho; chaves/modelos reais, Windows, ESP32 e Home Assistant não foram testados. Preservados também: HUD, plasma, órbita e animação do núcleo.",
+  "notas": "Revisão 1.42.0 (2026-11-02). A captura de comando passou a usar o VAD testável e WAV PCM como caminho principal, com teto de 20 s, reamostragem de 48 kHz para 16 kHz e aplicação real dos controles de eco, ruído, AGC e filtro. Há seletor de motor STT (Automático, Groq, Android e Android local), fallback turbo somente em erro 400 do Groq e trava para não consumir a wake word em parcial que contenha apenas “Jarvis”. O diagnóstico registra duração, bytes, captura média e upload médio. Tudo preserva TTS, agentes, provedores, memória, rotinas, automações e as funções anteriores. A acústica real, a latência de rede e o consumo no Poco X7 continuam sem medição nesta máquina; não há alegação de 100%. Whisper local/sherpa ASR e barge-in continuam fora desta release. Preserva o núcleo holográfico, o plasma e a animação das versões anteriores, além do TTS, agentes, provedores, memória, rotinas e automações. Preserva também o raciocínio em etapas, a personalidade adaptativa e a verificação da resposta da 1.39, além das áreas clicáveis e a abertura sem flash da 1.40.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -15,13 +15,13 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "success",
-    "sha256": "28a87cb3ec4eaa6d890047406c481190ff8868d080391ce679a0cf832ca8af5b",
-    "bytes": 81195283,
-    "arquivo": "jarvis-nova-1.38.1-10381.apk",
-    "data": "2026-11-01",
-    "ambiente": "build local: Android SDK 35, build-tools 35.0.0, JDK 21, Gradle 8.9, assembleDebug",
-    "observacao": "APK 1.38.1 com as correções da auditoria; versionCode 10381, minSdk 26, targetSdk 34, assinatura v2. Sem instalação em aparelho físico."
+    "resultado": "pendente",
+    "sha256": "",
+    "bytes": 0,
+    "arquivo": "jarvis-nova-1.42.0-10420.apk",
+    "data": "2026-11-02",
+    "ambiente": "GitHub Actions release-apk.yml: Ubuntu 24.04, JDK 21, Android SDK 35, assembleDebug",
+    "observacao": "APK 1.42.0 será compilado e publicado pelo release workflow; sem instalação em aparelho físico nesta rodada."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

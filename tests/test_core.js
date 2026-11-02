@@ -32,6 +32,10 @@ const Core = require('../core.js');
     assert.strictEqual(core.verificarResultado('x', null).status, 'falhou');
     assert.strictEqual(core.verificarResultado('x', { ok: true, recibo: { estado: 'incerto', motivo: 'sem prova' } }).status, 'incerto');
     assert.strictEqual(core.verificarResultado('x', { ok: true, info: 'feito' }).status, 'confirmado');
+    // O otimismo do adaptador não pode esconder uma falha escrita na própria resposta.
+    assert.strictEqual(core.verificarResultado('x', { ok: true, info: 'Não consegui abrir a porta' }).status, 'falhou');
+    assert.strictEqual(core.verificarResultado('x', { ok: true, info: 'Concluído sem falhas' }).status, 'confirmado');
+    assert.strictEqual(core.verificarResultado('x', { ok: true, info: 'Não consegui', recibo: { estado: 'ok', motivo: 'recibo otimista' } }).status, 'falhou');
 
     const semExecutor = await core.delegar('diagnostique o sistema');
     assert.strictEqual(semExecutor.status, 'nao_configurado');

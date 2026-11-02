@@ -64,7 +64,8 @@ jobs:
           cp core.js core_ui.js www/
           cp aprendizado.js aprendizado_ui.js www/
           cp arquivos_dev.js www/
-          cp voz_motor.js www/
+          cp voz_motor.js fala.js audio_pcm.js www/
+          cp cognicao.js www/
           cp humor.js www/
           cp identidade.js www/
           cp identidade_ui.js www/
@@ -152,6 +153,21 @@ jobs:
             “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
+
+            **Novidades da 1.42.0:** captura de comando com VAD testável e WAV PCM como caminho principal,
+teto de 20 s, reamostragem para 16 kHz e controles reais de eco/ruído/AGC; seletor de motor STT
+(Automático, Groq, Android e Android local) com fallback turbo explícito; wake word não é mais
+consumida por parcial contendo apenas “Jarvis”; diagnóstico com duração, bytes e métricas de
+captura/upload. A precisão acústica em aparelho físico continua não medida.
+
+**Novidades da 1.41.0:** confiança e hipóteses alternativas do Android
+            preservadas no caminho real; comandos de ação abaixo do limiar pedem repetição;
+            filtro high-pass/compressor na captura e no perfil; WAV PCM de emergência;
+            bloqueio de identidade com indício de replay; teste de transcrição com WER e
+            latência no próprio aparelho. A precisão em PT-BR e o microfone físico ainda
+            não foram medidos nesta máquina.
+
+            **Novidades da 1.40.0:** raciocínio interno em cinco etapas, perfil adaptativo por contexto, memória contextual mais seletiva, verificação/revisão da resposta e controles de profundidade, iniciativa e conversa. O núcleo de ferramentas e as confirmações não mudaram.
 
             **Novidades da 1.38.1:** correção do cancelamento de tarefa durante a etapa em voo, remoção das declarações duplicadas da Visão 2.0, reset da análise ao reabrir a Visão, tratamento de exceções na preparação de ações e sorteio uniforme no gerador de senha. O roteador também descarta provedores desconhecidos.
 

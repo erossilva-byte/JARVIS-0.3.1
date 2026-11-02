@@ -77,4 +77,49 @@ console.log('OK: reinício limpa o estado');
 
 const ruido = Float32Array.from({ length: 1600 }, () => 0.005);
 assert.ok(Math.abs(E.rms(ruido) - 0.005) < 0.001, 'RMS confere');
+/* Detector de fluxo por RMS (usado pelo MediaRecorder): piso adaptativo,
+   confirmação, blip, sem-fala, teto, sensibilidade e reinício. */
+function passosD(det, valor, vezes, t, passo) {
+  let r = det.status ? det.status() : null;
+  for (let i = 0; i < vezes; i++) { r = det.processar(valor, t); t += passo || 50; }
+  return { r, t };
+}
+let d = E.criarDetectorRms({ calibracaoMs: 300, minRms: 0.01, ratio: 2, sensibilidade: 1,
+  confirmacaoMs: 180, minFalaMs: 200, silencioMs: 500, semFalaMs: 3000, maxMs: 10000 });
+let t = 0, q;
+({ r: q, t } = passosD(d, 0.003, 6, t));
+({ r: q, t } = passosD(d, 0.08, 10, t));
+({ r: q, t } = passosD(d, 0.003, 22, t));
+assert.strictEqual(q.fim, true, 'detector de fluxo termina');
+assert.strictEqual(q.motivo, 'silencio', 'detector termina por silêncio: ' + q.motivo);
+assert.strictEqual(q.ouviu, true, 'detector confirma fala');
+assert.ok(q.falaMs >= 200, 'detector contabiliza fala: ' + q.falaMs);
+console.log('OK: detector de fluxo adaptativo confirma e encerra por silêncio');
+
+let dn = E.criarDetectorRms({ calibracaoMs: 200, minRms: 0.01, semFalaMs: 3000, maxMs: 10000 });
+t = 0; ({ r: q, t } = passosD(dn, 0.002, 70, t));
+assert.strictEqual(q.motivo, 'sem-fala', 'silêncio não vira fala');
+assert.strictEqual(q.ouviu, false);
+console.log('OK: detector de fluxo não grava silêncio');
+
+let db = E.criarDetectorRms({ calibracaoMs: 200, minRms: 0.01, confirmacaoMs: 180, semFalaMs: 3000 });
+t = 0; ({ r: q, t } = passosD(db, 0.002, 6, t)); ({ r: q, t } = passosD(db, 0.08, 2, t)); ({ r: q, t } = passosD(db, 0.002, 60, t));
+assert.strictEqual(q.ouviu, false, 'blip curto não confirma fala');
+assert.strictEqual(q.motivo, 'sem-fala');
+console.log('OK: detector de fluxo ignora blip curto');
+
+const baixa = E.criarDetectorRms({ calibracaoMs: 200, minRms: 0.01, sensibilidade: 0.7 });
+const alta = E.criarDetectorRms({ calibracaoMs: 200, minRms: 0.01, sensibilidade: 1.6 });
+let rb, ra; t = 0;
+for (let i = 0; i < 6; i++) { rb = baixa.processar(0.003, t); ra = alta.processar(0.003, t); t += 50; }
+assert.ok(alta.status().limiar < baixa.status().limiar, 'mais sensibilidade reduz o limiar');
+console.log('OK: sensibilidade altera o limiar do detector');
+
+let dm = E.criarDetectorRms({ calibracaoMs: 200, minRms: 0.01, maxMs: 1200, semFalaMs: 3000 });
+t = 0; ({ r: q, t } = passosD(dm, 0.002, 6, t)); ({ r: q, t } = passosD(dm, 0.08, 20, t));
+assert.strictEqual(q.motivo, 'maximo', 'teto do detector: ' + q.motivo);
+dm.reiniciar();
+assert.strictEqual(dm.status().fim, false);
+console.log('OK: detector de fluxo respeita teto e reinício');
+
 console.log('\ntest_escuta: todos os grupos passaram');

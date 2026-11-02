@@ -78,19 +78,22 @@ checagens = {
         and 'abrirInformacoes()' in app),
 
     # 3. Chat: histórico inteiro e conversa em tela própria
-    "Chat saiu do menu: conversa tem tela própria": (
+    "Chat saiu do menu: transcrição é a tela secundária": (
         'body:not(.modo-conversa) .chat-area' in css and 'body.modo-conversa #chat{max-height:none' in css
-        and 'function definirConversa' in app and 'id="btn-conversa"' in html
-        and 'id="dash-conversa"' in html),
+        and 'function definirConversa' in app and 'id="btn-transcricao"' in html
+        and 'id="chat-area"' in html and 'id="resposta-atual"' in html
+        and 'id="btn-conversa"' not in html and 'id="dash-conversa"' not in html),
     "Rolagem não é mais limitada por dvh nem por clip de pintura": (
         '#chat{contain:none;' in css
         and css.count('body:not(.modo-conversa) #chat{max-height:') == 4
         and 'contain:layout paint' not in css.split('body.chat-ampliado #chat')[0].split('#chat{')[-1]),
     "Fim da última mensagem não fica cortado": (
         'requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight || 1e9; })' in app),
-    "Entrar na conversa também pelo microfone e pelo comando": (
-        'function ciclo() {\n  vibrar(12);\n  entrarConversa();' in app
-        and 'entrarConversa();   // a resposta aparece na tela de conversa, não no menu' in app),
+    "Comandos e voz respondem no núcleo sem abrir o chat": (
+        'function ciclo() {' in app
+        and 'entrarConversa();' not in app.split('function ciclo() {', 1)[1].split('function enviarComando', 1)[0]
+        and 'function enviarComando' in app
+        and "atualizarRespostaCentral('Processando o comando…', 'processando');" in app),
 
     # 4. Duplicação de mensagens e de falas
     "Portão de eco único no núcleo": (

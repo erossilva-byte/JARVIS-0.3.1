@@ -1,4 +1,38 @@
-# J.A.R.V.I.S. Nova 1.38.1
+# J.A.R.V.I.S. Nova 1.42.0
+
+## 1.42.0 — Voz: VAD/WAV, motor STT selecionável e métricas
+
+Esta revisão fecha os problemas encontrados no caminho real de comando. A captura normal passou a usar o VAD testável e WAV PCM, com teto de 20 s, reamostragem para 16 kHz e aplicação dos controles de eco, supressão de ruído, AGC e filtro. O usuário escolhe entre Automático, Groq, Android e Android local; o fallback Android não acontece mais quando o motor Groq foi selecionado, e um parcial contendo apenas “Jarvis” não consome a ativação antes do comando.
+
+O diagnóstico registra duração do áudio, bytes enviados, captura média e upload médio. O APK 1.42.0 é compilado pelo release workflow com JDK 21 e Android SDK 35; o hash e o tamanho são registrados após a publicação. A instalação, o microfone, a wake word, o TTS, a câmera, o segundo plano e o desempenho no Poco X7 continuam **sem validação física** nesta máquina; a precisão acústica em PT-BR também não foi medida.
+
+## 1.41.0 — Voz PT-BR: confiança, filtros, replay e diagnóstico
+
+Esta revisão ataca o caminho real de voz, não só a interface. O reconhecedor do Android agora devolve a confiança e até cinco hipóteses alternativas; o app usa esses sinais para recusar comandos de ação abaixo de 45% e pedir repetição, sem inventar confiança quando o motor não a fornece. O Whisper da Groq continua sendo o motor de maior qualidade quando há chave e rede; o Android local/online continua sendo o fallback.
+
+A captura normal ganhou um filtro high-pass de 85 Hz e um compressor suave antes do `MediaRecorder`; o perfil de locutor usa a mesma cadeia. O centroide do perfil passou a ponderar as amostras por SNR e duração, e um indício de reprodução agora impede a confirmação de identidade em vez de ser apenas exibido. Quando o WebView não oferece `MediaRecorder`, um caminho WAV PCM de emergência usa o VAD já existente.
+
+Em Ajustes ▸ Voz há um teste de transcrição: você digita a frase esperada, grava, e o app mostra o reconhecido, o acerto por palavra (WER), a latência real e a confiança quando disponível. O histórico fica local e pode ser apagado. Não há taxa de acerto de campo nesta revisão: a suíte prova o contrato e o cálculo, não a acústica do seu aparelho.
+
+O APK 1.41.0 tem **81.220.373 bytes** e SHA-256 `d05aab92eb158a27e50fcd249dc2ff64e89927aa8167371b07acc787e0b32953`; é debug/CI, compilado com Android SDK 35, build-tools 35.0.0, JDK 21 e Gradle 8.9. Os assets foram conferidos dentro do pacote: `app.js` com `VERSAO_APP = '1.41.0'`, `fala.js` 1.1.0, `audio_pcm.js` e `index.html` com os controles novos. O `aapt` confirma `com.jarvis.nova`, versionCode 10410, minSdk 26, targetSdk 34. Ele **não foi instalado em aparelho físico**; instalação, microfone, wake word, TTS, câmera, segundo plano e desempenho continuam sem validação física nesta máquina. A instalação, o microfone físico, a wake word, o TTS, a câmera, o segundo plano e o desempenho no Poco X7 continuam **sem validação física** nesta máquina.
+
+## 1.40.0 — Núcleo protagonista, áreas corrigidas e abertura limpa
+
+Esta revisão coloca o núcleo no centro do menu e remove a opção independente **Conversa**. O chat, o histórico, a transcrição, o microfone, os comandos digitados e as respostas faladas continuam funcionando; a transcrição virou uma tela secundária, aberta pelo botão próprio, pelo cartão de última resposta ou pelo cartão de acessos.
+
+As **Áreas** foram corrigidas na origem: o `<body>` recebia `data-modo` e a delegação tratava qualquer clique como troca de modo, retornando antes da ação. O seletor agora aceita somente `.modo-btn[data-modo]`, o cartão tem listener direto e o clique em nó de texto da WebView sobe para o elemento. Os 10 cartões e as 44 ações são exercitados por `tests/test_interface_dom.js` (80 verificações em jsdom).
+
+O **flash de abertura** vinha de `#boot` começar oculto, do menu aparecer e de o boot só iniciar 700 ms depois; o bloqueio ainda era aberto 520 ms depois de o boot sumir. Agora o boot nasce visível, o corpo nasce travado, o boot roda no primeiro ciclo e o bloqueio é montado antes de liberar o corpo.
+
+Preservados Obsidian, bloqueio opcional, provedores, humor, voz, pessoas, perfis, memória, executores e confirmações. O APK 1.40.0 tem 81.404.118 bytes e SHA-256 `307245cfcde586f92dc4122d24a539996ad7be8afe237226da075b0c6796dffb`; é debug/CI e os assets foram conferidos dentro do pacote (app.js 1.40.0, index.html 1.40.0 e a correção de `.modo-btn[data-modo]`). Ele não foi instalado em aparelho físico. A instalação, o toque real no WebView, o microfone, a wake word, o TTS, a câmera, o segundo plano e o desempenho no Poco X7 continuam **sem validação física** nesta máquina.
+
+## 1.39.0 — Raciocínio em etapas e personalidade adaptativa
+
+Esta revisão acrescenta uma camada cognitiva determinística antes e depois da IA. Ela identifica intenção, complexidade, pressa, assunto sensível, referências e necessidade de pesquisa, cálculo ou ferramenta; monta um plano interno de cinco etapas; seleciona o histórico relevante; e verifica/revisa a fala contra respostas vazias, aberturas genéricas, repetição e alegação de execução não feita.
+
+A personalidade ganhou três controles persistidos em Ajustes ▸ IA: profundidade, iniciativa e comportamento conversacional. Os três níveis de humor e os seis eixos existentes foram preservados. O Hermes, o Core, o catálogo de ferramentas, as confirmações, a memória, a voz, o avatar e o núcleo 3D não foram substituídos.
+
+O módulo e os testes estão em `cognicao.js`, `tests/test_cognicao.js` e `tests/test_v1_39_0.py`; a arquitetura e as limitações estão em `docs/COGNICAO-1.39.0.md`. O APK 1.39.0 tem 81.202.290 bytes e SHA-256 `39341a23fc2bf16680ee89b74b9109799d6b08669755e53695a9241c81f3bcce`; é debug/CI, assinado com a chave de CI, e não foi instalado em aparelho físico.
 
 ## 1.38.1 — Auditoria corretiva
 

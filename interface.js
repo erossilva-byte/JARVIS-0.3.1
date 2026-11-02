@@ -154,7 +154,8 @@
   }
 
   function pintarBotoesModo() {
-    var botoes = doc.querySelectorAll('[data-modo]');
+    // Só botões: o body também carrega data-modo como estado global.
+    var botoes = doc.querySelectorAll('.modo-btn[data-modo]');
     for (var i = 0; i < botoes.length; i++) {
       var ativo = botoes[i].getAttribute('data-modo') === modoAtual;
       botoes[i].classList.toggle('ativo', ativo);
@@ -196,11 +197,14 @@
     var grade = doc.getElementById('areas-grid');
     if (!grade || grade.getAttribute('data-pronto') === '1') return;
     grade.textContent = '';
-    AREAS.forEach(function (area) {
+    AREAS.forEach(function (area, indice) {
       var b = el('button', 'area-card');
       b.type = 'button';
       b.setAttribute('data-area', area.id);
-      b.setAttribute('aria-label', area.nome + ': ' + area.desc);
+      b.setAttribute('data-area-abrir', area.id);
+      b.setAttribute('data-indice', ('0' + (indice + 1)).slice(-2));
+      b.setAttribute('aria-controls', 'areas-detalhe');
+      b.setAttribute('aria-label', area.nome + ': ' + area.desc + '. Abrir a área.');
       var topo = el('span', 'area-card-topo');
       topo.appendChild(el('span', 'area-card-icone', area.icone));
       topo.appendChild(el('span', 'area-card-nome', area.nome));
@@ -208,6 +212,13 @@
       b.appendChild(topo);
       b.appendChild(el('span', 'area-card-desc', area.desc));
       b.appendChild(el('span', 'area-card-meta', area.acoes.length + ' acesso(s)'));
+      // Listener direto além da delegação: alguns WebViews Android entregam o toque
+      // no texto interno e não deixam o evento subir de forma confiável. O cartão
+      // responde mesmo quando o alvo é o ícone, o nome ou a descrição.
+      b.addEventListener('click', function (evento) {
+        if (evento) { evento.preventDefault(); evento.stopPropagation(); }
+        abrirArea(area.id);
+      });
       grade.appendChild(b);
     });
     grade.setAttribute('data-pronto', '1');
@@ -275,7 +286,10 @@
     montarDetalhe(area);
     inicio.hidden = true;
     detalhe.hidden = false;
-    if (detalhe.scrollIntoView) detalhe.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    var painel = doc.getElementById('painel-areas');
+    if (painel) painel.scrollTop = 0;
+    var st = doc.getElementById('areas-status');
+    if (st) st.textContent = area.nome + ': ' + area.acoes.length + ' acesso(s). Escolha uma função ou volte ao mapa.';
   }
 
   function acao(nome) {
@@ -288,19 +302,27 @@
   }
 
   function init() {
+    // init idempotente: DOMContentLoaded + chamada tardia não podem duplicar listeners.
+    if (doc.documentElement.getAttribute('data-jarvis-ui') === '1') return;
+    doc.documentElement.setAttribute('data-jarvis-ui', '1');
     montarGrade();
     aplicarModo(lerModo(), { salvar: false });
     doc.addEventListener('click', function (e) {
-      var alvo = e.target.closest ? e.target : null;
-      if (!alvo) return;
-      var modo = alvo.closest('[data-modo]');
+      // Em WebView antigo o alvo pode chegar como nó de texto. Sobe para o elemento
+      // antes de procurar o controle; antes, o clique era simplesmente descartado.
+      var alvo = e && e.target;
+      if (alvo && alvo.nodeType !== 1) alvo = alvo.parentElement || null;
+      if (!alvo || !alvo.closest) return;
+      var modo = alvo.closest('.modo-btn[data-modo]');
       if (modo) { aplicarModo(modo.getAttribute('data-modo')); return; }
-      var area = alvo.closest('[data-area]');
-      if (area && !area.hasAttribute('data-area-acao')) { abrirArea(area.getAttribute('data-area')); return; }
-      var voltar = alvo.closest('[data-area-voltar]');
-      if (voltar) { abrirArea(''); return; }
+      // A ação tem prioridade sobre o cartão: um dia um controle pode ficar dentro
+      // de um contêiner marcado com data-area, e o clique não deve abrir a área.
       var acaoEl = alvo.closest('[data-area-acao]');
       if (acaoEl) { acao(acaoEl.getAttribute('data-area-acao')); return; }
+      var voltar = alvo.closest('[data-area-voltar]');
+      if (voltar) { abrirArea(''); return; }
+      var area = alvo.closest('[data-area-abrir]') || alvo.closest('[data-area]');
+      if (area && !area.hasAttribute('data-area-acao')) { abrirArea(area.getAttribute('data-area') || area.getAttribute('data-area-abrir')); return; }
       var abrir = alvo.closest('[data-abrir-areas]');
       if (abrir && raiz.JarvisNavegacao) raiz.JarvisNavegacao.abrirAreas();
     });

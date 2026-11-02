@@ -1,4 +1,4 @@
-name: Build e testes do J.A.R.V.I.S. Nova 1.38.1
+name: Build e testes do J.A.R.V.I.S. Nova 1.42.0
 
 on:
   workflow_dispatch:
@@ -10,6 +10,8 @@ on:
       - '.github/workflows/build-apk.yml'
       - 'app.js'
       - 'identidade.js'
+      - 'fala.js'
+      - 'audio_pcm.js'
       - 'identidade_ui.js'
       - 'escuta.js'
       - 'agentes.js'
@@ -38,7 +40,7 @@ concurrency:
 
 jobs:
   build:
-    name: Testar e compilar APK debug 1.23.1
+    name: Testar e compilar APK debug 1.42.0
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -100,7 +102,8 @@ jobs:
           cp core.js core_ui.js www/
           cp aprendizado.js aprendizado_ui.js www/
           cp arquivos_dev.js www/
-          cp voz_motor.js www/
+          cp voz_motor.js fala.js audio_pcm.js www/
+          cp cognicao.js www/
           cp humor.js www/
           cp identidade.js www/
           cp identidade_ui.js www/
@@ -156,7 +159,7 @@ jobs:
       - name: Publicar APK e checksum
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-Nova-1.38.1-APK
+          name: JARVIS-Nova-1.42.0-APK
           if-no-files-found: error
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk

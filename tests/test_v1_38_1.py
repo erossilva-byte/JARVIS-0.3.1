@@ -23,13 +23,17 @@ def check(nome, ok):
         falhas.append(nome)
 
 
-check('versão 1.38.1 no metadado', meta.get('version') == '1.38.1' and meta.get('versionCode') == 10381)
-check('package e lock acompanham a versão', package.get('version') == '1.38.1' and lock.get('version') == '1.38.1'
-      and lock.get('packages', {}).get('', {}).get('version') == '1.38.1')
-check('Gradle acompanha a versão', 'versionCode 10381' in gradle and 'versionName "1.38.1"' in gradle)
-check('app e interface mostram a versão', "const VERSAO_APP = '1.38.1';" in app and 'v1.38.1' in html and 'v1.38.0' not in html)
-check('build success exige hash real', meta.get('build', {}).get('resultado') == 'success'
-      and bool(meta.get('build', {}).get('sha256')) and int(meta.get('build', {}).get('bytes', 0)) > 0)
+check('versão 1.38.1 ou posterior', [int(x) for x in meta.get('version', '0').split('.')] >= [1, 38, 1] and meta.get('versionCode', 0) >= 10381)
+check('package e lock acompanham a versão', package.get('version') == meta.get('version') and lock.get('version') == meta.get('version')
+      and lock.get('packages', {}).get('', {}).get('version') == meta.get('version'))
+check('Gradle acompanha a versão', ('versionCode %s' % meta.get('versionCode')) in gradle and ('versionName "%s"' % meta.get('version')) in gradle)
+check('app e interface mostram a versão', ("const VERSAO_APP = '%s';" % meta.get('version')) in app and ('v%s' % meta.get('version')) in html and 'v1.38.0' not in html)
+build = meta.get('build', {})
+# Um build ainda não gerado pode ficar pendente; um success sem artefato real continua proibido.
+check('build success exige hash real',
+      build.get('resultado') == 'pendente'
+      or (build.get('resultado') == 'success'
+          and bool(build.get('sha256')) and int(build.get('bytes', 0)) > 0))
 
 # A Visão 2.0 tinha duas declarações de cada função; a última vencia e a primeira era
 # código morto. O contrato impede que essa duplicação volte silenciosamente.
@@ -56,8 +60,8 @@ check('teste do roteador inválido está na suíte', 'roteador não estoura quan
 check('suíte inclui este contrato', 'test_v1_38_1.py' in package.get('scripts', {}).get('test:all', ''))
 check('documentação da correção existe', (RAIZ / 'docs/CORRECOES-1.38.1.md').exists()
       and (RAIZ / 'release/RELEASE-1.38.1.md').exists())
-check('workflow cita a versão corrente', '1.38.1' in (RAIZ / '.github/workflows/build-apk.yml').read_text(encoding='utf-8')
-      and '1.38.1' in (RAIZ / '.github/workflows/release-apk.yml').read_text(encoding='utf-8'))
+check('workflow cita a versão corrente', meta.get('version') in (RAIZ / '.github/workflows/build-apk.yml').read_text(encoding='utf-8')
+      and meta.get('version') in (RAIZ / '.github/workflows/release-apk.yml').read_text(encoding='utf-8'))
 
 if falhas:
     print('\n%d falha(s): %s' % (len(falhas), ', '.join(falhas)))

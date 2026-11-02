@@ -13,14 +13,18 @@
 <link rel="stylesheet" href="interface.css">
 <link rel="stylesheet" href="core.css">
 </head>
-<body data-state="idle">
-<div id="boot" class="boot" hidden>
+<body data-state="idle" class="travado">
+<div id="boot" class="boot" aria-busy="true" aria-label="Inicializando o J.A.R.V.I.S. Nova">
+  <div class="boot-grade" aria-hidden="true"></div>
   <div class="boot-nucleo" aria-hidden="true">
+    <span class="bn-orbita bn-orbita-a"></span><span class="bn-orbita bn-orbita-b"></span>
     <span class="bn-aro bn1"></span><span class="bn-aro bn2"></span><span class="bn-aro bn3"></span><span class="bn-nucleo"></span>
   </div>
+  <p class="boot-kicker">STARK INDUSTRIES · NÚCLEO DE COMANDO</p>
   <p class="boot-marca">J.A.R.V.I.S. NOVA</p>
   <div id="boot-barra" class="boot-barra" role="progressbar" aria-label="Inicialização do sistema" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="boot-preenche"></span></div>
   <p id="boot-status" class="boot-status" role="status" aria-live="polite">Iniciando o núcleo…</p>
+  <div class="boot-telemetria" aria-hidden="true"><span>ARC 01</span><span>IA CORE</span><span>VOZ</span><span>SENSORES</span></div>
   <p id="boot-voz" class="boot-voz" hidden>Fale para eu confirmar a sua voz.</p>
   <div class="boot-acoes">
     <button id="boot-tentar" type="button" class="secundario" hidden>Analisar minha voz de novo</button>
@@ -34,7 +38,9 @@
       <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3"/></svg><span>Parar</span>
     </button>
     <button id="btn-areas" class="wake-toggle areas-toggle" type="button" title="Abrir as áreas do sistema" aria-label="Abrir as áreas do sistema">Áreas</button>
-    <button id="btn-conversa" class="wake-toggle" type="button" title="Abrir a conversa" aria-label="Abrir a conversa" aria-pressed="false">Conversa</button>
+    <button id="btn-transcricao" class="icone transcricao-toggle" type="button" title="Abrir a transcrição" aria-label="Abrir a transcrição" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+    </button>
     <button id="btn-wake-toggle" class="wake-toggle" type="button" title="Pausar ativação por voz" aria-label="Pausar ativação por voz" aria-pressed="false" hidden><span class="wake-dot"></span><span id="wake-toggle-text">Escuta ativa</span></button>
     <button id="btn-chat-ampliado" class="icone" type="button" title="Ampliar a conversa" aria-label="Ampliar a conversa" aria-pressed="false">
       <svg class="ic-expandir" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/><path d="M3 3l6 6M21 3l-6 6M3 21l6-6M21 21l-6-6"/></svg>
@@ -125,7 +131,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.38.1</span>
+      <span class="orb-sub" aria-hidden="true">v1.42.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -138,6 +144,11 @@
       <span class="chip" id="chip-temp">-- °C</span>
       <span class="chip" id="chip-chuva">chuva --%</span>
       <span class="chip seguro" id="chip-seg">proteção ativa</span>
+    </div>
+    <div id="resposta-atual" class="resposta-atual" hidden role="status">
+      <span class="ra-eyebrow">ÚLTIMA RESPOSTA</span>
+      <p id="resposta-atual-texto"></p>
+      <button type="button" class="ra-transcricao" data-abrir-transcricao>Transcrição completa <span aria-hidden="true">›</span></button>
     </div>
     <div id="modos-uso" class="modos-uso" role="group" aria-label="Modo de uso">
       <button type="button" class="modo-btn" data-modo="completo" aria-pressed="true"><span aria-hidden="true">◎</span><b>Completo</b></button>
@@ -181,10 +192,10 @@
       </div>
     </div>
     <div class="dash-card atalhos">
-      <div class="dash-head"><span class="dash-eyebrow">CONVERSA E INFORMAÇÕES</span></div>
-      <button id="dash-conversa" class="atalho-dash" type="button"><b>Conversa</b><small id="dash-ultima">O histórico completo fica na tela de conversa.</small></button>
+      <div class="dash-head"><span class="dash-eyebrow">ACESSOS DIRETOS</span><span class="dash-signal" aria-hidden="true"></span></div>
       <button id="dash-visao" class="atalho-dash" type="button"><b>Visão</b><small>Câmera, sessão contínua, troca frontal/traseira e captura de tela do PC</small></button>
       <button id="dash-info" class="atalho-dash" type="button"><b>Informações</b><small>Bateria · memória · armazenamento · conexões · clima · manchetes</small></button>
+      <button class="atalho-dash" type="button" data-abrir-transcricao><b>Transcrição</b><small>Histórico, mensagens e comandos anteriores em uma tela secundária.</small></button>
     </div>
     <div class="dash-card atividades">
       <div class="dash-head"><span class="dash-eyebrow">ATIVIDADES</span><button id="dash-abrir-areas" class="mini" type="button" data-abrir-areas="1">Áreas ›</button></div>
@@ -193,7 +204,10 @@
     </div>
   </section>
 
-  <div class="chat-area"><div class="fade"></div><section id="chat" aria-live="polite"></section></div>
+  <div id="chat-area" class="chat-area">
+    <div class="chat-cab"><div><span class="eyebrow">REGISTRO DE COMANDO</span><b>Transcrição</b></div><button id="btn-transcricao-voltar" type="button">‹ Central</button></div>
+    <div class="fade"></div><section id="chat" aria-live="polite"></section>
+  </div>
   <div class="context-tools" aria-label="Controles de contexto da conversa">
     <label title="Quando desativado, o Jarvis só recebe a mensagem atual."><input id="ctx-historico" type="checkbox" checked><span>Contexto da conversa</span></label>
     <label title="Permite incluir a memória pessoal editada nos ajustes nesta conversa."><input id="ctx-memoria" type="checkbox" checked><span>Memória pessoal</span></label>
@@ -227,7 +241,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.38.1</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.42.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -284,6 +298,13 @@
     </details>
     <div id="c-personalidade-preview" class="personalidade-preview" aria-live="polite"><b>Prévia da personalidade</b><p>Altere o humor ou o estilo para ver como o J.A.R.V.I.S. deve responder.</p></div>
     <label>Estilo de resposta<select id="c-estilo"><option value="equilibrado">Equilibrado</option><option value="formal">Formal e objetivo</option><option value="amigavel">Amigável e descontraído</option><option value="tecnico">Técnico e detalhado</option></select></label>
+    <details class="pers-controles" open>
+      <summary>Raciocínio, profundidade e iniciativa</summary>
+      <p class="dica">Estes controles mudam como o JARVIS organiza o turno antes de responder. O plano interno não é exibido; a decisão final continua no Hermes e no núcleo de ferramentas.</p>
+      <label>Profundidade das respostas<select id="c-cog-profundidade"><option value="curta">Curta — direto ao ponto</option><option value="equilibrada">Equilibrada — explica o necessário</option><option value="detalhada">Detalhada — causa, alternativas e verificação</option></select></label>
+      <label>Nível de iniciativa<select id="c-cog-iniciativa"><option value="baixa">Baixa — só responde ao pedido</option><option value="normal">Normal — sugere o próximo passo</option><option value="alta">Alta — antecipa etapas e alertas</option></select></label>
+      <label>Comportamento conversacional<select id="c-cog-conversa"><option value="natural">Natural — acompanha o fio da conversa</option><option value="objetiva">Objetiva — menos rodeio, foco no resultado</option></select></label>
+    </details>
     <label>Cidade usada para o clima<input id="c-cidade" type="text" placeholder="São Paulo"></label>
   </section>
 
@@ -326,12 +347,15 @@
     <label>Perfil ativo<select id="c-voz-perfil-ativo"></select></label>
     <label>Limiar de decisão <output id="c-voz-limiar-valor">72%</output><input id="c-voz-limiar" type="range" min="0.55" max="0.9" step="0.01" value="0.72"></label>
     <label class="linha"><input id="c-voz-identificar" type="checkbox" checked><span>Identificar entre os perfis cadastrados<small>Com mais de um perfil, compara todos e exige margem entre o primeiro e o segundo. Uma voz parecida com duas pessoas resulta em inconclusivo.</small></span></label>
+    <label>Motor de reconhecimento de fala<select id="c-stt-motor"><option value="auto">Automático — Whisper quando houver chave; Android como reserva</option><option value="groq">Groq Whisper — nuvem, máxima precisão, exige chave</option><option value="android">Android — reconhecedor do aparelho, pode usar rede</option><option value="android-local">Android local — pacote de português offline</option></select></label>
+    <p id="c-stt-motor-status" class="dica" role="status" aria-live="polite">Automático: usa o Whisper da Groq quando há chave e internet; sem chave ou offline, usa o reconhecimento do Android.</p>
     <div class="botoes">
       <label class="linha"><input id="c-mic-ec" type="checkbox" checked><span>Cancelar eco</span></label>
       <label class="linha"><input id="c-mic-ns" type="checkbox" checked><span>Suprimir ruído</span></label>
-      <label class="linha"><input id="c-mic-agc" type="checkbox" checked><span>Ganho automático</span></label>
+      <label class="linha"><input id="c-mic-agc" type="checkbox" checked><span>Ganho automático</span></label><label class="linha"><input id="c-mic-filtro" type="checkbox" checked><span>Filtro de graves e compressor<small>Remove ruído de sala e aproxima a voz baixa sem saturar. Pode ser desligado se o aparelho tiver processamento próprio.</small></span></label>
     </div>
     <p id="c-voz-qualidade" class="dica" role="status" aria-live="polite">Nenhuma captura nesta sessão. O relatório mostra duração de fala, SNR, clipping e pitch.</p>
+    <div class="info-card"><span class="info-icon">◈</span><div><b>Teste de transcrição e precisão</b><p class="dica">Digite a frase que vai falar, inicie o teste e compare o esperado com o reconhecido. O cálculo usa distância por palavra (WER) e a latência real da captura até o texto; nada de precisão inventada.</p><label>Frase esperada<input id="c-voz-teste-esperado" type="text" maxlength="180" autocomplete="off" placeholder="Ex.: Jarvis, abre o Spotify"></label><div class="botoes"><button id="c-voz-teste-transcrever" type="button" class="secundario">Testar transcrição agora</button><button id="c-voz-teste-limpar" type="button" class="secundario">Limpar histórico de testes</button></div><p id="c-voz-teste-status" class="dica" role="status" aria-live="polite">Nenhum teste de transcrição nesta sessão.</p><p id="c-voz-metricas" class="dica" role="status" aria-live="polite">A precisão aparece só depois de comparar uma frase esperada com uma transcrição real.</p></div></div>
     <p id="c-voz-perfil-status" class="dica" role="status" aria-live="polite">Nenhum perfil vocal salvo.</p>
     <div id="c-voz-perfis" class="pessoas-lista" aria-live="polite"></div>
     <label>Quando conferir a voz<select id="c-wake-perfil-modo"><option value="sessao">Uma vez por sessão (primeiro acesso e depois de ligar o celular)</option><option value="sempre">Em toda ativação</option></select></label>
@@ -562,11 +586,11 @@
 </aside>
 
 <aside id="painel-areas" class="painel painel-areas" hidden aria-label="Áreas do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · MAPA OPERACIONAL</p><h2>Áreas</h2></div><span class="versao-chip">v1.38.1</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · MAPA OPERACIONAL</p><h2>Áreas</h2></div><span class="versao-chip">v1.42.0</span></div>
   <section class="grupo areas-shell">
     <div id="areas-inicio">
       <p class="dica">Dez áreas, cada uma com suas funções. Os painéis antigos continuam disponíveis; esta camada apenas organiza o acesso e evita misturar ferramentas de assuntos diferentes.</p>
-      <div id="areas-grid" class="areas-grid"></div>
+        <div id="areas-grid" class="areas-grid"></div>
       <p class="dica">O modo de uso escolhido fica salvo no aparelho. O modo silencioso suprime a fala, mas mantém o texto e os controles.</p>
     </div>
     <div id="areas-detalhe" hidden></div>
@@ -577,7 +601,7 @@
 
 
 <aside id="painel-sistema" class="painel painel-sistema" hidden aria-label="Central operacional do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · NÚCLEO OPERACIONAL</p><h2>Central do sistema</h2></div><span class="versao-chip">v1.38.1</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · NÚCLEO OPERACIONAL</p><h2>Central do sistema</h2></div><span class="versao-chip">v1.42.0</span></div>
   <section class="grupo" data-category="sistema-nucleo">
     <h3>Estado do núcleo</h3>
     <p id="sis-status" class="dica" role="status" aria-live="polite">Carregando ferramentas e tarefas…</p>
@@ -633,7 +657,7 @@
 </aside>
 
 <aside id="painel-core" class="painel painel-core" hidden aria-label="JARVIS Core: agentes, contexto e saúde">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CORE</p><h2>JARVIS Core</h2></div><span class="versao-chip">v1.38.1</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CORE</p><h2>JARVIS Core</h2></div><span class="versao-chip">v1.42.0</span></div>
   <section class="grupo">
     <div class="core-hero">
       <p id="core-status" class="core-status" role="status" aria-live="polite">Consultando o Core…</p>
@@ -739,7 +763,7 @@
 </aside>
 
 <aside id="painel-pessoas" class="painel painel-pessoas" hidden aria-label="Identificação de pessoas do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · IDENTIFICAÇÃO DE PESSOAS</p><h2>Pessoas</h2></div><span class="versao-chip">v1.38.1 · local</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · IDENTIFICAÇÃO DE PESSOAS</p><h2>Pessoas</h2></div><span class="versao-chip">v1.42.0 · local</span></div>
   <section class="grupo" id="idp-inicio">
     <p class="dica">Cada pessoa tem um perfil próprio: foto, informações, campos personalizados e perfil de voz. O reconhecimento compara vetores de características no aparelho — o áudio nunca é guardado e nada é enviado a provedores sem sua autorização. Em dúvida, o J.A.R.V.I.S. responde “inconclusivo” em vez de adivinhar.</p>
     <div class="idp-barra-topo">
@@ -891,7 +915,7 @@
       <button type="button" data-mem-tema="rotinas">Rotinas</button>
       <button type="button" data-mem-tema="mensagens">Conversas</button>
     </div>
-    <label>Buscar na memória<input id="mem-busca" type="text" autocomplete="off" placeholder="palavra, projeto, assunto…"></label>
+    <label>Buscar por significado<input id="mem-busca" type="text" autocomplete="off" placeholder="ex.: onde guardei o programa do projeto Atlas?"></label><p class="dica">A busca combina palavras exatas com um embedding lexical local; o resultado mostra a relevância. Nada sai do aparelho.</p>
     <div id="mem-lista" class="mem-lista" aria-live="polite"></div>
     <div class="divider-small"></div>
     <h3>Nova nota</h3>
@@ -1217,6 +1241,7 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="apps.js"></script>
 <!-- Núcleo de linguagem e decisão: precisa vir antes de app.js. -->
 <script src="hermes.js"></script>
+<script src="cognicao.js"></script>
 <script src="humor.js"></script>
 <script src="voz_motor.js"></script>
 <script src="agentes.js"></script>
@@ -1225,6 +1250,8 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="sistema.js"></script>
 <script src="plano.js"></script>
 <script src="escuta.js"></script>
+<script src="fala.js"></script>
+<script src="audio_pcm.js"></script>
 <script src="arquivos_dev.js"></script>
 <script src="aprendizado.js"></script>
 <script src="app.js"></script>
