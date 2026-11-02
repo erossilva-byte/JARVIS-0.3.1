@@ -4,7 +4,7 @@
 
 Esta revisão fecha os problemas encontrados no caminho real de comando. A captura normal passou a usar o VAD testável e WAV PCM, com teto de 20 s, reamostragem para 16 kHz e aplicação dos controles de eco, supressão de ruído, AGC e filtro. O usuário escolhe entre Automático, Groq, Android e Android local; o fallback Android não acontece mais quando o motor Groq foi selecionado, e um parcial contendo apenas “Jarvis” não consome a ativação antes do comando.
 
-O diagnóstico registra duração do áudio, bytes enviados, captura média e upload médio. O APK 1.42.0 é compilado pelo release workflow com JDK 21 e Android SDK 35; o hash e o tamanho são registrados após a publicação. A instalação, o microfone, a wake word, o TTS, a câmera, o segundo plano e o desempenho no Poco X7 continuam **sem validação física** nesta máquina; a precisão acústica em PT-BR também não foi medida.
+O diagnóstico registra duração do áudio, bytes enviados, captura média e upload médio. O APK 1.42.0 tem **81,209,022 bytes** (81.209.022) e SHA-256 `f9b9adf6a55a35c59a6939971322f3fcbcbe76740342e30589b46074a7348455`; foi compilado pelo release workflow com JDK 21/Android SDK 35 e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.0. Ele **não foi instalado em aparelho físico**: instalação, microfone, wake word, TTS, câmera, segundo plano, desempenho no Poco X7 e precisão acústica em PT-BR continuam sem validação física.
 
 ## 1.41.0 — Voz PT-BR: confiança, filtros, replay e diagnóstico
 

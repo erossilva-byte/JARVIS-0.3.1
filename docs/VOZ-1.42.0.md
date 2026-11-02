@@ -206,8 +206,12 @@ substituição em três palavras = 33,33% de WER).
 
 ## Build 1.42.0
 
-- Arquivo esperado: `jarvis-nova-1.42.0-10420.apk`.
+- Arquivo: `jarvis-nova-1.42.0-10420.apk`.
+- Tamanho: 81,209,022 bytes (81.209.022).
+- SHA-256: `f9b9adf6a55a35c59a6939971322f3fcbcbe76740342e30589b46074a7348455`.
+- Release: https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.0.
 - Ambiente: GitHub Actions, Ubuntu 24.04, JDK 21, Android SDK 35, `assembleDebug`.
 - Assinatura: `ci/debug.keystore`, compatível com o atualizador embutido.
-- Hash e tamanho serão registrados nesta branch após a publicação do release.
+- O checksum foi conferido por download do asset publicado; `app.js` interno declara `VERSAO_APP = '1.42.0'` e o HTML tem seis chips `v1.42.0`.
+- O release também contém os instaladores Windows (`J.A.R.V.I.S.Nova.1.42.0.exe` e `Setup`), publicados pelo workflow do PC.
 - Nenhum APK foi instalado em aparelho físico nesta rodada.
