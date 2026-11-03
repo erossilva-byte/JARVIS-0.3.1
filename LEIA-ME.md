@@ -1,4 +1,12 @@
-# J.A.R.V.I.S. Nova 1.42.2
+# J.A.R.V.I.S. Nova 1.42.3
+
+## 1.42.3 — Montar circuito na interface e perguntar sobre a imagem
+
+O painel **Arquivos** ganhou a seção **Montar circuito**: escolha o componente, informe id e valor, ligue os terminais (`V1.1` ↔ `R1.1`), valide, veja a netlist e salve o `.cad` — sem escrever JSON. O arquivo salvo leva a placa de 120×80×2 mm como geometria e o circuito validado; o cofre, a análise e o download continuam os mesmos.
+
+Sobre o CADeSIMU, com transparência: o formato gravado é o **`CadSimu CAD` v1** documentado neste projeto (`docs/CAD-CIRCUITOS.md`). O `.cad` nativo do CADeSIMU é proprietário e **não** é gerado; a netlist é texto para simulador de PC. Isso está escrito no próprio painel, não escondido.
+
+Na **Visão**, depois de qualquer análise, o campo **Perguntar sobre a análise** deixa você questionar a mesma imagem (“quantas portas aparecem?”) sem abrir a câmera de novo. A resposta entra no texto da análise e é falada.
 
 ## 1.42.2 — Circuitos elétricos no .cad e fluidez
 

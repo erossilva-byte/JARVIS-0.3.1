@@ -104,7 +104,9 @@
   function criar(especificacao) {
     var e = especificacao || {};
     var unidades = UNIDADES.indexOf(e.unidades) >= 0 ? e.unidades : 'mm';
-    var objetos = Array.isArray(e.objetos) && e.objetos.length ? e.objetos : [objetoPadrao(e.tipo)];
+    var objetos = Array.isArray(e.objetos) ? e.objetos.slice() : [objetoPadrao(e.tipo)];
+    // Circuito puro não ganha caixa fantasma: sem objetos, o documento é só o circuito.
+    if (!objetos.length && !e.circuito) objetos = [objetoPadrao(e.tipo)];
     var doc = {
       formato: FORMATO,
       versao: VERSAO,

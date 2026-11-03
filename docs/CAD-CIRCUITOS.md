@@ -91,12 +91,21 @@ simulação: quem calcula tensão/corrente é o simulador do PC.
 
 ## Onde isso aparece no aplicativo
 
+Em **Arquivos ▸ Montar circuito** dá para montar sem escrever JSON: escolha o tipo, informe id e
+valor, toque em **Adicionar componente**, preencha **Terminal A**/**Terminal B** (`V1.1`, `R1.1`) e
+toque em **Ligar terminais**. **Validar** mostra componentes, ligações e redes com erros/avisos;
+**Gerar netlist** joga o texto no campo de análise; **Salvar .cad do circuito** grava o arquivo com
+a placa de 120×80×2 mm como geometria e o circuito validado.
+
 Ao analisar um `.cad` com `circuito`, o cartão de análise mostra quantos componentes, conexões e
 redes existem, além dos erros/avisos — o mesmo resumo volta em `CAD.analisar(texto).resumo`.
 O arquivo continua listável, baixável e apagável como qualquer `.cad`.
 
+Regressões: `tests/test_cad_circuito.js` (15 verificações do formato) e
+`tests/test_cad_circuito_ui.js` (app inteiro no jsdom: monta, valida, gera netlist, salva e relê).
+
 ## Limites honestos
 
-- Não há editor gráfico de esquema nesta versão: o circuito é escrito no JSON (ou gerado no PC).
+- Há montagem por formulário no aplicativo; **não há editor gráfico de esquema** (arrastar símbolos) nesta versão.
 - Não há simulação elétrica no aparelho — só validação estrutural e netlist.
 - Compatibilidade: arquivos sem `circuito` seguem válidos; a seção é opcional.

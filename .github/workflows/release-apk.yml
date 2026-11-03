@@ -154,6 +154,13 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
+            **Novidades da 1.42.3:** montagem de circuito pela interface — escolha o componente,
+            informe id e valor, ligue os terminais, valide e salve o .cad sem escrever JSON. O
+            arquivo leva a placa 120×80×2 mm e o circuito validado, com netlist pronta para o PC.
+            A Visão ganhou o campo de pergunta sobre a imagem analisada, reaproveitando a última
+            captura sem abrir a câmera de novo. O .cad nativo do CADeSIMU continua não sendo gerado
+            (formato proprietário) e isso aparece no próprio painel.
+
             **Novidades da 1.42.2:** o .cad passa a montar circuitos elétricos — componentes com
             terminais, conexões R1.1, validação de curto na fonte/componente solto/LED sem resistor e
             netlist para o PC — com teste de regressão próprio. Também deixa o WebView mais leve:

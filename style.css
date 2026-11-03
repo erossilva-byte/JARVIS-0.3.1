@@ -1614,3 +1614,12 @@ button.anexo{width:44px;min-width:44px;height:44px;min-height:44px;border-radius
 .aprend-item button{min-height:32px;padding:0 9px;font-size:11px}
 .aprend-pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;color:var(--suave);background:rgba(8,16,28,.7);padding:9px;border-radius:9px;max-height:180px;overflow:auto}
 .aprend-contexto summary{cursor:pointer;color:var(--cor);font-size:12px}
+
+/* ---- Visão: perguntar sobre a análise ---- */
+.visao-pergunta{display:grid;gap:8px;margin:10px 0 0}
+.visao-pergunta .botoes{margin-top:0}
+/* ---- .cad: montagem de circuito ---- */
+.cad-circuito{display:grid;gap:8px;margin-top:10px}
+.cad-circuito .botoes{margin-top:0;align-items:flex-end}
+.cad-circuito label{flex:1;min-width:120px}
+#circ-lista{max-height:34vh}

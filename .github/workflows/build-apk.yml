@@ -1,4 +1,4 @@
-name: Build e testes do J.A.R.V.I.S. Nova 1.42.2
+name: Build e testes do J.A.R.V.I.S. Nova 1.42.3
 
 on:
   workflow_dispatch:
@@ -40,7 +40,7 @@ concurrency:
 
 jobs:
   build:
-    name: Testar e compilar APK debug 1.42.2
+    name: Testar e compilar APK debug 1.42.3
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -159,7 +159,7 @@ jobs:
       - name: Publicar APK e checksum
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-Nova-1.42.2-APK
+          name: JARVIS-Nova-1.42.3-APK
           if-no-files-found: error
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk

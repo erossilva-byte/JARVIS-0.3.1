@@ -1,3 +1,12 @@
+## 1.42.3 — Montar circuito na interface e perguntar sobre a imagem
+
+- `.cad`: montagem de circuito dentro do painel Arquivos — tipo, id, valor, ligação terminal a terminal (`V1.1` ↔ `R1.1`), **Validar**, **Gerar netlist**, desfazer ligação, remover componente e salvar, sem escrever JSON.
+- O `.cad` do circuito é salvo com a **placa de 120×80×2 mm** como geometria e o circuito validado; `CAD.criar` não injeta mais caixa fantasma em documento que já traz circuito.
+- Regressão nova em `tests/test_cad_circuito_ui.js` (jsdom com o app inteiro): monta o exemplo, valida, gera netlist, salva e relê o arquivo do cofre.
+- **Visão:** campo “Perguntar sobre a análise” + botão Perguntar que reaproveita a última imagem analisada (sem reabrir a câmera); sem imagem guardada, a pergunta analisa o quadro atual. A resposta entra no texto da análise, em ordem cronológica, e é falada.
+- Compatibilidade declarada no próprio painel: o formato gravado é o `CadSimu CAD` v1 deste projeto; o `.cad` nativo do CADeSIMU é proprietário e **não** é produzido.
+- Correção de estrutura: os blocos novos foram colocados dentro do escopo do `app.js` (o arquivo é um IIFE), para enxergarem `CAD`, `renderArquivos` e `falar`.
+
 ## 1.42.2 — Circuitos elétricos no .cad e fluidez do WebView
 
 - `.cad`: seção opcional `circuito` com componentes elétricos (resistor, capacitor, indutor, fonte, LED, diodo, chave, terra, carga, motor, fusível), conexões por terminal (`R1.1`), limite de 200 componentes e 400 conexões.

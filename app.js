@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.42.2';
+const VERSAO_APP = '1.42.3';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -8431,6 +8431,7 @@ if (btnBootTentar) btnBootTentar.onclick = () => { const voz = $('#boot-voz'); i
  * informação, não instrução: o que estiver escrito na tela não vira comando.
  */
 let visaoFacing = 'environment';
+let visaoUltimaImagem = ''; // última imagem analisada, só em memória
 let visaoSessao = { ativa: false, pausada: false, timer: 0, analises: 0 };
 let cadUltimoDoc = null;
 function vsStatus(t, e) {
@@ -8485,6 +8486,7 @@ async function analisarDataUrl(d, q) {
       tratamento: trat(), resumo: r.resumo,
       humor: Number(store.get('humor', '90')) >= 40, serio: tom.serio, pressa: tom.pressa
     });
+    visaoUltimaImagem = d;
     visaoResumo = r.resumo;
     visaoProvedor = r.provedor;
     desenharBaloes(r.objetos);
@@ -9267,6 +9269,7 @@ async function analisarImagem(dataUrl, pergunta, opcoes) {
       tratamento: trat(), resumo: r.resumo,
       humor: Number(store.get('humor', '90')) >= 40, serio: tom.serio, pressa: tom.pressa
     });
+    visaoUltimaImagem = dataUrl;
     visaoResumo = r.resumo;
     visaoProvedor = r.provedor;
     desenharBaloes(r.objetos);
@@ -9971,4 +9974,285 @@ if (devFechar) devFechar.onclick = () => fecharPaineis();
 
 ligarPerfilNaUI();
 
+/* ---------- Visão: perguntar sobre a imagem já analisada ----------
+ * A pergunta reaproveita a última imagem analisada, guardada só na memória do painel. Sem imagem
+ * guardada, ela analisa o quadro atual da câmera. Nada sai do aparelho sem tocar em Perguntar.
+ */
+let visaoPerguntando = false;
+function visaoPerguntaStatus(t, erro) {
+  const el = document.getElementById('visao-pergunta-status');
+  if (!el) return;
+  el.textContent = t;
+  el.classList.toggle('erro', !!erro);
+}
+function anexarTextoVisao(modo, texto) {
+  const caixa = document.getElementById('visao-texto');
+  if (!caixa) return;
+  const atual = String(caixa.textContent || '').trim();
+  const base = (!atual || atual.indexOf('Nenhuma análise ainda.') === 0) ? '' : atual;
+  const bloco = String(texto == null ? '' : texto).trim() || 'O provedor não devolveu texto.';
+  caixa.textContent = (base ? base + '\n\n' : '') + bloco;
+  const rotulo = document.getElementById('visao-texto-modo');
+  if (rotulo) rotulo.textContent = modo || '—';
+}
+async function perguntarSobreVisao() {
+  const campo = document.getElementById('visao-pergunta');
+  const btn = document.getElementById('visao-perguntar');
+  const pergunta = String(campo && campo.value || '').trim();
+  if (!pergunta) {
+    visaoPerguntaStatus('Escreva a pergunta sobre a imagem antes de enviar.', true);
+    if (campo) campo.focus();
+    return;
+  }
+  if (visaoPerguntando) return;
+  if (typeof visaoAnalisando !== 'undefined' && visaoAnalisando) {
+    visaoPerguntaStatus('Espere a análise em curso terminar.', true);
+    return;
+  }
+  visaoPerguntando = true;
+  if (btn) btn.disabled = true;
+  visaoPerguntaStatus('Perguntando sobre a imagem…');
+  try {
+    let r = null;
+    let onde = '';
+    if (visaoUltimaImagem) { r = await analisarDataUrl(visaoUltimaImagem, pergunta); onde = 'Resposta sobre a imagem já analisada'; }
+    else { r = await analisarQuadro(pergunta); onde = 'Resposta sobre o quadro atual'; }
+    if (!r) { visaoPerguntaStatus('Sem resposta: veja o status da análise acima.', true); return; }
+    anexarTextoVisao('pergunta', 'Pergunta: ' + pergunta + '\n' + (r.fala || r.resumo || ''));
+    visaoPerguntaStatus(onde + ' · ' + (visaoProvedor || 'provedor') + '.', 'ok');
+    registrar('visão', 'pergunta sobre imagem: ' + pergunta.slice(0, 80));
+    await falar(r.fala);
+  } catch (e) {
+    visaoPerguntaStatus('Não consegui perguntar: ' + ((e && e.message) || e), true);
+  } finally {
+    visaoPerguntando = false;
+    if (btn) btn.disabled = false;
+  }
+}
+const btnVisaoPerguntar = document.getElementById('visao-perguntar');
+if (btnVisaoPerguntar) btnVisaoPerguntar.onclick = () => { perguntarSobreVisao(); };
+const campoVisaoPergunta = document.getElementById('visao-pergunta');
+if (campoVisaoPergunta) campoVisaoPergunta.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter') { ev.preventDefault(); perguntarSobreVisao(); }
+});
+const btnVisaoPerguntaLimpar = document.getElementById('visao-pergunta-limpar');
+if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
+  if (campoVisaoPergunta) { campoVisaoPergunta.value = ''; campoVisaoPergunta.focus(); }
+  visaoPerguntaStatus('Pergunta limpa. A última imagem continua guardada para a próxima pergunta.');
+};
+
+/* ---------- .cad: montagem de circuito elétrico pela interface ----------
+ * Componentes entram por tipo, id e valor; as ligações vão de terminal a terminal e são
+ * validadas pelo CAD.js antes de virar arquivo. O documento salvo é o "CadSimu CAD" v1 deste
+ * projeto: o .cad nativo do CADeSIMU é proprietário e não é gerado — a netlist vai para o PC.
+ */
+(function montarCircuito() {
+  const selTipo = document.getElementById('circ-tipo');
+  if (!selTipo) return;
+  const PREFIXO = { resistor: 'R', capacitor: 'C', indutor: 'L', fonte: 'V', led: 'LED', diodo: 'D', chave: 'S', terra: 'GND', carga: 'RL', motor: 'M', fusivel: 'F' };
+  let componentes = [];
+  let conexoes = [];
+  const el = (id) => document.getElementById(id);
+  // window.CadNucleo é a fonte única: o const CAD do app pode não existir neste escopo.
+  const modulo = () => (typeof window !== 'undefined' && window.CadNucleo) ? window.CadNucleo : ((typeof CAD !== 'undefined' && CAD) ? CAD : null);
+  const contar = (v) => Array.isArray(v) ? v.length : (Number.isFinite(Number(v)) ? Number(v) : 0);
+  function status(t, erro) {
+    const s = el('circ-status');
+    if (s) { s.textContent = t; s.classList.toggle('erro', !!erro); }
+  }
+  function preencherTipos() {
+    const m = modulo();
+    if (!m || selTipo.options.length) return;
+    Object.keys(m.COMPONENTES).forEach((k) => {
+      const o = document.createElement('option');
+      o.value = k;
+      o.textContent = m.COMPONENTES[k].nome + ' · ' + k;
+      selTipo.appendChild(o);
+    });
+    selTipo.value = 'resistor';
+  }
+  function proximoId(tipo) {
+    const p = PREFIXO[tipo] || 'X';
+    let n = 1;
+    while (componentes.some((c) => c.id === p + n)) n++;
+    return p + n;
+  }
+  function desenhar() {
+    const lista = el('circ-lista');
+    if (!lista) return;
+    lista.textContent = '';
+    const m = modulo();
+    if (!componentes.length) {
+      const vazio = document.createElement('p');
+      vazio.className = 'dica mem-vazio';
+      vazio.textContent = 'Nenhum componente ainda. Adicione um e ligue os terminais.';
+      lista.appendChild(vazio);
+    }
+    componentes.forEach((c) => {
+      const def = (m && m.COMPONENTES[c.tipo]) || { nome: c.tipo, terminais: 2, unidade: '' };
+      const item = document.createElement('article');
+      item.className = 'mem-nota';
+      const cab = document.createElement('div');
+      cab.className = 'mem-nota-cab';
+      const tema = document.createElement('span');
+      tema.className = 'mem-nota-tema';
+      tema.textContent = def.nome;
+      const titulo = document.createElement('b');
+      titulo.textContent = c.id;
+      cab.append(tema, titulo);
+      const meta = document.createElement('small');
+      meta.textContent = def.terminais + ' terminal(is)' + (c.valor != null ? ' · ' + c.valor + (def.unidade ? ' ' + def.unidade : '') : '');
+      const acoes = document.createElement('div');
+      acoes.className = 'botoes';
+      const rem = document.createElement('button');
+      rem.type = 'button';
+      rem.className = 'secundario perigo';
+      rem.textContent = 'Remover';
+      rem.onclick = () => {
+        componentes = componentes.filter((x) => x.id !== c.id);
+        conexoes = conexoes.filter((k) => String(k.de).indexOf(c.id + '.') !== 0 && String(k.para).indexOf(c.id + '.') !== 0);
+        desenhar();
+        status('Componente ' + c.id + ' removido.');
+      };
+      acoes.appendChild(rem);
+      item.append(cab, meta, acoes);
+      lista.appendChild(item);
+    });
+    if (conexoes.length) {
+      const p = document.createElement('p');
+      p.className = 'dica';
+      p.textContent = 'Ligações: ' + conexoes.map((k) => k.de + ' ↔ ' + k.para).join(' · ');
+      lista.appendChild(p);
+    }
+  }
+  function adicionar() {
+    const m = modulo();
+    if (!m) { status('O módulo de arquivos não carregou neste dispositivo.', true); return; }
+    const tipo = selTipo.value;
+    const def = m.COMPONENTES[tipo];
+    if (!def) { status('Escolha um tipo de componente.', true); return; }
+    if (componentes.length >= m.LIMITE_COMPONENTES) { status('Limite de ' + m.LIMITE_COMPONENTES + ' componentes por circuito.', true); return; }
+    const campoId = el('circ-id');
+    let id = String(campoId && campoId.value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24);
+    if (!id) id = proximoId(tipo);
+    if (!/^[A-Z][A-Z0-9_-]{0,23}$/.test(id)) { status('O id precisa começar com letra (ex.: R1, LED2).', true); return; }
+    if (componentes.some((c) => c.id === id)) { status('Já existe um componente ' + id + '.', true); return; }
+    const campoValor = el('circ-valor');
+    const txt = String(campoValor && campoValor.value || '').trim().replace(',', '.');
+    let valor = null;
+    if (txt) {
+      valor = Number(txt);
+      if (!Number.isFinite(valor) || valor < 0) { status('Valor inválido: use número não negativo (ex.: 330).', true); return; }
+    }
+    if (def.valorObrigatorio && valor == null) { status(def.nome + ' precisa de valor' + (def.unidade ? ' em ' + def.unidade : '') + '.', true); return; }
+    componentes.push({ tipo, id, valor });
+    if (campoId) campoId.value = '';
+    if (campoValor) campoValor.value = '';
+    desenhar();
+    status('Componente ' + id + ' (' + def.nome + ') adicionado. Terminais: ' + (def.terminais === 1 ? id + '.1' : id + '.1 a ' + id + '.' + def.terminais) + '.');
+  }
+  function ligar() {
+    const m = modulo();
+    if (!m) { status('O módulo de arquivos não carregou neste dispositivo.', true); return; }
+    const campoDe = el('circ-de');
+    const campoPara = el('circ-para');
+    const de = String(campoDe && campoDe.value || '').trim().toUpperCase();
+    const para = String(campoPara && campoPara.value || '').trim().toUpperCase();
+    if (!de || !para) { status('Preencha os dois terminais, por exemplo V1.1 e R1.1.', true); return; }
+    if (conexoes.length >= (m.LIMITE_CONEXOES || 400)) { status('Limite de ligações por circuito atingido.', true); return; }
+    const teste = m.validarCircuito({ componentes, conexoes: conexoes.concat([{ de, para }]) });
+    const erro = (teste.erros || []).find((e) => e.indexOf('Conexão ' + (conexoes.length + 1) + ':') === 0);
+    if (erro) { status(erro, true); return; }
+    conexoes.push({ de, para });
+    if (campoDe) campoDe.value = '';
+    if (campoPara) campoPara.value = '';
+    desenhar();
+    status('Ligação ' + de + ' ↔ ' + para + ' feita.');
+  }
+  function validar() {
+    const m = modulo();
+    if (!m) { status('O módulo de arquivos não carregou neste dispositivo.', true); return null; }
+    if (!componentes.length) { status('Adicione ao menos um componente antes de validar.', true); return null; }
+    const r = m.validarCircuito({ componentes, conexoes });
+    if (!r.ok) { status('Não fecha: ' + r.erros.join(' '), true); return null; }
+    const avisos = (r.avisos || []).length ? ' Avisos: ' + r.avisos.join(' ') : '';
+    status('Circuito válido: ' + contar(r.componentes) + ' componente(s), ' + contar(r.conexoes) + ' ligação(ões), ' + contar(r.redes) + ' rede(s).' + avisos);
+    return r;
+  }
+  function verNetlist() {
+    const r = validar();
+    const m = modulo();
+    if (!r || !m) return;
+    const texto = m.netlist({ circuito: { componentes, conexoes } });
+    const campo = el('cad-texto');
+    if (campo) campo.value = texto;
+    status('Netlist copiada para o campo “Ou cole o conteúdo”: é texto para simulador de PC, não é o .cad nativo do CADeSIMU.');
+    registrar('arquivos', 'netlist do circuito: ' + componentes.length + ' componente(s)');
+  }
+  function salvar() {
+    const r = validar();
+    const m = modulo();
+    if (!r || !m) return;
+    const nome = String(el('circ-nome') && el('circ-nome').value || '').trim() || 'circuito';
+    const circuito = {
+      componentes: componentes.map((c) => (c.valor == null ? { tipo: c.tipo, id: c.id } : { tipo: c.tipo, id: c.id, valor: c.valor })),
+      conexoes: conexoes.map((k) => ({ de: k.de, para: k.para }))
+    };
+    // O .cad precisa de geometria: a placa 120×80×2 mm é a base real do circuito.
+    const placa = m.objetoPadrao('caixa');
+    placa.nome = 'placa';
+    placa.dimensoes = [120, 80, 2];
+    const doc = m.criar({ nome, unidades: 'mm', objetos: [placa], circuito });
+    const salvo = m.salvar(nome, doc);
+    if (!salvo.ok) { status(salvo.erro || 'Não foi possível salvar o .cad.', true); return; }
+    if (typeof cadUltimoDoc !== 'undefined') cadUltimoDoc = doc;
+    const texto = m.serializar(doc);
+    if (typeof PC !== 'undefined' && PC) PC.criar(salvo.nome, texto).catch((e) => registrar('erro', 'cad no PC: ' + ((e && e.message) || e)));
+    renderArquivos();
+    analisarCadTexto(texto, salvo.nome);
+    status('Arquivo ' + salvo.nome + ' salvo com ' + componentes.length + ' componente(s) e ' + conexoes.length + ' ligação(ões).');
+    registrar('arquivos', '.cad de circuito: ' + salvo.nome);
+  }
+  function desfazer() {
+    if (!conexoes.length) { status('Nenhuma ligação para desfazer.', true); return; }
+    const k = conexoes.pop();
+    desenhar();
+    status('Ligação ' + k.de + ' ↔ ' + k.para + ' desfeita.');
+  }
+  function exemplo() {
+    componentes = [
+      { tipo: 'fonte', id: 'V1', valor: 9 },
+      { tipo: 'resistor', id: 'R1', valor: 330 },
+      { tipo: 'led', id: 'D1', valor: 2 },
+      { tipo: 'terra', id: 'GND1', valor: null }
+    ];
+    conexoes = [
+      { de: 'V1.1', para: 'R1.1' },
+      { de: 'R1.2', para: 'D1.1' },
+      { de: 'D1.2', para: 'GND1.1' },
+      { de: 'V1.2', para: 'GND1.1' }
+    ];
+    desenhar();
+    status('Exemplo carregado: fonte 9 V, resistor 330 Ω, LED e terra. Toque em Validar.');
+  }
+  function limpar() {
+    componentes = [];
+    conexoes = [];
+    desenhar();
+    status('Circuito limpo. Adicione componentes para começar de novo.');
+  }
+  [['circ-add', adicionar], ['circ-exemplo', exemplo], ['circ-ligar', ligar], ['circ-desfazer', desfazer],
+   ['circ-validar', validar], ['circ-netlist', verNetlist], ['circ-salvar', salvar], ['circ-limpar', limpar]]
+    .forEach(([id, fn]) => {
+      const b = el(id);
+      if (b) b.onclick = () => { try { fn(); } catch (e) { status('Falhou: ' + ((e && e.message) || e), true); } };
+    });
+  ['circ-de', 'circ-para'].forEach((id) => {
+    const c = el(id);
+    if (c) c.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ligar(); } });
+  });
+  preencherTipos();
+  desenhar();
+  if (!selTipo.options.length) window.addEventListener('load', () => { preencherTipos(); }, { once: true });
+})();
 })();
