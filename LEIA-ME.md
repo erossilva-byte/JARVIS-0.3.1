@@ -6,6 +6,8 @@ O `.cad` agora aceita uma seção opcional de circuito elétrico: componentes co
 
 O aplicativo também ficou mais leve: a busca da memória não re-renderiza a cada tecla, a vigilância da interface e as atividades do painel param com o app oculto, e os desfoques de fundo caros saíram dos chips e das mensagens. É ajuste medido no código e nos testes; o ganho em aparelho físico ainda não foi medido aqui.
 
+O APK 1.42.2 tem **81.212.410 bytes** (81.212.410) e SHA-256 `e6b796a09bb10fb908c9efb3f7a59d683400e97a1a5d9181a9659d9929d97632`; foi compilado pelo release workflow com JDK 21/Android SDK 35 e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.2. O release também traz os instaladores Windows (`J.A.R.V.I.S.Nova.1.42.2.exe` e `Setup`). Ele **não foi instalado em aparelho físico**: microfone real, wake word, segundo plano e desempenho no Poco X7 continuam sem validação física.
+
 ## 1.42.1 — Auditoria de botões e correções honestas
 
 Esta revisão varreu a interface inteira com clique de verdade (jsdom), não só leitura de código: 300 botões, 239 medidos depois de abrir cada painel e cada aba de Ajustes, zero exceções de clique. Dos 15 cliques que não mudavam nada, 13 eram comportamento correto (seletor de arquivo, atualização idempotente, aba já ativa, painel já aberto) e 2 eram falha: “Liberar memória” da voz neural ficava mudo sem o plugin JarvisVoz, e o microfone do núcleo voltava ao repouso sem explicar quando o ambiente não tem gravação. Os dois agora respondem com mensagem e têm teste de regressão (`tests/test_botoes_honestos.js`).

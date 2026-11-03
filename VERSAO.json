@@ -15,11 +15,13 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "pendente",
+    "resultado": "success",
+    "sha256": "e6b796a09bb10fb908c9efb3f7a59d683400e97a1a5d9181a9659d9929d97632",
+    "bytes": 81212410,
     "arquivo": "jarvis-nova-1.42.2-10422.apk",
     "data": "2026-11-03",
     "ambiente": "GitHub Actions release-apk.yml: Ubuntu 24.04, JDK 21, Android SDK 35, assembleDebug",
-    "observacao": "Build da 1.42.2 aguardando a tag v1.42.2; o checksum será registrado após o run publicar o APK."
+    "observacao": "APK 1.42.2 compilado e publicado no release v1.42.2; checksum conferido por download do asset. Assinatura debug/CI. Sem instalação em aparelho físico."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",
