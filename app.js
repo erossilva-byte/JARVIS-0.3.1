@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.42.4';
+const VERSAO_APP = '1.42.5';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -3303,6 +3303,81 @@ async function responderCore(texto) {
   return null;
 }
 
+/* ---------- Projetista elétrico pelo chat e pela voz ----------
+ * O turno (texto digitado e fala reconhecida) passa por aqui antes da IA: pedidos de projeto
+ * elétrico são resolvidos pelo motor determinístico, com o resumo falado. Sem IA no meio,
+ * sem inventar simulação nem abertura no CADeSIMU.
+ */
+const LIMITE_PROJETISTA = 'Verificação estrutural; simulação elétrica e abertura no CADeSIMU não são executadas.';
+
+function intencaoProjetista(texto) {
+  const n = normalizarCore(texto);
+  if (!n) return false;
+  if (/^projetista\b/.test(n)) return true;
+  const eletrico = /(partida direta|reversao|reversora|estrela triangulo|compensadora|motor trifasico|motor monofasico|comando eletrico|circuito eletrico|quadro de comando|\bclp\b|contator|botoeira|sinaleiro|temporizador|disjuntor|rele termico)/.test(n);
+  const verbo = /(crie|criar|monte|montar|projete|projetar|desenvolva|faca|analise|analisar|verifique|corrija|corrigir|adicione|adicionar|remova|remover|converta|converter|gere|gerar|salve|salvar|relatorio|ladder)/.test(n);
+  return eletrico && verbo;
+}
+
+function pedidoProjetista(texto) {
+  return String(texto || '')
+    .replace(/^\s*projetista\b[:,\-–\s]*/i, '')
+    .replace(/^\s*(por favor|pfv)[,:]?\s*/i, '')
+    .trim();
+}
+
+async function responderProjetista(texto) {
+  if (!intencaoProjetista(texto)) return null;
+  const P = window.ProjetistaEletrico;
+  if (!P) return 'O projetista elétrico não carregou neste dispositivo.';
+  const n = normalizarCore(texto);
+  const api = window.JarvisProjetistaUI;
+  const pedido = pedidoProjetista(texto);
+  try { abrirPainel('#painel-arquivos'); } catch (e) { /* painel já aberto ou ausente */ }
+
+  if (/relatorio/.test(n) && api && api.temProjeto()) {
+    api.relatorio();
+    return 'Relatório técnico gerado na saída do projetista. ' + LIMITE_PROJETISTA;
+  }
+  if (/(ladder|logica do clp)/.test(n) && api && api.temProjeto()) {
+    api.ladder();
+    return 'Ladder gerado na saída do projetista. ' + LIMITE_PROJETISTA;
+  }
+  if (/(corrij|corrig)/.test(n) && api && api.temProjeto()) {
+    const r = api.corrigir();
+    return 'Correção: ' + String(r.status || '').trim() + ' ' + LIMITE_PROJETISTA;
+  }
+  if (/(analis|verifi|valide)/.test(n) && api && api.temProjeto()) {
+    const r = api.analisar();
+    return 'Análise do projeto atual: ' + String(r.status || '').trim() + ' ' + LIMITE_PROJETISTA;
+  }
+  if (api && api.temProjeto() &&
+      /(modific|adicione|adicionar|remova|remover|converta|converter|temporizador|acrescent)/.test(n) &&
+      !/(crie|monte|projete|desenvolva)/.test(n)) {
+    const r = api.modificar(pedido || texto);
+    return String(r.status || 'Modificação aplicada.').trim() + ' ' + LIMITE_PROJETISTA;
+  }
+  if (api) {
+    const r = api.criar(pedido || texto);
+    if (!r.projeto) return 'Não consegui montar o circuito: ' + String(r.status || 'faltam dados no pedido') + ' ' + LIMITE_PROJETISTA;
+    const v = P.validar(r.projeto);
+    return 'Projeto montado: ' + (r.projeto.titulo || r.projeto.tipo) + ' — ' + r.projeto.componentes.length +
+      ' componentes, ' + (v.ok ? 'verificação estrutural aprovada' : v.erros.length + ' erro(s)') + '. ' + LIMITE_PROJETISTA;
+  }
+  const inter = P.interpretar(texto);
+  if (!inter.ok) return inter.erro;
+  const pr = P.projetar(texto);
+  if (!pr.ok) return pr.erro;
+  const v = P.validar(pr.projeto);
+  return 'Projeto montado: ' + pr.projeto.titulo + ' — ' + pr.projeto.componentes.length + ' componentes, ' +
+    (v.ok ? 'verificação estrutural aprovada' : v.erros.length + ' erro(s)') + '. ' + LIMITE_PROJETISTA;
+}
+
+window.JarvisProjetista = {
+  responder: responderProjetista,
+  intencao: intencaoProjetista
+};
+
 async function turno(texto, contaminado = false, profundidade = 0) {
   // Aprendizado explícito e reversível: só registra comandos claros; não altera segurança.
   if (APRENDIZADO && store.get('aprendizado_ativo', '1') === '1') {
@@ -3317,6 +3392,8 @@ async function turno(texto, contaminado = false, profundidade = 0) {
   if (profundidade === 0 && !contaminado) {
     const coreLocal = await responderCore(texto);
     if (coreLocal) { adicionarHist({ role: 'user', content: texto }); adicionarHist({ role: 'assistant', content: coreLocal }); await falar(coreLocal); return; }
+    const projLocal = await responderProjetista(texto);
+    if (projLocal) { adicionarHist({ role: 'user', content: texto }); adicionarHist({ role: 'assistant', content: projLocal }); await falar(projLocal); return; }
     if (CORE) CORE.observarPedido(texto);
     const pessoaLocal = responderPessoaPorVoz(texto);
     if (pessoaLocal) {
@@ -10606,14 +10683,18 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
       g.setAttribute('class', 'proj-comp' + (comErro[id] ? ' sel' : ''));
       g.setAttribute('data-id', id);
       g.appendChild(retangulo(item.x, item.y, item.larg, item.altura, 'proj-cartao' + (comErro[id] ? ' sel' : '')));
-      g.appendChild(texto(id + ' · ' + truncar(item.c.tipo, 14), item.x + 8, item.y + 14, 'proj-titulo'));
-      g.appendChild(texto(truncar(item.c.funcao, 30), item.x + 8, item.y + 26, 'proj-tipo'));
+      g.appendChild(simboloIec(item.x, item.y, item.c, comErro[id]));
+      g.appendChild(texto(id + ' · ' + truncar(item.c.tipo, 12), item.x + 54, item.y + 16, 'proj-titulo'));
+      g.appendChild(texto(truncar(item.c.funcao, 26), item.x + 54, item.y + 27, 'proj-tipo'));
       Object.keys(item.c.pinos || {}).forEach((p) => {
         const ponto = item.pontos[p];
         if (!ponto) return;
         const circulo = no('circle');
-        circulo.setAttribute('cx', ponto.x); circulo.setAttribute('cy', ponto.y); circulo.setAttribute('r', 2.3);
-        circulo.setAttribute('class', 'proj-pino');
+        circulo.setAttribute('cx', ponto.x); circulo.setAttribute('cy', ponto.y); circulo.setAttribute('r', 2.8);
+        circulo.setAttribute('data-pino', p);
+        circulo.setAttribute('data-comp', id);
+        circulo.setAttribute('class', 'proj-pino' + (pinoSel && pinoSel.id === id && pinoSel.pino === p ? ' sel' : ''));
+        circulo.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); selecionarPino(id, p); });
         const titulo = no('title');
         titulo.textContent = id + '.' + p + ' → ' + (item.c.pinos[p] || 'sem rede');
         circulo.appendChild(titulo);
@@ -10623,6 +10704,209 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
       });
       palco.appendChild(g);
     });
+    preencherRedes();
+  }
+
+  function cloneProjeto(p) { return JSON.parse(JSON.stringify(p)); }
+
+  /** Símbolo IEC compacto por tipo. O pino e a rede continuam vindo do componente. */
+  function simboloIec(x, y, c, erro) {
+    const g = no('g');
+    g.setAttribute('class', 'proj-simbolo' + (erro ? ' sel' : ''));
+    const cx = x + 28, cy = y + 18;
+    const l = (x1, y1, x2, y2) => { g.appendChild(linha(x1, y1, x2, y2, 'proj-sim')); };
+    const r = (x1, y1, w, h) => {
+      const e = no('rect');
+      e.setAttribute('x', x1); e.setAttribute('y', y1);
+      e.setAttribute('width', w); e.setAttribute('height', h);
+      e.setAttribute('class', 'proj-sim');
+      g.appendChild(e);
+    };
+    const ci = (x1, y1, rr) => {
+      const e = no('circle');
+      e.setAttribute('cx', x1); e.setAttribute('cy', y1); e.setAttribute('r', rr);
+      e.setAttribute('class', 'proj-sim');
+      g.appendChild(e);
+    };
+    const tx = (t, dx, dy) => g.appendChild(texto(t, cx + dx, cy + dy, 'proj-simb-txt'));
+    switch (c.tipo) {
+      case 'contator':
+        r(cx - 20, cy - 10, 9, 20);
+        l(cx - 20, cy - 3, cx - 11, cy - 3);
+        l(cx - 20, cy + 3, cx - 11, cy + 3);
+        l(cx - 5, cy - 12, cx - 5, cy + 12);
+        for (let i = 0; i < 3; i++) {
+          l(cx + 2, cy - 8 + i * 8, cx + 8, cy - 3 + i * 8);
+          l(cx + 8, cy - 8 + i * 8, cx + 15, cy - 8 + i * 8);
+        }
+        tx('K', 0, -14);
+        break;
+      case 'releTermico':
+        r(cx - 10, cy - 12, 20, 24);
+        l(cx - 4, cy - 8, cx + 4, cy + 8);
+        l(cx + 4, cy - 8, cx - 4, cy + 8);
+        tx('F', 0, -15);
+        break;
+      case 'motor3':
+      case 'motor6':
+      case 'bomba':
+        ci(cx, cy, 13);
+        tx('M', 0, 3);
+        tx('3~', 0, -16);
+        break;
+      case 'motor1':
+        ci(cx, cy, 13);
+        tx('M', 0, 3);
+        tx('1~', 0, -16);
+        break;
+      case 'disjuntor3':
+        for (let i = 0; i < 3; i++) {
+          const dx = cx - 10 + i * 10;
+          l(dx, cy - 12, dx, cy + 12);
+          l(dx, cy - 4, dx + 5, cy + 4);
+        }
+        tx('Q', 0, -16);
+        break;
+      case 'disjuntor':
+        for (let i = 0; i < 2; i++) {
+          const dx = cx - 6 + i * 12;
+          l(dx, cy - 12, dx, cy + 12);
+          l(dx, cy - 4, dx + 5, cy + 4);
+        }
+        tx('Q', 0, -16);
+        break;
+      case 'botoeira':
+        l(cx - 12, cy + 6, cx + 6, cy - 6);
+        ci(cx - 12, cy + 6, 1.6);
+        ci(cx + 6, cy - 6, 1.6);
+        l(cx - 3, cy - 12, cx - 3, cy - 5);
+        tx(c.papel === 'emergencia' ? 'S0' : 'S', 0, -16);
+        break;
+      case 'sinaleiro':
+        ci(cx, cy, 11);
+        l(cx - 8, cy - 8, cx + 8, cy + 8);
+        l(cx + 8, cy - 8, cx - 8, cy + 8);
+        break;
+      case 'lampada':
+        ci(cx, cy, 11);
+        l(cx - 8, cy - 8, cx + 8, cy + 8);
+        l(cx + 8, cy - 8, cx - 8, cy + 8);
+        tx('H', 0, -15);
+        break;
+      case 'temporizador':
+        r(cx - 12, cy - 11, 24, 22);
+        ci(cx, cy, 6);
+        l(cx, cy, cx, cy - 4);
+        l(cx, cy, cx + 3, cy + 1);
+        tx('KT', 0, -16);
+        break;
+      case 'transformador':
+        for (let i = 0; i < 4; i++) l(cx - 12 + i * 4, cy - 9, cx - 12 + i * 4, cy + 9);
+        for (let i = 0; i < 4; i++) l(cx + 2 + i * 4, cy - 9, cx + 2 + i * 4, cy + 9);
+        l(cx - 2, cy - 12, cx - 2, cy + 12);
+        tx('T', 0, -16);
+        break;
+      case 'autotransformador':
+        for (let i = 0; i < 5; i++) l(cx - 8 + i * 4, cy - 9, cx - 8 + i * 4, cy + 9);
+        l(cx + 10, cy + 2, cx + 17, cy - 4);
+        tx('AT', 0, -16);
+        break;
+      case 'fusivel':
+        r(cx - 10, cy - 5, 20, 10);
+        l(cx - 16, cy, cx + 16, cy);
+        tx('F', 0, -14);
+        break;
+      case 'fonte':
+        r(cx - 12, cy - 10, 24, 20);
+        l(cx - 6, cy - 4, cx + 6, cy - 4);
+        l(cx - 6, cy + 4, cx + 6, cy + 4);
+        tx('+', 0, -14);
+        break;
+      case 'sensor': {
+        const face = no('path');
+        face.setAttribute('d', 'M ' + cx + ' ' + (cy - 12) + ' L ' + (cx + 12) + ' ' + cy +
+          ' L ' + cx + ' ' + (cy + 12) + ' L ' + (cx - 12) + ' ' + cy + ' Z');
+        face.setAttribute('class', 'proj-sim');
+        g.appendChild(face);
+        tx('S', 0, -16);
+        break;
+      }
+      case 'interruptor':
+        l(cx - 12, cy, cx - 2, cy);
+        l(cx - 2, cy, cx + 8, cy - 7);
+        ci(cx - 12, cy, 1.6);
+        ci(cx + 10, cy, 1.6);
+        tx('S', 0, -14);
+        break;
+      case 'clp':
+        r(cx - 20, cy - 12, 40, 24);
+        l(cx - 20, cy - 6, cx - 12, cy - 6);
+        l(cx - 20, cy, cx - 12, cy);
+        l(cx - 20, cy + 6, cx - 12, cy + 6);
+        l(cx + 12, cy - 6, cx + 20, cy - 6);
+        l(cx + 12, cy + 6, cx + 20, cy + 6);
+        tx('PLC', 0, -16);
+        break;
+      default:
+        r(cx - 14, cy - 10, 28, 20);
+        tx('?', 0, 3);
+        break;
+    }
+    return g;
+  }
+
+  /* ---------- Edição de pinos: selecionar, trocar a rede e desfazer ---------- */
+  let pinoSel = null;
+  const pilhaPinos = [];
+
+  function preencherRedes() {
+    const dl = el('proj-redes');
+    if (!dl || !projeto) return;
+    const m = modulo();
+    dl.textContent = '';
+    (m ? m.fios(projeto) : []).forEach((f) => {
+      const o = document.createElement('option');
+      o.value = f.rede;
+      dl.appendChild(o);
+    });
+  }
+
+  function selecionarPino(id, pino) {
+    pinoSel = { id: id, pino: pino };
+    const campoPino = el('proj-pino');
+    if (campoPino) campoPino.value = id + '.' + pino;
+    const campoRede = el('proj-rede');
+    const c = projeto && projeto.componentes.filter((x) => x.id === id)[0];
+    if (campoRede && c && c.pinos) campoRede.value = String(c.pinos[pino] == null ? '' : c.pinos[pino]);
+    desenhar();
+    status('Pino ' + id + '.' + pino + ' selecionado. Escolha a rede e toque em Ligar pino à rede.');
+  }
+
+  function aplicarPino() {
+    const m = modulo();
+    if (!m || !projeto || !pinoSel) { status('Toque num pino do desenho antes de ligar.', true); return; }
+    const alvo = String((el('proj-rede') || {}).value || '').trim();
+    if (!alvo) { status('Informe a rede (fio) de destino.', true); return; }
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,23}$/.test(alvo)) { status('A rede começa com letra e segue com letras, números ou _ (ex.: K1A).', true); return; }
+    const c = projeto.componentes.filter((x) => x.id === pinoSel.id)[0];
+    if (!c) { status('Componente não existe mais no projeto.', true); return; }
+    pilhaPinos.push(cloneProjeto(projeto));
+    if (pilhaPinos.length > 10) pilhaPinos.shift();
+    c.pinos[pinoSel.pino] = alvo;
+    validacao = m.validar(projeto);
+    desenhar(); lista(); preencherRedes(); saida(textoDaVerificacao(validacao));
+    status('Pino ' + pinoSel.id + '.' + pinoSel.pino + ' ligado à rede ' + alvo +
+      (validacao.ok ? ' — verificação aprovada.' : ' — ' + validacao.erros.length + ' erro(s).'), !validacao.ok);
+  }
+
+  function desfazerPino() {
+    if (!pilhaPinos.length) { status('Nenhuma alteração de pino para desfazer.', true); return; }
+    const m = modulo();
+    projeto = pilhaPinos.pop();
+    validacao = m ? m.validar(projeto) : null;
+    desenhar(); lista(); preencherRedes();
+    if (validacao) saida(textoDaVerificacao(validacao));
+    status('Última alteração de pino desfeita (' + pilhaPinos.length + ' restante(s)).');
   }
 
   function lista() {
@@ -10895,9 +11179,30 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
     status('Histórico de ' + h.versoes.length + ' versão(ões) de ' + ultimoSalvo + '.');
   }
 
+  function resposta() {
+    return {
+      ok: !!projeto,
+      texto: (el('proj-saida') || {}).value || '',
+      status: (el('proj-status') || {}).textContent || '',
+      projeto: projeto
+    };
+  }
+  window.JarvisProjetistaUI = {
+    criar: (pedido) => { if (pedido != null) campo.value = String(pedido); criar(); return resposta(); },
+    modificar: (pedido) => { const c = el('proj-mod'); if (c) c.value = String(pedido || ''); modificarProjeto(); return resposta(); },
+    analisar: () => { analisar(); return resposta(); },
+    corrigir: () => { corrigir(); return resposta(); },
+    relatorio: () => { relatorio(); return resposta(); },
+    ladder: () => { ladder(); return resposta(); },
+    salvar: () => { salvar(); return resposta(); },
+    temProjeto: () => !!projeto,
+    estado: () => projeto
+  };
+
   const acoes = [['proj-criar', criar], ['proj-analisar', analisar], ['proj-corrigir', corrigir],
     ['proj-relatorio', relatorio], ['proj-ladder', ladder], ['proj-salvar', salvar],
-    ['proj-modificar', modificarProjeto], ['proj-versoes', mostrarVersoes], ['proj-comparar', compararProjeto]];
+    ['proj-modificar', modificarProjeto], ['proj-versoes', mostrarVersoes], ['proj-comparar', compararProjeto],
+    ['proj-pino-aplicar', aplicarPino], ['proj-pino-desfazer', desfazerPino]];
   acoes.forEach(([id, fn]) => {
     const b = el(id);
     if (b) b.onclick = () => { try { fn(); } catch (e) { status('Falhou: ' + ((e && e.message) || e), true); } };

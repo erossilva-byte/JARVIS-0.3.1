@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.42.4",
-  "versionCode": 10424,
+  "version": "1.42.5",
+  "versionCode": 10425,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-11-03",
-  "status": "1.42.4: editor de circuito no palco com arrastar, ligação por terminal, edição/apagar e recarga de .cad; x/y validados; build CI publicado.",
+  "status": "1.42.5: projetista elétrico editável com histórico de versões, restauração e comparação; auditoria registrada; núcleo 3D, áreas e abertura preservados; build CI pendente.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.42.4 (2026-11-03). O painel Arquivos ganhou um editor de circuito no palco: símbolos desenhados por tipo, terminais tocáveis, fios entre terminais, arrastar para mover (posição x/y salva no .cad), seleção do componente para editar id/valor ou apagar, ligação pelos campos de texto como alternativa e \"Carregar .cad salvo\" que devolve o circuito do cofre para edição. A validação continua a mesma (curto na fonte, componente solto, LED sem resistor, circuito sem fonte) e a netlist vai para simulação no PC. O formato gravado é o \"CadSimu CAD\" v1 deste projeto; o .cad nativo do CADeSIMU é proprietário e não é produzido, e o painel diz isso. O núcleo verifica o aparelho, o provedor e o resultado antes de falar; seguem o raciocínio em etapas e a personalidade adaptativa, o núcleo 3D com plasma e animação holográfica, as dez áreas clicáveis, a abertura sem flash, a voz masculina PT-BR, o humor, o Obsidian e o bloqueio opcional. Testes: tests/test_cad_posicao.js, tests/test_cad_circuito.js e tests/test_cad_circuito_ui.js (jsdom com o app inteiro). Sem validação em aparelho físico.",
+  "notas": "Revisão 1.42.5 (2026-11-03). O projetista elétrico passou a editar projeto existente: temporizador com sinalização retardada, remoção de componente, proteção térmica, troca de tensão de comando e reconstrução como partida direta, reversão, estrela-triângulo ou compensadora — sempre sobre uma cópia, com o original intacto e a diferença calculada. Cada gravação guarda a versão anterior (até cinco), com listagem, restauração que preserva a atual no histórico e comparação estrutural entre dois projetos. A vista de projeto passou a usar símbolos IEC por tipo e a permitir religar qualquer pino (tocar no pino, trocar a rede, revalidar e desfazer). O mesmo projetista responde no chat e na voz, com resumo falado e painel aberto. A auditoria técnica está em docs/AUDITORIA.md: verificação estática sem ids duplicados, funções duplicadas ou segredos; a gravação de arquivos no desktop é conferida por releitura de hash e backup; nada de crítico foi confirmado nos caminhos testados, e o que não foi verificado está declarado. O núcleo verifica o aparelho, o provedor e o resultado antes de falar; seguem o raciocínio em etapas e a personalidade adaptativa, o núcleo 3D com plasma e animação holográfica, as dez áreas clicáveis, a abertura sem flash, a voz masculina PT-BR, o humor, o Obsidian, o bloqueio opcional e os circuitos no .cad. Testes: tests/test_projetista.js (73 verificações) e tests/test_projetista_ui.js no jsdom. Sem validação em aparelho físico e sem abertura no CADeSIMU, cujo formato é proprietário.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -15,13 +15,8 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "success",
-    "sha256": "d0a331d65c704ec0c2d52d3007f8bf1d857b396680286f0898817cb70ee1eada",
-    "bytes": 81222586,
-    "arquivo": "jarvis-nova-1.42.4-10424.apk",
-    "data": "2026-11-03",
-    "ambiente": "GitHub Actions release-apk.yml: Ubuntu 24.04, JDK 21, Android SDK 35, assembleDebug",
-    "observacao": "APK 1.42.4 compilado e publicado no release v1.42.4; checksum conferido por download do asset. Assinatura debug/CI. Sem instalação em aparelho físico."
+    "resultado": "pendente",
+    "observacao": "APK 1.42.5 em compilação no GitHub Actions (release-apk.yml)."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

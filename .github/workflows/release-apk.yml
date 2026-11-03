@@ -154,6 +154,13 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
+            **Novidades da 1.42.5:** projetista elétrico editável: modifique um projeto existente
+            (temporizador com sinalização retardada, remover componente, proteção térmica, tensão de
+            comando e conversão de topologia) sem tocar no original, com histórico de versões,
+            restauração e comparação estrutural. A vista usa símbolos IEC e permite religar pinos,
+            com revalidação e desfazer. O projetista também responde no chat e na voz.
+            Auditoria técnica registrada em docs/AUDITORIA.md.
+
             **Novidades da 1.42.4:** editor de circuito com palco: símbolos, terminais e fios
             desenhados; arraste para mover; toque em dois terminais para ligar; toque no componente
             para selecionar, editar id/valor ou apagar; e "Carregar .cad salvo" devolve o circuito

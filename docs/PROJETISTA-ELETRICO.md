@@ -17,6 +17,23 @@ apontada na saída.
 A vista de projeto desenha cada componente como um cartão com seus pinos e a rede (fio) de cada
 pino; as linhas tracejadas são os fios. Componente com erro aparece destacado.
 
+## Pelo chat e pela voz
+
+O mesmo motor responde no turno do Jarvis, antes da IA: "projetista: crie uma partida direta para
+motor trifásico de 5 CV", "converta para reversão", "remova H1", "analise o projeto", "corrija",
+"relatório", "ladder". A resposta é falada, o painel Arquivos abre e a saída técnica fica no
+painel. Perguntas comuns não são capturadas (é preciso verbo de projeto + termo elétrico, ou o
+prefixo "projetista"). A fala reconhecida usa o mesmo caminho do texto.
+
+## Símbolos e edição de pinos
+
+A vista desenha símbolo por tipo (contator com bobina e contatos, térmico, motor 3~, disjuntor,
+botoeira, temporizador, transformador, autotransformador, sensor, CLP, sinaleiro, fusível, fonte,
+interruptor), com o pino e a rede de cada terminal. **Tocar num pino** preenche "Pino" e "Rede";
+digitar outra rede e tocar em **Ligar pino à rede** regrava aquela ligação e revalida na hora —
+se criar curto ou deixar terminal solto, a verificação aponta. **Desfazer ligação** volta a última
+alteração de pino (até 10).
+
 ## Editar projeto existente, versões e comparação
 
 Depois de criar (ou abrir) um projeto, o campo **Modificação do projeto** aceita pedidos como:
@@ -134,7 +151,7 @@ Cada pino aponta para o **nome da rede**; dois pinos com o mesmo nome estão no 
 - **Intertravamento mecânico** é físico e não é representável no arquivo (aparece na sequência e
   no aviso).
 - **Ladder** é entregue como lista de expressões verificáveis, não como arquivo nativo de CLP.
-- Sem zonas, roteamento automático de fios, seleção múltipla ou desfazer/refazer na vista.
+- Sem zonas, roteamento automático de fios, seleção múltipla ou desfazer geral na vista (há desfazer por pino, até 10).
 
 ## Testes
 
@@ -142,7 +159,7 @@ Cada pino aponta para o **nome da rede**; dois pinos com o mesmo nome estão no 
   projeto e aprovação das seis topologias, determinismo, relatório, ladder, arquivo, detecção de
   falta de intertravamento/emergência/proteção, tensão errada, endereço de CLP duplicado, curto,
   terminal solto, a correção de cada um, o histórico de versões com restauração e a modificação de projeto existente.
-- `tests/test_projetista_ui.js` — app inteiro no jsdom: criar, desenhar (cartões e fios), analisar,
+- `tests/test_projetista_ui.js` — app inteiro no jsdom: criar, desenhar (símbolos IEC, pinos e fios), editar pino com desfazer, responder pelo chat, analisar,
   corrigir sem inventar correção, relatório, ladder do CLP, salvar, reabrir e apagar.
 
 ## Arquivos

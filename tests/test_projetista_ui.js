@@ -115,6 +115,31 @@ const { JSDOM, VirtualConsole } = require('jsdom');
   await dormir(150);
   assert.ok(/restaurada/.test(d.getElementById('proj-status').textContent), 'restaurar deve confirmar: ' + d.getElementById('proj-status').textContent);
 
+  // Símbolos IEC, edição de pino e ponte do chat/voz
+  assert.ok(d.querySelectorAll('#proj-palco .proj-simbolo').length >= 5, 'a vista deve desenhar símbolos: ' + d.querySelectorAll('#proj-palco .proj-simbolo').length);
+  assert.ok(w.JarvisProjetistaUI, 'a ponte do projetista deve estar exposta para o chat');
+  assert.ok(w.JarvisProjetista && typeof w.JarvisProjetista.responder === 'function', 'o chat deve ter o respondente do projetista');
+  assert.strictEqual(w.JarvisProjetista.intencao('qual a capital da França?'), false, 'pergunta comum não pode ser capturada como projetista');
+  const respostaChat = await w.JarvisProjetista.responder('projetista: crie uma partida direta para motor trifásico de 5 CV');
+  assert.ok(/Projeto montado/.test(respostaChat), 'chat deve montar o projeto: ' + String(respostaChat).slice(0, 160));
+  assert.ok(/não são executadas/.test(respostaChat), 'chat deve declarar a limitação de simulação');
+  assert.strictEqual(d.getElementById('painel-arquivos').hidden, false, 'o painel Arquivos deve abrir pelo chat');
+
+  const pinoA2 = d.querySelector('#proj-palco circle[data-pino="A2"]');
+  assert.ok(pinoA2, 'o desenho deve expor o pino A2');
+  pinoA2.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true }));
+  await dormir(60);
+  assert.ok(/K1\.A2/.test(d.getElementById('proj-pino').value), 'tocar no pino deve preencher o campo: ' + d.getElementById('proj-pino').value);
+  d.getElementById('proj-rede').value = 'K1A';
+  d.getElementById('proj-pino-aplicar').click();
+  await dormir(80);
+  assert.ok(/ligado à rede K1A/.test(d.getElementById('proj-status').textContent), 'aplicar pino deve confirmar: ' + d.getElementById('proj-status').textContent);
+  assert.ok(/erro\(s\)/.test(d.getElementById('proj-lista').textContent), 'ligar A2 em K1A deve criar curto e aparecer na verificação');
+  d.getElementById('proj-pino-desfazer').click();
+  await dormir(80);
+  assert.ok(/desfeita/.test(d.getElementById('proj-status').textContent), 'desfazer deve confirmar: ' + d.getElementById('proj-status').textContent);
+  assert.ok(/aprovado/.test(d.getElementById('proj-lista').textContent), 'desfazer deve voltar à verificação aprovada');
+
   console.log('OK: projetista elétrico na interface — criar, desenhar, analisar, corrigir, relatório, ladder e projeto salvo');
   process.exit(0);
 })().catch((e) => { console.error('FALHA: ' + e.message); process.exit(1); });

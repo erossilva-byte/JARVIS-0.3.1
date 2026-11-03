@@ -1645,3 +1645,7 @@ button.anexo{width:44px;min-width:44px;height:44px;min-height:44px;border-radius
 .proj-rede{fill:var(--cor);font:6.5px ui-monospace,monospace;text-anchor:middle;opacity:.9}
 .proj-fio{stroke:var(--suave);stroke-width:1;fill:none;stroke-dasharray:3 2;opacity:.8}
 #proj-lista,#proj-arquivos{max-height:32vh}
+.proj-sim{stroke:var(--cor);stroke-width:1.2;fill:none;stroke-linecap:round}
+.proj-simbolo.sel .proj-sim{stroke:#ff9a9a}
+.proj-simb-txt{fill:var(--texto);font:6px ui-monospace,monospace;text-anchor:middle}
+.proj-pino.sel{fill:var(--cor);stroke:var(--texto)}

@@ -1,5 +1,7 @@
-## Em desenvolvimento — Projetista elétrico
+## 1.42.5 — Projetista elétrico editável, versões e auditoria
 
+- **Projetista pelo chat e pela voz**: pedidos de projeto elétrico são resolvidos localmente no turno (texto digitado e fala reconhecida), com resumo falado, painel Arquivos aberto e declaração de que simulação elétrica e CADeSIMU não são executados. Perguntas comuns não são capturadas.
+- **Símbolos IEC e edição de pinos**: a vista de projeto desenha contator, térmico, motor, disjuntor, botoeira, temporizador, transformador, sensor, CLP e demais tipos; tocar num pino preenche componente/pino, e a rede pode ser trocada (com lista de redes), revalidada e desfeita.
 - **Edição de projeto existente** (`modificar`): temporizador com sinalização retardada, remoção de componente, proteção térmica, troca de tensão de comando e reconstrução como partida direta, reversão, estrela-triângulo ou compensadora — sempre sobre uma cópia, com o original intacto e a diferença calculada.
 - **Histórico de versões**: cada gravação da mesma projeto guarda a anterior (até 5), com listagem, restauração (a versão atual continua no histórico) e comparação estrutural entre dois projetos.
 - **Auditoria registrada** em `docs/AUDITORIA.md`: verificação estática sem ids duplicados, funções duplicadas ou segredos; gravação no desktop conferida por releitura de hash; nada de crítico confirmado nos caminhos testados, com o que não foi verificado declarado.
