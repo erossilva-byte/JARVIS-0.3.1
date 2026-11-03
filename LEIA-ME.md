@@ -6,6 +6,8 @@ O painel **Arquivos ▸ Montar circuito** virou editor: o palco desenha símbolo
 
 Ressalva mantida: o formato é o **`CadSimu CAD` v1** deste projeto, com `x`/`y` opcionais; o `.cad` nativo do CADeSIMU é proprietário e **não** é gerado. A netlist continua servindo de entrada para simuladores de PC, e o celular não simula eletricamente.
 
+O APK 1.42.4 tem **81222586 bytes** e SHA-256 `d0a331d65c704ec0c2d52d3007f8bf1d857b396680286f0898817cb70ee1eada`, compilado no GitHub Actions e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.4. Ele **não foi instalado em aparelho físico**: toque real, arrastar com o dedo e desempenho no Poco X7 continuam sem validação física.
+
 ## 1.42.3 — Montar circuito na interface e perguntar sobre a imagem
 
 O painel **Arquivos** ganhou a seção **Montar circuito**: escolha o componente, informe id e valor, ligue os terminais (`V1.1` ↔ `R1.1`), valide, veja a netlist e salve o `.cad` — sem escrever JSON. O arquivo salvo leva a placa de 120×80×2 mm como geometria e o circuito validado; o cofre, a análise e o download continuam os mesmos.
