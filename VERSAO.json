@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.42.5",
-  "versionCode": 10425,
+  "version": "1.42.6",
+  "versionCode": 10426,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-11-03",
-  "status": "1.42.5: projetista elétrico editável com histórico de versões, restauração e comparação; auditoria registrada; núcleo 3D, áreas e abertura preservados; build CI pendente.",
+  "status": "1.42.6: correção do pacote Android (projetista.js ausente no 1.42.5) com teste de empacotamento; build CI pendente.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.42.5 (2026-11-03). O projetista elétrico passou a editar projeto existente: temporizador com sinalização retardada, remoção de componente, proteção térmica, troca de tensão de comando e reconstrução como partida direta, reversão, estrela-triângulo ou compensadora — sempre sobre uma cópia, com o original intacto e a diferença calculada. Cada gravação guarda a versão anterior (até cinco), com listagem, restauração que preserva a atual no histórico e comparação estrutural entre dois projetos. A vista de projeto passou a usar símbolos IEC por tipo e a permitir religar qualquer pino (tocar no pino, trocar a rede, revalidar e desfazer). O mesmo projetista responde no chat e na voz, com resumo falado e painel aberto. A auditoria técnica está em docs/AUDITORIA.md: verificação estática sem ids duplicados, funções duplicadas ou segredos; a gravação de arquivos no desktop é conferida por releitura de hash e backup; nada de crítico foi confirmado nos caminhos testados, e o que não foi verificado está declarado. O núcleo verifica o aparelho, o provedor e o resultado antes de falar; seguem o raciocínio em etapas e a personalidade adaptativa, o núcleo 3D com plasma e animação holográfica, as dez áreas clicáveis, a abertura sem flash, a voz masculina PT-BR, o humor, o Obsidian, o bloqueio opcional e os circuitos no .cad. Testes: tests/test_projetista.js (73 verificações) e tests/test_projetista_ui.js no jsdom. Sem validação em aparelho físico e sem abertura no CADeSIMU, cujo formato é proprietário.",
+  "notas": "Revisão 1.42.6 (2026-11-03). Correção crítica de empacotamento: o release 1.42.5 foi publicado sem o projetista.js dentro do APK, porque o workflow copia uma lista fixa de arquivos para www/. O painel do projetista abria sem o módulo e o chat respondia que ele não havia carregado. O workflow agora copia o módulo e o teste tests/test_empacotamento.py confere que todo script do index.html está no pacote Android e na lista do Windows. Seguem as capacidades da 1.42.5: projetista editável com histórico de versões, restauração, comparação, símbolos IEC, edição de pinos com desfazer e uso pelo chat e pela voz. O núcleo verifica o aparelho, o provedor e o resultado antes de falar; seguem o raciocínio em etapas e a personalidade adaptativa, o núcleo 3D com plasma e animação holográfica, as dez áreas clicáveis, a abertura sem flash, a voz masculina PT-BR, o humor, o Obsidian, o bloqueio opcional e os circuitos no .cad. Simulação elétrica e abertura no CADeSIMU continuam não executadas.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,7 +16,7 @@
   ],
   "build": {
     "resultado": "pendente",
-    "observacao": "APK 1.42.5 em compilação no GitHub Actions (release-apk.yml)."
+    "observacao": "APK 1.42.6 em compilação no GitHub Actions (release-apk.yml)."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

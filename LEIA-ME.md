@@ -1,4 +1,8 @@
-# J.A.R.V.I.S. Nova 1.42.5
+# J.A.R.V.I.S. Nova 1.42.6
+
+## 1.42.6 — Correção do pacote Android
+
+O APK **1.42.5** foi publicado sem o `projetista.js`: o painel do projetista abria no Android, mas o módulo não existia no pacote e o recurso não funcionava. A 1.42.6 corrige o workflow de build e adiciona `tests/test_empacotamento.py`, que falha se qualquer script do `index.html` ficar fora do pacote Android ou da lista do Windows. A mesma verificação encontrou `pc.js` e `cad_projeto.js` fora do pacote Android desde versões anteriores (painel PC e reparo/exportação do CAD sem módulo no aparelho); os dois foram incluídos. Use esta versão no lugar da 1.42.5.
 
 ## 1.42.5 — Projetista elétrico editável
 

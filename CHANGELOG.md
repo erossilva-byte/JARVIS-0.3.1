@@ -1,3 +1,10 @@
+## 1.42.6 — Correção do pacote Android do projetista
+
+- **Crítico**: o release 1.42.5 saiu sem `projetista.js` no APK (o workflow copiava uma lista fixa de arquivos para `www/`). No Android o painel do projetista abria sem o módulo e o chat respondia "não carregou". Corrigido no workflow.
+- **Regressão**: `tests/test_empacotamento.py` compara os `<script src>` do `index.html` com a cópia para `www/` e com a lista de arquivos do pacote Windows; divergência derruba o teste.
+- **Também corrigido**: `pc.js` e `cad_projeto.js` estavam fora da cópia para `www/` desde antes — painel PC e reparo/exportação do CAD no Android sem módulo. O teste de empacotamento passou a cobrir todos os scripts do `index.html`.
+- Nenhuma funcionalidade da 1.42.5 foi alterada: projetista editável, versões, restauração, comparação, símbolos IEC, edição de pinos e uso pelo chat/voz.
+
 ## 1.42.5 — Projetista elétrico editável, versões e auditoria
 
 - **Projetista pelo chat e pela voz**: pedidos de projeto elétrico são resolvidos localmente no turno (texto digitado e fala reconhecida), com resumo falado, painel Arquivos aberto e declaração de que simulação elétrica e CADeSIMU não são executados. Perguntas comuns não são capturadas.

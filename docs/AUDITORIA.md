@@ -31,8 +31,19 @@ verificação, está escrito que não houve.
 
 ### Crítico
 
-Nenhum achado crítico confirmado nos caminhos exercitados pelos testes. Não houve corrupção de
-dados, perda de arquivo nem falha de inicialização nos testes executados.
+**1. APK 1.42.5 publicado sem `projetista.js`** (encontrado ao conferir o conteúdo do APK, depois do release).
+O workflow Android monta `www/` com uma lista fixa de `cp`; `projetista.js` entrou no `index.html` e no
+pacote Windows, mas não nessa lista. Resultado: no Android o painel do projetista abria sem o módulo
+(`window.ProjetistaEletrico` indefinido) e o chat respondia que ele não carregou. Corrigido em 1.42.6:
+o módulo passou a ser copiado e `tests/test_empacotamento.py` compara os `<script src>` com a cópia e com
+a lista do Windows, falhando em divergência.
+
+**2. `pc.js` e `cad_projeto.js` também nunca eram copiados para `www/`** (encontrado pelo teste de
+empacotamento criado para o item 1). O `index.html` carrega os dois, mas o workflow Android não os
+copiava: no aparelho, o painel PC e o reparo/exportação do CAD ficavam sem módulo. Corrigido no mesmo
+workflow; o teste falha se qualquer script do `index.html` ficar fora do pacote.
+
+Fora esse, nenhum outro achado crítico foi confirmado nos caminhos exercitados pelos testes.
 
 ### Alto
 
@@ -85,6 +96,7 @@ que só aparecem nesses ambientes não foram descartadas — apenas não foram o
 | `node tests/test_projetista.js` | **OK, 73 verificações** (interpretação, topologias, verificação, correção, arquivo, versões, comparação e modificação) |
 | `node tests/test_projetista_ui.js` | OK (criar, desenhar, analisar, corrigir, relatório, ladder, salvar, reabrir, modificar, comparar, versões e restaurar) |
 | `npm run test:all` | **EXIT 0, 2.107 verificações** |
+| `python3 tests/test_empacotamento.py` | OK (todo script do `index.html` no pacote Android e no Windows) |
 | Contratos Python | verdes |
 
 ## 6. Não verificado (declarado, não presumido)
