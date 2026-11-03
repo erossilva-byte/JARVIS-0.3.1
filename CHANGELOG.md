@@ -1,5 +1,8 @@
 ## Em desenvolvimento — Projetista elétrico
 
+- **Edição de projeto existente** (`modificar`): temporizador com sinalização retardada, remoção de componente, proteção térmica, troca de tensão de comando e reconstrução como partida direta, reversão, estrela-triângulo ou compensadora — sempre sobre uma cópia, com o original intacto e a diferença calculada.
+- **Histórico de versões**: cada gravação da mesma projeto guarda a anterior (até 5), com listagem, restauração (a versão atual continua no histórico) e comparação estrutural entre dois projetos.
+- **Auditoria registrada** em `docs/AUDITORIA.md`: verificação estática sem ids duplicados, funções duplicadas ou segredos; gravação no desktop conferida por releitura de hash; nada de crítico confirmado nos caminhos testados, com o que não foi verificado declarado.
 - **Área própria no painel Arquivos**: pedido em português, criar, analisar, corrigir, relatório técnico, ladder do CLP, salvar e reabrir projeto.
 - **Motor determinístico** (`projetista.js`): interpreta potência (CV), trifásico/monofásico, tensões, temporizador, emergência e sinalização; monta partida direta, reversão, estrela-triângulo, compensadora, comando com selo, iluminação e CLP de nível, com pinos nomeados, redes, fios numerados, sequência de operação e dimensionamento didático.
 - **Verificação estrutural por regras**: terminal solto, curto, curto entre fases, bobina sem alimentação, falta de emergência, falta de proteção, falta de intertravamento, tensão de bobina incompatível, temporizador ausente e endereço de CLP duplicado/inválido — por busca em largura nos fios e contatos.

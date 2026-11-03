@@ -93,6 +93,28 @@ const { JSDOM, VirtualConsole } = require('jsdom');
   await dormir(100);
   assert.ok(/aberto/.test(d.getElementById('proj-status').textContent), 'abrir deve confirmar: ' + d.getElementById('proj-status').textContent);
 
+  // Modificação, comparação, histórico e restauração
+  d.getElementById('proj-mod').value = 'adicionar temporizador de 10 segundos';
+  d.getElementById('proj-modificar').click();
+  await dormir(150);
+  assert.ok(/modificação\(ões\) aplicada/.test(d.getElementById('proj-status').textContent), 'modificar deve confirmar: ' + d.getElementById('proj-status').textContent);
+  assert.ok(/Temporizador/.test(d.getElementById('proj-saida').value), 'a saída deve descrever o temporizador inserido');
+  assert.ok(/COMPARAÇÃO DE PROJETOS/.test(d.getElementById('proj-saida').value), 'a saída deve trazer a comparação com o original');
+  d.getElementById('proj-comparar').click();
+  await dormir(80);
+  assert.ok(/COMPARAÇÃO DE PROJETOS/.test(d.getElementById('proj-saida').value), 'comparar deve gerar a comparação');
+  d.getElementById('proj-salvar').click();
+  await dormir(120);
+  d.getElementById('proj-versoes').click();
+  await dormir(120);
+  assert.ok(/Histórico de/.test(d.getElementById('proj-status').textContent), 'versões devem listar o histórico: ' + d.getElementById('proj-status').textContent);
+  assert.ok(/VERSÕES DE/.test(d.getElementById('proj-saida').value), 'a saída deve listar as versões');
+  const botaoRestaurar = Array.from(d.querySelectorAll('#proj-arquivos button')).find((b) => /Restaurar/.test(b.textContent));
+  assert.ok(botaoRestaurar, 'o histórico deve oferecer Restaurar');
+  botaoRestaurar.click();
+  await dormir(150);
+  assert.ok(/restaurada/.test(d.getElementById('proj-status').textContent), 'restaurar deve confirmar: ' + d.getElementById('proj-status').textContent);
+
   console.log('OK: projetista elétrico na interface — criar, desenhar, analisar, corrigir, relatório, ladder e projeto salvo');
   process.exit(0);
 })().catch((e) => { console.error('FALHA: ' + e.message); process.exit(1); });

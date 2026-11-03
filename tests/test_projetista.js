@@ -153,4 +153,44 @@ assert.ok(P.listar().length === 1, ok('projeto aparece na lista'));
 assert.ok(P.ler('teste-reversao').ok, ok('projeto salvo reabre'));
 assert.ok(P.apagar('teste-reversao').ok, ok('projeto salvo apaga'));
 
+// 22 — histórico de versões: a gravação anterior é preservada
+const memoria2 = {};
+P.usarStore({ getItem: (k) => memoria2[k] || null, setItem: (k, v) => { memoria2[k] = v; return true; } });
+const baseHistorico = JSON.parse(JSON.stringify(projetos.direta));
+const s1 = P.salvar('historico-direta', baseHistorico);
+assert.ok(s1.ok && s1.substituiu === false, ok('primeira gravação não substitui'));
+baseHistorico.componentes = baseHistorico.componentes.filter((c) => c.id !== 'H1');
+const s2 = P.salvar('historico-direta', baseHistorico);
+assert.ok(s2.ok && s2.substituiu === true, ok('segunda gravação registra substituição'));
+const historico = P.versoes('historico-direta');
+assert.strictEqual(historico.versoes.length, 2, 'duas versões no histórico: ' + historico.versoes.length);
+assert.ok(P.lerVersao('historico-direta', 1).projeto.componentes.length > P.lerVersao('historico-direta', 0).projeto.componentes.length, ok('versão anterior guardada com mais componentes'));
+const restaurado = P.restaurar('historico-direta', 1);
+assert.ok(restaurado.ok && restaurado.projeto.componentes.length === projetos.direta.componentes.length, ok('restaurar devolve a versão anterior'));
+assert.strictEqual(P.versoes('historico-direta').versoes.length, 3, ok('restaurar mantém a versão atual no histórico'));
+
+// 23 — comparação aponta o que mudou
+const diff = P.comparar(projetos.direta, baseHistorico);
+assert.ok(diff.removidos.indexOf('H1') >= 0, ok('comparação aponta componente removido (H1)'));
+assert.ok(/COMPARAÇÃO DE PROJETOS/.test(diff.resumo), ok('comparação gera resumo legível'));
+assert.strictEqual(P.comparar(projetos.direta, projetos.direta).adicionados.length, 0, ok('comparação de projeto consigo mesmo não inventa diferença'));
+
+// 24 — modificação de projeto existente
+const modDir = P.projetar(pedidos.direta).projeto;
+const comTimer = P.modificar(modDir, 'adicionar temporizador de 10 segundos');
+assert.ok(comTimer.ok, 'modificação do temporizador: ' + comTimer.erro);
+assert.strictEqual(comTimer.projeto.componentes.length, modDir.componentes.length + 2, ok('temporizador e sinaleiro adicionados'));
+assert.ok(comTimer.validacao.ok, 'projeto com temporizador continua válido: ' + comTimer.validacao.erros.map((e) => e.codigo).join(','));
+assert.ok(comTimer.mudancas.length >= 1 && /Temporizador/.test(comTimer.mudancas[0]), ok('modificação registrada na saída'));
+assert.strictEqual(modDir.componentes.length, projetos.direta.componentes.length, ok('projeto original intacto após modificar'));
+const semH1 = P.modificar(modDir, 'remover H1');
+assert.ok(semH1.ok && !semH1.projeto.componentes.some((c) => c.id === 'H1'), ok('remoção de componente existente'));
+assert.ok(P.modificar(modDir, 'remover ZZ9').ok === false, ok('remoção de componente inexistente é recusada'));
+const comoReversao = P.modificar(modDir, 'converter para reversão');
+assert.ok(comoReversao.ok && comoReversao.projeto.tipo === 'reversao', ok('conversão para reversão troca a topologia'));
+assert.ok(comoReversao.validacao.ok, 'reversão resultante é válida: ' + comoReversao.validacao.erros.map((e) => e.codigo).join(','));
+const em24 = P.modificar(modDir, 'comando em 24 V');
+assert.ok(em24.ok && em24.projeto.spec.tensaoComando === 24, ok('troca de tensão de comando'));
+assert.ok(P.modificar(modDir, 'fazer café').ok === false, ok('pedido de modificação desconhecido é recusado'));
+
 console.log('OK: projetista elétrico — ' + checks + ' verificações (interpretação, 6 topologias, verificação, correção e arquivo)');

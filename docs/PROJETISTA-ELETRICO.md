@@ -17,6 +17,28 @@ apontada na saída.
 A vista de projeto desenha cada componente como um cartão com seus pinos e a rede (fio) de cada
 pino; as linhas tracejadas são os fios. Componente com erro aparece destacado.
 
+## Editar projeto existente, versões e comparação
+
+Depois de criar (ou abrir) um projeto, o campo **Modificação do projeto** aceita pedidos como:
+
+| Pedido de modificação | O que o motor faz |
+| --- | --- |
+| "adicionar temporizador de 10 segundos" | insere `KT` comandado pela bobina do contator principal e um sinaleiro que acende depois do tempo |
+| "remover H1" | remove o componente, seus pinos e as ligações dele (e o tira de intertravamentos) |
+| "adicionar proteção" | insere relé térmico no circuito de força da carga |
+| "comando em 24 V" | reconstrói o comando na tensão pedida (bobinas, fonte e proteção) |
+| "converter para reversão" / "estrela-triângulo" / "compensadora" / "partida direta" | reconstrói a topologia mantendo potência, tensões e emergência |
+| qualquer outra coisa | recusa com exemplos do que entende |
+
+O projeto **original não é alterado**: a modificação trabalha sobre uma cópia e a saída mostra a
+**comparação** (componentes adicionados, removidos, alterados e redes novas/removidas). Isso é
+diferença de estrutura — não é simulação elétrica.
+
+**Versões**: cada gravação guarda a anterior (até 5). O botão **Versões** lista o histórico do
+último projeto salvo e oferece **Restaurar**; restaurar grava a versão escolhida como versão nova,
+mantendo a atual no histórico — nada é perdido. **Comparar** usa o projeto de antes da modificação
+(ou a última versão salva) como referência.
+
 ## Topologias reconhecidas pelo pedido
 
 | Pedido (palavras-chave) | Topologia montada |
@@ -116,10 +138,10 @@ Cada pino aponta para o **nome da rede**; dois pinos com o mesmo nome estão no 
 
 ## Testes
 
-- `tests/test_projetista.js` — 57 verificações: interpretação dos seis pedidos da missão,
+- `tests/test_projetista.js` — 73 verificações: interpretação dos seis pedidos da missão,
   projeto e aprovação das seis topologias, determinismo, relatório, ladder, arquivo, detecção de
   falta de intertravamento/emergência/proteção, tensão errada, endereço de CLP duplicado, curto,
-  terminal solto e a correção de cada um.
+  terminal solto, a correção de cada um, o histórico de versões com restauração e a modificação de projeto existente.
 - `tests/test_projetista_ui.js` — app inteiro no jsdom: criar, desenhar (cartões e fios), analisar,
   corrigir sem inventar correção, relatório, ladder do CLP, salvar, reabrir e apagar.
 

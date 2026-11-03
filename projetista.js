@@ -919,13 +919,29 @@
     if (!s) return [];
     var bruto;
     try { bruto = JSON.parse(s.getItem(CHAVE_STORE) || '[]'); } catch (e) { return []; }
-    return Array.isArray(bruto) ? bruto.filter(function (a) { return a && a.nome && a.texto; }).slice(0, LIMITE_ARQUIVOS) : [];
+    if (!Array.isArray(bruto)) return [];
+    return bruto.filter(function (a) {
+      return a && a.nome && (typeof a.texto === 'string' || (Array.isArray(a.versoes) && a.versoes.length));
+    }).slice(0, LIMITE_ARQUIVOS);
   }
   function gravarLista(lista) {
     var s = obterStore();
     if (!s) return false;
     try { s.setItem(CHAVE_STORE, JSON.stringify(lista.slice(0, LIMITE_ARQUIVOS))); return true; } catch (e) { return false; }
   }
+  /** Versão atual primeiro, depois as anteriores (mais recente antes). */
+  function versoesDe(entrada) {
+    if (!entrada) return [];
+    var lista = Array.isArray(entrada.versoes) ? entrada.versoes.slice() : [];
+    if (typeof entrada.texto === 'string') {
+      lista.unshift({ texto: entrada.texto, bytes: entrada.bytes, atualizado: entrada.atualizado });
+    }
+    return lista.filter(function (v) { return v && typeof v.texto === 'string'; });
+  }
+  function entradaDe(nome) {
+    return lerLista().filter(function (a) { return a.nome === slug(nome); })[0] || null;
+  }
+
   function salvar(nome, projeto) {
     var texto = typeof projeto === 'string' ? projeto : serializar(projeto);
     var r = parse(texto);
@@ -933,21 +949,35 @@
     var bytes = bytesDe(texto);
     if (bytes > LIMITE_BYTES) return { ok: false, erro: 'Projeto acima de 512 kB.' };
     var arq = slug(nome || r.projeto.titulo || r.projeto.tipo);
-    var lista = lerLista().filter(function (a) { return a.nome !== arq; });
-    lista.unshift({ nome: arq, texto: texto, bytes: bytes, atualizado: Date.now() });
-    if (!gravarLista(lista)) return { ok: false, erro: 'Sem espaço local para salvar o projeto.' };
-    return { ok: true, nome: arq, bytes: bytes, projeto: r.projeto, validacao: r.validacao };
+    var lista = lerLista();
+    var anterior = lista.filter(function (a) { return a.nome === arq; })[0];
+    var antigas = versoesDe(anterior).slice(0, 5);
+    var restante = lista.filter(function (a) { return a.nome !== arq; });
+    restante.unshift({
+      nome: arq, texto: texto, bytes: bytes, atualizado: Date.now(), versoes: antigas
+    });
+    if (!gravarLista(restante)) return { ok: false, erro: 'Sem espaço local para salvar o projeto.' };
+    return {
+      ok: true, nome: arq, bytes: bytes, substituiu: !!anterior, versoes: antigas.length,
+      projeto: r.projeto, validacao: r.validacao
+    };
   }
+
   function listar() {
     return lerLista().map(function (a) {
-      return { nome: a.nome, bytes: a.bytes || bytesDe(a.texto), atualizado: a.atualizado || 0 };
+      return {
+        nome: a.nome, bytes: a.bytes || bytesDe(a.texto), atualizado: a.atualizado || 0,
+        versoes: versoesDe(a).length
+      };
     }).sort(function (a, b) { return b.atualizado - a.atualizado; });
   }
+
   function ler(nome) {
-    var alvo = lerLista().filter(function (a) { return a.nome === slug(nome); })[0];
+    var alvo = entradaDe(nome);
     if (!alvo) return { ok: false, erro: 'Projeto "' + limpar(nome, 60) + '" não encontrado.' };
     return parse(alvo.texto);
   }
+
   function apagar(nome) {
     var alvo = slug(nome);
     var lista = lerLista();
@@ -956,11 +986,214 @@
     return gravarLista(sobrou) ? { ok: true } : { ok: false, erro: 'Não foi possível apagar agora.' };
   }
 
+  /** Lista o histórico (a versão atual é a índice 0). */
+  function versoes(nome) {
+    var entrada = entradaDe(nome);
+    if (!entrada) return { ok: false, erro: 'Projeto "' + limpar(nome, 60) + '" não encontrado.' };
+    var lista = versoesDe(entrada);
+    return {
+      ok: true, nome: entrada.nome,
+      versoes: lista.map(function (v, i) {
+        var p = null;
+        try { p = JSON.parse(v.texto); } catch (e) { p = null; }
+        return {
+          indice: i,
+          bytes: v.bytes || bytesDe(v.texto),
+          atualizado: v.atualizado || 0,
+          resumo: p && p.titulo ? p.titulo : (p ? 'projeto ' + (p.tipo || '') : 'versão ' + (i + 1)),
+          componentes: p && Array.isArray(p.componentes) ? p.componentes.length : 0
+        };
+      })
+    };
+  }
+
+  function lerVersao(nome, indice) {
+    var entrada = entradaDe(nome);
+    if (!entrada) return { ok: false, erro: 'Projeto "' + limpar(nome, 60) + '" não encontrado.' };
+    var lista = versoesDe(entrada);
+    var i = Math.max(0, Math.min(lista.length - 1, Number(indice) || 0));
+    if (!lista[i]) return { ok: false, erro: 'Versão ' + (indice + 1) + ' não existe.' };
+    return parse(lista[i].texto);
+  }
+
+  function restaurar(nome, indice) {
+    var r = lerVersao(nome, indice);
+    if (!r.ok) return r;
+    var s = salvar(nome, r.projeto);
+    if (!s.ok) return s;
+    return {
+      ok: true, projeto: r.projeto, nome: s.nome, bytes: s.bytes, versoes: s.versoes,
+      validacao: s.validacao, restaurada: Number(indice) || 0
+    };
+  }
+
+  /* ---------- Comparação estrutural ---------- */
+  function comparar(a, b) {
+    if (!a || !b || !Array.isArray(a.componentes) || !Array.isArray(b.componentes)) {
+      return { ok: false, erro: 'Dois projetos são necessários para comparar.' };
+    }
+    var mapa = function (p) {
+      var m = {};
+      p.componentes.forEach(function (c) { m[c.id] = c; });
+      return m;
+    };
+    var ma = mapa(a), mb = mapa(b);
+    var adicionados = Object.keys(mb).filter(function (id) { return !ma[id]; });
+    var removidos = Object.keys(ma).filter(function (id) { return !mb[id]; });
+    var alterados = [];
+    Object.keys(ma).forEach(function (id) {
+      if (!mb[id]) return;
+      var campos = [];
+      ['tipo', 'funcao', 'tensao'].forEach(function (k) {
+        if (String(ma[id][k] == null ? '' : ma[id][k]) !== String(mb[id][k] == null ? '' : mb[id][k])) campos.push(k);
+      });
+      var pa = ma[id].pinos || {}, pb = mb[id].pinos || {};
+      var chaves = Object.keys(pa).concat(Object.keys(pb));
+      chaves.forEach(function (p) {
+        if (pa[p] !== pb[p] && campos.indexOf('pino ' + p) < 0) campos.push('pino ' + p);
+      });
+      if (campos.length) alterados.push({ id: id, campos: campos });
+    });
+    var redes = function (p) {
+      var s = {};
+      p.componentes.forEach(function (c) {
+        Object.keys(c.pinos || {}).forEach(function (k) { s[c.pinos[k]] = true; });
+      });
+      return s;
+    };
+    var ra = redes(a), rb = redes(b);
+    var novasRedes = Object.keys(rb).filter(function (r) { return !ra[r]; });
+    var redesRemovidas = Object.keys(ra).filter(function (r) { return !rb[r]; });
+    var va = validar(a), vb = validar(b);
+
+    var linhas = [];
+    linhas.push('COMPARAÇÃO DE PROJETOS (estrutural)');
+    linhas.push('  A: ' + (a.titulo || a.tipo) + ' · ' + a.componentes.length + ' componentes · ' + va.erros.length + ' erro(s)');
+    linhas.push('  B: ' + (b.titulo || b.tipo) + ' · ' + b.componentes.length + ' componentes · ' + vb.erros.length + ' erro(s)');
+    linhas.push('');
+    linhas.push('Componentes adicionados: ' + (adicionados.length ? adicionados.join(', ') : 'nenhum'));
+    linhas.push('Componentes removidos: ' + (removidos.length ? removidos.join(', ') : 'nenhum'));
+    linhas.push('Componentes alterados: ' + (alterados.length ? alterados.map(function (x) { return x.id + ' (' + x.campos.join(', ') + ')'; }).join('; ') : 'nenhum'));
+    linhas.push('Redes novas: ' + (novasRedes.length ? novasRedes.join(', ') : 'nenhuma'));
+    linhas.push('Redes removidas: ' + (redesRemovidas.length ? redesRemovidas.join(', ') : 'nenhuma'));
+    if (va.erros.length || vb.erros.length) linhas.push('Atenção: um dos projetos tem erro estrutural; a comparação não valida funcionamento.');
+    linhas.push('Isto é diferença de estrutura, não simulação elétrica.');
+
+    return {
+      ok: true, adicionados: adicionados, removidos: removidos, alterados: alterados,
+      novasRedes: novasRedes, redesRemovidas: redesRemovidas,
+      validacaoA: va, validacaoB: vb, resumo: linhas.join('\n')
+    };
+  }
+
+  /* ---------- Modificação de projeto existente ---------- */
+  function modificar(projeto, pedido) {
+    if (!projeto || !Array.isArray(projeto.componentes) || !projeto.componentes.length) {
+      return { ok: false, erro: 'Crie ou abra um projeto antes de modificar.' };
+    }
+    var texto = String(pedido == null ? '' : pedido).trim();
+    if (!texto) return { ok: false, erro: 'Escreva a modificação desejada.' };
+    var t = texto.toLowerCase();
+    var original = clonar(projeto);
+    var atual = clonar(projeto);
+    var mudancas = [];
+    var spec = atual.spec || { tipo: atual.tipo, tensaoComando: 220, emergencia: true };
+
+    function reconstruir(tipo, rotulo) {
+      var nova = clonar(spec);
+      nova.tipo = tipo;
+      var r = projetar({ spec: nova, pedido: atual.pedido || texto });
+      if (!r.ok) return false;
+      r.projeto.pedido = atual.pedido || texto;
+      atual = r.projeto;
+      mudancas.push(rotulo);
+      return true;
+    }
+
+    if (/revers/.test(t)) {
+      if (!reconstruir('reversao', 'Projeto reconstruído como reversão de motor, mantendo potência, tensões e emergência do original.')) {
+        return { ok: false, erro: 'Não consegui reconstruir como reversão com esta especificação.' };
+      }
+    } else if (/estrela/.test(t) && /tri/.test(t)) {
+      if (!reconstruir('estrela_triangulo', 'Projeto reconstruído como estrela-triângulo automática.')) {
+        return { ok: false, erro: 'Não consegui reconstruir como estrela-triângulo com esta especificação.' };
+      }
+    } else if (/compensadora/.test(t)) {
+      if (!reconstruir('compensadora', 'Projeto reconstruído como partida compensadora.')) {
+        return { ok: false, erro: 'Não consegui reconstruir como compensadora com esta especificação.' };
+      }
+    } else if (/partida\s+direta/.test(t)) {
+      if (!reconstruir('partida_direta', 'Projeto reconstruído como partida direta.')) {
+        return { ok: false, erro: 'Não consegui reconstruir como partida direta com esta especificação.' };
+      }
+    } else if (/tens[aã]o|comando/.test(t) && t.match(/(24|220|380)\s*v/)) {
+      var valor = Number(t.match(/(24|220|380)\s*v/)[1]);
+      var novaSpec = clonar(spec);
+      novaSpec.tensaoComando = valor;
+      var rv = projetar({ spec: novaSpec, pedido: atual.pedido || texto });
+      if (!rv.ok) return { ok: false, erro: rv.erro };
+      atual = rv.projeto;
+      mudancas.push('Comando reconstruído em ' + valor + ' V (bobinas, fonte e proteção do comando refeitas).');
+    } else if (/temporizador|retard/.test(t)) {
+      var seg = t.match(/(\d+(?:[.,]\d+)?)\s*(?:s\b|seg)/);
+      var segundos = seg ? Number(seg[1].replace(',', '.')) : 10;
+      var principal = atual.componentes.filter(function (c) { return c.papel === 'principal' && c.pinos && c.pinos.A1; })[0];
+      var ret = ((atual.redes && atual.redes.retorno) || [])[0];
+      if (!principal) return { ok: false, erro: 'Este projeto não tem contator principal com bobina para o temporizador comandar.' };
+      if (!ret) return { ok: false, erro: 'O projeto não tem rede de retorno definida.' };
+      var idT = 'KT';
+      var nT = 2;
+      while (atual.componentes.some(function (c) { return c.id === idT; })) { idT = 'KT' + nT; nT++; }
+      var idH = 'H' + (atual.componentes.filter(function (c) { return c.tipo === 'sinaleiro'; }).length + 1);
+      var redeLamp = redeUnica(atual, idT + '_LAMP');
+      atual.componentes.push({
+        id: idT, tipo: 'temporizador', funcao: 'Temporizador de ' + segundos + ' s (sinalização retardada)',
+        papel: 'temporizador', tensao: spec.tensaoComando, tempo: segundos,
+        pinos: { A1: principal.pinos.A1, A2: ret, 15: principal.pinos.A1, 16: redeLamp },
+        x: 110, y: 470
+      });
+      atual.componentes.push({
+        id: idH, tipo: 'sinaleiro', funcao: 'Sinaleiro após ' + segundos + ' s',
+        papel: 'sinalizacao', pinos: { 1: redeLamp, 2: ret }, x: 300, y: 470
+      });
+      mudancas.push('Temporizador ' + idT + ' de ' + segundos + ' s inserido, comandando o sinaleiro ' + idH + ' depois do tempo.');
+    } else if (/remover|apagar|excluir/.test(t)) {
+      var alvo = (t.match(/\b(?:remover|apagar|excluir)\s+([a-z]{1,4}\d{1,3})\b/) || [])[1];
+      if (!alvo) return { ok: false, erro: 'Diga qual componente remover, por exemplo: "remover H1".' };
+      var id = alvo.toUpperCase();
+      var achado = atual.componentes.filter(function (c) { return c.id === id; })[0];
+      if (!achado) return { ok: false, erro: 'O componente ' + id + ' não existe no projeto.' };
+      atual.componentes = atual.componentes.filter(function (c) { return c.id !== id; });
+      atual.intertravamentos = (atual.intertravamentos || []).filter(function (par) { return par.indexOf(id) < 0; });
+      mudancas.push('Componente ' + id + ' removido com os pinos e as ligações dele.');
+    } else if (/prote[cç]/.test(t)) {
+      var carga = atual.componentes.filter(function (c) { return TIPOS[c.tipo] && TIPOS[c.tipo].carga; })[0];
+      if (!carga) return { ok: false, erro: 'O projeto não tem carga (motor/bomba) para proteger.' };
+      if (!aplicarProtecao(atual, carga.id)) return { ok: false, erro: 'A carga ' + carga.id + ' já tem proteção declarada.' };
+      mudancas.push('Relé térmico inserido no circuito de força de ' + carga.id + '.');
+    } else {
+      return {
+        ok: false,
+        erro: 'Não entendi a modificação. Exemplos: "adicionar temporizador de 10 segundos", "remover H1", "adicionar proteção", "converter para reversão", "comando em 24 V".'
+      };
+    }
+
+    var v = validar(atual);
+    return {
+      ok: true, projeto: atual, mudancas: mudancas, validacao: v,
+      diferenca: comparar(original, atual),
+      original: original,
+      aviso: v.ok ? '' : 'A modificação deixou ' + v.erros.length + ' erro(s) de verificação estrutural.'
+    };
+  }
+
   return {
     FORMATO: FORMATO, VERSAO: VERSAO, TIPOS: TIPOS, EXEMPLOS: EXEMPLOS,
     interpretar: interpretar, projetar: projetar, validar: validar, corrigir: corrigir,
+    modificar: modificar, comparar: comparar,
     relatorio: relatorio, ladder: ladder, fios: fios, resumoComponentes: resumoComponentes,
     serializar: serializar, parse: parse, dimensionar: dimensionar,
-    salvar: salvar, listar: listar, ler: ler, apagar: apagar, usarStore: usarStore
+    salvar: salvar, listar: listar, ler: ler, apagar: apagar,
+    versoes: versoes, lerVersao: lerVersao, restaurar: restaurar, usarStore: usarStore
   };
 });

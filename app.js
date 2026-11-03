@@ -10801,12 +10801,103 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
     if (!m || !projeto) { status('Crie um projeto antes de salvar.', true); return; }
     const nome = projeto.tipo + '-' + (projeto.spec && projeto.spec.cv ? projeto.spec.cv + 'cv' : 'geral');
     const r = m.salvar(nome, projeto);
+    if (r.ok) ultimoSalvo = r.nome;
     status(r.ok ? 'Projeto salvo como ' + r.nome + ' (' + Math.max(1, Math.round(r.bytes / 1024)) + ' kB).' : r.erro, !r.ok);
     arquivos();
   }
 
+  let anterior = null;
+  let ultimoSalvo = '';
+
+  function modificarProjeto() {
+    const m = modulo();
+    if (!m || !projeto) { status('Crie um projeto antes de modificar.', true); return; }
+    const campoMod = el('proj-mod');
+    const pedido = String(campoMod && campoMod.value || '').trim();
+    if (!pedido) { status('Escreva a modificação, por exemplo: "adicionar temporizador de 10 segundos".', true); return; }
+    const antes = projeto;
+    const r = m.modificar(projeto, pedido);
+    if (!r.ok) { status(r.erro, true); return; }
+    anterior = antes;
+    projeto = r.projeto;
+    validacao = r.validacao;
+    desenhar(); lista();
+    saida([
+      'MODIFICAÇÕES APLICADAS',
+      r.mudancas.map((t) => '  - ' + t).join('\n'),
+      '',
+      r.diferenca ? r.diferenca.resumo : '',
+      '',
+      textoDaVerificacao(validacao)
+    ].join('\n'));
+    status(r.mudancas.length + ' modificação(ões) aplicada(s)' + (validacao.ok ? ' e verificação aprovada.' : '; restam ' + validacao.erros.length + ' erro(s).'), !validacao.ok);
+  }
+
+  function compararProjeto() {
+    const m = modulo();
+    if (!m || !projeto) { status('Crie um projeto antes de comparar.', true); return; }
+    if (!anterior && ultimoSalvo) {
+      const salvo = m.ler(ultimoSalvo);
+      if (salvo.ok) anterior = salvo.projeto;
+    }
+    if (!anterior) { status('Modifique o projeto ou salve uma versão para ter o que comparar.', true); return; }
+    saida(m.comparar(anterior, projeto).resumo);
+    status('Comparação estrutural gerada (não é simulação elétrica).');
+  }
+
+  function mostrarVersoes() {
+    const m = modulo();
+    if (!m || !ultimoSalvo) { status('Salve o projeto para começar o histórico de versões.', true); return; }
+    const h = m.versoes(ultimoSalvo);
+    if (!h.ok) { status(h.erro, true); return; }
+    const linhas = ['VERSÕES DE ' + ultimoSalvo, ''];
+    h.versoes.forEach((v) => {
+      linhas.push('  ' + (v.indice + 1) + '. ' + v.resumo + ' · ' + v.componentes + ' componentes · ' +
+        Math.max(1, Math.round((v.bytes || 0) / 1024)) + ' kB' +
+        (v.atualizado ? ' · ' + new Date(v.atualizado).toLocaleString('pt-BR') : ''));
+    });
+    if (h.versoes.length < 2) linhas.push('  (só a versão atual; salve de novo para guardar histórico)');
+    linhas.push('');
+    linhas.push('Restaurar mantém a versão atual no histórico: nada é perdido.');
+    saida(linhas.join('\n'));
+    const box = el('proj-arquivos');
+    if (!box) return;
+    box.textContent = '';
+    h.versoes.forEach((v) => {
+      const item = document.createElement('article');
+      item.className = 'mem-nota';
+      const cab = document.createElement('div');
+      cab.className = 'mem-nota-cab';
+      const tema = document.createElement('span');
+      tema.className = 'mem-nota-tema';
+      tema.textContent = v.indice === 0 ? 'versão atual' : 'versão ' + (v.indice + 1);
+      const titulo = document.createElement('b');
+      titulo.textContent = v.resumo;
+      cab.append(tema, titulo);
+      const meta = document.createElement('small');
+      meta.textContent = v.componentes + ' componentes · ' + Math.max(1, Math.round((v.bytes || 0) / 1024)) + ' kB';
+      const acoes = document.createElement('div');
+      acoes.className = 'botoes';
+      const restaurar = document.createElement('button');
+      restaurar.type = 'button'; restaurar.className = 'secundario'; restaurar.textContent = 'Restaurar';
+      restaurar.onclick = () => {
+        const r = m.restaurar(ultimoSalvo, v.indice);
+        if (!r.ok) { status(r.erro, true); return; }
+        projeto = r.projeto;
+        validacao = r.validacao;
+        desenhar(); lista(); saida(m.relatorio(projeto));
+        status('Versão ' + (v.indice + 1) + ' restaurada como versão nova, com a atual preservada no histórico.');
+      };
+      acoes.appendChild(restaurar);
+      item.append(cab, meta, acoes);
+      box.appendChild(item);
+    });
+    status('Histórico de ' + h.versoes.length + ' versão(ões) de ' + ultimoSalvo + '.');
+  }
+
   const acoes = [['proj-criar', criar], ['proj-analisar', analisar], ['proj-corrigir', corrigir],
-    ['proj-relatorio', relatorio], ['proj-ladder', ladder], ['proj-salvar', salvar]];
+    ['proj-relatorio', relatorio], ['proj-ladder', ladder], ['proj-salvar', salvar],
+    ['proj-modificar', modificarProjeto], ['proj-versoes', mostrarVersoes], ['proj-comparar', compararProjeto]];
   acoes.forEach(([id, fn]) => {
     const b = el(id);
     if (b) b.onclick = () => { try { fn(); } catch (e) { status('Falhou: ' + ((e && e.message) || e), true); } };
