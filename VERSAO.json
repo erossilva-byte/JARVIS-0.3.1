@@ -5,7 +5,7 @@
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-11-03",
-  "status": "1.42.3: circuito elétrico montado pela interface e pergunta sobre a imagem no Vision; núcleo 3D, áreas e abertura preservados; build CI pendente.",
+  "status": "1.42.3: circuito elétrico montado pela interface (componente, terminal, validação, netlist, salvar) e pergunta sobre a imagem no Vision; build CI publicado.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
   "notas": "Revisão 1.42.3 (2026-11-03). O painel Arquivos ganhou \"Montar circuito\": tipo, id e valor do componente, ligação terminal a terminal (R1.1 ↔ V1.1), validação pelo CAD.js, netlist, desfazer ligação, remover componente e salvar o .cad com a placa de 120×80×2 mm como geometria. O formato gravado é o \"CadSimu CAD\" v1 documentado; o .cad nativo do CADeSIMU é proprietário e não é produzido — o painel diz isso. A Visão ganhou o campo \"Perguntar sobre a análise\": a pergunta reaproveita a última imagem analisada, sem abrir a câmera de novo, e a resposta entra no texto e é falada. O núcleo verifica o aparelho, o provedor e o resultado antes de falar; segue o raciocínio em etapas e a personalidade adaptativa, o núcleo 3D com plasma e animação holográfica, as dez áreas clicáveis com suas ações reais, a abertura sem flash, a voz masculina PT-BR, o humor, a memória Obsidian em Ajustes ▸ Memória e o bloqueio opcional em Ajustes ▸ Segurança. Testes: tests/test_cad_circuito_ui.js (jsdom, app inteiro) e tests/test_cad_circuito.js. Sem validação em aparelho físico; não há alegação de precisão de 100%.",
   "arquivos_documentacao": [
@@ -15,8 +15,13 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "pendente",
-    "observacao": "APK 1.42.3 em compilação no GitHub Actions (release-apk.yml)."
+    "resultado": "success",
+    "sha256": "ca9803324a2cd919463d13719074a470d4ea9405e93b431ed23535ef62f90ffe",
+    "bytes": 81218070,
+    "arquivo": "jarvis-nova-1.42.3-10423.apk",
+    "data": "2026-11-03",
+    "ambiente": "GitHub Actions release-apk.yml: Ubuntu 24.04, JDK 21, Android SDK 35, assembleDebug",
+    "observacao": "APK 1.42.3 compilado e publicado no release v1.42.3; checksum conferido por download do asset. Assinatura debug/CI. Sem instalação em aparelho físico."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

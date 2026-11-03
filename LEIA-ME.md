@@ -8,6 +8,8 @@ Sobre o CADeSIMU, com transparência: o formato gravado é o **`CadSimu CAD` v1*
 
 Na **Visão**, depois de qualquer análise, o campo **Perguntar sobre a análise** deixa você questionar a mesma imagem (“quantas portas aparecem?”) sem abrir a câmera de novo. A resposta entra no texto da análise e é falada.
 
+O APK 1.42.3 tem **81218070 bytes** e SHA-256 `ca9803324a2cd919463d13719074a470d4ea9405e93b431ed23535ef62f90ffe`; foi compilado no GitHub Actions (JDK 21/Android SDK 35) e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.3, junto dos instaladores Windows `J.A.R.V.I.S.Nova.1.42.3.exe` e `Setup`. Ele **não foi instalado em aparelho físico**: microfone real, wake word, segundo plano e desempenho no Poco X7 continuam sem validação física.
+
 ## 1.42.2 — Circuitos elétricos no .cad e fluidez
 
 O `.cad` agora aceita uma seção opcional de circuito elétrico: componentes com terminais, conexões entre terminais (`R1.1`), validação de verdade (id repetido, terminal inexistente, curto na fonte, componente solto, LED sem resistor, circuito sem fonte) e netlist pronta para o PC. Arquivos antigos continuam abrindo. O passo a passo e o exemplo estão em `docs/CAD-CIRCUITOS.md`.
