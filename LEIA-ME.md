@@ -1,4 +1,10 @@
-# J.A.R.V.I.S. Nova 1.42.1
+# J.A.R.V.I.S. Nova 1.42.2
+
+## 1.42.2 — Circuitos elétricos no .cad e fluidez
+
+O `.cad` agora aceita uma seção opcional de circuito elétrico: componentes com terminais, conexões entre terminais (`R1.1`), validação de verdade (id repetido, terminal inexistente, curto na fonte, componente solto, LED sem resistor, circuito sem fonte) e netlist pronta para o PC. Arquivos antigos continuam abrindo. O passo a passo e o exemplo estão em `docs/CAD-CIRCUITOS.md`.
+
+O aplicativo também ficou mais leve: a busca da memória não re-renderiza a cada tecla, a vigilância da interface e as atividades do painel param com o app oculto, e os desfoques de fundo caros saíram dos chips e das mensagens. É ajuste medido no código e nos testes; o ganho em aparelho físico ainda não foi medido aqui.
 
 ## 1.42.1 — Auditoria de botões e correções honestas
 

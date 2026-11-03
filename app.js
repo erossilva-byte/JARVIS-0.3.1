@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.42.1';
+const VERSAO_APP = '1.42.2';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -5406,6 +5406,7 @@ function algumPainelAberto() {
  * deixar a tela escurecida sem conteúdo — a "tela preta" intermitente.
  */
 function garantirInterfaceVisivel() {
+  if (document.hidden) return false;
   if (algumPainelAberto()) return false;
   const bloqueio = $('#bloqueio');
   if (bloqueio && !bloqueio.hidden) return false;
@@ -5851,7 +5852,7 @@ function sisCard(titulo, texto, selo, estado) {
 }
 function renderAtividadesInicio() {
   const caixa = document.getElementById('dash-atividades');
-  if (!caixa) return;
+  if (!caixa || document.hidden) return;
   caixa.textContent = '';
   if (!SISTEMA) {
     const p = document.createElement('p');
@@ -7747,7 +7748,7 @@ document.querySelectorAll('[data-mem-tema]').forEach((b) => {
   });
 });
 const memBusca = $('#mem-busca');
-if (memBusca) memBusca.addEventListener('input', () => renderMemoria());
+if (memBusca) { let memBuscaTimer = 0; memBusca.addEventListener('input', () => { clearTimeout(memBuscaTimer); memBuscaTimer = setTimeout(renderMemoria, 180); }); }
 ['#mem-criar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => criarNotaMemoria(); });
 ['#mem-apagar-tema'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => apagarTemaMemoria(); });
 ['#mem-exportar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => exportarMemoria(); });

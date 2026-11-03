@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.42.1",
-  "versionCode": 10421,
+  "version": "1.42.2",
+  "versionCode": 10422,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-11-03",
-  "status": "1.42.1: auditoria de botões com clique real em jsdom, botão neural sem plugin agora responde, microfone sem backend explica a falha; build CI pendente.",
+  "status": "1.42.2: circuitos elétricos validados no .cad com netlist, menos repintura no WebView e testes novos; build CI pendente.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.42.1 (2026-11-03). Auditoria de efeito com clique real em jsdom varreu a superfície inteira de botões (300 elementos; 239 medidos com painéis abertos um a um; zero exceções de clique). Os 15 cliques sem efeito foram classificados um a um como seletor de arquivo, atualização idempotente, aba já ativa, estado já aplicado ou ambiente sem áudio — e apenas dois eram falha de verdade: “Liberar memória” da voz neural morria em silêncio sem o plugin JarvisVoz, e o microfone do núcleo voltava ao repouso sem explicar quando não há backend de áudio; ambos agora respondem com mensagem e têm regressão em tests/test_botoes_honestos.js. Verificações estáticas novas: toda ação das áreas tem caso no acaoNavegacao, nenhum ID duplicado, nenhum label for quebrado, nenhum href=\"#\" ou onclick inline. Preserva TTS, agentes, provedores, memória, rotinas, automações, o raciocínio em etapas, a personalidade adaptativa, as áreas clicáveis do núcleo 3D com plasma e a animação holográfica (abertura sem flash), a voz masculina PT-BR e todas as funções anteriores. Sem validação em aparelho físico; não há alegação de precisão de 100%.",
+  "notas": "Revisão 1.42.2 (2026-11-03). O .cad ganhou a seção opcional \"circuito\": componentes (resistor, capacitor, indutor, fonte, LED, diodo, chave, terra, carga, motor, fusível) com terminais, conexões \"ID.terminal\", validação de id/terminal/curto na fonte/componente solto/LED sem resistor e netlist gerada para o PC; arquivos sem circuito continuam válidos. Fluidez: a busca da memória passou a ter espera de digitação, a vigilância da interface e as atividades do painel não trabalham com o app oculto, e o desfoque de fundo saiu dos chips e das mensagens — menos repintura por quadro no WebView. Preserva TTS, agentes, provedores, memória, rotinas, automações, o raciocínio em etapas, a personalidade adaptativa, as áreas clicáveis e a abertura sem flash do núcleo 3D com plasma e animação holográfica, a voz masculina PT-BR e todas as funções anteriores. Verificações estáticas continuam cobrindo as ações das áreas, IDs únicos e rótulos. Sem validação em aparelho físico; não há alegação de precisão de 100%.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -15,13 +15,11 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "success",
-    "sha256": "506ee0a5c45919f095942f91b496a1fad1c00bc6c99038d15f730d68502ae013",
-    "bytes": 81209170,
-    "arquivo": "jarvis-nova-1.42.1-10421.apk",
+    "resultado": "pendente",
+    "arquivo": "jarvis-nova-1.42.2-10422.apk",
     "data": "2026-11-03",
     "ambiente": "GitHub Actions release-apk.yml: Ubuntu 24.04, JDK 21, Android SDK 35, assembleDebug",
-    "observacao": "APK 1.42.1 compilado e publicado no release v1.42.1; checksum conferido por download do asset. Assinatura debug/CI. Sem instalação em aparelho físico."
+    "observacao": "Build da 1.42.2 aguardando a tag v1.42.2; o checksum será registrado após o run publicar o APK."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

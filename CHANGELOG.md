@@ -1,3 +1,13 @@
+## 1.42.2 — Circuitos elétricos no .cad e fluidez do WebView
+
+- `.cad`: seção opcional `circuito` com componentes elétricos (resistor, capacitor, indutor, fonte, LED, diodo, chave, terra, carga, motor, fusível), conexões por terminal (`R1.1`), limite de 200 componentes e 400 conexões.
+- Validação real do circuito: id repetido, terminal inexistente, terminal ligado nele mesmo, valor inválido, **fonte em curto**, componente solto, LED sem resistor e circuito sem fonte — erro com motivo, aviso quando o arquivo abre mas pede atenção.
+- `CAD.netlist(doc)` gera netlist com terra na rede 0 e numeração derivada das conexões; a análise do aplicativo passa a resumir componentes, conexões, redes e erros no mesmo cartão.
+- Compatibilidade: `.cad` sem `circuito` continua válido; os demais formatos (DXF/STL/3MF/STEP/IFC) não mudaram.
+- Regressão em `tests/test_cad_circuito.js` (10 verificações) dentro do `test:all`.
+- Fluidez: busca da memória com espera de digitação (180 ms) em vez de re-render por tecla; `garantirInterfaceVisivel` e as atividades do painel não rodam com o app oculto; o `backdrop-filter` saiu dos chips e das mensagens (repintura mais barata no WebView), com fundo equivalente.
+- Nada de função removida ou simulada; identidade, humor, núcleo 3D, voz masculina PT-BR, Obsidian e bloqueio opcional intactos.
+
 ## 1.42.1 — Auditoria de botões e correções honestas
 
 - Auditoria de efeito com clique real em jsdom: 300 botões, 239 medidos com os painéis/abas abertos um a um (rodadas até fixar), zero exceções de clique e zero erros globais de boot.

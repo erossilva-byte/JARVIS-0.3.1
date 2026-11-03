@@ -198,9 +198,9 @@ header{padding-top:calc(12px + env(safe-area-inset-top));padding-bottom:9px}
 .hud{filter:drop-shadow(0 18px 28px rgba(0,0,0,.18));transition:filter .25s,transform .25s}
 .hud:active{transform:scale(.985)}
 .halo{filter:blur(1px)}
-.chip{background:rgba(10,21,36,.5);backdrop-filter:blur(8px)}
+.chip{background:rgba(10,21,36,.72)}
 .chip.estado{padding:7px 12px;border:1px solid var(--linha);border-radius:99px;background:rgba(9,19,32,.7)}
-.msg.eu{box-shadow:0 8px 24px rgba(0,0,0,.12);backdrop-filter:blur(10px)}
+.msg.eu{box-shadow:0 8px 24px rgba(0,0,0,.12)}
 .msg.jv{max-width:min(92%,640px);padding:8px 0 8px 14px;background:linear-gradient(90deg,rgba(var(--rgb),.055),transparent);border-radius:0 12px 12px 0}
 button:disabled{opacity:.5;cursor:wait;filter:saturate(.5)}
 .wake-toggle{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 10px;border-color:rgba(109,255,194,.25);background:rgba(109,255,194,.07);color:#6dffc2;font-size:11px;white-space:nowrap}
@@ -393,7 +393,7 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
 .a1 circle{filter:drop-shadow(0 0 2px rgba(var(--rgb),.5))}
 .hud .n-ponto{filter:drop-shadow(0 0 8px rgba(var(--rgb),.8))}
 .chip.estado{letter-spacing:.035em;text-transform:uppercase;font-size:12px;font-weight:650}
-.chip{backdrop-filter:blur(8px);background:rgba(8,16,29,.46)}
+.chip{background:rgba(8,16,29,.7)}
 #chat{scroll-padding-block:16px}
 .msg.jv{position:relative}
 .msg.jv::before{content:"J.A.R.V.I.S.";display:block;color:var(--cor);font-size:10px;letter-spacing:.16em;font-weight:700;margin-bottom:3px;opacity:.86}

@@ -154,6 +154,12 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
+            **Novidades da 1.42.2:** o .cad passa a montar circuitos elétricos — componentes com
+            terminais, conexões R1.1, validação de curto na fonte/componente solto/LED sem resistor e
+            netlist para o PC — com teste de regressão próprio. Também deixa o WebView mais leve:
+            busca da memória com espera de digitação, rotinas pausadas com o app oculto e sem desfoque
+            de fundo nos chips/mensagens.
+
             **Novidades da 1.42.1:** auditoria de botões com clique real em jsdom — 300 botões, 239 medidos
             com os painéis abertos um a um e zero exceções de clique. “Liberar memória” da voz neural
             responde quando o plugin não existe, e o microfone do núcleo explica a falha quando o
