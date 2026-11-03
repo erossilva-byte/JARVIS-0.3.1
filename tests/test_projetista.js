@@ -1,0 +1,156 @@
+/* Projetista elétrico: interpretação, projeto, verificação, correção e arquivo.
+ * Roda em Node puro (o mesmo módulo que o aplicativo carrega no WebView).
+ */
+'use strict';
+const assert = require('assert');
+const path = require('path');
+const P = require(path.join(__dirname, '..', 'projetista.js'));
+P.usarStore({ getItem: () => null, setItem: () => true });
+
+let checks = 0;
+function ok(nome) { checks++; return nome; }
+
+// 1..6 — interpretação dos seis exemplos da missão
+const pedidos = {
+  direta: 'Crie uma partida direta para um motor trifásico de 5 CV, com proteção, botão de emergência, liga/desliga e sinalização.',
+  reversao: 'Crie um circuito de reversão de motor trifásico com dois contatores e intertravamento elétrico e mecânico.',
+  estrela: 'Desenvolva uma partida estrela-triângulo automática com temporizador de 8 segundos.',
+  compensadora: 'Crie uma partida compensadora para motor trifásico de 15 CV.',
+  clp: 'Crie um sistema de controle de nível de água usando CLP, sensores e bomba.',
+  comando: 'Monte um comando liga/desliga com selo e sinaleiro em 24 V.'
+};
+const esperado = { direta: 'partida_direta', reversao: 'reversao', estrela: 'estrela_triangulo', compensadora: 'compensadora', clp: 'clp', comando: 'comando' };
+Object.keys(pedidos).forEach((k) => {
+  const i = P.interpretar(pedidos[k]);
+  assert.ok(i.ok, ok('interpretar ' + k));
+  assert.strictEqual(i.spec.tipo, esperado[k], 'tipo de ' + k + ': ' + i.spec.tipo);
+  checks++;
+});
+assert.strictEqual(P.interpretar(pedidos.direta).spec.cv, 5, ok('CV lido do pedido'));
+assert.strictEqual(P.interpretar(pedidos.compensadora).spec.cv, 15, ok('CV da compensadora'));
+assert.strictEqual(P.interpretar(pedidos.estrela).spec.temporizador, 8, ok('temporizador lido'));
+assert.strictEqual(P.interpretar(pedidos.comando).spec.tensaoComando, 24, ok('comando em 24 V'));
+assert.strictEqual(P.interpretar('').ok, false, ok('pedido vazio é recusado'));
+
+// 7 — todo pedido gera projeto que passa na verificação
+const projetos = {};
+Object.keys(pedidos).forEach((k) => {
+  const r = P.projetar(pedidos[k]);
+  assert.ok(r.ok, ok('projetar ' + k));
+  const v = P.validar(r.projeto);
+  assert.ok(v.ok, 'projeto ' + k + ' deveria passar: ' + v.erros.map((e) => e.codigo + ' ' + e.mensagem).join(' | '));
+  assert.ok(r.projeto.componentes.length >= 4, 'componentes de ' + k);
+  assert.ok(P.fios(r.projeto).length >= 3, 'fios de ' + k);
+  assert.ok(r.projeto.sequencia.length >= 3, 'sequência de ' + k);
+  projetos[k] = r.projeto;
+  checks++;
+});
+
+// 8 — determinismo: mesmo pedido, mesmo projeto
+assert.strictEqual(JSON.stringify(P.projetar(pedidos.direta).projeto), JSON.stringify(projetos.direta), ok('projeto determinístico'));
+
+// 9 — relatório declara o que foi e o que não foi verificado
+const rel = P.relatorio(projetos.direta);
+['RELATÓRIO TÉCNICO', 'VERIFICAÇÃO', 'Simulação funcional: não executada', 'CADeSIMU: não aberto'].forEach((t) => {
+  assert.ok(rel.includes(t), 'relatório deve conter "' + t + '"');
+  checks++;
+});
+
+// 10 — ladder do CLP com endereços
+const lad = P.ladder(projetos.clp);
+assert.ok(lad.includes('%Q0.0') && lad.includes('TABELA DE ENTRADAS/SAÍDAS'), ok('ladder com saída e tabela de I/O'));
+assert.ok(/não tem lógica de CLP/.test(P.ladder(projetos.direta)), ok('ladder recusa projeto sem CLP'));
+
+// 11 — arquivo do projeto volta pela reabertura
+const texto = P.serializar(projetos.reversao);
+const lido = P.parse(texto);
+assert.ok(lido.ok, ok('projeto reabre'));
+assert.strictEqual(lido.projeto.componentes.length, projetos.reversao.componentes.length, ok('componentes preservados'));
+assert.strictEqual(P.parse('{"formato":"outro"}').ok, false, ok('formato errado é recusado'));
+
+// 12 — partida direta tem proteção, emergência e selo de verdade
+const direta = projetos.direta;
+assert.ok(direta.componentes.some((c) => c.tipo === 'releTermico'), ok('tem relé térmico'));
+assert.ok(direta.componentes.some((c) => c.papel === 'emergencia'), ok('tem emergência'));
+const k1 = direta.componentes.find((c) => c.id === 'K1');
+assert.ok(k1.pinos['13'] && k1.pinos['14'] && k1.pinos['13'] !== k1.pinos['14'], ok('contato de selo ligado em duas redes'));
+
+// 13 — reversão perde o intertravamento e a correção devolve
+function semIntertravamento(projeto) {
+  const p = JSON.parse(JSON.stringify(projeto));
+  const k2 = p.componentes.find((c) => c.id === 'K2');
+  delete k2.pinos['21'];
+  delete k2.pinos['22'];
+  const s1 = p.componentes.find((c) => c.id === 'S1');
+  s1.pinos['1'] = 'CI';
+  const k1c = p.componentes.find((c) => c.id === 'K1');
+  k1c.pinos['13'] = 'CI';
+  k1c.pinos['14'] = 'K1A';
+  return p;
+}
+const semTrava = semIntertravamento(projetos.reversao);
+const vSemTrava = P.validar(semTrava);
+assert.ok(vSemTrava.erros.some((e) => e.codigo === 'falta_intertravamento'), ok('detecta falta de intertravamento: ' + vSemTrava.erros.map((e) => e.codigo).join(',')));
+const rTrava = P.corrigir(semTrava);
+assert.ok(rTrava.ok, 'correção do intertravamento deveria fechar: ' + rTrava.validacao.erros.map((e) => e.codigo).join(','));
+assert.ok(rTrava.correcoes.some((t) => /NF/.test(t)), ok('correção registra o NF incluído'));
+
+// 14 — sem botoeira de emergência
+const semEmergencia = JSON.parse(JSON.stringify(projetos.direta));
+const emergenciaOriginal = semEmergencia.componentes.find((c) => c.papel === 'emergencia');
+const alimentacaoComando = emergenciaOriginal.pinos['1'];
+semEmergencia.componentes = semEmergencia.componentes.filter((c) => c.papel !== 'emergencia');
+semEmergencia.componentes.find((c) => c.id === 'S2').pinos['1'] = alimentacaoComando;
+const vSemEmergencia = P.validar(semEmergencia);
+assert.ok(vSemEmergencia.erros.some((e) => e.codigo === 'falta_emergencia'), ok('detecta ausência de emergência'));
+const rEmergencia = P.corrigir(semEmergencia);
+assert.ok(rEmergencia.ok, 'correção da emergência deveria fechar: ' + rEmergencia.validacao.erros.map((e) => e.codigo).join(','));
+assert.ok(rEmergencia.projeto.componentes.some((c) => c.papel === 'emergencia'), ok('emergência reinserida'));
+
+// 15 — motor sem proteção
+const semProtecao = JSON.parse(JSON.stringify(projetos.direta));
+semProtecao.componentes = semProtecao.componentes.filter((c) => c.tipo !== 'releTermico');
+const motor = semProtecao.componentes.find((c) => c.tipo === 'motor3');
+motor.pinos = { U: 'S1', V: 'S2', W: 'S3', PE: 'PE' };
+const vSemProtecao = P.validar(semProtecao);
+assert.ok(vSemProtecao.erros.some((e) => e.codigo === 'falta_protecao'), ok('detecta motor sem proteção'));
+const rProtecao = P.corrigir(semProtecao);
+assert.ok(rProtecao.ok, 'correção da proteção deveria fechar: ' + rProtecao.validacao.erros.map((e) => e.codigo + ' ' + e.mensagem).join(' | '));
+assert.ok(rProtecao.projeto.componentes.some((c) => c.tipo === 'releTermico'), ok('térmico reinserido'));
+
+// 16 — bobina com tensão errada
+const tensaoErrada = JSON.parse(JSON.stringify(projetos.reversao));
+tensaoErrada.componentes.find((c) => c.id === 'K1').tensao = 110;
+assert.ok(P.validar(tensaoErrada).erros.some((e) => e.codigo === 'tensao_bobina'), ok('detecta tensão de bobina incompatível'));
+const rTensao = P.corrigir(tensaoErrada);
+assert.ok(rTensao.ok, ok('correção ajusta a tensão da bobina'));
+
+// 17 — endereço de CLP duplicado
+const clpRuim = JSON.parse(JSON.stringify(projetos.clp));
+clpRuim.componentes.find((c) => c.tipo === 'clp').enderecos.I2 = '%I0.0';
+assert.ok(P.validar(clpRuim).erros.some((e) => e.codigo === 'clp_endereco_duplicado'), ok('detecta endereço duplicado'));
+
+// 18 — curto entre dois terminais do mesmo componente
+const curto = JSON.parse(JSON.stringify(projetos.direta));
+curto.componentes.find((c) => c.id === 'K1').pinos['2'] = 'R1';
+assert.ok(P.validar(curto).erros.some((e) => e.codigo === 'curto'), ok('detecta curto no componente'));
+
+// 19 — terminal obrigatório solto
+const solto = JSON.parse(JSON.stringify(projetos.direta));
+delete solto.componentes.find((c) => c.id === 'K1').pinos['A2'];
+assert.ok(P.validar(solto).erros.some((e) => e.codigo === 'terminal_solto'), ok('detecta terminal solto'));
+
+// 20 — relatório de um projeto com erro aponta o erro e não finge aprovação
+const relRuim = P.relatorio(semProtecao);
+assert.ok(/ERRO \[falta_protecao\]/.test(relRuim), ok('relatório mostra o erro encontrado'));
+
+// 21 — arquivo local: salvar, listar, ler e apagar
+const memoria = {};
+P.usarStore({ getItem: (k) => memoria[k] || null, setItem: (k, v) => { memoria[k] = v; return true; } });
+const salvo = P.salvar('teste-reversao', projetos.reversao);
+assert.ok(salvo.ok, 'salvar projeto: ' + (salvo.erro || ''));
+assert.ok(P.listar().length === 1, ok('projeto aparece na lista'));
+assert.ok(P.ler('teste-reversao').ok, ok('projeto salvo reabre'));
+assert.ok(P.apagar('teste-reversao').ok, ok('projeto salvo apaga'));
+
+console.log('OK: projetista elétrico — ' + checks + ' verificações (interpretação, 6 topologias, verificação, correção e arquivo)');

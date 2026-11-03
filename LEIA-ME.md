@@ -1,5 +1,11 @@
 # J.A.R.V.I.S. Nova 1.42.4
 
+## Em desenvolvimento — Projetista elétrico
+
+O painel **Arquivos ▸ Projetista elétrico** monta o circuito a partir de um pedido em português: partida direta, reversão, estrela-triângulo, compensadora, comando com selo, iluminação e CLP de nível. O projeto vem com componentes, pinos, fios numerados, sequência de operação e verificação estrutural (curto, terminal solto, bobina sem alimentação, falta de proteção, falta de intertravamento), com correção do que o motor sabe corrigir e relatório que separa o que foi verificado do que **não** foi.
+
+O arquivo é o formato próprio `ProjetistaEletrico CAD` v1. O `.cad` nativo do CADeSIMU é proprietário: não é gerado nem aberto, e a simulação elétrica não é executada no aplicativo. Detalhes em [docs/PROJETISTA-ELETRICO.md](docs/PROJETISTA-ELETRICO.md).
+
 ## 1.42.4 — Editor de circuito no palco
 
 O painel **Arquivos ▸ Montar circuito** virou editor: o palco desenha símbolos, terminais e fios. Arraste um componente para mover (a posição vai para o `.cad`), toque em dois terminais para ligar, toque no componente para selecionar e **Aplicar edição** (id/valor) ou **Apagar selecionado**. **Carregar .cad salvo** traz de volta o circuito do cofre para continuar editando.

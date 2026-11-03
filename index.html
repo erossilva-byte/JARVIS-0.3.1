@@ -1045,6 +1045,26 @@
       </div>
       <p id="circ-status" class="dica" role="status" aria-live="polite">Adicione componentes, ligue os terminais, valide e salve.</p>
     </div>
+    <div class="divider-small"></div>
+    <h3>Projetista elétrico</h3>
+    <p class="dica">Descreva o circuito e o projeto é montado por regras: componentes, pinos, fios numerados, sequência de operação e verificação de curto, terminal solto, bobina sem alimentação, falta de proteção e falta de intertravamento. O resultado usa o formato <code>ProjetistaEletrico CAD</code> v1 deste projeto. O <code>.cad</code> nativo do CADeSIMU é proprietário e <b>não</b> é gerado, e a simulação elétrica não é executada aqui.</p>
+    <label>Pedido<textarea id="proj-pedido" rows="3" spellcheck="false">Crie uma partida direta para um motor trifásico de 5 CV, com proteção, botão de emergência, liga/desliga e sinalização.</textarea></label>
+    <div class="botoes">
+      <button id="proj-criar" type="button" class="primario">Criar circuito</button>
+      <button id="proj-analisar" type="button" class="secundario">Analisar</button>
+      <button id="proj-corrigir" type="button" class="secundario">Corrigir erros</button>
+    </div>
+    <div class="botoes">
+      <button id="proj-relatorio" type="button" class="secundario">Relatório técnico</button>
+      <button id="proj-ladder" type="button" class="secundario">Ladder do CLP</button>
+      <button id="proj-salvar" type="button" class="secundario">Salvar projeto</button>
+    </div>
+    <svg id="proj-palco" class="proj-palco" viewBox="0 0 640 560" role="img" aria-label="Vista do projeto elétrico: componentes com pinos e fios"></svg>
+    <p class="dica">Vista de projeto: cada cartão é um componente e mostra o pino com a rede (fio) em que ele está; as linhas tracejadas são os fios.</p>
+    <div id="proj-lista" class="mem-lista cad-lista" aria-live="polite"></div>
+    <label>Saída técnica<textarea id="proj-saida" rows="8" spellcheck="false" placeholder="Relatório, verificação e ladder aparecem aqui"></textarea></label>
+    <div id="proj-arquivos" class="mem-lista cad-lista" aria-live="polite"></div>
+    <p id="proj-status" class="dica" role="status" aria-live="polite">Descreva o circuito e toque em Criar circuito.</p>
     <h3>Analisar .cad</h3>
     <label>Arquivo do aparelho<input id="cad-importar" type="file" accept=".cad,.dxf,.stl,.3mf,.step,.stp,.ifc,application/json,model/stl,model/3mf"></label>
     <label>Ou cole o conteúdo<textarea id="cad-texto" rows="5" spellcheck="false" placeholder='{"formato":"CadSimu CAD","versao":1,"unidades":"mm","objetos":[…]}'></textarea></label>
@@ -1306,6 +1326,7 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="audio_pcm.js"></script>
 <script src="arquivos_dev.js"></script>
 <script src="aprendizado.js"></script>
+<script src="projetista.js"></script>
 <script src="app.js"></script>
 <script src="core_ui.js"></script>
 <script src="aprendizado_ui.js"></script>

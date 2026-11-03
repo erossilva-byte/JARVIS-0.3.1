@@ -10506,4 +10506,312 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
   desenhar();
   if (!selTipo.options.length) window.addEventListener('load', () => { preencherTipos(); }, { once: true });
 })();
+/* ---------- Projetista elétrico: área dentro do painel Arquivos ----------
+ * A interface não decide nada sozinha: ela chama ProjetistaEletrico (regras determinísticas),
+ * desenha a vista de projeto com pinos e fios e mostra o relatório. Nada aqui finge simulação
+ * elétrica nem abertura no CADeSIMU — o aviso está na própria saída técnica.
+ */
+(function projetistaEletricoUI() {
+  const campo = document.getElementById('proj-pedido');
+  if (!campo) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const palco = document.getElementById('proj-palco');
+  let projeto = null;
+  let validacao = null;
+  const el = (id) => document.getElementById(id);
+  const modulo = () => (typeof window !== 'undefined' && window.ProjetistaEletrico) ? window.ProjetistaEletrico : null;
+
+  function status(t, erro) {
+    const s = el('proj-status');
+    if (s) { s.textContent = t; s.classList.toggle('erro', !!erro); }
+  }
+  function saida(t) {
+    const s = el('proj-saida');
+    if (s) s.value = String(t == null ? '' : t);
+  }
+  function truncar(t, n) {
+    const s = String(t == null ? '' : t);
+    return s.length > n ? s.slice(0, n - 1) + '…' : s;
+  }
+  function no(nome) { return document.createElementNS(NS, nome); }
+  function texto(t, x, y, cls) {
+    const n = no('text');
+    n.setAttribute('x', x); n.setAttribute('y', y); n.setAttribute('class', cls || 'proj-tipo');
+    n.textContent = String(t);
+    return n;
+  }
+  function linha(x1, y1, x2, y2, cls) {
+    const l = no('line');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('class', cls || 'proj-fio');
+    return l;
+  }
+  function retangulo(x, y, w, h, cls) {
+    const r = no('rect');
+    r.setAttribute('x', x); r.setAttribute('y', y); r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('rx', 6); r.setAttribute('class', cls || 'proj-cartao');
+    return r;
+  }
+
+  function posicoes() {
+    const mapa = {};
+    if (!projeto) return mapa;
+    projeto.componentes.forEach((c) => {
+      const pinos = Object.keys(c.pinos || {});
+      const larg = 150;
+      const linhasPinos = Math.ceil(pinos.length / 4);
+      const altura = 34 + linhasPinos * 15;
+      const pontos = {};
+      pinos.forEach((p, i) => {
+        pontos[p] = { x: c.x + 14 + (i % 4) * 34, y: c.y + 46 + Math.floor(i / 4) * 15 };
+      });
+      mapa[c.id] = { c: c, x: c.x, y: c.y, larg: larg, altura: altura, pontos: pontos };
+    });
+    return mapa;
+  }
+
+  function desenhar() {
+    if (!palco) return;
+    while (palco.firstChild) palco.removeChild(palco.firstChild);
+    if (!projeto) return;
+    const mapa = posicoes();
+    const comErro = {};
+    ((validacao && validacao.erros) || []).forEach((e) => { if (e.componente) comErro[e.componente] = true; });
+
+    const redes = {};
+    Object.keys(mapa).forEach((id) => {
+      const item = mapa[id];
+      Object.keys(item.c.pinos || {}).forEach((p) => {
+        const rede = item.c.pinos[p];
+        const ponto = item.pontos[p];
+        if (!rede || !ponto) return;
+        if (!redes[rede]) redes[rede] = [];
+        redes[rede].push({ id: id, p: p, x: ponto.x, y: ponto.y });
+      });
+    });
+    const gFios = no('g');
+    Object.keys(redes).forEach((rede) => {
+      const pontos = redes[rede];
+      if (pontos.length < 2) return;
+      for (let i = 0; i < pontos.length - 1; i++) {
+        gFios.appendChild(linha(pontos[i].x, pontos[i].y, pontos[i + 1].x, pontos[i + 1].y, 'proj-fio'));
+      }
+      gFios.appendChild(texto(rede, pontos[0].x, pontos[0].y - 5, 'proj-rede'));
+    });
+    palco.appendChild(gFios);
+
+    Object.keys(mapa).forEach((id) => {
+      const item = mapa[id];
+      const g = no('g');
+      g.setAttribute('class', 'proj-comp' + (comErro[id] ? ' sel' : ''));
+      g.setAttribute('data-id', id);
+      g.appendChild(retangulo(item.x, item.y, item.larg, item.altura, 'proj-cartao' + (comErro[id] ? ' sel' : '')));
+      g.appendChild(texto(id + ' · ' + truncar(item.c.tipo, 14), item.x + 8, item.y + 14, 'proj-titulo'));
+      g.appendChild(texto(truncar(item.c.funcao, 30), item.x + 8, item.y + 26, 'proj-tipo'));
+      Object.keys(item.c.pinos || {}).forEach((p) => {
+        const ponto = item.pontos[p];
+        if (!ponto) return;
+        const circulo = no('circle');
+        circulo.setAttribute('cx', ponto.x); circulo.setAttribute('cy', ponto.y); circulo.setAttribute('r', 2.3);
+        circulo.setAttribute('class', 'proj-pino');
+        const titulo = no('title');
+        titulo.textContent = id + '.' + p + ' → ' + (item.c.pinos[p] || 'sem rede');
+        circulo.appendChild(titulo);
+        g.appendChild(circulo);
+        g.appendChild(texto(p, ponto.x, ponto.y - 4, 'proj-pino-nome'));
+        g.appendChild(texto(String(item.c.pinos[p] == null ? '—' : item.c.pinos[p]), ponto.x, ponto.y + 9, 'proj-rede'));
+      });
+      palco.appendChild(g);
+    });
+  }
+
+  function lista() {
+    const box = el('proj-lista');
+    if (!box) return;
+    box.textContent = '';
+    const m = modulo();
+    if (!projeto) return;
+    projeto.componentes.forEach((c) => {
+      const item = document.createElement('article');
+      item.className = 'mem-nota';
+      const cab = document.createElement('div');
+      cab.className = 'mem-nota-cab';
+      const tema = document.createElement('span');
+      tema.className = 'mem-nota-tema';
+      tema.textContent = (m && m.TIPOS[c.tipo] ? m.TIPOS[c.tipo].nome : c.tipo);
+      const titulo = document.createElement('b');
+      titulo.textContent = c.id;
+      cab.append(tema, titulo);
+      const meta = document.createElement('small');
+      meta.textContent = c.funcao + (c.tensao ? ' · bobina ' + c.tensao + ' V' : '') +
+        ' · ' + Object.keys(c.pinos || {}).map((p) => p + ':' + c.pinos[p]).join(' ');
+      item.append(cab, meta);
+      box.appendChild(item);
+    });
+    if (validacao) {
+      const p = document.createElement('p');
+      p.className = 'dica';
+      const ver = validacao.verificacao || {};
+      p.textContent = 'Verificação estrutural: ' + (validacao.ok ? 'aprovado' : validacao.erros.length + ' erro(s)') +
+        ' · ' + (ver.componentes || 0) + ' componentes · ' + (ver.fios || 0) + ' fios · ' + (ver.regras || 0) + ' regras.' +
+        ' Verificação elétrica e simulação: não executadas. CADeSIMU: não aberto.';
+      box.appendChild(p);
+    }
+  }
+
+  function arquivos() {
+    const box = el('proj-arquivos');
+    if (!box) return;
+    box.textContent = '';
+    const m = modulo();
+    const salvos = m ? m.listar() : [];
+    if (!salvos.length) {
+      const vazio = document.createElement('p');
+      vazio.className = 'dica mem-vazio';
+      vazio.textContent = 'Nenhum projeto salvo ainda.';
+      box.appendChild(vazio);
+      return;
+    }
+    salvos.forEach((a) => {
+      const item = document.createElement('article');
+      item.className = 'mem-nota';
+      const cab = document.createElement('div');
+      cab.className = 'mem-nota-cab';
+      const tema = document.createElement('span');
+      tema.className = 'mem-nota-tema';
+      tema.textContent = 'projeto';
+      const titulo = document.createElement('b');
+      titulo.textContent = a.nome;
+      cab.append(tema, titulo);
+      const meta = document.createElement('small');
+      meta.textContent = Math.max(1, Math.round((a.bytes || 0) / 1024)) + ' kB · ' + (a.atualizado ? new Date(a.atualizado).toLocaleString('pt-BR') : '');
+      const acoes = document.createElement('div');
+      acoes.className = 'botoes';
+      const abrir = document.createElement('button');
+      abrir.type = 'button'; abrir.className = 'secundario'; abrir.textContent = 'Abrir';
+      abrir.onclick = () => {
+        const r = m.ler(a.nome);
+        if (!r.ok) { status(r.erro, true); return; }
+        projeto = r.projeto;
+        validacao = m.validar(projeto);
+        desenhar(); lista(); saida(m.relatorio(projeto));
+        status('Projeto ' + a.nome + ' aberto (' + projeto.componentes.length + ' componente(s)).');
+      };
+      const apagar = document.createElement('button');
+      apagar.type = 'button'; apagar.className = 'secundario perigo'; apagar.textContent = 'Apagar';
+      apagar.onclick = () => {
+        const r = m.apagar(a.nome);
+        status(r.ok ? 'Projeto ' + a.nome + ' apagado.' : r.erro, !r.ok);
+        arquivos();
+      };
+      acoes.append(abrir, apagar);
+      item.append(cab, meta, acoes);
+      box.appendChild(item);
+    });
+  }
+
+  function textoDaVerificacao(v) {
+    const linhas = [];
+    linhas.push('Verificação estrutural: ' + (v.ok ? 'aprovado' : v.erros.length + ' erro(s)'));
+    v.erros.forEach((e) => linhas.push('ERRO [' + e.codigo + '] ' + e.mensagem));
+    v.avisos.forEach((a) => linhas.push('AVISO ' + a));
+    linhas.push('');
+    linhas.push('Regras aplicadas: ' + ((v.verificacao && v.verificacao.regras) || 0) + ' · pinos: ' + ((v.verificacao && v.verificacao.pinos) || 0) + ' · fios: ' + ((v.verificacao && v.verificacao.fios) || 0));
+    linhas.push('Verificação elétrica (tensão, corrente, transitórios): não executada.');
+    linhas.push('Simulação funcional: não executada.');
+    linhas.push('CADeSIMU: não aberto — o formato nativo do CADe SIMU é proprietário.');
+    return linhas.join('\n');
+  }
+
+  function criar() {
+    const m = modulo();
+    if (!m) { status('O projetista não carregou neste dispositivo.', true); return; }
+    const pedido = String(campo.value || '').trim();
+    const inter = m.interpretar(pedido);
+    if (!inter.ok) { status(inter.erro, true); return; }
+    const r = m.projetar(pedido);
+    if (!r.ok) { status(r.erro, true); return; }
+    projeto = r.projeto;
+    projeto.decisoes = inter.decisoes;
+    projeto.pendencias = inter.pendencias;
+    validacao = m.validar(projeto);
+    desenhar(); lista();
+    const partes = [];
+    partes.push('PROJETO: ' + projeto.titulo);
+    partes.push('Tipo: ' + projeto.tipo + ' · comando ' + projeto.spec.tensaoComando + ' V · ' +
+      projeto.spec.tensaoPotencia + ' V ' + (projeto.spec.trifasico ? 'trifásico' : 'monofásico') +
+      ' · ' + projeto.componentes.length + ' componentes · ' + m.fios(projeto).length + ' fios');
+    if (projeto.dimensionamento && projeto.dimensionamento.correnteA) {
+      partes.push('Estimativa: ' + projeto.dimensionamento.correnteA + ' A · disjuntor ' + projeto.dimensionamento.disjuntorA +
+        ' A · contator ' + projeto.dimensionamento.contatorA + ' A · térmico ' + projeto.dimensionamento.termicoA + ' A');
+    }
+    partes.push('');
+    partes.push('Decisões: ' + (inter.decisoes.length ? inter.decisoes.join(' ') : 'nenhuma'));
+    partes.push(inter.pendencias.length ? 'Pendências para confirmar: ' + inter.pendencias.join(' ') : 'Sem pendências: os dados essenciais vieram no pedido.');
+    partes.push('');
+    partes.push(textoDaVerificacao(validacao));
+    partes.push('');
+    partes.push('Sequência de operação:');
+    projeto.sequencia.forEach((s, i) => partes.push('  ' + (i + 1) + '. ' + s));
+    saida(partes.join('\n'));
+    status('Projeto "' + projeto.titulo + '" montado' + (validacao.ok ? ' e aprovado na verificação estrutural.' : ' com ' + validacao.erros.length + ' erro(s) — veja a saída técnica.'));
+  }
+
+  function analisar() {
+    const m = modulo();
+    if (!m || !projeto) { status('Crie um projeto antes de analisar.', true); return; }
+    validacao = m.validar(projeto);
+    desenhar(); lista();
+    saida((projeto.titulo ? projeto.titulo + '\n\n' : '') + textoDaVerificacao(validacao));
+    status('Análise concluída: ' + (validacao.ok ? 'nenhum erro estrutural.' : validacao.erros.length + ' erro(s) encontrado(s).'), !validacao.ok);
+  }
+
+  function corrigir() {
+    const m = modulo();
+    if (!m || !projeto) { status('Crie um projeto antes de corrigir.', true); return; }
+    const r = m.corrigir(projeto);
+    projeto = r.projeto;
+    validacao = r.validacao;
+    desenhar(); lista();
+    const linhas = [r.correcoes.length ? 'CORREÇÕES APLICADAS' : 'NADA A CORRIGIR'];
+    r.correcoes.forEach((c) => linhas.push('  - ' + c));
+    if (!r.correcoes.length) linhas.push('  A verificação estrutural não apontou erro corrigível por regra.');
+    linhas.push('');
+    linhas.push(textoDaVerificacao(validacao));
+    saida(linhas.join('\n'));
+    status(r.correcoes.length ? r.correcoes.length + ' correção(ões) aplicada(s)' + (validacao.ok ? ' e verificação aprovada.' : '; restam ' + validacao.erros.length + ' erro(s).') : 'Nenhuma correção necessária.', !validacao.ok);
+  }
+
+  function relatorio() {
+    const m = modulo();
+    if (!m || !projeto) { status('Crie um projeto antes do relatório.', true); return; }
+    saida(m.relatorio(projeto));
+    status('Relatório técnico gerado.');
+  }
+
+  function ladder() {
+    const m = modulo();
+    if (!m || !projeto) { status('Crie um projeto antes do ladder.', true); return; }
+    saida(m.ladder(projeto));
+    status('Ladder gerado como texto verificável.');
+  }
+
+  function salvar() {
+    const m = modulo();
+    if (!m || !projeto) { status('Crie um projeto antes de salvar.', true); return; }
+    const nome = projeto.tipo + '-' + (projeto.spec && projeto.spec.cv ? projeto.spec.cv + 'cv' : 'geral');
+    const r = m.salvar(nome, projeto);
+    status(r.ok ? 'Projeto salvo como ' + r.nome + ' (' + Math.max(1, Math.round(r.bytes / 1024)) + ' kB).' : r.erro, !r.ok);
+    arquivos();
+  }
+
+  const acoes = [['proj-criar', criar], ['proj-analisar', analisar], ['proj-corrigir', corrigir],
+    ['proj-relatorio', relatorio], ['proj-ladder', ladder], ['proj-salvar', salvar]];
+  acoes.forEach(([id, fn]) => {
+    const b = el(id);
+    if (b) b.onclick = () => { try { fn(); } catch (e) { status('Falhou: ' + ((e && e.message) || e), true); } };
+  });
+  arquivos();
+})();
+
 })();

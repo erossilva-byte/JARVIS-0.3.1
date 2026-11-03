@@ -1632,3 +1632,16 @@ button.anexo{width:44px;min-width:44px;height:44px;min-height:44px;border-radius
 .circ-term.ativo{fill:var(--cor);stroke:var(--texto)}
 .circ-nome{fill:var(--texto);font:9px ui-monospace,monospace;text-anchor:middle}
 .circ-valor{fill:var(--suave);font:8px ui-monospace,monospace;text-anchor:middle}
+
+/* ---- Projetista elétrico: vista de projeto ---- */
+.proj-palco{display:block;width:100%;aspect-ratio:640/560;background:rgba(8,16,28,.55);border:1px solid var(--linha);border-radius:12px}
+.proj-cartao{fill:rgba(10,24,40,.88);stroke:var(--linha);stroke-width:1}
+.proj-cartao.sel{stroke:#ff9a9a;stroke-width:1.6}
+.proj-comp.sel .proj-titulo{fill:#ffb3b3}
+.proj-titulo{fill:var(--texto);font:8.5px ui-monospace,monospace}
+.proj-tipo{fill:var(--suave);font:7px ui-monospace,monospace}
+.proj-pino{fill:var(--superficie2);stroke:var(--suave);stroke-width:1}
+.proj-pino-nome{fill:var(--texto);font:6.5px ui-monospace,monospace;text-anchor:middle}
+.proj-rede{fill:var(--cor);font:6.5px ui-monospace,monospace;text-anchor:middle;opacity:.9}
+.proj-fio{stroke:var(--suave);stroke-width:1;fill:none;stroke-dasharray:3 2;opacity:.8}
+#proj-lista,#proj-arquivos{max-height:32vh}

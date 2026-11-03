@@ -1,3 +1,13 @@
+## Em desenvolvimento — Projetista elétrico
+
+- **Área própria no painel Arquivos**: pedido em português, criar, analisar, corrigir, relatório técnico, ladder do CLP, salvar e reabrir projeto.
+- **Motor determinístico** (`projetista.js`): interpreta potência (CV), trifásico/monofásico, tensões, temporizador, emergência e sinalização; monta partida direta, reversão, estrela-triângulo, compensadora, comando com selo, iluminação e CLP de nível, com pinos nomeados, redes, fios numerados, sequência de operação e dimensionamento didático.
+- **Verificação estrutural por regras**: terminal solto, curto, curto entre fases, bobina sem alimentação, falta de emergência, falta de proteção, falta de intertravamento, tensão de bobina incompatível, temporizador ausente e endereço de CLP duplicado/inválido — por busca em largura nos fios e contatos.
+- **Correção estrutural**: insere NF cruzado, emergência, relé térmico e ajusta tensão de bobina, dizendo o que fez; o que não é corrigível continua listado.
+- **Relatório honesto**: separa verificação estrutural, elétrica, simulação funcional e abertura no CADeSIMU (as três últimas não são executadas).
+- **Formato próprio documentado** `ProjetistaEletrico CAD` v1, com reabertura e revalidação. O `.cad` nativo do CADeSIMU continua não sendo gerado.
+- **Regressões**: `tests/test_projetista.js` (57 verificações) e `tests/test_projetista_ui.js` (app inteiro no jsdom).
+
 ## 1.42.4 — Editor de circuito no palco
 
 - **Palco SVG** no painel Arquivos: cada componente aparece com símbolo próprio, terminais tocáveis e fios entre os terminais ligados.
