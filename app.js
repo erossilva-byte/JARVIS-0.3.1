@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.42.0';
+const VERSAO_APP = '1.42.1';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -3964,7 +3964,9 @@ async function ouvirUmaVez() {
     }
   }
   const b = await gravar();
-  if (!b || abortar) return '';
+  if (abortar) return '';
+  // Sem backend de áudio o clique não pode morrer em silêncio: o usuário precisa saber.
+  if (!b) throw new Error('Não consegui abrir o microfone neste ambiente. Verifique a permissão ou use o aplicativo Android para falar comigo.');
   aquecer();
   if (!neuralAtiva()) aquecerVoz(true);
   setEstado('thinking');
@@ -7109,7 +7111,7 @@ if (btnPararNeural) btnPararNeural.onclick = () => { neuralParar(); neuralMsg('F
 const btnLiberarNeural = $('#c-neural-liberar');
 if (btnLiberarNeural) btnLiberarNeural.onclick = async () => {
   const p = neuralPlugin();
-  if (!p) return;
+  if (!p) { neuralMsg('A voz neural está disponível apenas no aplicativo Android; não há memória para liberar.', true); return; }
   try {
     await p.liberar();
     neuralMsg('Memória liberada. O modelo continua no aparelho e carrega de novo na próxima fala.');

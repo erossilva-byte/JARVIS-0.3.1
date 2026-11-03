@@ -154,6 +154,12 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
+            **Novidades da 1.42.1:** auditoria de botões com clique real em jsdom — 300 botões, 239 medidos
+            com os painéis abertos um a um e zero exceções de clique. “Liberar memória” da voz neural
+            responde quando o plugin não existe, e o microfone do núcleo explica a falha quando o
+            ambiente não tem gravação: nenhum botão visível fica mais mudo. Verificações novas:
+            toda ação das áreas ligada, sem IDs duplicados, sem rótulos quebrados e sem cliques decorativos.
+
             **Novidades da 1.42.0:** captura de comando com VAD testável e WAV PCM como caminho principal,
             teto de 20 s, reamostragem para 16 kHz e controles reais de eco/ruído/AGC; seletor de motor STT
             (Automático, Groq, Android e Android local) com fallback turbo explícito; wake word não é mais

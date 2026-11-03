@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.42.0",
-  "versionCode": 10420,
+  "version": "1.42.1",
+  "versionCode": 10421,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
-  "gerado": "2026-11-02",
-  "status": "1.42.0: VAD/WAV 20 s e 16 kHz, seletor de motor STT, wake word parcial e métricas de captura; build CI publicado.",
+  "gerado": "2026-11-03",
+  "status": "1.42.1: auditoria de botões com clique real em jsdom, botão neural sem plugin agora responde, microfone sem backend explica a falha; build CI pendente.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.42.0 (2026-11-02). A captura de comando passou a usar o VAD testável e WAV PCM como caminho principal, com teto de 20 s, reamostragem de 48 kHz para 16 kHz e aplicação real dos controles de eco, ruído, AGC e filtro. Há seletor de motor STT (Automático, Groq, Android e Android local), fallback turbo somente em erro 400 do Groq e trava para não consumir a wake word em parcial que contenha apenas “Jarvis”. O diagnóstico registra duração, bytes, captura média e upload médio. Tudo preserva TTS, agentes, provedores, memória, rotinas, automações e as funções anteriores. A acústica real, a latência de rede e o consumo no Poco X7 continuam sem medição nesta máquina; não há alegação de 100%. Whisper local/sherpa ASR e barge-in continuam fora desta release. Preserva o núcleo holográfico, o plasma e a animação das versões anteriores, além do TTS, agentes, provedores, memória, rotinas e automações. Preserva também o raciocínio em etapas, a personalidade adaptativa e a verificação da resposta da 1.39, além das áreas clicáveis e a abertura sem flash da 1.40.",
+  "notas": "Revisão 1.42.1 (2026-11-03). Auditoria de efeito com clique real em jsdom varreu a superfície inteira de botões (300 elementos; 239 medidos com painéis abertos um a um; zero exceções de clique). Os 15 cliques sem efeito foram classificados um a um como seletor de arquivo, atualização idempotente, aba já ativa, estado já aplicado ou ambiente sem áudio — e apenas dois eram falha de verdade: “Liberar memória” da voz neural morria em silêncio sem o plugin JarvisVoz, e o microfone do núcleo voltava ao repouso sem explicar quando não há backend de áudio; ambos agora respondem com mensagem e têm regressão em tests/test_botoes_honestos.js. Verificações estáticas novas: toda ação das áreas tem caso no acaoNavegacao, nenhum ID duplicado, nenhum label for quebrado, nenhum href=\"#\" ou onclick inline. Preserva TTS, agentes, provedores, memória, rotinas, automações, o raciocínio em etapas, a personalidade adaptativa, as áreas clicáveis do núcleo 3D com plasma e a animação holográfica (abertura sem flash), a voz masculina PT-BR e todas as funções anteriores. Sem validação em aparelho físico; não há alegação de precisão de 100%.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -15,13 +15,11 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "success",
-    "sha256": "f9b9adf6a55a35c59a6939971322f3fcbcbe76740342e30589b46074a7348455",
-    "bytes": 81209022,
-    "arquivo": "jarvis-nova-1.42.0-10420.apk",
-    "data": "2026-11-02",
+    "resultado": "pendente",
+    "arquivo": "jarvis-nova-1.42.1-10421.apk",
+    "data": "2026-11-03",
     "ambiente": "GitHub Actions release-apk.yml: Ubuntu 24.04, JDK 21, Android SDK 35, assembleDebug",
-    "observacao": "APK 1.42.0 compilado e publicado no release v1.42.0; checksum conferido por download. Assinatura debug/CI. Sem instalação em aparelho físico."
+    "observacao": "Build da 1.42.1 aguardando a tag v1.42.1; o checksum será registrado após o run publicar o APK."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

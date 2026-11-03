@@ -1,3 +1,14 @@
+## 1.42.1 — Auditoria de botões e correções honestas
+
+- Auditoria de efeito com clique real em jsdom: 300 botões, 239 medidos com os painéis/abas abertos um a um (rodadas até fixar), zero exceções de clique e zero erros globais de boot.
+- Os 15 cliques sem efeito foram classificados um a um: seletor de arquivo, atualização idempotente, aba já ativa, filtro já aplicado, painel já aberto, `window.open` simulado e ambiente sem áudio. Dois eram falha de verdade e foram corrigidos.
+- `#c-neural-liberar` (“Liberar memória”, Ajustes ▸ Voz) não morre mais em silêncio quando o plugin `JarvisVoz` não existe: responde com mensagem de indisponibilidade, igual aos irmãos “Testar voz neural” e “Parar”.
+- Microfone do núcleo: quando o ambiente não tem backend de áudio (`AudioContext`/`MediaRecorder`), o clique agora explica a falha em vez de voltar ao repouso sem dizer nada; antes o estado passava por `listening` e voltava a `idle` sem mensagem.
+- Regressão em `tests/test_botoes_honestos.js` (no `test:all`): executa o handler do botão neural nos três cenários (sem plugin, com plugin, plugin com falha) e sobe o app inteiro para clicar no microfone.
+- Verificações estáticas novas: as 24 ações das áreas dinâmicas têm caso no `acaoNavegacao`, nenhum ID duplicado no HTML, nenhum `label for` quebrado, nenhum `href="#"`, nenhum `onclick` inline, nenhum `$('#id')` apontando para elemento inexistente e nenhum handler vazio.
+- Botões `disabled`/ocultos foram separados dos medidos (243 na primeira varredura): todos correspondem a estado real (tela de abertura, editor sem seleção, painel PC sem Electron, PIN ativo, modelo local carregado) e não são botões falsos.
+- Nenhuma função removida ou simulada; identidade, humor, núcleo 3D, voz masculina PT-BR, Obsidian em Ajustes ▸ Memória e bloqueio em Ajustes ▸ Segurança permanecem intactos.
+
 ## 1.42.0 — Voz, memória semântica e auditoria do Core
 
 - Voz: captura de comando passou a usar o VAD testável e WAV PCM como caminho principal, com teto de 20 s e reamostragem para 16 kHz; o `MediaRecorder` ficou como reserva. Os controles de eco, ruído, AGC e filtro agora chegam ao gravador normal.

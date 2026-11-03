@@ -1,4 +1,10 @@
-# J.A.R.V.I.S. Nova 1.42.0
+# J.A.R.V.I.S. Nova 1.42.1
+
+## 1.42.1 — Auditoria de botões e correções honestas
+
+Esta revisão varreu a interface inteira com clique de verdade (jsdom), não só leitura de código: 300 botões, 239 medidos depois de abrir cada painel e cada aba de Ajustes, zero exceções de clique. Dos 15 cliques que não mudavam nada, 13 eram comportamento correto (seletor de arquivo, atualização idempotente, aba já ativa, painel já aberto) e 2 eram falha: “Liberar memória” da voz neural ficava mudo sem o plugin JarvisVoz, e o microfone do núcleo voltava ao repouso sem explicar quando o ambiente não tem gravação. Os dois agora respondem com mensagem e têm teste de regressão (`tests/test_botoes_honestos.js`).
+
+Também passaram a valer verificações novas em toda a rodada: toda ação das áreas tem caso no roteador de navegação, o HTML não tem IDs duplicados nem rótulos quebrados, e não existe `href="#"`, `onclick` inline ou handler vazio. Nada foi removido ou simulado; as funções, a identidade e o núcleo 3D seguem intactos.
 
 ## 1.42.0 — Voz: VAD/WAV, motor STT selecionável e métricas
 
