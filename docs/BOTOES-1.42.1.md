@@ -75,6 +75,10 @@ integração entre HTML e JavaScript, e falhas silenciosas em handlers.
 
 ## Build 1.42.1
 
-- Build: GitHub Actions (`release-apk.yml`), tag `v1.42.1`.
-- O checksum e o tamanho deste APK são registrados em `VERSAO.json` e no `LEIA-ME.md` depois que
-  o run publica o asset; até lá o campo `build.resultado` fica `pendente`.
+- Build: GitHub Actions (`release-apk.yml`) no run `41615261533`, concluído com sucesso em 2m16s.
+- Arquivo: `jarvis-nova-1.42.1-10421.apk` — 81.209.170 bytes.
+- SHA-256: `506ee0a5c45919f095942f91b496a1fad1c00bc6c99038d15f730d68502ae013` (conferido por download do asset publicado).
+- Release: https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.1 (não draft, não pré-release).
+- `app.js` interno declara `VERSAO_APP = '1.42.1'` e o `index.html` interno tem seis chips `v1.42.1`.
+- O mesmo release contém os instaladores Windows `J.A.R.V.I.S.Nova.1.42.1.exe` (82.065.217 bytes) e `J.A.R.V.I.S.Nova.Setup.1.42.1.exe` (82.230.973 bytes), publicados pelo workflow do PC (run `41615261503`).
+- O APK não foi instalado em aparelho físico; os limites da seção anterior continuam válidos.

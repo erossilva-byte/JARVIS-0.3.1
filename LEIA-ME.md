@@ -6,6 +6,8 @@ Esta revisão varreu a interface inteira com clique de verdade (jsdom), não só
 
 Também passaram a valer verificações novas em toda a rodada: toda ação das áreas tem caso no roteador de navegação, o HTML não tem IDs duplicados nem rótulos quebrados, e não existe `href="#"`, `onclick` inline ou handler vazio. Nada foi removido ou simulado; as funções, a identidade e o núcleo 3D seguem intactos.
 
+O APK 1.42.1 tem **81.209.170 bytes** (81.209.170) e SHA-256 `506ee0a5c45919f095942f91b496a1fad1c00bc6c99038d15f730d68502ae013`; foi compilado pelo release workflow com JDK 21/Android SDK 35 e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.1. O release também traz os instaladores Windows (`J.A.R.V.I.S.Nova.1.42.1.exe` e `Setup`). Ele **não foi instalado em aparelho físico**: microfone real, wake word, toque, segundo plano, câmera e desempenho no Poco X7 continuam sem validação física.
+
 ## 1.42.0 — Voz: VAD/WAV, motor STT selecionável e métricas
 
 Esta revisão fecha os problemas encontrados no caminho real de comando. A captura normal passou a usar o VAD testável e WAV PCM, com teto de 20 s, reamostragem para 16 kHz e aplicação dos controles de eco, supressão de ruído, AGC e filtro. O usuário escolhe entre Automático, Groq, Android e Android local; o fallback Android não acontece mais quando o motor Groq foi selecionado, e um parcial contendo apenas “Jarvis” não consome a ativação antes do comando.
