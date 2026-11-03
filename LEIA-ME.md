@@ -4,6 +4,8 @@
 
 O APK **1.42.5** foi publicado sem o `projetista.js`: o painel do projetista abria no Android, mas o módulo não existia no pacote e o recurso não funcionava. A 1.42.6 corrige o workflow de build e adiciona `tests/test_empacotamento.py`, que falha se qualquer script do `index.html` ficar fora do pacote Android ou da lista do Windows. A mesma verificação encontrou `pc.js` e `cad_projeto.js` fora do pacote Android desde versões anteriores (painel PC e reparo/exportação do CAD sem módulo no aparelho); os dois foram incluídos. Use esta versão no lugar da 1.42.5.
 
+O APK **1.42.6** (`jarvis-nova-1.42.6-10426.apk`) tem **81273094 bytes** e SHA-256 `e0eae803b9d73de2207cfab52dd398bd5ce7eca19fb189eb67dd3a3f3c0b014d`, compilado no GitHub Actions e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.6 . Conferido por dentro: `projetista.js`, `pc.js` e `cad_projeto.js` presentes em `assets/public`. Ele **não foi instalado em aparelho físico** — toque, arrastar, microfone no aparelho e desempenho no Poco X7 seguem sem validação física, e o APK é assinado em debug/CI.
+
 ## 1.42.5 — Projetista elétrico editável
 
 O painel **Arquivos ▸ Projetista elétrico** monta o circuito a partir de um pedido em português: partida direta, reversão, estrela-triângulo, compensadora, comando com selo, iluminação e CLP de nível. O projeto vem com componentes, pinos, fios numerados, sequência de operação e verificação estrutural (curto, terminal solto, bobina sem alimentação, falta de proteção, falta de intertravamento), com correção do que o motor sabe corrigir e relatório que separa o que foi verificado do que **não** foi.
