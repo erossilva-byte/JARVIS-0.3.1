@@ -1,4 +1,4 @@
-# Circuitos elétricos no `.cad` — 1.42.2
+# Circuitos elétricos no `.cad` — 1.42.4
 
 > O `.cad` continua sendo o documento do CadSimu (corpo 3D em primitivas). A partir da 1.42.2
 > ele aceita uma seção **opcional** `circuito`, com componentes e ligações por terminal, que é
@@ -91,21 +91,27 @@ simulação: quem calcula tensão/corrente é o simulador do PC.
 
 ## Onde isso aparece no aplicativo
 
-Em **Arquivos ▸ Montar circuito** dá para montar sem escrever JSON: escolha o tipo, informe id e
-valor, toque em **Adicionar componente**, preencha **Terminal A**/**Terminal B** (`V1.1`, `R1.1`) e
-toque em **Ligar terminais**. **Validar** mostra componentes, ligações e redes com erros/avisos;
-**Gerar netlist** joga o texto no campo de análise; **Salvar .cad do circuito** grava o arquivo com
-a placa de 120×80×2 mm como geometria e o circuito validado.
+Em **Arquivos ▸ Montar circuito** o circuito é editado num **palco**:
+
+- escolha o tipo, informe id e valor e toque em **Adicionar componente** — o símbolo aparece no palco;
+- **toque num terminal** (fica destacado) e **no outro** para criar a ligação; toque de novo no mesmo
+  terminal para cancelar. **Terminal A**/**Terminal B** + **Ligar terminais** continuam disponíveis;
+- **arraste** o componente para mover; a posição `x`/`y` é salva;
+- toque no componente para selecionar: **Aplicar edição** renomeia (ajustando as ligações) e troca o
+  valor; **Apagar selecionado** remove o componente e as ligações dele;
+- **Carregar .cad salvo** devolve o circuito mais recente do cofre para edição;
+- **Validar**, **Gerar netlist** e **Salvar .cad do circuito** (placa de 120×80×2 mm como geometria)
+  seguem iguais.
 
 Ao analisar um `.cad` com `circuito`, o cartão de análise mostra quantos componentes, conexões e
 redes existem, além dos erros/avisos — o mesmo resumo volta em `CAD.analisar(texto).resumo`.
 O arquivo continua listável, baixável e apagável como qualquer `.cad`.
 
 Regressões: `tests/test_cad_circuito.js` (15 verificações do formato) e
-`tests/test_cad_circuito_ui.js` (app inteiro no jsdom: monta, valida, gera netlist, salva e relê).
+`tests/test_cad_circuito_ui.js` (app inteiro no jsdom: desenha 4 símbolos/4 fios, edita valor, arrasta, salva, apaga e recarrega) e `tests/test_cad_posicao.js` (x/y opcional e preservado).
 
 ## Limites honestos
 
-- Há montagem por formulário no aplicativo; **não há editor gráfico de esquema** (arrastar símbolos) nesta versão.
+- O editor é de palco simples: sem zonas, roteamento automático de fios, seleção múltipla nem desfazer/refazer além de remover a última ligação.
 - Não há simulação elétrica no aparelho — só validação estrutural e netlist.
 - Compatibilidade: arquivos sem `circuito` seguem válidos; a seção é opcional.

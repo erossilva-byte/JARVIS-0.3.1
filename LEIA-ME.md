@@ -1,4 +1,10 @@
-# J.A.R.V.I.S. Nova 1.42.3
+# J.A.R.V.I.S. Nova 1.42.4
+
+## 1.42.4 — Editor de circuito no palco
+
+O painel **Arquivos ▸ Montar circuito** virou editor: o palco desenha símbolos, terminais e fios. Arraste um componente para mover (a posição vai para o `.cad`), toque em dois terminais para ligar, toque no componente para selecionar e **Aplicar edição** (id/valor) ou **Apagar selecionado**. **Carregar .cad salvo** traz de volta o circuito do cofre para continuar editando.
+
+Ressalva mantida: o formato é o **`CadSimu CAD` v1** deste projeto, com `x`/`y` opcionais; o `.cad` nativo do CADeSIMU é proprietário e **não** é gerado. A netlist continua servindo de entrada para simuladores de PC, e o celular não simula eletricamente.
 
 ## 1.42.3 — Montar circuito na interface e perguntar sobre a imagem
 

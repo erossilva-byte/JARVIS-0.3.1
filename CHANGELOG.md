@@ -1,3 +1,12 @@
+## 1.42.4 — Editor de circuito no palco
+
+- **Palco SVG** no painel Arquivos: cada componente aparece com símbolo próprio, terminais tocáveis e fios entre os terminais ligados.
+- **Arrastar** move o componente (limitado ao palco) e a posição `x`/`y` é gravada no `.cad`; `CAD.validarCircuito` valida a posição quando presente e continua aceitando arquivos antigos sem ela.
+- **Ligar por toque**: toque num terminal (fica destacado) e no outro para criar a ligação; toque de novo no mesmo terminal cancela. Os campos Terminal A/B continuam como alternativa precisa.
+- **Selecionar e editar**: toque no componente preenche id/valor; **Aplicar edição** renomeia (com atualização das ligações) e troca o valor; **Apagar selecionado** remove o componente e as ligações dele.
+- **Carregar .cad salvo** devolve o circuito mais recente do cofre para edição, com as posições preservadas.
+- Regressões: `tests/test_cad_posicao.js` (x/y opcional, validado e preservado na ida e volta) e `tests/test_cad_circuito_ui.js` (jsdom: 4 símbolos, 4 fios, editar 330→470, arrastar para 200,90, salvar, apagar D1 e recarregar).
+
 ## 1.42.3 — Montar circuito na interface e perguntar sobre a imagem
 
 - `.cad`: montagem de circuito dentro do painel Arquivos — tipo, id, valor, ligação terminal a terminal (`V1.1` ↔ `R1.1`), **Validar**, **Gerar netlist**, desfazer ligação, remover componente e salvar, sem escrever JSON.

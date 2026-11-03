@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.42.3';
+const VERSAO_APP = '1.42.4';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -10041,24 +10041,32 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
   visaoPerguntaStatus('Pergunta limpa. A última imagem continua guardada para a próxima pergunta.');
 };
 
-/* ---------- .cad: montagem de circuito elétrico pela interface ----------
- * Componentes entram por tipo, id e valor; as ligações vão de terminal a terminal e são
- * validadas pelo CAD.js antes de virar arquivo. O documento salvo é o "CadSimu CAD" v1 deste
- * projeto: o .cad nativo do CADeSIMU é proprietário e não é gerado — a netlist vai para o PC.
+/* ---------- .cad: editor de circuito elétrico ----------
+ * O palco desenha símbolos, terminais e fios: arrastar move, tocar em dois terminais liga,
+ * tocar no componente seleciona para editar ou apagar, e um .cad salvo volta para edição.
+ * O documento gravado é o "CadSimu CAD" v1 deste projeto, com x/y opcionais por componente;
+ * o .cad nativo do CADeSIMU é proprietário e não é gerado — a netlist vai para o simulador do PC.
  */
-(function montarCircuito() {
+(function editorCircuito() {
+  const palco = document.getElementById('circ-palco');
   const selTipo = document.getElementById('circ-tipo');
-  if (!selTipo) return;
+  if (!selTipo || !palco) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const LARG = 320, ALT = 200;
   const PREFIXO = { resistor: 'R', capacitor: 'C', indutor: 'L', fonte: 'V', led: 'LED', diodo: 'D', chave: 'S', terra: 'GND', carga: 'RL', motor: 'M', fusivel: 'F' };
   let componentes = [];
   let conexoes = [];
+  let selecionado = '';
+  let terminalA = '';
   const el = (id) => document.getElementById(id);
-  // window.CadNucleo é a fonte única: o const CAD do app pode não existir neste escopo.
   const modulo = () => (typeof window !== 'undefined' && window.CadNucleo) ? window.CadNucleo : ((typeof CAD !== 'undefined' && CAD) ? CAD : null);
   const contar = (v) => Array.isArray(v) ? v.length : (Number.isFinite(Number(v)) ? Number(v) : 0);
   function status(t, erro) {
     const s = el('circ-status');
     if (s) { s.textContent = t; s.classList.toggle('erro', !!erro); }
+  }
+  function posicao(c) {
+    return { x: Number.isFinite(Number(c.x)) ? Number(c.x) : 60, y: Number.isFinite(Number(c.y)) ? Number(c.y) : 60 };
   }
   function preencherTipos() {
     const m = modulo();
@@ -10077,7 +10085,103 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
     while (componentes.some((c) => c.id === p + n)) n++;
     return p + n;
   }
+  function terminais(c) {
+    const pos = posicao(c);
+    if (c.tipo === 'terra') return [{ n: 1, x: pos.x, y: pos.y + 18 }];
+    return [{ n: 1, x: pos.x - 26, y: pos.y }, { n: 2, x: pos.x + 26, y: pos.y }];
+  }
+  function noSvg(nome) { return document.createElementNS(NS, nome); }
+  function linha(x1, y1, x2, y2, cls) {
+    const l = noSvg('line');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('class', cls || 'circ-sim');
+    return l;
+  }
+  function texto(t, x, y, cls) {
+    const n = noSvg('text');
+    n.setAttribute('x', x); n.setAttribute('y', y); n.setAttribute('class', cls || 'circ-nome');
+    n.textContent = t;
+    return n;
+  }
+  function caminho(d) { const n = noSvg('path'); n.setAttribute('d', d); n.setAttribute('class', 'circ-sim'); return n; }
+  function circulo(x, y, r) { const n = noSvg('circle'); n.setAttribute('cx', x); n.setAttribute('cy', y); n.setAttribute('r', r); n.setAttribute('class', 'circ-sim'); return n; }
+  function simbolo(c) {
+    const pos = posicao(c);
+    const x = pos.x;
+    const y = pos.y;
+    switch (c.tipo) {
+      case 'resistor':
+        return [caminho('M ' + (x - 24) + ' ' + y + ' L ' + (x - 18) + ' ' + y + ' L ' + (x - 14) + ' ' + (y - 8) + ' L ' + (x - 6) + ' ' + (y + 8) + ' L ' + (x + 2) + ' ' + (y - 8) + ' L ' + (x + 10) + ' ' + (y + 8) + ' L ' + (x + 18) + ' ' + y + ' L ' + (x + 24) + ' ' + y)];
+      case 'capacitor':
+        return [linha(x - 24, y, x - 4, y), linha(x + 4, y, x + 24, y), caminho('M ' + (x - 4) + ' ' + (y - 13) + ' L ' + (x - 4) + ' ' + (y + 13)), caminho('M ' + (x + 4) + ' ' + (y - 13) + ' L ' + (x + 4) + ' ' + (y + 13))];
+      case 'indutor':
+        return [caminho('M ' + (x - 24) + ' ' + y + ' L ' + (x - 16) + ' ' + y + ' Q ' + (x - 12) + ' ' + (y - 11) + ' ' + (x - 8) + ' ' + y + ' Q ' + (x - 4) + ' ' + (y - 11) + ' ' + x + ' ' + y + ' Q ' + (x + 4) + ' ' + (y - 11) + ' ' + (x + 8) + ' ' + y + ' Q ' + (x + 12) + ' ' + (y - 11) + ' ' + (x + 16) + ' ' + y + ' L ' + (x + 24) + ' ' + y)];
+      case 'fonte':
+        return [circulo(x, y, 14), linha(x - 8, y, x + 8, y), caminho('M ' + (x - 4) + ' ' + (y - 4) + ' L ' + (x + 4) + ' ' + (y - 4)), linha(x - 8, y + 7, x + 8, y + 7)];
+      case 'led':
+        return [caminho('M ' + (x - 10) + ' ' + (y - 12) + ' L ' + (x - 10) + ' ' + (y + 12) + ' L ' + (x + 10) + ' ' + y + ' Z'),
+          caminho('M ' + (x + 10) + ' ' + (y - 12) + ' L ' + (x + 10) + ' ' + (y + 12)),
+          caminho('M ' + (x + 14) + ' ' + (y - 12) + ' L ' + (x + 20) + ' ' + (y - 18)),
+          caminho('M ' + (x + 8) + ' ' + (y - 16) + ' L ' + (x + 14) + ' ' + (y - 22))];
+      case 'diodo':
+        return [caminho('M ' + (x - 10) + ' ' + (y - 12) + ' L ' + (x - 10) + ' ' + (y + 12) + ' L ' + (x + 10) + ' ' + y + ' Z'),
+          caminho('M ' + (x + 10) + ' ' + (y - 12) + ' L ' + (x + 10) + ' ' + (y + 12)),
+          linha(x - 24, y, x - 10, y), linha(x + 10, y, x + 24, y)];
+      case 'chave':
+        return [linha(x - 24, y, x - 12, y), linha(x - 12, y, x + 10, y - 9), linha(x + 10, y, x + 24, y), circulo(x - 12, y, 2.5), circulo(x + 10, y, 2.5)];
+      case 'terra':
+        return [linha(x, y - 14, x, y), linha(x - 12, y, x + 12, y), linha(x - 8, y + 5, x + 8, y + 5), linha(x - 4, y + 10, x + 4, y + 10)];
+      case 'carga':
+        return [caminho('M ' + (x - 14) + ' ' + (y - 10) + ' L ' + (x + 14) + ' ' + (y - 10) + ' L ' + (x + 14) + ' ' + (y + 10) + ' L ' + (x - 14) + ' ' + (y + 10) + ' Z'),
+          linha(x - 24, y, x - 14, y), linha(x + 14, y, x + 24, y),
+          linha(x - 6, y - 3, x + 6, y + 4), caminho('M ' + (x + 6) + ' ' + (y + 4) + ' L ' + (x + 2) + ' ' + (y + 4) + ' M ' + (x + 6) + ' ' + (y + 4) + ' L ' + (x + 6) + ' ' + y)];
+      case 'motor':
+        return [circulo(x, y, 14), texto('M', x, y + 4, 'circ-nome'), linha(x - 24, y, x - 14, y), linha(x + 14, y, x + 24, y)];
+      default:
+        return [caminho('M ' + (x - 14) + ' ' + (y - 8) + ' L ' + (x + 14) + ' ' + (y - 8) + ' L ' + (x + 14) + ' ' + (y + 8) + ' L ' + (x - 14) + ' ' + (y + 8) + ' Z'),
+          linha(x - 24, y, x - 14, y), linha(x + 14, y, x + 24, y)];
+    }
+  }
+  function terminalDe(nome) {
+    const t = String(nome || '').toUpperCase().split('.');
+    const c = componentes.find((x) => x.id === t[0]);
+    if (!c) return null;
+    const achado = terminais(c).find((x) => String(x.n) === t[1]);
+    return achado ? { x: achado.x, y: achado.y } : null;
+  }
+  function grupo(c) {
+    const g = noSvg('g');
+    g.setAttribute('data-id', c.id);
+    g.setAttribute('class', 'circ-comp' + (c.id === selecionado ? ' sel' : ''));
+    simbolo(c).forEach((n) => g.appendChild(n));
+    const pos = posicao(c);
+    g.appendChild(texto(c.id, pos.x, pos.y - 24, 'circ-nome'));
+    if (c.valor != null) g.appendChild(texto(String(c.valor), pos.x, pos.y + 30, 'circ-valor'));
+    terminais(c).forEach((t) => {
+      const cir = noSvg('circle');
+      cir.setAttribute('cx', t.x); cir.setAttribute('cy', t.y); cir.setAttribute('r', 6);
+      cir.setAttribute('data-term', c.id + '.' + t.n);
+      cir.setAttribute('class', 'circ-term' + (terminalA === c.id + '.' + t.n ? ' ativo' : ''));
+      cir.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); ligarTerminal(c.id + '.' + t.n); });
+      g.appendChild(cir);
+    });
+    g.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); selecionar(c.id); iniciarArraste(g, c, ev); });
+    return g;
+  }
+  function desenharPalco() {
+    while (palco.firstChild) palco.removeChild(palco.firstChild);
+    const fios = noSvg('g');
+    conexoes.forEach((k) => {
+      const a = terminalDe(k.de);
+      const b = terminalDe(k.para);
+      if (a && b) fios.appendChild(linha(a.x, a.y, b.x, b.y, 'circ-fio'));
+    });
+    palco.appendChild(fios);
+    componentes.forEach((c) => palco.appendChild(grupo(c)));
+    if (selecionado && !componentes.some((c) => c.id === selecionado)) selecionado = '';
+  }
   function desenhar() {
+    desenharPalco();
     const lista = el('circ-lista');
     if (!lista) return;
     lista.textContent = '';
@@ -10085,7 +10189,7 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
     if (!componentes.length) {
       const vazio = document.createElement('p');
       vazio.className = 'dica mem-vazio';
-      vazio.textContent = 'Nenhum componente ainda. Adicione um e ligue os terminais.';
+      vazio.textContent = 'Nenhum componente ainda. Adicione um e ligue os terminais no palco.';
       lista.appendChild(vazio);
     }
     componentes.forEach((c) => {
@@ -10101,20 +10205,17 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
       titulo.textContent = c.id;
       cab.append(tema, titulo);
       const meta = document.createElement('small');
-      meta.textContent = def.terminais + ' terminal(is)' + (c.valor != null ? ' · ' + c.valor + (def.unidade ? ' ' + def.unidade : '') : '');
+      const pos = posicao(c);
+      meta.textContent = def.terminais + ' terminal(is)' + (c.valor != null ? ' · ' + c.valor + (def.unidade ? ' ' + def.unidade : '') : '') + ' · (' + Math.round(pos.x) + ', ' + Math.round(pos.y) + ')';
       const acoes = document.createElement('div');
       acoes.className = 'botoes';
+      const sel = document.createElement('button');
+      sel.type = 'button'; sel.className = 'secundario'; sel.textContent = 'Selecionar';
+      sel.onclick = () => { selecionar(c.id); status('Componente ' + c.id + ' selecionado.'); };
       const rem = document.createElement('button');
-      rem.type = 'button';
-      rem.className = 'secundario perigo';
-      rem.textContent = 'Remover';
-      rem.onclick = () => {
-        componentes = componentes.filter((x) => x.id !== c.id);
-        conexoes = conexoes.filter((k) => String(k.de).indexOf(c.id + '.') !== 0 && String(k.para).indexOf(c.id + '.') !== 0);
-        desenhar();
-        status('Componente ' + c.id + ' removido.');
-      };
-      acoes.appendChild(rem);
+      rem.type = 'button'; rem.className = 'secundario perigo'; rem.textContent = 'Remover';
+      rem.onclick = () => { apagarComponente(c.id); };
+      acoes.append(sel, rem);
       item.append(cab, meta, acoes);
       lista.appendChild(item);
     });
@@ -10124,6 +10225,86 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
       p.textContent = 'Ligações: ' + conexoes.map((k) => k.de + ' ↔ ' + k.para).join(' · ');
       lista.appendChild(p);
     }
+  }
+  function selecionar(id) {
+    selecionado = id;
+    const c = componentes.find((x) => x.id === id);
+    if (c) {
+      if (el('circ-edit-id')) el('circ-edit-id').value = c.id;
+      if (el('circ-edit-valor')) el('circ-edit-valor').value = c.valor == null ? '' : String(c.valor);
+    }
+    desenhar();
+  }
+  function ponto(ev) {
+    const r = palco.getBoundingClientRect ? palco.getBoundingClientRect() : { left: 0, top: 0, width: 0, height: 0 };
+    const kx = r.width ? LARG / r.width : 1;
+    const ky = r.height ? ALT / r.height : 1;
+    return { x: (Number(ev.clientX) - r.left) * kx, y: (Number(ev.clientY) - r.top) * ky };
+  }
+  function iniciarArraste(g, c, ev) {
+    const inicio = ponto(ev);
+    const base = posicao(c);
+    let mexeu = false;
+    const mover = (e2) => {
+      const p = ponto(e2);
+      const nx = Math.max(24, Math.min(LARG - 24, base.x + (p.x - inicio.x)));
+      const ny = Math.max(24, Math.min(ALT - 24, base.y + (p.y - inicio.y)));
+      c.x = Math.round(nx);
+      c.y = Math.round(ny);
+      if (Math.abs(p.x - inicio.x) + Math.abs(p.y - inicio.y) > 2) mexeu = true;
+      g.setAttribute('transform', 'translate(' + (c.x - base.x) + ', ' + (c.y - base.y) + ')');
+    };
+    const fim = () => {
+      window.removeEventListener('pointermove', mover);
+      window.removeEventListener('pointerup', fim);
+      window.removeEventListener('pointercancel', fim);
+      desenhar();
+      if (mexeu) status('Componente ' + c.id + ' movido para (' + c.x + ', ' + c.y + ').');
+    };
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', fim);
+    window.addEventListener('pointercancel', fim);
+  }
+  function ligarTerminal(nome) {
+    if (!terminalA) {
+      terminalA = nome;
+      status('Terminal ' + nome + ' escolhido; toque no outro terminal para ligar (ou toque de novo para cancelar).');
+      desenhar();
+      return;
+    }
+    if (terminalA === nome) {
+      terminalA = '';
+      status('Mesmo terminal: seleção cancelada.');
+      desenhar();
+      return;
+    }
+    const m = modulo();
+    const teste = m ? m.validarCircuito({ componentes, conexoes: conexoes.concat([{ de: terminalA, para: nome }]) }) : { erros: ['módulo de arquivos não carregou'] };
+    const erro = (teste.erros || []).find((e) => e.indexOf('Conexão ' + (conexoes.length + 1) + ':') === 0);
+    if (erro) { status(erro, true); terminalA = ''; desenhar(); return; }
+    conexoes.push({ de: terminalA, para: nome });
+    status('Ligação ' + terminalA + ' ↔ ' + nome + ' feita.');
+    terminalA = '';
+    desenhar();
+  }
+  function ligar() {
+    const m = modulo();
+    if (!m) { status('O módulo de arquivos não carregou neste dispositivo.', true); return; }
+    const campoDe = el('circ-de');
+    const campoPara = el('circ-para');
+    const de = String(campoDe && campoDe.value || '').trim().toUpperCase();
+    const para = String(campoPara && campoPara.value || '').trim().toUpperCase();
+    if (!de || !para) { status('Preencha os dois terminais (ex.: V1.1 e R1.1) ou toque neles no palco.', true); return; }
+    if (conexoes.length >= (m.LIMITE_CONEXOES || 400)) { status('Limite de ligações por circuito atingido.', true); return; }
+    const teste = m.validarCircuito({ componentes, conexoes: conexoes.concat([{ de, para }]) });
+    const erro = (teste.erros || []).find((e) => e.indexOf('Conexão ' + (conexoes.length + 1) + ':') === 0);
+    if (erro) { status(erro, true); return; }
+    conexoes.push({ de, para });
+    if (campoDe) campoDe.value = '';
+    if (campoPara) campoPara.value = '';
+    terminalA = '';
+    desenhar();
+    status('Ligação ' + de + ' ↔ ' + para + ' feita.');
   }
   function adicionar() {
     const m = modulo();
@@ -10145,29 +10326,58 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
       if (!Number.isFinite(valor) || valor < 0) { status('Valor inválido: use número não negativo (ex.: 330).', true); return; }
     }
     if (def.valorObrigatorio && valor == null) { status(def.nome + ' precisa de valor' + (def.unidade ? ' em ' + def.unidade : '') + '.', true); return; }
-    componentes.push({ tipo, id, valor });
+    const i = componentes.length;
+    componentes.push({ tipo, id, valor, x: Math.min(LARG - 30, 60 + (i % 3) * 100), y: Math.min(ALT - 30, 60 + Math.floor(i / 3) * 60) });
     if (campoId) campoId.value = '';
     if (campoValor) campoValor.value = '';
+    selecionado = id;
     desenhar();
-    status('Componente ' + id + ' (' + def.nome + ') adicionado. Terminais: ' + (def.terminais === 1 ? id + '.1' : id + '.1 a ' + id + '.' + def.terminais) + '.');
+    if (el('circ-edit-id')) el('circ-edit-id').value = id;
+    if (el('circ-edit-valor')) el('circ-edit-valor').value = valor == null ? '' : String(valor);
+    status('Componente ' + id + ' (' + def.nome + ') adicionado. Terminais: ' + (def.terminais === 1 ? id + '.1' : id + '.1 e ' + id + '.2') + '.');
   }
-  function ligar() {
+  function trocarId(t, de, para) {
+    const s = String(t || '').toUpperCase();
+    return s.indexOf(de + '.') === 0 ? para + s.slice(de.length) : s;
+  }
+  function aplicarEdicao() {
+    const c = componentes.find((x) => x.id === selecionado);
+    if (!c) { status('Selecione um componente no palco (ou toque em Selecionar na lista) para editar.', true); return; }
     const m = modulo();
-    if (!m) { status('O módulo de arquivos não carregou neste dispositivo.', true); return; }
-    const campoDe = el('circ-de');
-    const campoPara = el('circ-para');
-    const de = String(campoDe && campoDe.value || '').trim().toUpperCase();
-    const para = String(campoPara && campoPara.value || '').trim().toUpperCase();
-    if (!de || !para) { status('Preencha os dois terminais, por exemplo V1.1 e R1.1.', true); return; }
-    if (conexoes.length >= (m.LIMITE_CONEXOES || 400)) { status('Limite de ligações por circuito atingido.', true); return; }
-    const teste = m.validarCircuito({ componentes, conexoes: conexoes.concat([{ de, para }]) });
-    const erro = (teste.erros || []).find((e) => e.indexOf('Conexão ' + (conexoes.length + 1) + ':') === 0);
-    if (erro) { status(erro, true); return; }
-    conexoes.push({ de, para });
-    if (campoDe) campoDe.value = '';
-    if (campoPara) campoPara.value = '';
+    const campoId = el('circ-edit-id');
+    const campoValor = el('circ-edit-valor');
+    const novoId = String(campoId && campoId.value || c.id).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24) || c.id;
+    if (!/^[A-Z][A-Z0-9_-]{0,23}$/.test(novoId)) { status('Id inválido: comece com letra (ex.: R1).', true); return; }
+    if (novoId !== c.id && componentes.some((x) => x.id === novoId)) { status('Já existe ' + novoId + '.', true); return; }
+    const def = (m && m.COMPONENTES) ? m.COMPONENTES[c.tipo] : null;
+    const bruto = String(campoValor && campoValor.value || '').trim().replace(',', '.');
+    let valor = c.valor;
+    if (bruto) {
+      valor = Number(bruto);
+      if (!Number.isFinite(valor) || valor < 0) { status('Valor inválido: use número não negativo.', true); return; }
+    } else { valor = null; }
+    if (def && def.valorObrigatorio && valor == null) { status(def.nome + ' precisa de valor' + (def.unidade ? ' em ' + def.unidade : '') + '.', true); return; }
+    conexoes = conexoes.map((k) => ({ de: trocarId(k.de, c.id, novoId), para: trocarId(k.para, c.id, novoId) }));
+    c.id = novoId;
+    c.valor = valor;
+    selecionado = novoId;
     desenhar();
-    status('Ligação ' + de + ' ↔ ' + para + ' feita.');
+    status('Componente ' + novoId + ' atualizado' + (valor == null ? '.' : ' para ' + valor + (def && def.unidade ? ' ' + def.unidade : '') + '.'));
+  }
+  function apagarComponente(id) {
+    const c = componentes.find((x) => x.id === id);
+    if (!c) return false;
+    componentes = componentes.filter((x) => x.id !== id);
+    conexoes = conexoes.filter((k) => String(k.de).indexOf(id + '.') !== 0 && String(k.para).indexOf(id + '.') !== 0);
+    if (selecionado === id) selecionado = '';
+    terminalA = '';
+    desenhar();
+    status('Componente ' + id + ' removido com as ligações dele.');
+    return true;
+  }
+  function apagarSelecionado() {
+    if (!selecionado) { status('Nenhum componente selecionado: toque num componente do palco.', true); return; }
+    apagarComponente(selecionado);
   }
   function validar() {
     const m = modulo();
@@ -10183,9 +10393,8 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
     const r = validar();
     const m = modulo();
     if (!r || !m) return;
-    const texto = m.netlist({ circuito: { componentes, conexoes } });
     const campo = el('cad-texto');
-    if (campo) campo.value = texto;
+    if (campo) campo.value = m.netlist({ circuito: { componentes, conexoes } });
     status('Netlist copiada para o campo “Ou cole o conteúdo”: é texto para simulador de PC, não é o .cad nativo do CADeSIMU.');
     registrar('arquivos', 'netlist do circuito: ' + componentes.length + ' componente(s)');
   }
@@ -10195,10 +10404,14 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
     if (!r || !m) return;
     const nome = String(el('circ-nome') && el('circ-nome').value || '').trim() || 'circuito';
     const circuito = {
-      componentes: componentes.map((c) => (c.valor == null ? { tipo: c.tipo, id: c.id } : { tipo: c.tipo, id: c.id, valor: c.valor })),
+      componentes: componentes.map((c) => {
+        const pos = posicao(c);
+        const item = { tipo: c.tipo, id: c.id, x: Math.round(pos.x), y: Math.round(pos.y) };
+        if (c.valor != null) item.valor = c.valor;
+        return item;
+      }),
       conexoes: conexoes.map((k) => ({ de: k.de, para: k.para }))
     };
-    // O .cad precisa de geometria: a placa 120×80×2 mm é a base real do circuito.
     const placa = m.objetoPadrao('caixa');
     placa.nome = 'placa';
     placa.dimensoes = [120, 80, 2];
@@ -10208,10 +10421,40 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
     if (typeof cadUltimoDoc !== 'undefined') cadUltimoDoc = doc;
     const texto = m.serializar(doc);
     if (typeof PC !== 'undefined' && PC) PC.criar(salvo.nome, texto).catch((e) => registrar('erro', 'cad no PC: ' + ((e && e.message) || e)));
-    renderArquivos();
-    analisarCadTexto(texto, salvo.nome);
+    if (typeof renderArquivos === 'function') renderArquivos();
+    if (typeof analisarCadTexto === 'function') analisarCadTexto(texto, salvo.nome);
     status('Arquivo ' + salvo.nome + ' salvo com ' + componentes.length + ' componente(s) e ' + conexoes.length + ' ligação(ões).');
     registrar('arquivos', '.cad de circuito: ' + salvo.nome);
+  }
+  function carregar() {
+    const m = modulo();
+    if (!m) { status('O módulo de arquivos não carregou neste dispositivo.', true); return; }
+    const arquivos = m.listar();
+    for (const a of arquivos) {
+      const lido = m.ler(a.nome) || {};
+      const texto = typeof lido === 'string' ? lido : (lido.texto || lido.conteudo || '');
+      if (!texto || texto.indexOf('"circuito"') < 0) continue;
+      let doc = null;
+      try { doc = JSON.parse(texto); } catch (e) { continue; }
+      const circ = doc && doc.circuito;
+      if (!circ || !Array.isArray(circ.componentes) || !circ.componentes.length) continue;
+      componentes = circ.componentes.map((c, i) => ({
+        tipo: String(c.tipo || '').toLowerCase(),
+        id: String(c.id || '').toUpperCase(),
+        valor: c.valor == null ? null : Number(c.valor),
+        x: Number.isFinite(Number(c.x)) ? Number(c.x) : 60 + (i % 3) * 100,
+        y: Number.isFinite(Number(c.y)) ? Number(c.y) : 60 + Math.floor(i / 3) * 60
+      }));
+      conexoes = (circ.conexoes || []).map((k) => ({ de: String(k.de || '').toUpperCase(), para: String(k.para || '').toUpperCase() }));
+      if (el('circ-nome')) el('circ-nome').value = doc.nome || 'circuito';
+      selecionado = '';
+      terminalA = '';
+      desenhar();
+      status('Circuito de ' + a.nome + ' carregado para edição (' + componentes.length + ' componente(s), ' + conexoes.length + ' ligação(ões)).');
+      registrar('arquivos', 'circuito aberto para edição: ' + a.nome);
+      return;
+    }
+    status('Nenhum .cad com circuito salvo para editar. Monte um circuito e toque em Salvar .cad do circuito.', true);
   }
   function desfazer() {
     if (!conexoes.length) { status('Nenhuma ligação para desfazer.', true); return; }
@@ -10221,10 +10464,10 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
   }
   function exemplo() {
     componentes = [
-      { tipo: 'fonte', id: 'V1', valor: 9 },
-      { tipo: 'resistor', id: 'R1', valor: 330 },
-      { tipo: 'led', id: 'D1', valor: 2 },
-      { tipo: 'terra', id: 'GND1', valor: null }
+      { tipo: 'fonte', id: 'V1', valor: 9, x: 60, y: 60 },
+      { tipo: 'resistor', id: 'R1', valor: 330, x: 160, y: 60 },
+      { tipo: 'led', id: 'D1', valor: 2, x: 250, y: 60 },
+      { tipo: 'terra', id: 'GND1', valor: null, x: 160, y: 150 }
     ];
     conexoes = [
       { de: 'V1.1', para: 'R1.1' },
@@ -10232,17 +10475,22 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
       { de: 'D1.2', para: 'GND1.1' },
       { de: 'V1.2', para: 'GND1.1' }
     ];
+    selecionado = '';
+    terminalA = '';
     desenhar();
-    status('Exemplo carregado: fonte 9 V, resistor 330 Ω, LED e terra. Toque em Validar.');
+    status('Exemplo carregado: fonte 9 V, resistor 330 Ω, LED e terra. Toque em Validar ou mova os componentes.');
   }
   function limpar() {
     componentes = [];
     conexoes = [];
+    selecionado = '';
+    terminalA = '';
     desenhar();
     status('Circuito limpo. Adicione componentes para começar de novo.');
   }
   [['circ-add', adicionar], ['circ-exemplo', exemplo], ['circ-ligar', ligar], ['circ-desfazer', desfazer],
-   ['circ-validar', validar], ['circ-netlist', verNetlist], ['circ-salvar', salvar], ['circ-limpar', limpar]]
+   ['circ-validar', validar], ['circ-netlist', verNetlist], ['circ-salvar', salvar], ['circ-limpar', limpar],
+   ['circ-aplicar', aplicarEdicao], ['circ-apagar', apagarSelecionado], ['circ-carregar', carregar]]
     .forEach(([id, fn]) => {
       const b = el(id);
       if (b) b.onclick = () => { try { fn(); } catch (e) { status('Falhou: ' + ((e && e.message) || e), true); } };
@@ -10250,6 +10498,9 @@ if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
   ['circ-de', 'circ-para'].forEach((id) => {
     const c = el(id);
     if (c) c.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ligar(); } });
+  });
+  palco.addEventListener('pointerdown', () => {
+    if (selecionado || terminalA) { selecionado = ''; terminalA = ''; desenhar(); status('Seleção limpa.'); }
   });
   preencherTipos();
   desenhar();

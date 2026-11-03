@@ -31,19 +31,35 @@ const { JSDOM, VirtualConsole } = require('jsdom');
   const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
   await dormir(2500);
 
-  // --- .cad: montagem de circuito ---
+  // --- .cad: editor de circuito (palco + lista) ---
   const sel = d.getElementById('circ-tipo');
-  console.log('DIAG modulo:', typeof w.CadNucleo, '| opcoes:', sel ? sel.options.length : '-', '| add.onclick:', typeof (d.getElementById('circ-add') || {}).onclick, '| exemplo.onclick:', typeof (d.getElementById('circ-exemplo') || {}).onclick);
-
   assert.ok(sel && sel.options.length >= 11, 'o seletor deve listar os tipos do CAD.js: ' + (sel ? sel.options.length : 'ausente'));
   d.getElementById('circ-exemplo').click();
   await dormir(80);
   assert.strictEqual(d.querySelectorAll('#circ-lista .mem-nota').length, 4, 'o exemplo deve listar 4 componentes');
+  assert.strictEqual(d.querySelectorAll('#circ-palco .circ-comp').length, 4, 'o palco deve desenhar os 4 símbolos');
+  assert.strictEqual(d.querySelectorAll('#circ-palco .circ-fio').length, 4, 'o palco deve desenhar as 4 ligações');
+
+  const grupo = d.querySelector('#circ-palco .circ-comp[data-id="R1"]');
+  assert.ok(grupo, 'R1 deve estar no palco');
+  grupo.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true, clientX: 160, clientY: 60 }));
+  assert.strictEqual(d.getElementById('circ-edit-id').value, 'R1', 'selecionar deve preencher o id');
+  d.getElementById('circ-edit-valor').value = '470';
+  d.getElementById('circ-aplicar').click();
+  await dormir(60);
+  assert.ok(/R1 atualizado/.test(d.getElementById('circ-status').textContent), 'editar deve confirmar: ' + d.getElementById('circ-status').textContent);
+  assert.ok(/470/.test(d.getElementById('circ-lista').textContent), 'a lista deve mostrar o valor novo');
+
+  w.dispatchEvent(new w.MouseEvent('pointermove', { clientX: 200, clientY: 90 }));
+  w.dispatchEvent(new w.MouseEvent('pointerup', { clientX: 200, clientY: 90 }));
+  await dormir(60);
+  assert.ok(/R1 movido/.test(d.getElementById('circ-status').textContent), 'arrastar deve confirmar: ' + d.getElementById('circ-status').textContent);
+
   d.getElementById('circ-validar').click();
-  await dormir(80);
+  await dormir(60);
   assert.ok(/Circuito válido/.test(d.getElementById('circ-status').textContent), 'validar deve confirmar: ' + d.getElementById('circ-status').textContent);
   d.getElementById('circ-netlist').click();
-  await dormir(80);
+  await dormir(60);
   assert.ok(/V1 1 0 9/.test(d.getElementById('cad-texto').value), 'a netlist deve usar terra 0: ' + d.getElementById('cad-texto').value.slice(0, 160));
 
   const antes = w.CadNucleo.listar().length;
@@ -56,8 +72,24 @@ const { JSDOM, VirtualConsole } = require('jsdom');
   const texto = typeof lido === 'string' ? lido : (lido.texto || lido.conteudo || '');
   assert.ok(texto, 'o arquivo salvo deve poder ser lido de volta');
   const doc = JSON.parse(texto);
-  assert.strictEqual(doc.circuito.componentes.length, 4, 'o arquivo salvo deve conter o circuito');
+  const r1 = doc.circuito.componentes.find((c) => c.id === 'R1');
+  assert.ok(r1, 'R1 deve estar no arquivo salvo');
+  assert.strictEqual(r1.valor, 470, 'o valor editado deve ser salvo');
+  assert.strictEqual(r1.x, 200, 'a posição x do arraste deve ser salva: ' + r1.x);
+  assert.strictEqual(r1.y, 90, 'a posição y do arraste deve ser salva: ' + r1.y);
   assert.ok(doc.objetos.length >= 1, 'o arquivo salvo deve conter a placa como geometria');
+
+  const grupoD1 = d.querySelector('#circ-palco .circ-comp[data-id="D1"]');
+  assert.ok(grupoD1, 'D1 deve estar no palco');
+  grupoD1.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true, clientX: 250, clientY: 60 }));
+  d.getElementById('circ-apagar').click();
+  await dormir(80);
+  assert.strictEqual(d.querySelectorAll('#circ-palco .circ-comp').length, 3, 'apagar deve remover o componente do palco');
+  assert.ok(/removido/.test(d.getElementById('circ-status').textContent), 'apagar deve confirmar');
+  d.getElementById('circ-carregar').click();
+  await dormir(120);
+  assert.ok(/carregado para edição/.test(d.getElementById('circ-status').textContent), 'carregar deve confirmar: ' + d.getElementById('circ-status').textContent);
+  assert.strictEqual(d.querySelectorAll('#circ-palco .circ-comp').length, 4, 'carregar deve restaurar os 4 componentes salvos');
 
   // --- Visão: perguntar sobre a análise ---
   const campo = d.getElementById('visao-pergunta');

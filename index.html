@@ -131,7 +131,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.42.3</span>
+      <span class="orb-sub" aria-hidden="true">v1.42.4</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -241,7 +241,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.42.3</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.42.4</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -586,7 +586,7 @@
 </aside>
 
 <aside id="painel-areas" class="painel painel-areas" hidden aria-label="Áreas do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · MAPA OPERACIONAL</p><h2>Áreas</h2></div><span class="versao-chip">v1.42.3</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · MAPA OPERACIONAL</p><h2>Áreas</h2></div><span class="versao-chip">v1.42.4</span></div>
   <section class="grupo areas-shell">
     <div id="areas-inicio">
       <p class="dica">Dez áreas, cada uma com suas funções. Os painéis antigos continuam disponíveis; esta camada apenas organiza o acesso e evita misturar ferramentas de assuntos diferentes.</p>
@@ -601,7 +601,7 @@
 
 
 <aside id="painel-sistema" class="painel painel-sistema" hidden aria-label="Central operacional do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · NÚCLEO OPERACIONAL</p><h2>Central do sistema</h2></div><span class="versao-chip">v1.42.3</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · NÚCLEO OPERACIONAL</p><h2>Central do sistema</h2></div><span class="versao-chip">v1.42.4</span></div>
   <section class="grupo" data-category="sistema-nucleo">
     <h3>Estado do núcleo</h3>
     <p id="sis-status" class="dica" role="status" aria-live="polite">Carregando ferramentas e tarefas…</p>
@@ -657,7 +657,7 @@
 </aside>
 
 <aside id="painel-core" class="painel painel-core" hidden aria-label="JARVIS Core: agentes, contexto e saúde">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CORE</p><h2>JARVIS Core</h2></div><span class="versao-chip">v1.42.3</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CORE</p><h2>JARVIS Core</h2></div><span class="versao-chip">v1.42.4</span></div>
   <section class="grupo">
     <div class="core-hero">
       <p id="core-status" class="core-status" role="status" aria-live="polite">Consultando o Core…</p>
@@ -772,7 +772,7 @@
 </aside>
 
 <aside id="painel-pessoas" class="painel painel-pessoas" hidden aria-label="Identificação de pessoas do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · IDENTIFICAÇÃO DE PESSOAS</p><h2>Pessoas</h2></div><span class="versao-chip">v1.42.3 · local</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · IDENTIFICAÇÃO DE PESSOAS</p><h2>Pessoas</h2></div><span class="versao-chip">v1.42.4 · local</span></div>
   <section class="grupo" id="idp-inicio">
     <p class="dica">Cada pessoa tem um perfil próprio: foto, informações, campos personalizados e perfil de voz. O reconhecimento compara vetores de características no aparelho — o áudio nunca é guardado e nada é enviado a provedores sem sua autorização. Em dúvida, o J.A.R.V.I.S. responde “inconclusivo” em vez de adivinhar.</p>
     <div class="idp-barra-topo">
@@ -1003,7 +1003,7 @@
     <div class="botoes"><button id="cad-gerar" type="button" class="primario">Gerar .cad</button><button id="cad-exemplo" type="button" class="secundario">Usar exemplo</button></div>
     <div class="divider-small"></div>
     <h3>Montar circuito</h3>
-    <p class="dica">Monte sem escrever JSON: cada componente tem terminais numerados a partir de 1. O arquivo gerado usa o formato <code>CadSimu CAD</code> v1 documentado neste projeto. O arquivo salvo leva a placa de 120×80×2 mm como base e o circuito ligado a ela. O <code>.cad</code> nativo do CADeSIMU é proprietário e <b>não</b> é produzido; a netlist abaixo serve para simulação no PC.</p>
+    <p class="dica">Monte sem escrever JSON: cada componente tem terminais numerados a partir de 1. O arquivo gerado usa o formato <code>CadSimu CAD</code> v1 documentado neste projeto. O palco é um editor: arraste, ligue terminais e edite o componente selecionado. O arquivo salvo leva a placa de 120×80×2 mm como base, o circuito ligado a ela e a posição de cada componente (x/y). O <code>.cad</code> nativo do CADeSIMU é proprietário e <b>não</b> é produzido; a netlist abaixo serve para simulação no PC.</p>
     <div class="cad-circuito">
       <label>Nome do circuito<input id="circ-nome" type="text" maxlength="60" autocomplete="off" placeholder="pisca-led"></label>
       <div class="botoes">
@@ -1022,6 +1022,17 @@
       <div class="botoes">
         <button id="circ-ligar" type="button" class="secundario">Ligar terminais</button>
         <button id="circ-desfazer" type="button" class="secundario">Desfazer ligação</button>
+      </div>
+      <svg id="circ-palco" class="circ-palco" viewBox="0 0 320 200" role="group" aria-label="Palco do circuito: arraste os componentes e toque nos terminais para ligar"></svg>
+      <p class="dica">Toque num componente para selecionar e arraste para mover; toque num terminal e depois no outro para ligar; toque fora para limpar a seleção.</p>
+      <div class="botoes">
+        <label>Editar id<input id="circ-edit-id" type="text" maxlength="12" autocomplete="off" placeholder="R1"></label>
+        <label>Editar valor<input id="circ-edit-valor" type="text" maxlength="24" inputmode="decimal" autocomplete="off" placeholder="330"></label>
+      </div>
+      <div class="botoes">
+        <button id="circ-aplicar" type="button" class="secundario">Aplicar edição</button>
+        <button id="circ-apagar" type="button" class="secundario perigo">Apagar selecionado</button>
+        <button id="circ-carregar" type="button" class="secundario">Carregar .cad salvo</button>
       </div>
       <div id="circ-lista" class="mem-lista cad-lista" aria-live="polite"></div>
       <div class="botoes">

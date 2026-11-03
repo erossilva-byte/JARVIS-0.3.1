@@ -304,6 +304,10 @@
       var valor = c.valor == null ? null : Number(c.valor);
       if (valor != null && (!Number.isFinite(valor) || valor < 0)) { erros.push('Componente ' + id + ': "valor" precisa ser número finito e não negativo.'); return; }
       if (def.valorObrigatorio && valor == null) avisos.push('Componente ' + id + ' (' + def.nome + '): sem "valor"; a simulação não terá o que usar.');
+      if (c.x != null || c.y != null) {
+        var px = Number(c.x), py = Number(c.y);
+        if (!Number.isFinite(px) || !Number.isFinite(py)) { erros.push('Componente ' + id + ': "x"/"y" precisam ser números finitos.'); return; }
+      }
       var comp = { id: id, tipo: tipo, nome: def.nome, terminais: def.terminais, valor: valor, ligados: {} };
       mapa[id] = comp; lista.push(comp);
     });

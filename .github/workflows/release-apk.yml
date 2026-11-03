@@ -154,6 +154,11 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
+            **Novidades da 1.42.4:** editor de circuito com palco: símbolos, terminais e fios
+            desenhados; arraste para mover; toque em dois terminais para ligar; toque no componente
+            para selecionar, editar id/valor ou apagar; e "Carregar .cad salvo" devolve o circuito
+            do cofre para edição, com as posições x/y preservadas no arquivo.
+
             **Novidades da 1.42.3:** montagem de circuito pela interface — escolha o componente,
             informe id e valor, ligue os terminais, valide e salve o .cad sem escrever JSON. O
             arquivo leva a placa 120×80×2 mm e o circuito validado, com netlist pronta para o PC.
