@@ -10,6 +10,10 @@ interface = (ROOT / "interface.js").read_text(encoding="utf-8")
 css = (ROOT / "style.css").read_text(encoding="utf-8") + (ROOT / "core.css").read_text(encoding="utf-8")
 workflow = (ROOT / ".github/workflows/auditoria-android-windows.yml").read_text(encoding="utf-8")
 package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+emulator_step = re.search(
+    r"- name: Inicializar emulador e testar instalação, abertura e estabilidade\s+uses: reactivecircus/android-emulator-runner@v2\s+timeout-minutes:\s*(\d+)",
+    workflow,
+)
 
 checks = {
     "splash já visível no primeiro quadro": '<div id="boot" class="boot">' in html and '<div id="boot" class="boot" hidden>' not in html,
@@ -32,7 +36,7 @@ checks = {
     "transcrição fica fora do menu principal": "body:not(.modo-conversa) .chat-area" in css and "body.modo-conversa .dash" in css,
     "botões de área aceitam toque e foco": "touch-action:manipulation" in css and ".area-card:focus-visible" in css,
     "bloqueio opcional e memória continuam na configuração": 'data-config-tab="memoria"' in html and 'data-category="seguranca"' in html,
-    "emulador tem tempo suficiente para iniciar": any(line.strip() == "timeout-minutes: 30" for line in workflow.splitlines()),
+    "emulador tem tempo suficiente para iniciar": bool(emulator_step) and int(emulator_step.group(1)) >= 30 and "emulator-boot-timeout: 1800" in workflow,
     "teste de interação incluído na suíte completa": "tests/test_v1_40_interactions.py" in package["scripts"]["test:all"],
 }
 
