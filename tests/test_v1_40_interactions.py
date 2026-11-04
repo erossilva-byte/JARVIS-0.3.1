@@ -15,6 +15,8 @@ emulator_step = re.search(
     workflow,
 )
 
+install_timeout = re.search(r"timeout\s+(\d+)s\s+adb install -r", workflow)
+
 checks = {
     "splash já visível no primeiro quadro": '<div id="boot" class="boot">' in html and '<div id="boot" class="boot" hidden>' not in html,
     "menu principal oculto durante a inicialização": '<body data-state="idle" class="travado">' in html and "visibility:hidden;pointer-events:none;opacity:0" in css,
@@ -35,6 +37,7 @@ checks = {
     "áreas voltam ao índice quando reabertas": "window.JarvisAreas.abrir('')" in app,
     "transcrição fica fora do menu principal": "body:not(.modo-conversa) .chat-area" in css and "body.modo-conversa .dash" in css,
     "botões de área aceitam toque e foco": "touch-action:manipulation" in css and ".area-card:focus-visible" in css,
+    "instalação do APK tem timeout compatível com artefato grande": bool(install_timeout) and int(install_timeout.group(1)) >= 180,
     "bloqueio opcional e memória continuam na configuração": 'data-config-tab="memoria"' in html and 'data-category="seguranca"' in html,
     "emulador tem tempo suficiente para iniciar": bool(emulator_step) and int(emulator_step.group(1)) >= 30 and "emulator-boot-timeout: 1800" in workflow,
     "teste de interação incluído na suíte completa": "tests/test_v1_40_interactions.py" in package["scripts"]["test:all"],
