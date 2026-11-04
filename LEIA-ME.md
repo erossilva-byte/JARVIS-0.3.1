@@ -1,4 +1,8 @@
-# J.A.R.V.I.S. Nova 1.42.8
+# J.A.R.V.I.S. Nova 1.42.9
+
+## 1.42.9 — Bloqueio com biometria, NFC e central própria
+
+A tela de bloqueio opcional ganhou autenticação real: biometria forte do Android (nunca câmera comum), leitura NFC com UID guardado só como hash e modos combinados, incluindo duas etapas. Tudo é configurado em Ajustes ▸ Segurança, com tempo de inatividade, limite de tentativas, tags, histórico e restauração. O PIN passou a PBKDF2 com sal e o hash antigo migra sozinho. Sem biometria ou NFC, a tela diz isso e o PIN continua sendo a recuperação; nada foi testado em aparelho físico e o APK segue com assinatura debug/CI.
 
 ## 1.42.8 — Contexto visual da sessão
 

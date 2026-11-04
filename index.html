@@ -131,7 +131,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.42.8</span>
+      <span class="orb-sub" aria-hidden="true">v1.42.9</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -241,7 +241,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.42.8</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.42.9</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -494,9 +494,41 @@
     <h3>Proteção e permissões</h3>
     <label class="linha"><input id="c-seguro" type="checkbox"><span>Modo seguro<small>Quando ligado, bloqueia ligações e mensagens. Desligue para permitir essas ações; a confirmação continua obrigatória.</small></span></label>
     <label>Novo PIN de segurança (4 a 8 dígitos)<input id="c-pin" type="password" inputmode="numeric" placeholder="deixe vazio para manter" autocomplete="new-password"></label>
-    <label class="linha"><input id="c-bloqueio" type="checkbox"><span>Pedir desbloqueio ao abrir o aplicativo<small>Opcional e desligado por padrão. Não substitui o bloqueio do Android: protege só a abertura do J.A.R.V.I.S. Exige um PIN cadastrado e aceita biometria/credencial do aparelho quando existir.</small></span></label>
+    <label class="linha"><input id="c-bloqueio" type="checkbox"><span>Pedir desbloqueio ao abrir o aplicativo<small>Opcional e desligado por padrão. Protege só a abertura do J.A.R.V.I.S. e não substitui o bloqueio do Android. Exige PIN cadastrado; biometria e NFC são etapas extras quando o aparelho permite.</small></span></label>
+    <div class="seg-grade">
+      <label>Modo de desbloqueio
+        <select id="c-bloq-modo">
+          <option value="pin">Somente PIN</option>
+          <option value="bio">Biometria do aparelho</option>
+          <option value="nfc">Tag NFC</option>
+          <option value="bio|nfc">Biometria ou NFC</option>
+          <option value="bio+nfc">Biometria + NFC (duas etapas)</option>
+          <option value="bio+pin">Biometria + PIN</option>
+          <option value="nfc+pin">NFC + PIN</option>
+        </select>
+      </label>
+      <label>Bloquear após inatividade (segundos)<input id="c-bloq-timeout" type="number" min="15" max="3600" step="15" value="120" inputmode="numeric"></label>
+      <label>Tentativas antes do limite<input id="c-bloq-max" type="number" min="3" max="10" step="1" value="5" inputmode="numeric"></label>
+    </div>
+    <label class="linha"><input id="c-bloq-bio" type="checkbox" checked><span>Permitir biometria/reconhecimento facial<small>Usa o BiometricPrompt com biometria forte do Android. Uma foto ou vídeo não passa: a prova é feita pelo sensor e pelo sistema, nunca pela câmera comum do app. Nenhuma imagem do rosto é guardada.</small></span></label>
+    <label class="linha"><input id="c-bloq-nfc" type="checkbox" checked><span>Permitir desbloqueio por tag NFC<small>Somente tags cadastradas aqui liberam o app. O UID é guardado apenas como hash; tags de UID simples podem ser clonadas, por isso NFC é conveniência e pode ser combinado com biometria.</small></span></label>
+    <p id="c-bloq-dispositivo" class="dica" role="status" aria-live="polite">Consultando os recursos deste aparelho…</p>
     <div class="botoes"><button id="c-bloqueio-recuperacao" type="button" class="secundario">Gerar código de recuperação</button><button id="c-bloqueio-biometria" type="button" class="secundario" hidden>Testar biometria</button></div>
     <output id="c-bloqueio-codigo" class="codigo-recuperacao" hidden></output>
+
+    <h3>Tags NFC autorizadas</h3>
+    <p class="dica">Cadastre a tag com um nome. Para cadastrar, renomear, bloquear ou remover, confirme com biometria ou com o PIN atual. Tags desconhecidas nunca desbloqueiam.</p>
+    <div class="seg-grade">
+      <label>Nome da nova tag<input id="c-nfc-nome" type="text" maxlength="40" placeholder="Ex.: chaveiro do escritório" autocomplete="off"></label>
+      <label>PIN atual (confirmação)<input id="c-nfc-senha" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password" placeholder="necessário sem biometria"></label>
+    </div>
+    <div class="botoes"><button id="c-nfc-cadastrar" type="button" class="primario">Cadastrar tag NFC</button><button id="c-nfc-testar" type="button" class="secundario">Testar leitura NFC</button></div>
+    <div id="c-nfc-lista" class="nfc-lista" role="list">Nenhuma tag cadastrada.</div>
+
+    <h3>Histórico de desbloqueios</h3>
+    <p class="dica">Método, resultado e horário. PIN, UID e código de recuperação nunca entram no histórico.</p>
+    <div id="c-bloq-historico" class="seg-historico" role="log" aria-live="polite">Nenhum desbloqueio registrado ainda.</div>
+    <div class="botoes"><button id="c-bloq-restaurar" type="button" class="secundario perigo">Restaurar configurações de segurança</button></div>
     <p id="c-bloqueio-status" class="dica" role="status" aria-live="polite">Desativado.</p>
     <div class="info-card"><span class="info-icon">⌁</span><div><b>Permissões do aparelho</b><p>O app solicita microfone quando necessário. Notificações, reconhecimento de voz, economia de bateria e permissões em segundo plano variam por Android e fabricante.</p></div></div>
   </section>
@@ -586,7 +618,7 @@
 </aside>
 
 <aside id="painel-areas" class="painel painel-areas" hidden aria-label="Áreas do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · MAPA OPERACIONAL</p><h2>Áreas</h2></div><span class="versao-chip">v1.42.8</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · MAPA OPERACIONAL</p><h2>Áreas</h2></div><span class="versao-chip">v1.42.9</span></div>
   <section class="grupo areas-shell">
     <div id="areas-inicio">
       <p class="dica">Dez áreas, cada uma com suas funções. Os painéis antigos continuam disponíveis; esta camada apenas organiza o acesso e evita misturar ferramentas de assuntos diferentes.</p>
@@ -601,7 +633,7 @@
 
 
 <aside id="painel-sistema" class="painel painel-sistema" hidden aria-label="Central operacional do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · NÚCLEO OPERACIONAL</p><h2>Central do sistema</h2></div><span class="versao-chip">v1.42.8</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · NÚCLEO OPERACIONAL</p><h2>Central do sistema</h2></div><span class="versao-chip">v1.42.9</span></div>
   <section class="grupo" data-category="sistema-nucleo">
     <h3>Estado do núcleo</h3>
     <p id="sis-status" class="dica" role="status" aria-live="polite">Carregando ferramentas e tarefas…</p>
@@ -657,7 +689,7 @@
 </aside>
 
 <aside id="painel-core" class="painel painel-core" hidden aria-label="JARVIS Core: agentes, contexto e saúde">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CORE</p><h2>JARVIS Core</h2></div><span class="versao-chip">v1.42.8</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CORE</p><h2>JARVIS Core</h2></div><span class="versao-chip">v1.42.9</span></div>
   <section class="grupo">
     <div class="core-hero">
       <p id="core-status" class="core-status" role="status" aria-live="polite">Consultando o Core…</p>
@@ -772,7 +804,7 @@
 </aside>
 
 <aside id="painel-pessoas" class="painel painel-pessoas" hidden aria-label="Identificação de pessoas do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · IDENTIFICAÇÃO DE PESSOAS</p><h2>Pessoas</h2></div><span class="versao-chip">v1.42.8 · local</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · IDENTIFICAÇÃO DE PESSOAS</p><h2>Pessoas</h2></div><span class="versao-chip">v1.42.9 · local</span></div>
   <section class="grupo" id="idp-inicio">
     <p class="dica">Cada pessoa tem um perfil próprio: foto, informações, campos personalizados e perfil de voz. O reconhecimento compara vetores de características no aparelho — o áudio nunca é guardado e nada é enviado a provedores sem sua autorização. Em dúvida, o J.A.R.V.I.S. responde “inconclusivo” em vez de adivinhar.</p>
     <div class="idp-barra-topo">
@@ -1140,6 +1172,7 @@
     </div>
     <p class="eyebrow">J.A.R.V.I.S. NOVA · ACESSO</p>
     <h2 id="bloqueio-titulo">Sistema bloqueado</h2>
+    <span id="bloq-metodo" aria-live="polite">PIN</span>
     <p class="dica" id="bloqueio-dica">Digite seu PIN para liberar o assistente.</p>
     <div class="bloq-campo">
       <label for="bloqueio-pin">PIN de acesso</label>
@@ -1147,9 +1180,11 @@
       <div class="bloq-pontos" id="bloqueio-pontos" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     </div>
     <p id="bloqueio-erro" class="erro" role="alert" aria-live="assertive"></p>
+    <p id="bloq-fase" role="status" aria-live="polite"></p>
     <div class="botoes bloq-acoes">
       <button id="bloqueio-entrar" type="button" class="primario">Desbloquear</button>
       <button id="bloqueio-bio" type="button" class="secundario" hidden>Usar biometria</button>
+      <button id="bloqueio-nfc" type="button" class="secundario" hidden>Aproximar tag NFC</button>
     </div>
     <button id="bloqueio-esqueci" type="button" class="link-botao">Esqueci o PIN</button>
     <div id="bloqueio-recuperacao" class="bloq-recuperacao" hidden>
@@ -1323,6 +1358,7 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="cad_projeto.js"></script>
 <script src="visao.js"></script>
 <script src="visao_contexto.js"></script>
+<script src="seguranca.js"></script>
 <script src="pessoas.js"></script>
 <script src="identidade.js"></script>
 <script src="identidade_ui.js"></script>

@@ -15,6 +15,8 @@ permissoes = [
     "android.permission.CAMERA", "android.permission.REQUEST_INSTALL_PACKAGES",
     # Bloqueio OPCIONAL do aplicativo com BiometricPrompt (não substitui o bloqueio do Android).
     "android.permission.USE_BIOMETRIC", "android.permission.USE_FINGERPRINT",
+    # Leitura de tags para o desbloqueio opcional; o hardware NFC é opcional (uses-feature).
+    "android.permission.NFC",
     "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
     # Chamada completada de verdade: sem CALL_PHONE o app só abre o discador.
     "android.permission.CALL_PHONE",

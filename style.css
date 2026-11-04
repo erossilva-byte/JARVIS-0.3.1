@@ -1649,3 +1649,32 @@ button.anexo{width:44px;min-width:44px;height:44px;min-height:44px;border-radius
 .proj-simbolo.sel .proj-sim{stroke:#ff9a9a}
 .proj-simb-txt{fill:var(--texto);font:6px ui-monospace,monospace;text-anchor:middle}
 .proj-pino.sel{fill:var(--cor);stroke:var(--texto)}
+
+/* ---- Central de segurança (1.42.9) ---- */
+.seg-grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:10px 0}
+.seg-grade label{display:flex;flex-direction:column;gap:6px;font-size:.86rem}
+.seg-grade input,.seg-grade select{width:100%}
+.nfc-lista{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.nfc-tag{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid rgba(var(--rgb),.2);border-radius:14px;background:rgba(8,20,32,.55)}
+.nfc-tag small{opacity:.78;line-height:1.35}
+.nfc-tag.bloqueada{border-color:rgba(255,110,110,.45)}
+.nfc-tag.inativa{opacity:.72}
+.nfc-tag input{width:100%}
+.seg-historico{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto;padding:10px;border:1px solid rgba(var(--rgb),.16);border-radius:12px;font-size:.82rem;line-height:1.4;background:rgba(4,12,20,.5)}
+.seg-historico b{color:rgb(var(--rgb))}
+#bloq-metodo{display:inline-flex;align-items:center;gap:6px;margin:2px auto 8px;padding:4px 10px;border-radius:999px;border:1px solid rgba(var(--rgb),.35);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:rgb(var(--rgb));background:rgba(var(--rgb),.07)}
+#bloq-fase{min-height:1.2em;font-size:.8rem;letter-spacing:.06em;color:rgba(220,240,255,.82);margin:6px 0 2px}
+#bloq-fase:empty{display:none}
+#bloqueio-erro[data-estado="erro"]{color:#ff9b9b}
+#bloqueio-erro[data-estado="ok"]{color:#8ef0c3}
+/* Estados do núcleo holográfico: leitura NFC, reconhecimento, confirmado e negado. */
+.bloq-nucleo.reconhecendo .bloq-varredura{animation-duration:1.1s;opacity:1}
+.bloq-nucleo.lendo-nfc .ba1{animation-duration:1.4s;stroke:#6fe3ff}
+.bloq-nucleo.lendo-nfc .bloq-miolo{animation:bloq-pulso-nfc 1.2s ease-in-out infinite}
+.bloq-nucleo.confirmado .ba2{stroke:#7cf0c0;animation-duration:2.6s}
+.bloq-nucleo.confirmado .bloq-miolo{background:radial-gradient(circle,#d9fff2 0%,#5cf0be 42%,rgba(30,180,140,.25) 72%,transparent 78%)}
+.bloq-nucleo.negado .ba1{stroke:#ff8f8f;animation-duration:.5s}
+.bloq-nucleo.negado .bloq-miolo{background:radial-gradient(circle,#ffdada 0%,#ff7b7b 42%,rgba(200,40,40,.25) 72%,transparent 78%)}
+@keyframes bloq-pulso-nfc{0%,100%{transform:scale(.9);opacity:.75}50%{transform:scale(1.12);opacity:1}}
+@media(prefers-reduced-motion:reduce){.bloq-nucleo.lendo-nfc .bloq-miolo{animation:none}}
+@media(max-width:520px){.seg-grade{grid-template-columns:1fr}}

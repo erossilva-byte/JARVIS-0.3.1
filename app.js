@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.42.8';
+const VERSAO_APP = '1.42.9';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -565,15 +565,47 @@ function atualizarSeguranca() {
 
 /* ---------- Segurança ---------- */
 /* ---------- Bloqueio opcional do aplicativo (Ajustes ▸ Segurança) ----------
- * Regras: é opcional, desligado por padrão e nunca pode inutilizar o app. Só liga com um
- * PIN já cadastrado; o PIN sempre desbloqueia; biometria/credencial do aparelho é atalho,
- * não requisito. Tentativas erradas apenas atrasam a próxima tentativa (até 30 s) e a
- * recuperação por código fica na própria tela. Nada aqui substitui o bloqueio do Android.
+ * Opcional, desligado por padrão e nunca inutiliza o app. Três provas reais: PIN (PBKDF2,
+ * com migração do hash antigo), biometria forte do Android (BiometricPrompt, sem foto de
+ * câmera comum) e tag NFC autorizada. Os modos combinam etapas ou alternativas; o PIN é
+ * sempre a recuperação final, para o proprietário não ficar trancado fora. Nada aqui
+ * substitui a tela de bloqueio do Android, e nenhuma imagem ou UID bruto é guardado.
  */
+const SEGN = window.SegurancaNucleo;
 const BLOQ_TENT = 'bloqueio_tentativas';
 const BLOQ_ULTIMO = 'bloqueio_ultimo_plano';
 const BLOQ_ATE = 'bloqueio_espera_ate';
 let bloqTimer = 0;
+let bloqProvas = {};
+let bloqMetodoUsado = 'pin';
+let bloqLendoNfc = false;
+let bloqDisp = null;
+
+function segCfg() {
+  if (!SEGN) return { modo: 'pin', timeoutSeg: 120, maxTentativas: 5, esperaMaxSeg: 30, nfcAtivo: false, bioAtivo: false, tags: [] };
+  let bruto = {};
+  try { bruto = JSON.parse(store.get('seguranca_cfg', '{}') || '{}'); } catch (e) { bruto = {}; }
+  return SEGN.normalizar(bruto);
+}
+function segSalvar(cfg) {
+  if (!SEGN) return cfg;
+  const limpo = SEGN.normalizar(cfg);
+  store.set('seguranca_cfg', JSON.stringify(limpo));
+  return limpo;
+}
+function segEventos() {
+  try {
+    const l = JSON.parse(store.get('seguranca_eventos', '[]') || '[]');
+    return Array.isArray(l) ? l : [];
+  } catch (e) { return []; }
+}
+function segRegistrar(metodo, resultado, detalhe) {
+  try {
+    const ev = SEGN.evento({ metodo: metodo, resultado: resultado, detalhe: detalhe });
+    store.set('seguranca_eventos', JSON.stringify(SEGN.historico(segEventos(), ev, 60)));
+    registrar('segurança', (resultado === 'ok' ? 'acesso liberado por ' : 'acesso negado por ') + metodo);
+  } catch (e) { /* histórico nunca impede o acesso */ }
+}
 function bloqueioAtivo() {
   return store.get('bloqueio', '0') === '1' && !!store.get('pin_hash', '');
 }
@@ -581,26 +613,105 @@ function bloqStatus(txt, erro) {
   const el = $('#c-bloqueio-status');
   if (el) { el.textContent = txt; el.classList.toggle('erro', !!erro); }
 }
+function bloqTexto(txt, estado) {
+  const el = $('#bloqueio-erro');
+  if (!el) return;
+  el.textContent = txt;
+  el.dataset.estado = estado || '';
+}
+function bloqFase(txt) {
+  const el = $('#bloq-fase');
+  if (el) el.textContent = txt || '';
+}
+function bloqMetodoBadge(txt) {
+  const el = $('#bloq-metodo');
+  if (el) el.textContent = txt || 'PIN';
+}
+function bloqNucleoEstado(estado) {
+  const n = $('#bloqueio .bloq-nucleo');
+  if (!n) return;
+  n.classList.remove('lendo-nfc', 'reconhecendo', 'confirmado', 'negado');
+  if (estado) n.classList.add(estado);
+}
+function bloqRotuloMetodo() {
+  const cfg = segCfg();
+  if (!cfg || !cfg.modo) return 'PIN';
+  const m = cfg.modo;
+  if (m === 'bio' || m === 'bio+pin' || m === 'bio+nfc') {
+    return bloqDisp && bloqDisp.rosto ? 'reconhecimento facial' : 'biometria';
+  }
+  if (m === 'nfc' || m === 'nfc+pin') return 'tag NFC';
+  if (m === 'bio|nfc') return 'biometria ou NFC';
+  return 'PIN';
+}
+async function bloqConsultarAparelho(forcar) {
+  if (bloqDisp && !forcar) return bloqDisp;
+  const p = plug('JarvisSeguranca');
+  bloqDisp = { biometria: false, aparelho: false, rosto: false, nfc: false, motivo: 'Sem o plugin de segurança (versão Windows).' };
+  if (!p || typeof p.disponivel !== 'function') return bloqDisp;
+  try {
+    const d = await p.disponivel();
+    bloqDisp = {
+      biometria: !!(d && d.biometria),
+      aparelho: !!(d && d.aparelho),
+      rosto: !!(d && d.rosto),
+      nfc: !!(d && d.nfc),
+      motivo: (d && d.motivo) || ''
+    };
+  } catch (e) {
+    bloqDisp.motivo = 'Não foi possível consultar a biometria: ' + ((e && e.message) || e);
+  }
+  return bloqDisp;
+}
+
 function atualizarBloqueioUI() {
+  if (!SEGN) return;
   const chk = $('#c-bloqueio');
   const ativo = bloqueioAtivo();
   if (chk) chk.checked = ativo;
   const temPin = !!store.get('pin_hash', '');
+  const cfg = segCfg();
+  const disp = bloqDisp || { biometria: false, nfc: false, rosto: false };
   bloqStatus(ativo
-    ? 'Ativado: o app pede PIN ou biometria ao abrir. O bloqueio do sistema Android continua valendo por cima.'
+    ? 'Ativado. ' + SEGN.resumo(cfg, disp) + '. O bloqueio do sistema Android continua valendo por cima.'
     : temPin
       ? 'Desativado: o PIN está cadastrado e continua sendo exigido em ações que pedem confirmação.'
       : 'Desativado: cadastre um PIN acima para poder ativar o bloqueio do aplicativo.');
-  const bio = $('#c-bloqueio-biometria');
-  if (bio && !bio.dataset.verificado) {
-    bio.dataset.verificado = '1';
-    const p = plug('JarvisSeguranca');
-    if (!p || typeof p.disponivel !== 'function') { bio.hidden = true; return; }
-    try {
-      const r = p.disponivel();
-      if (r && r.then) r.then((d) => { bio.hidden = !(d && d.biometria); bio.title = (d && d.motivo) || ''; }).catch(() => { bio.hidden = true; });
-    } catch (e) { bio.hidden = true; }
+
+  const sel = $('#c-bloq-modo');
+  if (sel) {
+    sel.value = cfg.modo;
+    Array.prototype.forEach.call(sel.options, (o) => {
+      const ex = SEGN.modoViavel(o.value, disp);
+      o.disabled = !ex.ok;
+      o.title = ex.ok ? '' : ex.motivo;
+    });
   }
+  const t = $('#c-bloq-timeout'); if (t) t.value = String(cfg.timeoutSeg);
+  const mx = $('#c-bloq-max'); if (mx) mx.value = String(cfg.maxTentativas);
+  const nfcChk = $('#c-bloq-nfc'); if (nfcChk) nfcChk.checked = cfg.nfcAtivo;
+  const bioChk = $('#c-bloq-bio'); if (bioChk) bioChk.checked = cfg.bioAtivo;
+
+  const bio = $('#c-bloqueio-biometria');
+  if (bio) {
+    bio.hidden = !disp.aparelho;
+    bio.textContent = disp.rosto ? 'Testar reconhecimento facial' : 'Testar biometria';
+    bio.title = disp.motivo || '';
+  }
+  const alvo = $('#c-bloq-dispositivo');
+  if (alvo) {
+    const d = SEGN.disponibilidade({ biometria: disp.biometria, rosto: disp.rosto, nfc: disp.nfc, motivo: disp.motivo });
+    const linhas = [
+      'Biometria forte: ' + (d.bio ? 'disponível' : 'indisponível'),
+      'Hardware facial: ' + (d.rosto ? 'presente' : 'não informado'),
+      'NFC: ' + (d.nfc ? 'ligado' : 'ausente/desligado')
+    ];
+    if (d.avisos.length) linhas.push(d.avisos.join(' '));
+    linhas.push('A biometria é executada pelo Android; o app nunca recebe nem guarda a imagem do rosto.');
+    alvo.textContent = linhas.join(' · ');
+  }
+  renderTagsNfc();
+  renderHistoricoSeguranca();
 }
 function bloqPintaPontos() {
   const campo = $('#bloqueio-pin'), box = $('#bloqueio-pontos');
@@ -627,9 +738,21 @@ function bloqTremer() {
   caixa.classList.add('erro-ativo');
   setTimeout(() => caixa.classList.remove('erro-ativo'), 420);
 }
-function abrirBloqueio() {
+function bloqMarcarProva(metodo) {
+  bloqProvas[metodo] = true;
+  bloqMetodoUsado = metodo;
+  const cfg = segCfg();
+  const av = SEGN.avaliarProvas(cfg.modo, bloqProvas);
+  bloqFase(av.ok ? 'Acesso liberado' : 'Etapas restantes: ' + (av.faltam || []).join(' + '));
+  bloqNucleoEstado('confirmado');
+  if (av.ok) { fecharBloqueio(); return true; }
+  return false;
+}
+async function abrirBloqueio() {
   const tela = $('#bloqueio');
   if (!tela || !bloqueioAtivo()) return;
+  const cfg = segCfg();
+  bloqProvas = {};
   tela.hidden = false;
   tela.classList.remove('saindo');
   document.body.classList.add('bloqueado');
@@ -637,23 +760,32 @@ function abrirBloqueio() {
   if (bloqTimer) clearInterval(bloqTimer);
   bloqTimer = setInterval(bloqRelogio, 15000);
   bloqPintaPontos();
-  const erro = $('#bloqueio-erro'); if (erro) erro.textContent = '';
-  const pin = $('#bloqueio-pin'); if (pin) { pin.value = ''; try { pin.focus(); } catch (e) { } }
+  bloqTexto('');
+  bloqNucleoEstado('');
+  bloqMetodoBadge(SEGN.rotulo(cfg.modo));
+  bloqFase('');
+  const pin = $('#bloqueio-pin'); if (pin) { pin.value = ''; }
   const rec = $('#bloqueio-recuperacao'); if (rec) rec.hidden = true;
   const dica = $('#bloqueio-dica');
-  if (dica) dica.textContent = 'Digite seu PIN para liberar o assistente, ' + trat() + '.';
+  if (dica) dica.textContent = 'Modo ' + (bloqRotuloMetodo()) + '. Use a etapa pedida; o PIN é a recuperação, ' + trat() + '.';
+
+  await bloqConsultarAparelho(true);
   const bio = $('#bloqueio-bio');
   if (bio) {
-    const p = plug('JarvisSeguranca');
-    if (!p || typeof p.disponivel !== 'function') bio.hidden = true;
-    else {
-      try {
-        const r = p.disponivel();
-        if (r && r.then) r.then((d) => { bio.hidden = !(d && d.aparelho); }).catch(() => { bio.hidden = true; });
-        else bio.hidden = true;
-      } catch (e) { bio.hidden = true; }
-    }
+    const pode = cfg.bioAtivo && bloqDisp && bloqDisp.aparelho;
+    bio.hidden = !pode;
+    bio.textContent = bloqDisp && bloqDisp.rosto ? 'Reconhecimento facial' : 'Usar biometria';
   }
+  const nfc = $('#bloqueio-nfc');
+  if (nfc) {
+    const pode = cfg.nfcAtivo && bloqDisp && bloqDisp.nfc && SEGN.etapas(cfg.modo).indexOf('nfc') >= 0;
+    nfc.hidden = !pode;
+    nfc.textContent = 'Aproximar tag NFC';
+  }
+  const fase = $('#bloq-fase');
+  if (fase) fase.hidden = false;
+  if (cfg.modo === 'bio' && bio && !bio.hidden) setTimeout(() => desbloquearComBiometria(), 400);
+  else if (pin && SEGN.etapas(cfg.modo).indexOf('pin') >= 0) { try { pin.focus(); } catch (e) { } }
   try { animarEntrada(tela.querySelector('.bloqueio-caixa')); } catch (e) { }
 }
 function fecharBloqueio() {
@@ -664,9 +796,9 @@ function fecharBloqueio() {
   store.set(BLOQ_TENT, '0');
   store.set(BLOQ_ATE, '0');
   store.set(BLOQ_ULTIMO, String(Date.now()));
-  registrar('segurança', 'aplicativo desbloqueado');
-  // Saída curta e previsível: o desbloqueio já valeu, a animação só evita o corte seco.
-  // Se a tela não existir, nada fica preso.
+  segRegistrar(bloqMetodoUsado || 'pin', 'ok', 'acesso liberado');
+  bloqNucleoEstado('confirmado');
+  bloqFase('Identidade confirmada');
   if (!tela) return;
   tela.classList.add('saindo');
   setTimeout(() => {
@@ -674,6 +806,8 @@ function fecharBloqueio() {
     tela.classList.remove('saindo');
     const caixa = tela.querySelector('.bloqueio-caixa');
     if (caixa) caixa.classList.remove('erro-ativo');
+    bloqNucleoEstado('');
+    bloqProvas = {};
   }, 260);
 }
 async function tentarDesbloquear() {
@@ -690,17 +824,26 @@ async function tentarDesbloquear() {
   const pin = campo ? String(campo.value || '').trim() : '';
   if (!pin) { if (erro) erro.textContent = 'Digite o PIN.'; return; }
   const esperado = store.get('pin_hash', '');
+  const cfg = segCfg();
   const tentativas = Number(store.get(BLOQ_TENT, '0')) || 0;
-  const hash = await hashPin(pin);
-  if (esperado && hash === esperado) { if (campo) campo.value = ''; if (erro) erro.textContent = ''; fecharBloqueio(); return; }
-  const n = tentativas + 1;
-  store.set(BLOQ_TENT, String(n));
+  if (await pinConfere(pin, esperado)) {
+    if (campo) campo.value = '';
+    bloqMetodoUsado = 'pin';
+    bloqMetodoBadge('PIN de recuperação');
+    bloqMarcarProva('pin');
+    return;
+  }
+  const nova = SEGN.tentativa(tentativas + 1, cfg.maxTentativas, cfg.esperaMaxSeg);
+  store.set(BLOQ_TENT, String(nova.n));
   if (campo) campo.value = '';
-  const espera = Math.min(30, Math.round(0.5 * Math.pow(2, Math.min(n, 6))));
-  registrar('segurança', 'tentativa de desbloqueio recusada (' + n + ')');
-  if (erro) erro.textContent = 'PIN incorreto. ' + (n >= 5 ? 'Use o código de recuperação se não lembrar.' : 'Tente de novo em ' + espera + ' s.');
+  const espera = Math.min(30, Math.round(0.5 * Math.pow(2, Math.min(nova.n, 6))));
+  segRegistrar('pin', 'negado', 'tentativa ' + nova.n + ' recusada');
+  bloqTexto('PIN incorreto. ' + nova.aviso, 'erro');
+  bloqFase('Acesso negado');
   bloqPintaPontos();
   bloqTremer();
+  bloqNucleoEstado('negado');
+  setTimeout(() => bloqNucleoEstado(''), 900);
   store.set(BLOQ_ATE, String(Date.now() + espera * 1000));
   const botao = $('#bloqueio-entrar');
   if (botao) { botao.disabled = true; setTimeout(() => { botao.disabled = false; }, espera * 1000); }
@@ -709,12 +852,78 @@ async function tentarDesbloquear() {
 async function desbloquearComBiometria() {
   const p = plug('JarvisSeguranca');
   if (!p || typeof p.autenticar !== 'function') return;
+  bloqFase(bloqDisp && bloqDisp.rosto ? 'Reconhecendo o rosto…' : 'Aguardando biometria…');
+  bloqNucleoEstado('reconhecendo');
   try {
     const r = await p.autenticar({ titulo: 'Desbloquear o J.A.R.V.I.S.', subtitulo: 'Confirme sua identidade, ' + trat() + '.' });
-    if (r && r.ok) fecharBloqueio();
+    if (r && r.ok) {
+      bloqFase('Identidade confirmada');
+      if (!bloqMarcarProva('bio')) {
+        segRegistrar('bio', 'ok', 'biometria confirmada; etapa seguinte pendente');
+        bloqTexto('Identidade confirmada. Falta a outra etapa do modo escolhido.');
+      }
+      return;
+    }
+    bloqTexto('Biometria não confirmada. Use o PIN do aplicativo.', 'erro');
   } catch (e) {
-    const erro = $('#bloqueio-erro');
-    if (erro) erro.textContent = 'Biometria não concluída. Use o PIN do aplicativo.';
+    segRegistrar('bio', 'negado', 'biometria não concluída');
+    bloqTexto('Biometria não concluída. Use o PIN do aplicativo.', 'erro');
+  } finally {
+    if (!document.body.classList.contains('bloqueado')) bloqNucleoEstado('');
+  }
+}
+async function hashUid(uid) {
+  const texto = 'jarvis-nfc|' + String(uid || '').toUpperCase();
+  if (window.crypto && crypto.subtle) {
+    const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+    return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  let h = 2166136261;
+  for (let i = 0; i < texto.length; i++) { h ^= texto.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return 'fnv' + (h >>> 0).toString(16);
+}
+async function desbloquearComNfc() {
+  const p = plug('JarvisSeguranca');
+  if (!p || typeof p.nfcLer !== 'function') { bloqTexto('NFC disponível apenas no aplicativo Android.', 'erro'); return; }
+  if (bloqLendoNfc) return;
+  bloqLendoNfc = true;
+  const btn = $('#bloqueio-nfc');
+  if (btn) btn.disabled = true;
+  bloqFase('Aproxime a tag autorizada…');
+  bloqTexto('');
+  bloqNucleoEstado('lendo-nfc');
+  try {
+    const r = await p.nfcLer({ segundos: 20 });
+    const hash = await hashUid(r && r.uid);
+    const cfg = segCfg();
+    const achou = SEGN.acharTag(cfg.tags, hash);
+    if (!achou.ok) {
+      segRegistrar('nfc', 'negado', achou.motivo);
+      bloqTexto(achou.motivo + ' Nada foi liberado.', 'erro');
+      bloqFase('Acesso negado');
+      bloqNucleoEstado('negado');
+      bloqTremer();
+      setTimeout(() => bloqNucleoEstado(''), 900);
+      return;
+    }
+    const idx = cfg.tags.findIndex((t) => t.uidHash === hash);
+    cfg.tags[idx].ultimoUso = Date.now();
+    segSalvar(cfg);
+    bloqMetodoBadge('Tag NFC');
+    bloqFase('Tag autorizada');
+    if (!bloqMarcarProva('nfc')) {
+      segRegistrar('nfc', 'ok', 'tag autorizada; etapa seguinte pendente');
+      bloqTexto('Tag autorizada. Falta a outra etapa do modo escolhido.');
+    }
+  } catch (e) {
+    const m = (e && e.message) || String(e);
+    bloqTexto(m, 'erro');
+    bloqFase('Leitura não concluída');
+    segRegistrar('nfc', 'negado', m);
+  } finally {
+    bloqLendoNfc = false;
+    if (btn) btn.disabled = false;
+    setTimeout(() => { if (document.body.classList.contains('bloqueado')) bloqNucleoEstado(''); }, 900);
   }
 }
 function gerarCodigoRecuperacao() {
@@ -723,11 +932,11 @@ function gerarCodigoRecuperacao() {
   if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(bytes);
   else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
   const codigo = Array.from(bytes).map((b) => letras[b % letras.length]).join('').replace(/(.{5})(?=.)/g, '$1-');
-  return hashPin('rec|' + codigo.replace(/-/g, '').toUpperCase()).then((h) => {
+  return hashCodigo('rec|' + codigo.replace(/-/g, '').toUpperCase()).then((h) => {
     store.set('bloqueio_codigo_hash', h);
     const out = $('#c-bloqueio-codigo');
     if (out) { out.hidden = false; out.textContent = 'Código de recuperação (guarde fora do telefone): ' + codigo; }
-    registrar('segurança', 'código de recuperação gerado');
+    segRegistrar('pin', 'ok', 'código de recuperação gerado');
     return codigo;
   });
 }
@@ -737,24 +946,167 @@ async function recuperarComCodigo() {
   const esperado = store.get('bloqueio_codigo_hash', '');
   if (!codigo) { if (erro) erro.textContent = 'Digite o código de recuperação.'; return; }
   if (!esperado) { if (erro) erro.textContent = 'Nenhum código foi gerado. Defina um novo PIN em Ajustes ▸ Segurança para gerar outro.'; return; }
-  if ((await hashPin('rec|' + codigo)) !== esperado) { if (erro) erro.textContent = 'Código de recuperação incorreto.'; return; }
+  if (!(await codigoConfere(codigo, esperado))) {
+    if (erro) erro.textContent = 'Código de recuperação incorreto.';
+    segRegistrar('pin', 'negado', 'código de recuperação incorreto');
+    return;
+  }
   store.set('pin_hash', '');
   store.set('bloqueio', '0');
-  registrar('segurança', 'acesso recuperado por código; PIN apagado e bloqueio desativado');
+  segRegistrar('pin', 'ok', 'acesso recuperado por código; PIN apagado e bloqueio desativado');
   if (campo) campo.value = '';
   fecharBloqueio();
   msg('sis', 'Acesso recuperado. O PIN foi apagado e o bloqueio do app foi desativado; defina um novo PIN em Ajustes ▸ Segurança.');
 }
 function iniciarBloqueioSeAtivo() {
+  if (!SEGN) return;
   atualizarBloqueioUI();
   if (bloqueioAtivo()) abrirBloqueio();
 }
+
+/* ---- Central NFC e histórico em Ajustes ▸ Segurança ---- */
+function renderTagsNfc() {
+  const box = $('#c-nfc-lista');
+  if (!box) return;
+  const cfg = segCfg();
+  box.textContent = '';
+  if (!cfg.tags.length) { box.textContent = 'Nenhuma tag cadastrada.'; return; }
+  cfg.tags.forEach((t) => {
+    const item = document.createElement('div');
+    item.className = 'nfc-tag' + (t.bloqueada ? ' bloqueada' : '') + (t.ativa ? '' : ' inativa');
+    const nome = document.createElement('input');
+    nome.type = 'text';
+    nome.value = t.nome;
+    nome.maxLength = 40;
+    nome.setAttribute('data-nome', t.id);
+    nome.setAttribute('aria-label', 'Nome da tag');
+    const info = document.createElement('small');
+    info.textContent = SEGN.mascararUid(t.ult4) + (t.criptografica ? ' · ISO-DEP' : ' · UID simples') +
+      ' · ' + (t.bloqueada ? 'bloqueada' : t.ativa ? 'ativa' : 'desativada') +
+      ' · último uso: ' + (t.ultimoUso ? new Date(t.ultimoUso).toLocaleString('pt-BR') : 'nunca');
+    const acoes = document.createElement('div');
+    acoes.className = 'botoes';
+    const mk = (rotulo, acao) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'secundario'; b.textContent = rotulo;
+      b.setAttribute('data-acao', acao); b.setAttribute('data-id', t.id);
+      acoes.appendChild(b);
+    };
+    mk('Salvar nome', 'renomear');
+    mk(t.ativa ? 'Desativar' : 'Ativar', 'ativar');
+    mk(t.bloqueada ? 'Desbloquear' : 'Bloquear', 'bloquear');
+    mk('Remover', 'remover');
+    item.append(nome, info, acoes);
+    box.appendChild(item);
+  });
+}
+function renderHistoricoSeguranca() {
+  const box = $('#c-bloq-historico');
+  if (!box) return;
+  const l = segEventos();
+  box.textContent = '';
+  if (!l.length) { box.textContent = 'Nenhum desbloqueio registrado ainda.'; return; }
+  l.slice(0, 30).forEach((e) => {
+    const d = document.createElement('div');
+    const b = document.createElement('b');
+    b.textContent = e.resultado === 'ok' ? 'liberado' : 'negado';
+    d.append(new Date(e.t).toLocaleString('pt-BR') + ' · ' + e.metodo + ' · ', b, ' · ' + e.detalhe);
+    box.appendChild(d);
+  });
+}
+async function autorizarSensivel(motivo) {
+  const p = plug('JarvisSeguranca');
+  if (p && typeof p.autenticar === 'function' && bloqDisp && bloqDisp.aparelho) {
+    try { const r = await p.autenticar({ titulo: motivo, subtitulo: 'Confirme sua identidade para alterar a segurança.' }); return !!(r && r.ok); }
+    catch (e) { /* cai para o PIN */ }
+  }
+  const campo = $('#c-nfc-senha');
+  const senha = campo ? String(campo.value || '').trim() : '';
+  if (!senha) { bloqStatus('Digite o PIN atual para confirmar a operação.', true); return false; }
+  const ok = await pinConfere(senha, store.get('pin_hash', ''));
+  if (campo) campo.value = '';
+  if (!ok) bloqStatus('PIN incorreto: a operação não foi feita.', true);
+  return ok;
+}
+async function cadastrarTagNfc() {
+  const p = plug('JarvisSeguranca');
+  if (!p || typeof p.nfcLer !== 'function') { bloqStatus('NFC disponível apenas no aplicativo Android.', true); return; }
+  if (!store.get('pin_hash', '')) { bloqStatus('Cadastre um PIN antes de autorizar tags NFC.', true); return; }
+  bloqStatus('Confirme sua identidade para cadastrar a tag…');
+  if (!(await autorizarSensivel('Cadastrar tag NFC'))) return;
+  bloqStatus('Aproxime a tag do celular (20 s)…');
+  try {
+    const r = await p.nfcLer({ segundos: 20 });
+    const leitura = SEGN.tagDeLeitura(r, { uidHash: await hashUid(r && r.uid) });
+    if (!leitura.ok) { bloqStatus(leitura.motivo, true); return; }
+    const cfg = segCfg();
+    if (cfg.tags.some((t) => t.uidHash === leitura.tag.uidHash)) {
+      bloqStatus('Esta tag já está cadastrada.', true);
+      renderTagsNfc();
+      return;
+    }
+    const campo = $('#c-nfc-nome');
+    const nome = campo && campo.value.trim() ? campo.value.trim() : 'Tag ' + (cfg.tags.length + 1);
+    leitura.tag.nome = nome;
+    cfg.tags.push(leitura.tag);
+    segSalvar(cfg);
+    if (campo) campo.value = '';
+    bloqStatus('Tag autorizada e cadastrada. ' + leitura.aviso, false);
+    segRegistrar('nfc', 'ok', 'tag cadastrada');
+    renderTagsNfc();
+  } catch (e) {
+    bloqStatus('Leitura NFC não concluída: ' + ((e && e.message) || e), true);
+  }
+}
+async function testarNfc() {
+  const p = plug('JarvisSeguranca');
+  if (!p || typeof p.nfcLer !== 'function') { bloqStatus('NFC disponível apenas no aplicativo Android.', true); return; }
+  bloqStatus('Aproxime qualquer tag para testar a leitura (20 s)…');
+  try {
+    const r = await p.nfcLer({ segundos: 20 });
+    const hash = await hashUid(r && r.uid);
+    const achou = SEGN.acharTag(segCfg().tags, hash);
+    bloqStatus('Leitura OK: UID ' + SEGN.mascararUid(r && r.uid) + ' · ' + (achou.ok ? 'tag autorizada' : achou.motivo) +
+      ' · ' + (r && r.criptografica ? 'ISO-DEP' : 'UID simples, clonável'), !achou.ok);
+  } catch (e) {
+    bloqStatus('Leitura NFC não concluída: ' + ((e && e.message) || e), true);
+  }
+}
+function acaoTagNfc(acao, id) {
+  const cfg = segCfg();
+  const i = cfg.tags.findIndex((t) => t.id === id);
+  if (i < 0) return;
+  const t = cfg.tags[i];
+  if (acao === 'remover') cfg.tags.splice(i, 1);
+  else if (acao === 'ativar') t.ativa = !t.ativa;
+  else if (acao === 'bloquear') t.bloqueada = !t.bloqueada;
+  else if (acao === 'renomear') {
+    const campo = document.querySelector('[data-nome="' + id + '"]');
+    t.nome = campo && campo.value.trim() ? campo.value.trim().slice(0, 40) : t.nome;
+  }
+  segSalvar(cfg);
+  segRegistrar('nfc', 'ok', 'tag alterada: ' + acao);
+  renderTagsNfc();
+}
+function restaurarSeguranca() {
+  if (!confirm('Restaurar a segurança? As tags NFC e o histórico serão apagados, o bloqueio será desativado e o modo volta a PIN. O PIN atual e o código de recuperação são mantidos.')) return;
+  segSalvar(SEGN.normalizar({}));
+  store.set('seguranca_eventos', '[]');
+  store.set('bloqueio', '0');
+  store.set(BLOQ_TENT, '0');
+  store.set(BLOQ_ATE, '0');
+  atualizarBloqueioUI();
+  bloqStatus('Segurança restaurada: bloqueio desativado, tags e histórico apagados. O PIN foi mantido.', false);
+  registrar('segurança', 'configurações de segurança restauradas');
+}
+
 (function ligarBloqueio() {
   const entrar = $('#bloqueio-entrar'); if (entrar) entrar.onclick = () => tentarDesbloquear().catch(() => { });
   const pin = $('#bloqueio-pin');
   if (pin) pin.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tentarDesbloquear().catch(() => { }); } });
   if (pin) pin.addEventListener('input', bloqPintaPontos);
   const bio = $('#bloqueio-bio'); if (bio) bio.onclick = () => desbloquearComBiometria();
+  const nfcBtn = $('#bloqueio-nfc'); if (nfcBtn) nfcBtn.onclick = () => desbloquearComNfc();
   const esqueci = $('#bloqueio-esqueci');
   if (esqueci) esqueci.onclick = () => { const r = $('#bloqueio-recuperacao'); if (r) r.hidden = false; const c = $('#bloqueio-codigo'); if (c) c.focus(); };
   const rec = $('#bloqueio-recuperar'); if (rec) rec.onclick = () => recuperarComCodigo().catch(() => { });
@@ -768,32 +1120,116 @@ function iniciarBloqueioSeAtivo() {
       bloqStatus(r && r.ok ? 'Biometria confirmada neste aparelho.' : 'Biometria não confirmada.', !(r && r.ok));
     } catch (e) { bloqStatus('Biometria não concluída: ' + ((e && e.message) || e), true); }
   };
+  const cadastrar = $('#c-nfc-cadastrar'); if (cadastrar) cadastrar.onclick = () => cadastrarTagNfc();
+  const tnfc = $('#c-nfc-testar'); if (tnfc) tnfc.onclick = () => testarNfc();
+  const lista = $('#c-nfc-lista');
+  if (lista) lista.addEventListener('click', (ev) => {
+    const b = ev.target && ev.target.closest ? ev.target.closest('[data-acao]') : null;
+    if (b) acaoTagNfc(b.getAttribute('data-acao'), b.getAttribute('data-id'));
+  });
+  const restaurar = $('#c-bloq-restaurar'); if (restaurar) restaurar.onclick = () => restaurarSeguranca();
+  const modo = $('#c-bloq-modo');
+  if (modo) modo.addEventListener('change', () => {
+    const cfg = segCfg(); cfg.modo = modo.value; segSalvar(cfg);
+    atualizarBloqueioUI();
+    registrar('segurança', 'modo de desbloqueio: ' + modo.value);
+  });
+  const limite = $('#c-bloq-timeout');
+  if (limite) limite.addEventListener('change', () => { const cfg = segCfg(); cfg.timeoutSeg = Number(limite.value); segSalvar(cfg); atualizarBloqueioUI(); });
+  const max = $('#c-bloq-max');
+  if (max) max.addEventListener('change', () => { const cfg = segCfg(); cfg.maxTentativas = Number(max.value); segSalvar(cfg); atualizarBloqueioUI(); });
+  const nfcChk = $('#c-bloq-nfc');
+  if (nfcChk) nfcChk.addEventListener('change', () => { const cfg = segCfg(); cfg.nfcAtivo = nfcChk.checked; segSalvar(cfg); atualizarBloqueioUI(); });
+  const bioChk = $('#c-bloq-bio');
+  if (bioChk) bioChk.addEventListener('change', () => { const cfg = segCfg(); cfg.bioAtivo = bioChk.checked; segSalvar(cfg); atualizarBloqueioUI(); });
   const chk = $('#c-bloqueio');
   if (chk) chk.addEventListener('change', () => {
-    if (chk.checked && !store.get('pin_hash', '')) {
+    const querBloqueio = chk.checked;
+    if (querBloqueio && !store.get('pin_hash', '')) {
       chk.checked = false;
       bloqStatus('Cadastre um PIN antes de ativar o bloqueio do aplicativo.', true);
       const campo = $('#c-pin'); if (campo) campo.focus();
       return;
     }
-    if (chk.checked && !store.get('bloqueio_codigo_hash', '')) gerarCodigoRecuperacao().catch(() => { });
-    store.set('bloqueio', chk.checked ? '1' : '0');
+    const cfg = segCfg();
+    const ex = SEGN.modoViavel(cfg.modo, bloqDisp || { bio: false, nfc: false });
+    if (querBloqueio && !ex.ok && cfg.modo !== 'pin') {
+      bloqStatus('Modo ' + SEGN.rotulo(cfg.modo) + ' indisponível: ' + ex.motivo + ' O bloqueio foi ativado em PIN até você escolher outro modo.', true);
+      cfg.modo = 'pin'; segSalvar(cfg);
+    }
+    if (querBloqueio && !store.get('bloqueio_codigo_hash', '')) gerarCodigoRecuperacao().catch(() => { });
+    store.set('bloqueio', querBloqueio ? '1' : '0');
     atualizarBloqueioUI();
-    registrar('segurança', chk.checked ? 'bloqueio do aplicativo ativado' : 'bloqueio do aplicativo desativado');
+    registrar('segurança', querBloqueio ? 'bloqueio do aplicativo ativado' : 'bloqueio do aplicativo desativado');
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { store.set(BLOQ_ULTIMO, String(Date.now())); return; }
     const desde = Number(store.get(BLOQ_ULTIMO, '0')) || 0;
-    if (bloqueioAtivo() && desde && Date.now() - desde > 120000 && bootConcluido) abrirBloqueio();
+    const cfg = segCfg();
+    const limiteMs = Math.max(15, cfg.timeoutSeg) * 1000;
+    if (bloqueioAtivo() && desde && Date.now() - desde >= limiteMs && bootConcluido) abrirBloqueio();
   });
-  atualizarBloqueioUI();
+  bloqConsultarAparelho(false).then(() => atualizarBloqueioUI()).catch(() => { });
 })();
 
+/* ---- PIN com PBKDF2, migrando o hash SHA-256 antigo sem trancar ninguém ---- */
+function hexDe(buf) {
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+function bytesDeHex(h) {
+  const s = String(h || '').replace(/[^0-9a-f]/gi, '');
+  const out = new Uint8Array(Math.floor(s.length / 2));
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(s.substr(i * 2, 2), 16);
+  return out;
+}
+function novoSalt(bytes) {
+  const b = new Uint8Array(bytes || 16);
+  if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(b);
+  else for (let i = 0; i < b.length; i++) b[i] = Math.floor(Math.random() * 256);
+  return Array.from(b).map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+async function derivar(texto, saltHex) {
+  if (!(window.crypto && crypto.subtle && crypto.subtle.importKey)) return '';
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(texto), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: bytesDeHex(saltHex), iterations: 120000, hash: 'SHA-256' }, base, 256);
+  return 'pbkdf2$' + saltHex + '$' + hexDe(bits);
+}
 async function hashPin(pin) {
+  let sal = store.get('pin_salt', '');
+  if (!sal) { sal = novoSalt(16); store.set('pin_salt', sal); }
+  const forte = await derivar('pin|' + pin, sal);
+  if (forte) return forte;
+  return hashPinLegado(pin);
+}
+async function hashPinLegado(pin) {
   if (!(window.crypto && crypto.subtle)) return 'p:' + pin;
   const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('jarvis|' + pin));
-  return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return hexDe(h);
 }
+async function pinConfere(pin, esperado) {
+  if (!esperado) return false;
+  const forte = await hashPin(pin);
+  if (forte === esperado) return true;
+  if ((await hashPinLegado(pin)) === esperado) {
+    store.set('pin_hash', forte);
+    return true;
+  }
+  return false;
+}
+async function hashCodigo(texto) {
+  let sal = store.get('rec_salt', '');
+  if (!sal) { sal = novoSalt(16); store.set('rec_salt', sal); }
+  const forte = await derivar(texto, sal);
+  return forte || hashPinLegado(texto);
+}
+async function codigoConfere(codigo, esperado) {
+  const forte = await hashCodigo('rec|' + codigo);
+  if (forte === esperado) return true;
+  const legado = await hashPin('rec|' + codigo);
+  if (legado === esperado) return true;
+  return (await hashPinLegado('rec|' + codigo)) === esperado;
+}
+
 function contatos() {
   const o = {};
   store.get('contatos').split('\n').forEach((l) => {

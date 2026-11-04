@@ -1,3 +1,14 @@
+## 1.42.9 — Bloqueio com biometria forte, NFC e central em Ajustes
+
+- **Modos de autenticação** (`seguranca.js`): PIN, biometria, NFC, biometria ou NFC, biometria + NFC, biometria + PIN, NFC + PIN.
+- **Biometria facial do sistema**: `BiometricPrompt` com `BIOMETRIC_STRONG`; o app informa se há hardware facial e nunca recebe a imagem do rosto.
+- **NFC real** (`JarvisSeguranca`): `enableReaderMode` com A/B/F/V, encerrado no timeout e na pausa; cadastro, nome, ativar, bloquear, remover, testar e último uso.
+- **Privacidade das tags**: só o SHA-256 do UID é guardado; a lista mostra `•••• 1A2B`. Tag desconhecida não libera nada.
+- **PIN reforçado**: PBKDF2-SHA256 com sal e 120.000 iterações; o hash antigo é aceito uma vez e migrado.
+- **Central em Ajustes ▸ Segurança**: modo, tempo de inatividade, tentativas, ligar/desligar biometria e NFC, histórico e restauração.
+- **Tela**: selo do método, fases ("Reconhecendo o rosto…", "Tag autorizada", "Acesso negado") e estados do núcleo, sem atrasar o desbloqueio.
+- **Limite**: leitura NFC, rosto e digital **não foram testados em aparelho físico**; não há tag nem sensor nesta máquina e o APK é debug/CI.
+
 ## 1.42.8 — Contexto visual da sessão
 
 - **Memória visual** (`visao_contexto.js`): objetos da análise, objeto atual, seleção e histórico curto de perguntas.
