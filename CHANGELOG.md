@@ -1,3 +1,14 @@
+## 1.42.8 — Contexto visual da sessão
+
+- **Memória visual** (`visao_contexto.js`): objetos da análise, objeto atual, seleção e histórico curto de perguntas.
+- **Acompanhamento**: "ele é bom para corrida?", "e quanto custa?" resolvem para o mesmo objeto, sem repetir a imagem; o referente explícito vai junto no pedido ao modelo.
+- **Procedência**: confirmado (fabricante/manual/etiqueta), loja (anúncio) ou estimado (visual); marca e modelo são descartados quando não há evidência legível.
+- **Múltiplos objetos**: lista, seleção por índice e comparação determinística de atributos.
+- **OCR como dado**: linhas que tentam instruir o sistema são descartadas; o restante é marcado como dado.
+- **Ponte técnica**: contator, disjuntor, térmico, motor, CLP, temporizador, transformador, sensor e sinaleiro consultam a base elétrica e se relacionam ao Projetista.
+- **Privacidade**: nada é salvo automaticamente; a imagem não é guardada.
+- **Limite**: sem chave de IA não há medição de precisão nem busca de preço validada; nada foi testado em aparelho físico.
+
 ## 1.42.7 — Base técnica elétrica, sequência de motores e segunda análise
 
 - **Base técnica** (`eletrica.js`): 12 componentes com terminais, função, limites e símbolo IEC 60617; tabelas de ampacidade (cobre/PVC, método B1), contatores AC-3, disjuntores e faixas de térmico; `consultar(termo)` com fonte declarada.

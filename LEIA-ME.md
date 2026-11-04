@@ -1,4 +1,8 @@
-# J.A.R.V.I.S. Nova 1.42.7
+# J.A.R.V.I.S. Nova 1.42.8
+
+## 1.42.8 — Contexto visual da sessão
+
+O Vision passou a lembrar o que foi analisado: perguntas como "ele é bom para corrida?" e "e quanto custa?" usam o mesmo objeto, sem repetir a foto. Marca e modelo só são afirmados com evidência legível; cada informação é marcada como confirmada, de loja ou estimada. Vários objetos podem ser selecionados e comparados, texto lido na imagem é tratado como dado (nunca instrução) e componentes técnicos são ligados à base elétrica e ao Projetista. Nada é salvo sem pedido explícito. Sem chave de IA, a precisão de identificação não foi medida.
 
 ## 1.42.7 — Base técnica elétrica e sequência de motores
 

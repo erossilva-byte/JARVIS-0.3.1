@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.42.7';
+const VERSAO_APP = '1.42.8';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -7536,6 +7536,7 @@ async function analisarVisao(opcoes) {
   if (!pronta) return { fala: 'Não consegui abrir a câmera, ' + trat() + '. Autorize a câmera nas permissões do aplicativo e me chame de novo.' };
   const r = await analisarQuadro(o.texto || '');
   if (!r) return { fala: 'Aponte a câmera para o objeto, ' + trat() + ', que eu analiso e digo o que estou vendo.' };
+  registrarContextoVisual(r);
   return { fala: r.fala, objetos: r.objetos };
 }
 
@@ -10094,6 +10095,23 @@ function anexarTextoVisao(modo, texto) {
   const rotulo = document.getElementById('visao-texto-modo');
   if (rotulo) rotulo.textContent = modo || '—';
 }
+/* Contexto visual da sessão: quem foi analisado, marca com evidência e perguntas de acompanhamento.
+ * Determinístico e local; a imagem continua só na memória do painel. */
+let visaoCtx = null;
+function contextoVisual() {
+  if (!visaoCtx && window.VisaoContexto) visaoCtx = window.VisaoContexto.novoContexto();
+  return visaoCtx;
+}
+function registrarContextoVisual(r) {
+  const VC = window.VisaoContexto;
+  if (!VC || !r || !Array.isArray(r.objetos)) return;
+  try {
+    const reg = VC.registrar(contextoVisual(), { objetos: r.objetos, textoLegivel: r.textoLegivel || [] });
+    const o = reg.objetoAtual;
+    if (o) visaoPerguntaStatus('Sessão visual: ' + o.nome + (o.marca ? ' (' + o.marca + ')' : ' — marca não confirmada') + '. Posso responder "ele", "quanto custa" ou "esse componente serve no projeto?".');
+  } catch (e) { /* contexto é opcional */ }
+}
+
 async function perguntarSobreVisao() {
   const campo = document.getElementById('visao-pergunta');
   const btn = document.getElementById('visao-perguntar');
@@ -10112,10 +10130,31 @@ async function perguntarSobreVisao() {
   if (btn) btn.disabled = true;
   visaoPerguntaStatus('Perguntando sobre a imagem…');
   try {
+    const VC = window.VisaoContexto;
+    let referente = '';
+    if (VC) {
+      const ctx = contextoVisual();
+      const res = VC.resolver(ctx, pergunta);
+      if (res.ok && res.objeto) {
+        VC.registrarPergunta(ctx, pergunta, res.intencao);
+        referente = ' [contexto visual: ' + res.objeto.nome + (res.objeto.marca ? ', marca ' + res.objeto.marca : ', marca não confirmada') + ']';
+        if (res.intencao === 'tecnico') {
+          const t = VC.tecnico(res.objeto, window.EletricaBase);
+          const resp = t.ok
+            ? 'Sobre ' + res.objeto.nome + ': ' + t.entradas[0].funcao + ' Terminais: ' + Object.keys(t.entradas[0].terminais).join(', ') + '. ' + t.relacao + ' Base: ' + t.fonte
+            : 'Reconheci ' + res.objeto.nome + ', mas não o mapeei para a base elétrica; sem isso não afirmo função nem terminais.';
+          anexarTextoVisao('contexto', 'Pergunta: ' + pergunta + '\n' + resp);
+          visaoPerguntaStatus('Respondido pelo contexto visual e pela base elétrica, sem chamar a IA.', 'ok');
+          await falar(resp);
+          return;
+        }
+      }
+    }
     let r = null;
     let onde = '';
-    if (visaoUltimaImagem) { r = await analisarDataUrl(visaoUltimaImagem, pergunta); onde = 'Resposta sobre a imagem já analisada'; }
-    else { r = await analisarQuadro(pergunta); onde = 'Resposta sobre o quadro atual'; }
+    const perg = pergunta + referente;
+    if (visaoUltimaImagem) { r = await analisarDataUrl(visaoUltimaImagem, perg); onde = 'Resposta sobre a imagem já analisada'; }
+    else { r = await analisarQuadro(perg); onde = 'Resposta sobre o quadro atual'; }
     if (!r) { visaoPerguntaStatus('Sem resposta: veja o status da análise acima.', true); return; }
     anexarTextoVisao('pergunta', 'Pergunta: ' + pergunta + '\n' + (r.fala || r.resumo || ''));
     visaoPerguntaStatus(onde + ' · ' + (visaoProvedor || 'provedor') + '.', 'ok');
@@ -10134,6 +10173,11 @@ const campoVisaoPergunta = document.getElementById('visao-pergunta');
 if (campoVisaoPergunta) campoVisaoPergunta.addEventListener('keydown', (ev) => {
   if (ev.key === 'Enter') { ev.preventDefault(); perguntarSobreVisao(); }
 });
+window.JarvisVisao = {
+  contexto: () => contextoVisual(),
+  registrar: (r) => registrarContextoVisual(r),
+  resolver: (texto) => window.VisaoContexto ? window.VisaoContexto.resolver(contextoVisual(), texto) : null
+};
 const btnVisaoPerguntaLimpar = document.getElementById('visao-pergunta-limpar');
 if (btnVisaoPerguntaLimpar) btnVisaoPerguntaLimpar.onclick = () => {
   if (campoVisaoPergunta) { campoVisaoPergunta.value = ''; campoVisaoPergunta.focus(); }

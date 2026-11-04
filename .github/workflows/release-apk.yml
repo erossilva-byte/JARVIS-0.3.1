@@ -56,7 +56,7 @@ jobs:
           mkdir -p www
           # Todo recurso web do app precisa estar aqui: sem hermes.js o app.js recusa
           # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
-          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js eletrica.js projetista.js pc.js cad_projeto.js visao.js pessoas.js www/
+          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js eletrica.js projetista.js pc.js cad_projeto.js visao.js visao_contexto.js pessoas.js www/
           cp avatar.js www/
           cp interface.css www/
           cp core.css www/
@@ -153,6 +153,12 @@ jobs:
             “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
+
+            **Novidades da 1.42.8:** contexto visual da sessão (`visao_contexto.js`):
+            perguntas de acompanhamento ("ele", "quanto custa"), procedência
+            confirmado/loja/estimado, marca e modelo só com evidência legível, múltiplos
+            objetos com seleção e comparação, OCR tratado como dado e ponte de componentes
+            com a base elétrica. Sem chave de IA não há teste de precisão.
 
             **Novidades da 1.42.7:** especialização elétrica de verdade: base técnica
             (`eletrica.js`) com componentes, terminais, limites e símbolo IEC, tabelas de ampacidade,
