@@ -89,66 +89,57 @@ public class JarvisSeguranca extends Plugin {
     @PluginMethod
     public void nfcLer(final PluginCall call) {
         final int segundos = Math.max(5, Math.min(60, call.getInt("segundos", 20)));
-        principal.post(new Runnable() {
-            @Override
-            public void run() {
-                NfcAdapter a = NfcAdapter.getDefaultAdapter(getContext());
-                if (a == null) { call.reject("Este aparelho não tem leitor NFC."); return; }
-                if (!a.isEnabled()) { call.reject("O NFC está desligado. Ative nas configurações do Android e tente de novo."); return; }
-                if (chamadaNfc != null) { call.reject("Já existe uma leitura NFC em andamento."); return; }
-                final Activity at = getActivity();
-                if (at == null) { call.reject("A tela do aplicativo não está disponível para ler a tag."); return; }
-                leitor = a;
-                chamadaNfc = call;
-                prazoNfc = new Runnable() {
+        principal.post(() -> {
+            NfcAdapter a = NfcAdapter.getDefaultAdapter(getContext());
+            if (a == null) { call.reject("Este aparelho não tem leitor NFC."); return; }
+            if (!a.isEnabled()) { call.reject("O NFC está desligado. Ative nas configurações do Android e tente de novo."); return; }
+            if (chamadaNfc != null) { call.reject("Já existe uma leitura NFC em andamento."); return; }
+            final Activity at = getActivity();
+            if (at == null) { call.reject("A tela do aplicativo não está disponível para ler a tag."); return; }
+            leitor = a;
+            chamadaNfc = call;
+            prazoNfc = () -> {
+                if (chamadaNfc != call) return;
+                encerrarLeitura();
+                call.reject("Nenhuma tag aproximada em " + segundos + " s.");
+            };
+            principal.postDelayed(prazoNfc, segundos * 1000L);
+            try {
+                a.enableReaderMode(at, new NfcAdapter.ReaderCallback() {
                     @Override
-                    public void run() {
+                    public void onTagDiscovered(Tag tag) {
                         if (chamadaNfc != call) return;
-                        encerrarLeitura();
-                        call.reject("Nenhuma tag aproximada em " + segundos + " s.");
-                    }
-                };
-                principal.postDelayed(prazoNfc, segundos * 1000L);
-                try {
-                    a.enableReaderMode(at, new NfcAdapter.ReaderCallback() {
-                        @Override
-                        public void onTagDiscovered(Tag tag) {
-                            if (chamadaNfc != call) return;
-                            JSObject out = new JSObject();
-                            out.put("uid", hex(tag.getId()));
-                            JSArray tech = new JSArray();
-                            boolean iso = false;
-                            String[] lista = tag.getTechList();
-                            if (lista != null) {
-                                for (String t : lista) {
-                                    tech.put(t);
-                                    if (t != null && t.endsWith("IsoDep")) iso = true;
-                                }
+                        JSObject out = new JSObject();
+                        out.put("uid", hex(tag.getId()));
+                        JSArray tech = new JSArray();
+                        boolean iso = false;
+                        String[] lista = tag.getTechList();
+                        if (lista != null) {
+                            for (String t : lista) {
+                                tech.put(t);
+                                if (t != null && t.endsWith("IsoDep")) iso = true;
                             }
-                            out.put("tech", tech);
-                            out.put("criptografica", iso);
-                            encerrarLeitura();
-                            call.resolve(out);
                         }
-                    }, NfcAdapter.FLAG_READER_NFC_A | NfcAdapter.FLAG_READER_NFC_B
-                        | NfcAdapter.FLAG_READER_NFC_F | NfcAdapter.FLAG_READER_NFC_V
-                        | NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS, null);
-                } catch (Throwable e) {
-                    encerrarLeitura();
-                    call.reject("Não foi possível iniciar a leitura NFC neste aparelho.");
-                }
+                        out.put("tech", tech);
+                        out.put("criptografica", iso);
+                        encerrarLeitura();
+                        call.resolve(out);
+                    }
+                }, NfcAdapter.FLAG_READER_NFC_A | NfcAdapter.FLAG_READER_NFC_B
+                    | NfcAdapter.FLAG_READER_NFC_F | NfcAdapter.FLAG_READER_NFC_V
+                    | NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS, null);
+            } catch (Throwable e) {
+                encerrarLeitura();
+                call.reject("Não foi possível iniciar a leitura NFC neste aparelho.");
             }
         });
     }
 
     @PluginMethod
     public void nfcCancelar(PluginCall call) {
-        principal.post(new Runnable() {
-            @Override
-            public void run() {
-                if (chamadaNfc != null) chamadaNfc.reject("Leitura NFC cancelada.");
-                encerrarLeitura();
-            }
+        principal.post(() -> {
+            if (chamadaNfc != null) chamadaNfc.reject("Leitura NFC cancelada.");
+            encerrarLeitura();
         });
         call.resolve();
     }
@@ -162,43 +153,40 @@ public class JarvisSeguranca extends Plugin {
         final boolean comCredencial = !Boolean.FALSE.equals(call.getBoolean("permitirCredencial", true));
         final int permitidos = comCredencial ? FORTE_OU_APARELHO : FORTE;
         final AtomicBoolean respondido = new AtomicBoolean(false);
-        principal.post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Executor executor = ContextCompat.getMainExecutor(getContext());
-                    BiometricPrompt prompt = new BiometricPrompt(getActivity(), executor, new BiometricPrompt.AuthenticationCallback() {
-                        @Override
-                        public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
-                            if (!respondido.compareAndSet(false, true)) return;
-                            JSObject out = new JSObject();
-                            out.put("ok", true);
-                            call.resolve(out);
-                        }
+        principal.post(() -> {
+            try {
+                Executor executor = ContextCompat.getMainExecutor(getContext());
+                BiometricPrompt prompt = new BiometricPrompt(getActivity(), executor, new BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                        if (!respondido.compareAndSet(false, true)) return;
+                        JSObject out = new JSObject();
+                        out.put("ok", true);
+                        call.resolve(out);
+                    }
 
-                        @Override
-                        public void onAuthenticationError(int codigo, CharSequence mensagem) {
-                            if (!respondido.compareAndSet(false, true)) return;
-                            // Cancelamento do usuário não é falha de segurança: o PIN continua disponível.
-                            call.reject(mensagem == null ? "Autenticação cancelada." : mensagem.toString());
-                        }
+                    @Override
+                    public void onAuthenticationError(int codigo, CharSequence mensagem) {
+                        if (!respondido.compareAndSet(false, true)) return;
+                        // Cancelamento do usuário não é falha de segurança: o PIN continua disponível.
+                        call.reject(mensagem == null ? "Autenticação cancelada." : mensagem.toString());
+                    }
 
-                        @Override
-                        public void onAuthenticationFailed() {
-                            // Tentativa não reconhecida: o prompt continua aberto. Não finaliza a chamada.
-                        }
-                    });
-                    BiometricPrompt.PromptInfo.Builder info = new BiometricPrompt.PromptInfo.Builder()
-                        .setTitle(titulo)
-                        .setSubtitle(subtitulo)
-                        .setAllowedAuthenticators(permitidos)
-                        .setConfirmationRequired(false);
-                    if (!comCredencial) info.setNegativeButtonText("Cancelar");
-                    prompt.authenticate(info.build());
-                } catch (Throwable e) {
-                    if (!respondido.compareAndSet(false, true)) return;
-                    call.reject("Biometria indisponível neste aparelho. Use o PIN do aplicativo.");
-                }
+                    @Override
+                    public void onAuthenticationFailed() {
+                        // Tentativa não reconhecida: o prompt continua aberto. Não finaliza a chamada.
+                    }
+                });
+                BiometricPrompt.PromptInfo.Builder info = new BiometricPrompt.PromptInfo.Builder()
+                    .setTitle(titulo)
+                    .setSubtitle(subtitulo)
+                    .setAllowedAuthenticators(permitidos)
+                    .setConfirmationRequired(false);
+                if (!comCredencial) info.setNegativeButtonText("Cancelar");
+                prompt.authenticate(info.build());
+            } catch (Throwable e) {
+                if (!respondido.compareAndSet(false, true)) return;
+                call.reject("Biometria indisponível neste aparelho. Use o PIN do aplicativo.");
             }
         });
     }
