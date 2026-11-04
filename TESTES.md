@@ -45,3 +45,17 @@ A validação integral local passou. A instalação das dependências e a compil
 ## Atualização 1.2.7 — 2026-10-16
 
 O GitHub Actions concluiu com sucesso a compilação do APK debug (`run ID 38973408843`). O APK foi gerado e seu SHA-256 é `bcec4f65593abd9a5084610e30cbb1b370c018c9946f7e9e2126334b54f4925f`. Os parágrafos anteriores descrevem testes históricos de versões anteriores. A instalação e os testes em aparelho físico ainda não foram concluídos.
+
+## Atualização 1.42.9 — execução local no Windows (2026-11-04)
+
+O script oficial `npm run test:all` usa `python3` porque o CI roda em Ubuntu. No Windows, `python3` costuma ser o atalho da Microsoft Store e não executa Python, então a suíte não rodava na máquina de desenvolvimento mesmo com Python instalado.
+
+- [x] Adicionado `npm run test:all:win`, que lê a mesma suíte de `test:all` e troca apenas a invocação do interpretador por `tests/python.js`.
+- [x] `tests/python.js` resolve, nesta ordem: `JARVIS_PYTHON`, `py -3`, `python` (Windows) ou `python3`, `python` (Linux/macOS).
+- [x] A suíte oficial permanece intacta, com `python3`, para o CI e para os testes históricos que conferem o registro em `test:all`.
+- [x] Regressão coberta por `tests/test_runner_windows.py`, registrado na suíte.
+- [x] Corrigido `tests/test_arquivos_sistema.py`: o caminho relativo do motor usa o separador da plataforma (`~\Jarvis\...` no Windows) e o teste só removia `~/`; a leitura do JSON do gerador agora é UTF-8 explícita.
+- [x] Corrigido `tests/test_cad_pacote.py`: saída do gerador decodificada como UTF-8 (antes usava a página de código do Windows e quebrava em nomes acentuados).
+- [x] Execução local completa: `npm run test:all:win` terminou com código 0.
+
+O que continua sem teste local: compilação Android (exige JDK + Android SDK), microfone, câmera, NFC, biometria e segundo plano reais. Esses itens seguem dependendo do aparelho físico ou do GitHub Actions.
