@@ -210,6 +210,18 @@ try:
         print(f"Configuração do serviço de acessibilidade gravada: {acess}")
 except Exception as e:
     raise SystemExit(f"Não consegui criar jarvis_paths.xml: {e}")
+# Recursos opcionais: NFC, rosto e digital não podem excluir o app da loja nem de aparelhos
+# sem o hardware. Quem decide o que usar é a central em Ajustes ▸ Segurança.
+if 'android.hardware.nfc' not in m:
+    feats = (
+        '    <uses-feature android:name="android.hardware.nfc" android:required="false" />\n'
+        '    <uses-feature android:name="android.hardware.face" android:required="false" />\n'
+        '    <uses-feature android:name="android.hardware.fingerprint" android:required="false" />\n'
+    )
+    app_pos = m.find("<application")
+    if app_pos >= 0:
+        m = m[:app_pos] + feats + m[app_pos:]
+
 path.write_text(m, encoding="utf-8")
 
 print(f'Manifesto corrigido: {path}')

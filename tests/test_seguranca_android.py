@@ -21,7 +21,8 @@ doc = (raiz / 'docs/SEGURANCA-1.42.9.md').read_text(encoding='utf-8')
 
 checagens = {
     'NFC declarado no manifesto': 'android.permission.NFC' in manifesto,
-    'NFC opcional (não exclui aparelhos sem leitor)': 'android.hardware.nfc" android:required="false"' in manifesto,
+    'NFC opcional (não exclui aparelhos sem leitor)': ('android.hardware.nfc" android:required="false"' in manifesto
+        and 'android.hardware.nfc' in patch_manifest and 'android.hardware.face' in patch_manifest),
     'patch_manifest mantém a permissão': 'android.permission.NFC' in patch_manifest,
     'Plugin registrado no app': 'registerPlugin(JarvisSeguranca.class)' in main,
     'Leitura por reader mode': 'enableReaderMode' in java and 'disableReaderMode' in java,
