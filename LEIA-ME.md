@@ -12,7 +12,7 @@ O Vision passou a lembrar o que foi analisado: perguntas como "ele é bom para c
 
 O projetista ganhou uma base de engenharia própria (`eletrica.js`): componentes com terminais, função, limites e símbolo IEC; tabelas de ampacidade, contator, disjuntor e térmico; dimensionamento com memória de cálculo e conferência independente. Nova topologia monta dois motores em sequência, com o segundo entrando X segundos depois do primeiro. A segunda análise (`conferirObjetivo`) verifica se o projeto montado atende ao pedido, e a netlist permite exportar e reimportar o diagrama em texto. O `.cad` do CADeSIMU continua não sendo gerado nem aberto, e não há simulação elétrica.
 
-O APK **1.42.8** (`jarvis-nova-1.42.8-10428.apk`) tem **81290982 bytes** e SHA-256 `a80aa07d8dc006a3dc385b5b9c7590debf80b97e2d1a7a49fd0d174bb1f1bfbd`, compilado no GitHub Actions e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.8 , com `visao_contexto.js`, `eletrica.js` e `projetista.js` conferidos dentro do pacote. Ele **não foi instalado em aparelho físico**: toque, voz, câmera e desempenho seguem sem validação física, e a assinatura é debug/CI.
+O APK **1.42.9** (`jarvis-nova-1.42.9-10429.apk`) tem **81302438 bytes** e SHA-256 `e9a313a1fbcafaa4cd653eedcc8c25df7dcbc18970202ea4da15126e50c28bb4`, compilado no GitHub Actions e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.9 , com `seguranca.js`, `visao_contexto.js`, `BIOMETRIC_STRONG` e o plugin NFC conferidos dentro do pacote. Ele **não foi instalado em aparelho físico**: rosto, digital, tag NFC, toque e desempenho seguem sem validação física, e a assinatura é debug/CI.
 
 ## 1.42.6 — Correção do pacote Android
 
