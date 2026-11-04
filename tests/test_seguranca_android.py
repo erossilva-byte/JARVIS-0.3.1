@@ -37,7 +37,11 @@ checagens = {
     'Hash antigo migra sem trancar': 'hashPinLegado' in app and 'store.set(\'pin_hash\', forte)' in app,
     'UID guardado como hash': 'hashUid' in app and 'uidHash' in nucleo and 'SEGN.mascararUid' in app,
     'Tag desconhecida não libera': "Tag desconhecida" in nucleo and "acharTag" in app,
-    'Modos combinados no núcleo': "'bio+nfc'" in nucleo and "'bio|nfc'" in nucleo and "'nfc+pin'" in nucleo,
+    'Modos combinados no núcleo': all(m in nucleo for m in ("'bio+nfc'", "'bio|nfc'", "'nfc+pin'", "'pin|bio'", "'pin|nfc'", "'pin|bio|nfc'", "'bio+nfc+pin'")),
+    'Modos novos expostos no seletor': all(m in html for m in ('value="pin|bio"', 'value="pin|nfc"', 'value="bio|nfc"', 'value="pin|bio|nfc"', 'value="bio+nfc+pin"')),
+    'Tela adapta os controles ao modo': ('SEGN.usaMetodo(cfg.modo' in app and 'bloqRecuperacaoPin' in app
+        and all(i in html for i in ('id="bloqueio-campo-pin"', 'id="bloqueio-usar-pin"'))),
+    'Alternativa não exige hardware único': 'alternativas.filter' in nucleo and 'provaDisponivel(e, d)' in nucleo,
     'Central: modo, tempo e tentativas': all(i in html for i in ('id="c-bloq-modo"', 'id="c-bloq-timeout"', 'id="c-bloq-max"')),
     'Central: tags e histórico': all(i in html for i in ('id="c-nfc-cadastrar"', 'id="c-nfc-lista"', 'id="c-bloq-historico"', 'id="c-bloq-restaurar"')),
     'Tela: método, fase e NFC': all(i in html for i in ('id="bloq-metodo"', 'id="bloq-fase"', 'id="bloqueio-nfc"')),

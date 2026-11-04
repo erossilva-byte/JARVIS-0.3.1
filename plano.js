@@ -6,6 +6,13 @@
  * Etapa "incerta" pausa e pede decisão humana; falha/bloqueio/cancelamento param
  * o plano e nenhuma etapa seguinte roda.
  *
+ * Desde a 1.44.0 o plano aceita dependências explícitas (DAG):
+ *  - `deps` (ou `depende_de`) referencia IDs de etapas ou índices 1-based;
+ *  - IDs desconhecidos, auto-dependência e ciclos são recusados;
+ *  - uma etapa só roda quando todas as dependências foram concluídas;
+ *  - se uma dependência falhar, os dependentes ficam "bloqueado" e não rodam;
+ *  - sem nenhuma dependência declarada, o plano continua linear (retrocompatível).
+ *
  * Módulo puro: recebe o executor e as confirmações por injeção, então é testável
  * sem DOM, rede ou aparelho.
  */
@@ -18,6 +25,7 @@
 
   const MAX_PASSOS = 6;
   const MAX_ARGS = 2000;
+  const ID_VALIDO = /^[a-zA-Z][a-zA-Z0-9_-]{0,39}$/;
 
   function extrairJson(texto) {
     let s = String(texto == null ? '' : texto).trim();
@@ -25,6 +33,47 @@
     const i = s.indexOf('{'), j = s.lastIndexOf('}');
     if (i < 0 || j <= i) return null;
     try { return JSON.parse(s.slice(i, j + 1)); } catch (e) { return null; }
+  }
+
+  /** Lê a lista de dependências declarada pelo modelo, sem confiar no formato. */
+  function lerDeps(bruto) {
+    if (bruto == null) return { ok: true, deps: [] };
+    if (!Array.isArray(bruto)) return { ok: false, erro: 'dependências precisam ser uma lista' };
+    return { ok: true, deps: bruto };
+  }
+
+  /** Ordem topológica estável (desempate pelo índice original). Detecta ciclo. */
+  function ordenar(passos) {
+    const indice = {};
+    const grau = {};
+    const filhos = {};
+    passos.forEach((p, i) => {
+      indice[p.id] = i;
+      grau[p.id] = 0;
+      filhos[p.id] = filhos[p.id] || [];
+    });
+    passos.forEach((p) => {
+      p.deps.forEach((d) => {
+        grau[p.id]++;
+        (filhos[d] = filhos[d] || []).push(p.id);
+      });
+    });
+    const prontos = passos.filter((p) => grau[p.id] === 0).map((p) => p.id);
+    const ordem = [];
+    while (prontos.length) {
+      prontos.sort((a, b) => indice[a] - indice[b]);
+      const id = prontos.shift();
+      ordem.push(id);
+      (filhos[id] || []).forEach((f) => {
+        grau[f]--;
+        if (grau[f] === 0) prontos.push(f);
+      });
+    }
+    if (ordem.length !== passos.length) {
+      const ciclo = passos.filter((p) => ordem.indexOf(p.id) < 0).map((p) => p.id);
+      return { ok: false, erro: 'O plano tem dependência circular entre: ' + ciclo.join(', ') + '.' };
+    }
+    return { ok: true, ordem };
   }
 
   /**
@@ -46,6 +95,8 @@
     const acoes = c.acoes || {};
     const disp = Array.isArray(c.disponiveis) ? c.disponiveis : null;
     const saida = [];
+    const usados = Object.create(null);
+    let declarouDeps = false;
     for (let i = 0; i < passos.length; i++) {
       const p = passos[i];
       if (!p || typeof p !== 'object' || Array.isArray(p)) return { ok: false, erro: 'Etapa ' + (i + 1) + ' inválida.' };
@@ -64,20 +115,67 @@
       let tamanho = 0;
       try { tamanho = JSON.stringify(args).length; } catch (e) { return { ok: false, erro: 'Etapa ' + (i + 1) + ' tem argumentos inválidos.' }; }
       if (tamanho > MAX_ARGS) return { ok: false, erro: 'Etapa ' + (i + 1) + ' tem argumentos grandes demais.' };
+      const id = typeof p.id === 'string' && ID_VALIDO.test(p.id.trim()) ? p.id.trim() : 'p' + (i + 1);
+      if (usados[id]) return { ok: false, erro: 'Etapa ' + (i + 1) + ' repete o ID ' + id + '.' };
+      usados[id] = true;
+      const brutoDeps = p.deps != null ? p.deps : (p.depende_de != null ? p.depende_de : p.dependencias);
+      const leitura = lerDeps(brutoDeps);
+      if (!leitura.ok) return { ok: false, erro: 'Etapa ' + (i + 1) + ': ' + leitura.erro + '.' };
+      if (leitura.deps.length) declarouDeps = true;
       saida.push({
-        id: 'p' + (i + 1),
+        id,
         acao,
         args,
         porque: String(p.porque || p.motivo || '').trim().slice(0, 140),
-        risco: Number(acoes[acao] && acoes[acao].risco) || 0
+        risco: Number(acoes[acao] && acoes[acao].risco) || 0,
+        deps: leitura.deps,
+        depsBruto: brutoDeps
       });
     }
+    // Resolve dependências por ID ou por índice 1-based. A validação é feita
+    // depois de todos os IDs existirem, então uma etapa pode depender de outra
+    // declarada mais adiante — a ordem de execução vem do grafo, não do texto.
+    const porId = Object.create(null);
+    saida.forEach((p) => { porId[p.id] = p; });
+    for (let i = 0; i < saida.length; i++) {
+      const p = saida[i];
+      const resolvidas = [];
+      for (const d of p.deps) {
+        let ref = '';
+        if (typeof d === 'number' && Number.isInteger(d)) {
+          if (d < 1 || d > saida.length) return { ok: false, erro: 'Etapa ' + (i + 1) + ' depende de um índice inexistente: ' + d + '.' };
+          ref = saida[d - 1].id;
+        } else if (typeof d === 'string') {
+          const s = d.trim();
+          if (porId[s]) ref = s;
+          else if (/^\d+$/.test(s)) {
+            const n = parseInt(s, 10);
+            if (n < 1 || n > saida.length) return { ok: false, erro: 'Etapa ' + (i + 1) + ' depende de um índice inexistente: ' + s + '.' };
+            ref = saida[n - 1].id;
+          } else return { ok: false, erro: 'Etapa ' + (i + 1) + ' depende de uma etapa desconhecida: ' + s + '.' };
+        } else return { ok: false, erro: 'Etapa ' + (i + 1) + ' tem dependência inválida.' };
+        if (ref === p.id) return { ok: false, erro: 'Etapa ' + (i + 1) + ' depende de si mesma.' };
+        if (resolvidas.indexOf(ref) < 0) resolvidas.push(ref);
+      }
+      p.deps = resolvidas;
+      delete p.depsBruto;
+    }
+    // Sem dependências declaradas, o comportamento antigo é preservado: cada
+    // etapa depende da anterior. Com dependências, quem não declarar nada é raiz.
+    const modo = declarouDeps ? 'dag' : 'linear';
+    if (modo === 'linear') {
+      saida.forEach((p, i) => { p.deps = i === 0 ? [] : [saida[i - 1].id]; });
+    }
+    const ordenacao = ordenar(saida);
+    if (!ordenacao.ok) return { ok: false, erro: ordenacao.erro };
     return {
       ok: true,
       plano: {
         objetivo,
         passos: saida,
-        riscoMax: saida.reduce((m, p) => Math.max(m, p.risco), 0)
+        riscoMax: saida.reduce((m, p) => Math.max(m, p.risco), 0),
+        modo,
+        ordem: ordenacao.ordem
       }
     };
   }
@@ -100,14 +198,16 @@
   function resumo(plano, opcoes) {
     const ps = (plano && plano.passos) || [];
     const comArgs = !!(opcoes && opcoes.args);
+    const mostrarDeps = !!(plano && plano.modo === 'dag');
     return ps.map((p, i) => {
       const extra = comArgs ? resumoArgs(p.args) : '';
-      return (i + 1) + '. ' + descrever(p) + (extra ? ' [' + extra + ']' : '');
+      const deps = mostrarDeps && Array.isArray(p.deps) && p.deps.length ? ' (após ' + p.deps.join(', ') + ')' : '';
+      return (i + 1) + '. ' + descrever(p) + deps + (extra ? ' [' + extra + ']' : '');
     }).join(' · ');
   }
 
   function vazio() {
-    return { passos: [], ok: 0, incerto: 0, falhou: 0, executados: 0 };
+    return { passos: [], ok: 0, incerto: 0, falhou: 0, bloqueado: 0, executados: 0 };
   }
 
   /**
@@ -121,22 +221,71 @@
   async function executar(plano, op) {
     const o = op || {};
     const passos = (plano && plano.passos) || [];
+    const porId = Object.create(null);
+    passos.forEach((p) => { porId[p.id] = p; });
+    const modo = (plano && plano.modo) || 'linear';
+    const ordemIds = (plano && Array.isArray(plano.ordem) && plano.ordem.length)
+      ? plano.ordem.slice()
+      : passos.map((p) => p.id);
     const estados = [];
-    let ok = 0, incerto = 0, falhou = 0;
+    const estadoPorId = Object.create(null);
+    let ok = 0, incerto = 0, falhou = 0, bloqueado = 0;
     function fechar(status) {
       return {
         status, objetivo: plano && plano.objetivo, passos: estados,
-        total: passos.length, executados: estados.length, ok, incerto, falhou,
+        total: passos.length, executados: estados.length, ok, incerto, falhou, bloqueado,
+        ordem: ordemIds.filter((id) => !!estadoPorId[id]),
         ultimo: estados.length ? estados[estados.length - 1] : null
       };
     }
     if (!passos.length) return fechar('falhou');
-    for (let i = 0; i < passos.length; i++) {
-      const p = passos[i];
+    const depsDe = (p) => Array.isArray(p && p.deps) ? p.deps : [];
+    const liberado = (id) => {
+      const e = estadoPorId[id];
+      return !!e && (e.estado === 'ok' || e.liberado === true);
+    };
+    // Marca como bloqueadas todas as etapas que dependem, direta ou
+    // indiretamente, de uma etapa que não concluiu.
+    function bloquearDependentes(idOrigem) {
+      const fila = [idOrigem];
+      const vistos = Object.create(null);
+      while (fila.length) {
+        const atual = fila.shift();
+        passos.forEach((p) => {
+          if (vistos[p.id] || estadoPorId[p.id]) return;
+          if (depsDe(p).indexOf(atual) < 0) return;
+          vistos[p.id] = true;
+          const item = {
+            id: p.id, acao: p.acao, estado: 'bloqueado',
+            motivo: 'dependência não concluída: ' + atual, info: ''
+          };
+          estados.push(item);
+          estadoPorId[p.id] = item;
+          bloqueado++;
+          fila.push(p.id);
+        });
+      }
+    }
+    for (const id of ordemIds) {
+      const p = porId[id];
+      if (!p || estadoPorId[p.id]) continue;
+      const indice = passos.indexOf(p);
       if (typeof o.cancelado === 'function' && o.cancelado()) return fechar('cancelado');
-      if (typeof o.aoIniciar === 'function') await o.aoIniciar(p, i);
+      const pendentes = depsDe(p).filter((d) => !liberado(d));
+      if (pendentes.length) {
+        const item = {
+          id: p.id, acao: p.acao, estado: 'bloqueado',
+          motivo: 'dependência não concluída: ' + pendentes.join(', '), info: ''
+        };
+        estados.push(item);
+        estadoPorId[p.id] = item;
+        bloqueado++;
+        if (modo === 'linear') return fechar('bloqueado');
+        continue;
+      }
+      if (typeof o.aoIniciar === 'function') await o.aoIniciar(p, indice);
       let res = null;
-      try { res = await o.executar(p, i); }
+      try { res = await o.executar(p, indice); }
       catch (e) { res = { falhou: true, info: String((e && e.message) || e || 'erro') }; }
       let est = null;
       if (res && res.recibo) est = res.recibo;
@@ -150,27 +299,36 @@
       const motivo = (est && est.motivo) || (res === null ? 'cancelado antes de executar' : (res && (res.erro || res.info)) || 'a ferramenta não devolveu recibo');
       const item = { id: p.id, acao: p.acao, estado, motivo, info: String((res && (res.info || res.fala)) || '').slice(0, 220) };
       estados.push(item);
+      estadoPorId[p.id] = item;
       if (estado === 'ok') {
         ok++;
-        if (typeof o.aoConcluir === 'function') await o.aoConcluir(p, i, res, item);
+        item.liberado = true;
+        if (typeof o.aoConcluir === 'function') await o.aoConcluir(p, indice, res, item);
         continue;
       }
       if (estado === 'incerto') {
         incerto++;
-        if (typeof o.aoIncertar === 'function') await o.aoIncertar(p, res, item, i);
-        const seguir = typeof o.confirmarIncerteza === 'function' ? !!(await o.confirmarIncerteza(p, res, item, i)) : false;
+        if (typeof o.aoIncertar === 'function') await o.aoIncertar(p, res, item, indice);
+        const seguir = typeof o.confirmarIncerteza === 'function' ? !!(await o.confirmarIncerteza(p, res, item, indice)) : false;
         if (seguir) {
-          if (typeof o.aoConcluir === 'function') await o.aoConcluir(p, i, res, item);
+          item.liberado = true;
+          if (typeof o.aoConcluir === 'function') await o.aoConcluir(p, indice, res, item);
           continue;
         }
         return fechar('pausado');
       }
       falhou++;
-      if (typeof o.aoFalhar === 'function') await o.aoFalhar(p, res, item, i);
-      return fechar(estado === 'cancelado' ? 'cancelado' : estado === 'bloqueado' ? 'bloqueado' : 'falhou');
+      if (typeof o.aoFalhar === 'function') await o.aoFalhar(p, res, item, indice);
+      if (modo === 'linear') {
+        return fechar(estado === 'cancelado' ? 'cancelado' : estado === 'bloqueado' ? 'bloqueado' : 'falhou');
+      }
+      // Em DAG, uma falha não impede ramos independentes; só os dependentes.
+      bloquearDependentes(p.id);
     }
+    if (falhou) return fechar('falhou');
+    if (bloqueado) return fechar('bloqueado');
     return fechar('concluido');
   }
 
-  return { MAX_PASSOS, extrairJson, normalizar, executar, resumo, descrever };
+  return { MAX_PASSOS, extrairJson, normalizar, executar, resumo, descrever, vazio };
 });

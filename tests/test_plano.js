@@ -77,6 +77,38 @@ assert.ok(P.resumo(n.plano).indexOf('segredo') < 0);
 assert.ok(P.resumo(n.plano).indexOf('abrir app') >= 0);
 assert.ok(P.resumo(n.plano, { args: true }).indexOf('texto=segredo') >= 0);
 
-console.log('test_plano: 25 verificações aprovadas');
+// 10. Dependência explícita por índice (1-based): o passo 2 só executa se o 1 der ok.
+const pdag = P.normalizar({ objetivo: 'em ordem', passos: [{ acao: 'hora' }, { acao: 'clima', deps: [1] }] }, { acoes: ACOES, disponiveis: disp }).plano;
+assert.equal(pdag.modo, 'dag');
+assert.deepEqual(pdag.passos[1].deps, ['p1']);
+let ordemExec = [];
+r = await P.executar(pdag, { executar: async (p) => { ordemExec.push(p.acao); return { recibo: { estado: 'ok', motivo: 'feito' } }; } });
+assert.equal(r.status, 'concluido'); assert.deepEqual(ordemExec, ['hora', 'clima']);
+
+// 11. Falha de uma dependência bloqueia os dependentes (DAG): o passo 2 não roda.
+ordemExec = [];
+r = await P.executar(pdag, { executar: async (p) => { ordemExec.push(p.acao); return { recibo: { estado: p.acao === 'hora' ? 'falhou' : 'ok', motivo: p.acao === 'hora' ? 'erro' : 'ok' } }; } });
+assert.equal(r.status, 'falhou'); assert.equal(r.ok, 0); assert.equal(r.bloqueado, 1); assert.deepEqual(ordemExec, ['hora']);
+
+// 12. Dependência por ID de texto também é resolvida.
+const pdagId = P.normalizar({ objetivo: 'por id', passos: [{ acao: 'hora', id: 'primeiro' }, { acao: 'clima', deps: ['primeiro'] }] }, { acoes: ACOES, disponiveis: disp }).plano;
+assert.deepEqual(pdagId.passos[1].deps, ['primeiro']);
+r = await P.executar(pdagId, { executar: async () => ({ recibo: { estado: 'ok', motivo: 'ok' } }) });
+assert.equal(r.status, 'concluido');
+
+// 13. Recusa de dependência inválida: desconhecida, auto, índice fora do range e ciclo.
+assert.equal(P.normalizar({ objetivo: 'x', passos: [{ acao: 'hora', deps: ['fantasma'] }] }, { acoes: ACOES, disponiveis: disp }).ok, false);
+assert.equal(P.normalizar({ objetivo: 'x', passos: [{ acao: 'hora', deps: ['p1'] }] }, { acoes: ACOES, disponiveis: disp }).ok, false);
+assert.equal(P.normalizar({ objetivo: 'x', passos: [{ acao: 'hora', deps: [9] }] }, { acoes: ACOES, disponiveis: disp }).ok, false);
+assert.equal(P.normalizar({ objetivo: 'x', passos: [{ acao: 'hora', deps: [1] }, { acao: 'clima', deps: ['p1'] }] }, { acoes: ACOES, disponiveis: disp }).ok, false);
+
+// 14. IDs explícitos são preservados e não se repetem.
+assert.equal(P.normalizar({ objetivo: 'x', passos: [{ acao: 'hora', id: 'a' }, { acao: 'clima', id: 'a' }] }, { acoes: ACOES, disponiveis: disp }).ok, false);
+assert.deepEqual(P.normalizar({ objetivo: 'x', passos: [{ acao: 'hora', id: 'a' }, { acao: 'clima', id: 'b' }] }, { acoes: ACOES, disponiveis: disp }).plano.passos.map((p) => p.id), ['a', 'b']);
+
+// 15. Resumo mostra as dependências quando em modo DAG.
+assert.ok(P.resumo(pdag).indexOf('após p1') >= 0);
+
+console.log('test_plano: 39 verificações aprovadas');
 
 })().catch((e) => { console.error(e); process.exit(1); });
