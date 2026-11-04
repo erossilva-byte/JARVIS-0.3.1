@@ -15,7 +15,7 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "ok",
+    "resultado": "success",
     "apk": "jarvis-nova-1.42.8-10428.apk",
     "bytes": 81290982,
     "sha256": "a80aa07d8dc006a3dc385b5b9c7590debf80b97e2d1a7a49fd0d174bb1f1bfbd",
