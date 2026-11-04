@@ -81,5 +81,7 @@ O que ainda depende de execução real: compilar `assembleRelease` com a chave c
 - [x] Versão 1.43.0 / versionCode 10430 em `VERSAO.json`, `package.json`, `package-lock.json`, `app.js`, `index.html` e nos dois workflows.
 - [x] `CHANGELOG.md` e `LEIA-ME.md` registram a 1.43.0 e a migração de assinatura.
 - [x] `VERSAO.json` marca o build como `pendente`; a tag `v1.43.0` publica o primeiro APK assinado com a chave de release.
-- [ ] Compilar a tag `v1.43.0` e conferir no log o SHA-256 e o certificado `CN=J.A.R.V.I.S. Nova`.
+- [x] Compilar a tag `v1.43.0` e conferir no log o SHA-256 e o certificado `CN=J.A.R.V.I.S. Nova`.
+- [x] APK publicado: `jarvis-nova-1.43.0-10430.apk`, 79.855.233 bytes, SHA-256 `37b0634d…8179c73`; certificado `3f9291bf…280cad` (chave de release). Checksum local = publicado = digest da API.
+- [x] `release-pc.yml` também passou na tag `v1.43.0`.
 - [ ] Desinstalar a 1.42.9 de debug no aparelho e instalar a 1.43.0 por cima do sistema (uma vez).
