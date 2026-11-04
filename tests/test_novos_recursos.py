@@ -61,7 +61,8 @@ checks = {
         "JarvisUpdatePlugin.java" in workflow and "ci/debug.keystore" in workflow
         and (ROOT / "ci" / "debug.keystore").exists()),
     "Workflow de release publica o APK": (
-        "tags:" in release and "softprops/action-gh-release" in release and "assembleDebug" in release),
+        "tags:" in release and "gh release upload" in release and "--clobber" in release
+        and "github.ref_type == 'tag'" in release and "assembleDebug" in release),
     "CSP permite consultar o GitHub": "https://api.github.com" in html,
     "Progresso do download na interface": "atualizacao-progresso" in app and "upd-status" in html,
     # ---- Cérebro local básico e humor ----
