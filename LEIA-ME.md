@@ -8,7 +8,7 @@ O Vision passou a lembrar o que foi analisado: perguntas como "ele é bom para c
 
 O projetista ganhou uma base de engenharia própria (`eletrica.js`): componentes com terminais, função, limites e símbolo IEC; tabelas de ampacidade, contator, disjuntor e térmico; dimensionamento com memória de cálculo e conferência independente. Nova topologia monta dois motores em sequência, com o segundo entrando X segundos depois do primeiro. A segunda análise (`conferirObjetivo`) verifica se o projeto montado atende ao pedido, e a netlist permite exportar e reimportar o diagrama em texto. O `.cad` do CADeSIMU continua não sendo gerado nem aberto, e não há simulação elétrica.
 
-O APK **1.42.7** (`jarvis-nova-1.42.7-10427.apk`) tem **81284329 bytes** e SHA-256 `99c57da5174028085a199d4e20d088956a465b427f9a6fb112bf8c1552f91fc7`, compilado no GitHub Actions e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.7 , com `eletrica.js` e `projetista.js` conferidos dentro do pacote. Ele **não foi instalado em aparelho físico**: toque, voz e desempenho no Poco X7 seguem sem validação física, e a assinatura é debug/CI.
+O APK **1.42.8** (`jarvis-nova-1.42.8-10428.apk`) tem **81290982 bytes** e SHA-256 `a80aa07d8dc006a3dc385b5b9c7590debf80b97e2d1a7a49fd0d174bb1f1bfbd`, compilado no GitHub Actions e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.8 , com `visao_contexto.js`, `eletrica.js` e `projetista.js` conferidos dentro do pacote. Ele **não foi instalado em aparelho físico**: toque, voz, câmera e desempenho seguem sem validação física, e a assinatura é debug/CI.
 
 ## 1.42.6 — Correção do pacote Android
 
