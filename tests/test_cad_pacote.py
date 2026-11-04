@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -49,7 +50,7 @@ check('Pacote abaixo de 64 MB', d['tamanho'] < 64 * 1024 * 1024)
 check('Validação do projeto aprovada', d['validacao']['ok'] is True, d['validacao'])
 check('Volume coerente com a geometria', d['volumes']['volume'] > 0)
 
-os.system('rm -rf ' + tmp)
+shutil.rmtree(tmp, ignore_errors=True)
 if falhas:
     print('\n%d verificação(ões) do pacote CAD falharam.' % len(falhas)); sys.exit(1)
 print('\nPacote CAD: ZIP, formatos, relatório e instruções validados por fora.')

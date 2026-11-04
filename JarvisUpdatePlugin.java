@@ -2,6 +2,8 @@ package com.jarvis.nova;
 
 import android.content.Intent;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
@@ -358,11 +360,54 @@ public class JarvisUpdatePlugin extends Plugin {
         }
     }
 
+    /** Primeira assinatura do pacote, ou null quando o Android não a expõe. */
+    private static byte[] primeiraAssinatura(PackageInfo pi) {
+        if (pi == null) return null;
+        if (Build.VERSION.SDK_INT >= 28) {
+            if (pi.signingInfo == null) return null;
+            Signature[] s = pi.signingInfo.hasMultipleSigners()
+                ? pi.signingInfo.getApkContentsSigners()
+                : pi.signingInfo.getSigningCertificateHistory();
+            return s == null || s.length == 0 ? null : s[0].toByteArray();
+        }
+        Signature[] s = pi.signatures;
+        return s == null || s.length == 0 ? null : s[0].toByteArray();
+    }
+
+    /**
+     * Confere se o APK baixado tem a mesma chave da versão instalada.
+     *
+     * Devolve true quando não é possível concluir: a checagem nunca deve impedir uma
+     * instalação legítima. Ela só recusa quando a troca de chave é certa — por exemplo,
+     * a migração de um APK assinado com a chave de debug para um APK de release, que o
+     * Android recusaria com um "app não instalado" sem explicar o motivo.
+     */
+    private boolean assinaturaCompativel(File apk) {
+        try {
+            PackageManager pm = getContext().getPackageManager();
+            int flags = Build.VERSION.SDK_INT >= 28
+                ? PackageManager.GET_SIGNING_CERTIFICATES
+                : PackageManager.GET_SIGNATURES;
+            PackageInfo instalado = pm.getPackageInfo(getContext().getPackageName(), flags);
+            PackageInfo novo = pm.getPackageArchiveInfo(apk.getAbsolutePath(), flags);
+            byte[] a = primeiraAssinatura(instalado);
+            byte[] b = primeiraAssinatura(novo);
+            if (a == null || b == null) return true;
+            return MessageDigest.isEqual(a, b);
+        } catch (Throwable t) {
+            return true;
+        }
+    }
+
     @PluginMethod
     public void instalarAtualizacao(PluginCall call) {
         File apk = arquivoAtualizacao();
         if (!apk.exists() || apk.length() < 1024) {
             call.reject("Nenhuma atualização baixada ainda. Use “atualizar Jarvis” ou toque em Baixar atualização.");
+            return;
+        }
+        if (!assinaturaCompativel(apk)) {
+            call.reject("Esta atualização foi assinada com uma chave diferente da versão instalada, então o Android não vai aceitá-la por cima. Desinstale o J.A.R.V.I.S. Nova uma vez (os dados locais serão apagados) e instale este APK de novo.");
             return;
         }
         try {

@@ -60,9 +60,10 @@ checks = {
     "Workflow copia o atualizador e fixa a assinatura": (
         "JarvisUpdatePlugin.java" in workflow and "ci/debug.keystore" in workflow
         and (ROOT / "ci" / "debug.keystore").exists()),
-    "Workflow de release publica o APK": (
+    "Workflow de release publica o APK assinado": (
         "tags:" in release and "gh release upload" in release and "--clobber" in release
-        and "github.ref_type == 'tag'" in release and "assembleDebug" in release),
+        and "github.ref_type == 'tag'" in release and "assembleRelease" in release
+        and "apksigner" in release),
     "CSP permite consultar o GitHub": "https://api.github.com" in html,
     "Progresso do download na interface": "atualizacao-progresso" in app and "upd-status" in html,
     # ---- Cérebro local básico e humor ----

@@ -59,3 +59,19 @@ O script oficial `npm run test:all` usa `python3` porque o CI roda em Ubuntu. No
 - [x] Execução local completa: `npm run test:all:win` terminou com código 0.
 
 O que continua sem teste local: compilação Android (exige JDK + Android SDK), microfone, câmera, NFC, biometria e segundo plano reais. Esses itens seguem dependendo do aparelho físico ou do GitHub Actions.
+
+## Assinatura de release — 2026-11-04
+
+O APK publicado deixou de usar a chave de debug (`ci/debug.keystore`, pública e com senha conhecida) e passou a exigir uma chave de release.
+
+- [x] `patch_gradle.py` cria `signingConfigs.release` a partir de `JARVIS_KEYSTORE_PATH`, `JARVIS_KEYSTORE_PASSWORD`, `JARVIS_KEY_ALIAS` e `JARVIS_KEY_PASSWORD`, ou de `android/app/keystore.properties` no build local.
+- [x] `release-apk.yml` compila `assembleRelease`, decodifica o keystore de `ANDROID_KEYSTORE_BASE64` e falha de propósito quando os segredos faltam.
+- [x] O workflow roda `apksigner verify --print-certs` e aborta se o certificado for `CN=Android Debug`.
+- [x] `JarvisUpdatePlugin` compara a assinatura do APK baixado com a instalada e explica a troca de chave antes de abrir o instalador (migração debug → release exige desinstalar uma vez).
+- [x] Regressão coberta por `tests/test_release_signing.py`, registrado na suíte.
+- [x] `tests/test_arquivos_sistema.py` e `tests/test_cad_pacote.py` limpam o temporário com `shutil.rmtree` em vez de `rm -rf` (que falhava no Windows).
+- [x] `npm run test:all:win` terminou com código 0 após as mudanças.
+
+Operação da chave (geração, segredos, backup e migração): `ASSINATURA-APK.md`.
+
+O que ainda depende de execução real: compilar `assembleRelease` com a chave configurada (GitHub Actions) e validar a instalação por cima no aparelho físico.

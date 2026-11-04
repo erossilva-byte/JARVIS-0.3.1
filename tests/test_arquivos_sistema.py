@@ -9,6 +9,7 @@ import csv
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -140,7 +141,7 @@ check('Temporário órfão antigo é removido', dados['extras']['limpeza']['remo
 check('Nenhum .tmp sobra depois das gravações', dados['extras']['temporariosRestantes'] == [],
       dados['extras']['temporariosRestantes'])
 
-os.system('rm -rf ' + tmp)
+shutil.rmtree(tmp, ignore_errors=True)
 if falhas:
     print('\n%d verificação(ões) do sistema de arquivos falharam.' % len(falhas))
     for f in falhas:

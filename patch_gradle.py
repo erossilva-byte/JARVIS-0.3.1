@@ -136,11 +136,52 @@ if "abiFilters" not in app_text:
 else:
     print(f"ABIs já fixadas: {app_gradle}")
 
-# Fixa a assinatura de debug no keystore do repositório.
-# Sem isso o CI gerava um keystore novo a cada build (o cp para ~/.android não era o
-# que o Gradle usava em todos os casos) e cada release saía com uma assinatura
-# diferente — o Android recusava a atualização por cima do app instalado.
-signing_block = """    signingConfigs {
+# ---------------------------------------------------------------------------
+# Assinatura do APK
+#
+# debug: keystore fixo do repositório. Sem isso o CI gerava um keystore novo a
+#        cada build e o Android recusava a atualização por cima do app instalado.
+# release: credenciais vêm do ambiente (CI) ou de android/app/keystore.properties
+#        (local, não versionado). Sem credenciais o release sai SEM assinatura e
+#        o workflow falha de propósito: publicar um APK assinado com a chave de
+#        debug é pior do que não publicar.
+# ---------------------------------------------------------------------------
+
+
+def _fim_bloco(texto, pos_chave):
+    """Índice da '}' que fecha o bloco aberto em pos_chave (ou -1)."""
+    nivel = 0
+    for i in range(pos_chave, len(texto)):
+        if texto[i] == "{":
+            nivel += 1
+        elif texto[i] == "}":
+            nivel -= 1
+            if nivel == 0:
+                return i
+    return -1
+
+
+assinatura_topo = """// Assinatura de release: ambiente (CI) ou keystore.properties local (não versionado).
+def jarvisAssinatura = [:]
+def jarvisProps = file('keystore.properties')
+if (jarvisProps.exists()) {
+    def p = new Properties()
+    jarvisProps.withInputStream { p.load(it) }
+    jarvisAssinatura.storeFile = p.getProperty('storeFile')
+    jarvisAssinatura.storePassword = p.getProperty('storePassword')
+    jarvisAssinatura.keyAlias = p.getProperty('keyAlias')
+    jarvisAssinatura.keyPassword = p.getProperty('keyPassword')
+}
+[['JARVIS_KEYSTORE_PATH', 'storeFile'], ['JARVIS_KEYSTORE_PASSWORD', 'storePassword'],
+ ['JARVIS_KEY_ALIAS', 'keyAlias'], ['JARVIS_KEY_PASSWORD', 'keyPassword']].each { par ->
+    def valor = System.getenv(par[0])
+    if (valor) jarvisAssinatura[par[1]] = valor
+}
+def jarvisTemAssinatura = (jarvisAssinatura.storeFile && file(jarvisAssinatura.storeFile).exists() &&
+    jarvisAssinatura.storePassword && jarvisAssinatura.keyAlias && jarvisAssinatura.keyPassword)
+"""
+
+assinatura_bloco = """    signingConfigs {
         debug {
             def ciKey = file('../../ci/debug.keystore')
             if (ciKey.exists()) {
@@ -150,16 +191,78 @@ signing_block = """    signingConfigs {
                 keyPassword 'android'
             }
         }
+        if (jarvisTemAssinatura) {
+            release {
+                storeFile file(jarvisAssinatura.storeFile)
+                storePassword jarvisAssinatura.storePassword
+                keyAlias jarvisAssinatura.keyAlias
+                keyPassword jarvisAssinatura.keyPassword
+            }
+        }
     }
 """
-if "ci/debug.keystore" not in app_text:
+
+if "jarvisTemAssinatura" not in app_text:
+    ancora = re.search(r"(?m)^apply plugin:.*$", app_text)
+    pos = ancora.end() if ancora else 0
+    app_text = app_text[:pos] + "\n\n" + assinatura_topo + app_text[pos:]
+    print(f"Variáveis de assinatura de release adicionadas: {app_gradle}")
+else:
+    print(f"Variáveis de assinatura de release já presentes: {app_gradle}")
+
+existente = re.search(r"(?m)^[ \t]*signingConfigs\s*\{", app_text)
+if existente:
+    fim = _fim_bloco(app_text, existente.end() - 1)
+    if fim < 0:
+        raise SystemExit(f"Bloco signingConfigs incompleto em {app_gradle}")
+    app_text = app_text[:existente.start()] + assinatura_bloco + app_text[fim + 1:]
+    print(f"Bloco signingConfigs normalizado (debug + release): {app_gradle}")
+else:
     android_block = re.search(r"(?m)^android\s*\{", app_text)
     if not android_block:
         raise SystemExit(f"Bloco android {{ não encontrado em {app_gradle}")
-    app_text = app_text[:android_block.end()] + "\n" + signing_block + app_text[android_block.end():]
-    print(f"Assinatura de debug fixada em ci/debug.keystore: {app_gradle}")
+    app_text = app_text[:android_block.end()] + "\n" + assinatura_bloco + app_text[android_block.end():]
+    print(f"Assinatura de debug fixada e release configurado: {app_gradle}")
+
+# Liga o release à chave de assinatura apenas quando as credenciais existirem.
+build_types = re.search(r"\bbuildTypes\s*\{", app_text)
+if build_types:
+    fim_bt = _fim_bloco(app_text, build_types.end() - 1)
+    if fim_bt < 0:
+        raise SystemExit(f"Bloco buildTypes incompleto em {app_gradle}")
+    trecho = app_text[build_types.start():fim_bt + 1]
+    release_type = re.search(r"\brelease\s*\{", trecho)
+    if release_type and "signingConfig signingConfigs.release" not in trecho:
+        fim_rel = _fim_bloco(trecho, release_type.end() - 1)
+        if fim_rel < 0:
+            raise SystemExit(f"Bloco release incompleto em {app_gradle}")
+        linha = trecho.rfind("\n", 0, fim_rel) + 1
+        trecho = (trecho[:linha]
+                  + "            if (jarvisTemAssinatura) {\n"
+                  + "                signingConfig signingConfigs.release\n"
+                  + "            }\n"
+                  + trecho[linha:])
+        app_text = app_text[:build_types.start()] + trecho + app_text[fim_bt + 1:]
+        print(f"Release ligado à chave de assinatura quando configurada: {app_gradle}")
 else:
-    print(f"Assinatura de debug já fixada: {app_gradle}")
+    # Templates mais antigos do Capacitor podem não trazer buildTypes; cria um release
+    # mínimo para que a chave configurada realmente seja usada.
+    android_block = re.search(r"(?m)^android\s*\{", app_text)
+    if not android_block:
+        raise SystemExit(f"Bloco android {{ não encontrado em {app_gradle}")
+    fim_android = _fim_bloco(app_text, android_block.end() - 1)
+    if fim_android < 0:
+        raise SystemExit(f"Bloco android incompleto em {app_gradle}")
+    bloco_release = """    buildTypes {
+        release {
+            if (jarvisTemAssinatura) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+"""
+    app_text = app_text[:fim_android] + bloco_release + app_text[fim_android:]
+    print(f"buildTypes criado com release assinável: {app_gradle}")
 
 # Persist both the SDK-floor adjustment and dependency changes on every run.
 app_gradle.write_text(app_text, encoding="utf-8")
