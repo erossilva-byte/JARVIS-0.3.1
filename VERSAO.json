@@ -5,7 +5,7 @@
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-11-03",
-  "status": "1.42.7: base técnica elétrica, sequência de dois motores, segunda análise e netlist; build CI pendente.",
+  "status": "1.42.7 publicada: base técnica elétrica, sequência de dois motores, segunda análise e netlist; APK verificado por dentro.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
   "notas": "Revisão 1.42.7 (2026-11-03). Especialização elétrica: nova base técnica (eletrica.js) com biblioteca de componentes (terminais, função, limites, símbolo IEC), tabelas de referência de ampacidade, contatores, disjuntores e faixas de térmico, dimensionamento com memória de cálculo (In, contator AC-3, disjuntor e curva, ajuste e faixa do térmico, cabo por ampacidade e queda de tensão) e conferência independente do que o projeto declara. Nova topologia para dois motores em sequência, com o segundo entrando X segundos depois do primeiro por temporizador. Segunda análise (conferirObjetivo) confronta a estrutura montada com o que foi pedido, sem reutilizar a verificação estrutural. Netlist v1 permite exportar e reimportar o projeto em texto, preservando pinos. O projetista segue respondendo no chat e na voz, agora também para dimensionamento, consulta de componente e segunda análise. Limites declarados: o `.cad` do CADeSIMU não é gerado nem aberto, não há simulação elétrica, e reconstrução a partir de foto depende de visão por IA (não configurada neste build). Também seguem a animação do núcleo em plasma, o raciocínio em etapas, a personalidade adaptativa e a verificação independente. Seguem também as dez áreas clicáveis e a abertura sem flash.",
   "arquivos_documentacao": [
@@ -15,8 +15,13 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "pendente",
-    "observacao": "APK 1.42.7 em compilação no GitHub Actions."
+    "resultado": "success",
+    "sha256": "99c57da5174028085a199d4e20d088956a465b427f9a6fb112bf8c1552f91fc7",
+    "bytes": 81284329,
+    "arquivo": "jarvis-nova-1.42.7-10427.apk",
+    "data": "2026-11-04",
+    "ambiente": "GitHub Actions release-apk.yml (Ubuntu, JDK 21, Android SDK 35, assembleDebug), disparo manual na tag v1.42.7",
+    "observacao": "APK 1.42.7 com eletrica.js e projetista.js conferidos dentro do pacote; assinatura debug/CI; sem instalação em aparelho físico."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

@@ -4,6 +4,8 @@
 
 O projetista ganhou uma base de engenharia própria (`eletrica.js`): componentes com terminais, função, limites e símbolo IEC; tabelas de ampacidade, contator, disjuntor e térmico; dimensionamento com memória de cálculo e conferência independente. Nova topologia monta dois motores em sequência, com o segundo entrando X segundos depois do primeiro. A segunda análise (`conferirObjetivo`) verifica se o projeto montado atende ao pedido, e a netlist permite exportar e reimportar o diagrama em texto. O `.cad` do CADeSIMU continua não sendo gerado nem aberto, e não há simulação elétrica.
 
+O APK **1.42.7** (`jarvis-nova-1.42.7-10427.apk`) tem **81284329 bytes** e SHA-256 `99c57da5174028085a199d4e20d088956a465b427f9a6fb112bf8c1552f91fc7`, compilado no GitHub Actions e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.7 , com `eletrica.js` e `projetista.js` conferidos dentro do pacote. Ele **não foi instalado em aparelho físico**: toque, voz e desempenho no Poco X7 seguem sem validação física, e a assinatura é debug/CI.
+
 ## 1.42.6 — Correção do pacote Android
 
 O APK **1.42.5** foi publicado sem o `projetista.js`: o painel do projetista abria no Android, mas o módulo não existia no pacote e o recurso não funcionava. A 1.42.6 corrige o workflow de build e adiciona `tests/test_empacotamento.py`, que falha se qualquer script do `index.html` ficar fora do pacote Android ou da lista do Windows. A mesma verificação encontrou `pc.js` e `cad_projeto.js` fora do pacote Android desde versões anteriores (painel PC e reparo/exportação do CAD sem módulo no aparelho); os dois foram incluídos. Use esta versão no lugar da 1.42.5.
