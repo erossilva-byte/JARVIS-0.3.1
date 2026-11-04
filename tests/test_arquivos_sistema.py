@@ -19,7 +19,7 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 tmp = tempfile.mkdtemp(prefix='jv-arq-audit-')
 proc = subprocess.run(
     ['node', os.path.join(RAIZ, 'tests', 'gerar_arquivos_auditoria.js'), tmp],
-    capture_output=True, text=True
+    capture_output=True, text=True, encoding='utf-8'
 )
 if proc.returncode != 0:
     print(proc.stdout)
@@ -41,7 +41,15 @@ def check(nome, condicao, detalhe=''):
 
 
 def caminho(rel):
-    return os.path.join(home, rel.replace('~/', '', 1))
+    # O motor devolve o caminho relativo no separador da plataforma: "~/Jarvis/x"
+    # no Linux/macOS e "~\\Jarvis\\x" no Windows. O "~" é sempre o primeiro
+    # caractere, então ele sai antes de juntar com a raiz.
+    rel = str(rel)
+    if rel == '~':
+        return home
+    if rel.startswith('~'):
+        rel = rel[1:].lstrip('/\\')
+    return os.path.join(home, rel)
 
 
 arquivos = {a['nome']: a for a in dados['arquivos']}

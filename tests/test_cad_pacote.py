@@ -9,7 +9,7 @@ import zipfile
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 tmp = tempfile.mkdtemp(prefix='jv-pacote-cad-')
-proc = subprocess.run(['node', os.path.join(RAIZ, 'tests', 'gerar_pacote_cad.js'), tmp], capture_output=True, text=True)
+proc = subprocess.run(['node', os.path.join(RAIZ, 'tests', 'gerar_pacote_cad.js'), tmp], capture_output=True, text=True, encoding='utf-8')
 if proc.returncode != 0:
     print(proc.stdout); print(proc.stderr); sys.exit('o gerador do pacote falhou')
 d = json.loads(proc.stdout)
