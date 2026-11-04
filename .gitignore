@@ -13,3 +13,7 @@ www/
 /*.apk.sha256
 /*.sha256
 /*-fonte.zip
+
+# Chaves de assinatura de release: nunca versionar
+*.jks
+keystore.properties

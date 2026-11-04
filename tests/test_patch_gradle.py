@@ -28,6 +28,15 @@ with tempfile.TemporaryDirectory(prefix="jarvis-gradle-patch-") as tmp:
     # gerava um keystore novo a cada build e cada release saía com assinatura diferente.
     assert result.count("ci/debug.keystore") == 1, "Assinatura de debug não está fixada (ou está duplicada)"
     assert "keyAlias 'androiddebugkey'" in result and "storePassword 'android'" in result, "Credenciais do keystore de CI ausentes"
+    # A assinatura de release vem do ambiente/keystore.properties; sem ela o APK
+    # publicado sairia assinado com a chave de debug (que qualquer um possui).
+    assert result.count("signingConfigs {") == 1, "Bloco signingConfigs duplicado"
+    assert all(t in result for t in (
+        "JARVIS_KEYSTORE_PATH", "JARVIS_KEYSTORE_PASSWORD", "JARVIS_KEY_ALIAS", "JARVIS_KEY_PASSWORD")), \
+        "Assinatura de release não lê as credenciais do ambiente"
+    assert "keystore.properties" in result, "Assinatura local não aceita keystore.properties"
+    assert "signingConfig signingConfigs.release" in result, "Build de release não usa a chave de release"
+    assert "if (jarvisTemAssinatura)" in result, "Release não condiciona a assinatura às credenciais"
 
 with tempfile.TemporaryDirectory(prefix="jarvis-gradle-kts-") as tmp:
     android = Path(tmp) / "android"
@@ -41,4 +50,30 @@ with tempfile.TemporaryDirectory(prefix="jarvis-gradle-kts-") as tmp:
     assert "minSdkVersion 26" in gradle.read_text(encoding="utf-8")
     assert "jitpack.io" not in settings.read_text(encoding="utf-8")
 
-print("Patch Gradle validado: API mínima 26, MediaPipe/IA local idempotente, sem SDK de palavra de ativação de terceiro e sem dependência openWakeWord não resolvida.")
+with tempfile.TemporaryDirectory(prefix="jarvis-gradle-buildtypes-") as tmp:
+    android = Path(tmp) / "android"
+    app = android / "app"
+    app.mkdir(parents=True)
+    gradle = app / "build.gradle"
+    settings = android / "settings.gradle"
+    gradle.write_text('''android {
+    defaultConfig {
+        minSdkVersion 24
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}
+dependencies {}
+''', encoding="utf-8")
+    settings.write_text("dependencyResolutionManagement { repositories { google() } }\n", encoding="utf-8")
+    for _ in range(2):
+        subprocess.run([sys.executable, str(PATCH), str(gradle)], check=True, capture_output=True, text=True)
+    texto = gradle.read_text(encoding="utf-8")
+    assert texto.count("buildTypes {") == 1, "buildTypes duplicado"
+    assert texto.count("signingConfig signingConfigs.release") == 1, "Assinatura de release duplicada"
+    assert texto.count("if (jarvisTemAssinatura)") == 2, "Assinatura de release não ligada ao buildType release"
+
+print("Patch Gradle validado: API mínima 26, MediaPipe/IA local idempotente, sem SDK de palavra de ativação de terceiro, sem dependência openWakeWord não resolvida e assinatura de release separada da de debug.")
