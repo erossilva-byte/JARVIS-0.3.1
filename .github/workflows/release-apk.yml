@@ -1,6 +1,9 @@
 name: Publicar release do J.A.R.V.I.S. Nova
-# Versão publicada: 1.42.9 — confira VERSAO.json antes de criar a tag.
+# Versão publicada: 1.43.0 — confira VERSAO.json antes de criar a tag.
 # Notas publicadas: o passo "Publicar release com o APK" gera o texto a partir de VERSAO.json.
+# Novidades da 1.43.0: APK assinado com chave privada de release (a 1.42.9 usava a chave de
+# debug pública). Quem tem a 1.42.9 precisa desinstalar uma vez; o atualizador explica a troca
+# de chave. O workflow falha sem os segredos de assinatura e confere o certificado com apksigner.
 # Novidades da 1.42.9: tela de bloqueio com biometria forte do Android, leitura NFC real,
 # modos combinados (biometria/NFC/PIN), central completa em Ajustes ▸ Segurança, histórico sem
 # segredos e PIN em PBKDF2 com migração do hash antigo. NFC é conveniência: UID pode ser clonado.

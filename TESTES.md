@@ -75,3 +75,11 @@ O APK publicado deixou de usar a chave de debug (`ci/debug.keystore`, pública e
 Operação da chave (geração, segredos, backup e migração): `ASSINATURA-APK.md`.
 
 O que ainda depende de execução real: compilar `assembleRelease` com a chave configurada (GitHub Actions) e validar a instalação por cima no aparelho físico.
+
+## Preparação da 1.43.0 — 2026-11-04
+
+- [x] Versão 1.43.0 / versionCode 10430 em `VERSAO.json`, `package.json`, `package-lock.json`, `app.js`, `index.html` e nos dois workflows.
+- [x] `CHANGELOG.md` e `LEIA-ME.md` registram a 1.43.0 e a migração de assinatura.
+- [x] `VERSAO.json` marca o build como `pendente`; a tag `v1.43.0` publica o primeiro APK assinado com a chave de release.
+- [ ] Compilar a tag `v1.43.0` e conferir no log o SHA-256 e o certificado `CN=J.A.R.V.I.S. Nova`.
+- [ ] Desinstalar a 1.42.9 de debug no aparelho e instalar a 1.43.0 por cima do sistema (uma vez).
