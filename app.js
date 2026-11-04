@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.42.6';
+const VERSAO_APP = '1.42.7';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -3334,6 +3334,28 @@ async function responderProjetista(texto) {
   const api = window.JarvisProjetistaUI;
   const pedido = pedidoProjetista(texto);
   try { abrirPainel('#painel-arquivos'); } catch (e) { /* painel já aberto ou ausente */ }
+
+  const EB = window.EletricaBase;
+  if (EB && /(dimensione|dimensionar|dimensionamento|qual o cabo|bitola|qual disjuntor)/.test(n)) {
+    const atual = api && api.temProjeto() ? api.estado() : null;
+    const spec = atual && atual.spec ? atual.spec : P.interpretar(pedido || texto).spec || {};
+    const d = EB.dimensionar(spec, {});
+    if (!d.ok) return String(d.erro || 'Potência não informada para dimensionar.') + ' ' + LIMITE_PROJETISTA;
+    return 'Dimensionamento: In ' + d.correnteA + ' A · contator ' + d.contatorA + ' A · disjuntor ' + d.disjuntorA +
+      ' A curva ' + d.curva + ' · térmico ' + d.termicoFaixa.min + '–' + d.termicoFaixa.max + ' A (ajuste ' + d.termicoA +
+      ' A) · cabo ' + d.caboMm2 + ' mm²' + (d.quedaV != null ? ' com ' + d.quedaV + '% de queda' : '') + '. ' + LIMITE_PROJETISTA;
+  }
+  if (EB && /(consult|o que (e|eh)|explica|para que serve|funcao do)/.test(n)) {
+    const termo = String(pedido || '').replace(/^(consult(e|ar)?|o que (e|eh)|explica(r)?|para que serve)\s*/i, '').trim();
+    const c = EB.consultar(termo);
+    if (!c.ok) return c.erro;
+    const e = c.entradas[0];
+    return e ? (e.nome + ': ' + e.funcao + ' Terminais: ' + Object.keys(e.terminais).join(', ') + '. Limite: ' + e.limites + ' ' + LIMITE_PROJETISTA) : 'Consultei as tabelas; veja a saída do projetista. ' + LIMITE_PROJETISTA;
+  }
+  if (api && api.temProjeto() && /(atende|objetivo|confere|segunda analise|revis)/.test(n)) {
+    const c = P.conferirObjetivo(api.estado());
+    return 'Segunda análise: ' + (c.ok ? 'o projeto atende ao objetivo (' + c.atendidos.length + ' itens)' : 'faltam ' + c.faltas.length + ' item(ns): ' + c.faltas.join('; ')) + '. ' + LIMITE_PROJETISTA;
+  }
 
   if (/relatorio/.test(n) && api && api.temProjeto()) {
     api.relatorio();

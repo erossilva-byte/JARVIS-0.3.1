@@ -1,4 +1,8 @@
-# J.A.R.V.I.S. Nova 1.42.6
+# J.A.R.V.I.S. Nova 1.42.7
+
+## 1.42.7 — Base técnica elétrica e sequência de motores
+
+O projetista ganhou uma base de engenharia própria (`eletrica.js`): componentes com terminais, função, limites e símbolo IEC; tabelas de ampacidade, contator, disjuntor e térmico; dimensionamento com memória de cálculo e conferência independente. Nova topologia monta dois motores em sequência, com o segundo entrando X segundos depois do primeiro. A segunda análise (`conferirObjetivo`) verifica se o projeto montado atende ao pedido, e a netlist permite exportar e reimportar o diagrama em texto. O `.cad` do CADeSIMU continua não sendo gerado nem aberto, e não há simulação elétrica.
 
 ## 1.42.6 — Correção do pacote Android
 

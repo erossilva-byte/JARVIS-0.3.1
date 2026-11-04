@@ -1,3 +1,14 @@
+## 1.42.7 — Base técnica elétrica, sequência de motores e segunda análise
+
+- **Base técnica** (`eletrica.js`): 12 componentes com terminais, função, limites e símbolo IEC 60617; tabelas de ampacidade (cobre/PVC, método B1), contatores AC-3, disjuntores e faixas de térmico; `consultar(termo)` com fonte declarada.
+- **Dimensionamento com memória de cálculo**: In por fórmula declarada (η 0,90 / fp 0,80), contator, disjuntor e curva, ajuste e faixa do térmico, cabo por ampacidade e queda ≤ 4% em 30 m.
+- **Verificação independente**: `conferirDimensionamento` reprova contator, disjuntor, térmico ou cabo menores que o necessário e alimenta `validar()` com o código `dimensionamento_*`.
+- **Sequência de dois motores**: nova topologia em que M2 entra X segundos depois de M1, com contator, disjuntor e térmico por motor e temporizador comandado por K1.
+- **Segunda análise**: `conferirObjetivo` confronta a estrutura montada com o pedido (dois motores, tempo do temporizador, intertravamento, proteção por motor, CLP com rungs) sem reutilizar `validar()`.
+- **Netlist v1**: `exportarNetlist`/`importarDiagramaTexto` levam o projeto para texto e trazem de volta com os pinos preservados.
+- **Chat e voz**: novos pedidos — dimensionamento, consulta de componente e "o projeto atende ao objetivo?".
+- **Limites**: o `.cad` nativo do CADeSIMU não é gerado nem aberto; não há simulação elétrica; foto de diagrama depende de visão por IA, não configurada neste build.
+
 ## 1.42.6 — Correção do pacote Android do projetista
 
 - **Crítico**: o release 1.42.5 saiu sem `projetista.js` no APK (o workflow copiava uma lista fixa de arquivos para `www/`). No Android o painel do projetista abria sem o módulo e o chat respondia "não carregou". Corrigido no workflow.

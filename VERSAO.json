@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.42.6",
-  "versionCode": 10426,
+  "version": "1.42.7",
+  "versionCode": 10427,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-11-03",
-  "status": "1.42.6 publicada: pacote Android corrigido (projetista, PC e CAD presentes) e testado por tests/test_empacotamento.py.",
+  "status": "1.42.7: base técnica elétrica, sequência de dois motores, segunda análise e netlist; build CI pendente.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.42.6 (2026-11-03). Correção crítica de empacotamento: o release 1.42.5 foi publicado sem o projetista.js dentro do APK, porque o workflow copia uma lista fixa de arquivos para www/. O painel do projetista abria sem o módulo e o chat respondia que ele não havia carregado. O workflow agora copia o módulo e o teste tests/test_empacotamento.py confere que todo script do index.html está no pacote Android e na lista do Windows. Seguem as capacidades da 1.42.5: projetista editável com histórico de versões, restauração, comparação, símbolos IEC, edição de pinos com desfazer e uso pelo chat e pela voz. O núcleo verifica o aparelho, o provedor e o resultado antes de falar; seguem o raciocínio em etapas e a personalidade adaptativa, o núcleo 3D com plasma e animação holográfica, as dez áreas clicáveis, a abertura sem flash, a voz masculina PT-BR, o humor, o Obsidian, o bloqueio opcional e os circuitos no .cad. Simulação elétrica e abertura no CADeSIMU continuam não executadas.",
+  "notas": "Revisão 1.42.7 (2026-11-03). Especialização elétrica: nova base técnica (eletrica.js) com biblioteca de componentes (terminais, função, limites, símbolo IEC), tabelas de referência de ampacidade, contatores, disjuntores e faixas de térmico, dimensionamento com memória de cálculo (In, contator AC-3, disjuntor e curva, ajuste e faixa do térmico, cabo por ampacidade e queda de tensão) e conferência independente do que o projeto declara. Nova topologia para dois motores em sequência, com o segundo entrando X segundos depois do primeiro por temporizador. Segunda análise (conferirObjetivo) confronta a estrutura montada com o que foi pedido, sem reutilizar a verificação estrutural. Netlist v1 permite exportar e reimportar o projeto em texto, preservando pinos. O projetista segue respondendo no chat e na voz, agora também para dimensionamento, consulta de componente e segunda análise. Limites declarados: o `.cad` do CADeSIMU não é gerado nem aberto, não há simulação elétrica, e reconstrução a partir de foto depende de visão por IA (não configurada neste build).",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -15,13 +15,8 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "success",
-    "sha256": "e0eae803b9d73de2207cfab52dd398bd5ce7eca19fb189eb67dd3a3f3c0b014d",
-    "bytes": 81273094,
-    "arquivo": "jarvis-nova-1.42.6-10426.apk",
-    "data": "2026-11-03",
-    "ambiente": "GitHub Actions release-apk.yml (Ubuntu, JDK 21, Android SDK 35, assembleDebug)",
-    "observacao": "APK 1.42.6 com projetista.js, pc.js e cad_projeto.js conferidos dentro do pacote; assinatura debug/CI; sem instalação em aparelho físico."
+    "resultado": "pendente",
+    "observacao": "APK 1.42.7 em compilação no GitHub Actions."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

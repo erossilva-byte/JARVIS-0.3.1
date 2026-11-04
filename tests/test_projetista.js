@@ -4,6 +4,7 @@
 'use strict';
 const assert = require('assert');
 const path = require('path');
+require(path.join(__dirname, '..', 'eletrica.js'));
 const P = require(path.join(__dirname, '..', 'projetista.js'));
 P.usarStore({ getItem: () => null, setItem: () => true });
 
@@ -194,3 +195,37 @@ assert.ok(em24.ok && em24.projeto.spec.tensaoComando === 24, ok('troca de tensã
 assert.ok(P.modificar(modDir, 'fazer café').ok === false, ok('pedido de modificação desconhecido é recusado'));
 
 console.log('OK: projetista elétrico — ' + checks + ' verificações (interpretação, 6 topologias, verificação, correção e arquivo)');
+
+// Sequência de dois motores: o exemplo da missão, montado e conferido por regra independente
+const pedidoSeq = 'Crie um circuito para controlar dois motores, onde o segundo só possa ligar depois que o primeiro estiver funcionando por cinco segundos.';
+const iSeq = P.interpretar(pedidoSeq);
+assert.ok(iSeq.ok && iSeq.spec.tipo === 'sequencia', 'tipo sequência: ' + (iSeq.spec && iSeq.spec.tipo));
+assert.strictEqual(iSeq.spec.temporizador, 5, 'tempo lido da sequência');
+const rSeq = P.projetar(pedidoSeq);
+assert.ok(rSeq.ok, 'projetar sequência');
+const vSeq = P.validar(rSeq.projeto);
+assert.ok(vSeq.ok, 'sequência deveria passar: ' + vSeq.erros.map((e) => e.codigo + ' ' + e.mensagem).join(' | '));
+assert.strictEqual(rSeq.projeto.componentes.filter((c) => /^motor/.test(c.tipo)).length, 2, 'dois motores');
+assert.ok(rSeq.projeto.componentes.some((c) => c.tipo === 'temporizador' && Number(c.tempo) === 5), 'temporizador de 5 s');
+const objSeq = P.conferirObjetivo(rSeq.projeto);
+assert.ok(objSeq.ok, 'segunda análise aprova a sequência: ' + objSeq.faltas.join('; '));
+checks += 3;
+
+// Segunda análise pega a remoção do temporizador (o que validar() estrutural não veria sozinho)
+const semTimer = JSON.parse(JSON.stringify(rSeq.projeto));
+semTimer.componentes = semTimer.componentes.filter((c) => c.tipo !== 'temporizador');
+assert.ok(!P.conferirObjetivo(semTimer).ok, 'segunda análise detecta falta do temporizador');
+checks++;
+
+// NETLIST: exporta, reimporta e preserva os pinos
+const net = P.exportarNetlist(projetos.direta);
+const imp = P.importarDiagramaTexto(net);
+assert.ok(imp.ok, 'netlist reabre: ' + imp.erro);
+assert.strictEqual(imp.projeto.componentes.length, projetos.direta.componentes.length, 'componentes da netlist');
+const k1orig = projetos.direta.componentes.find((c) => c.id === 'K1');
+const k1net = imp.projeto.componentes.find((c) => c.id === 'K1');
+assert.deepStrictEqual(k1net.pinos, k1orig.pinos, 'pinos preservados na netlist');
+assert.strictEqual(P.importarDiagramaTexto('lixo').ok, false, 'netlist inválida recusada');
+checks += 3;
+
+console.log('OK: sequência de dois motores, segunda análise e netlist — ' + checks + ' verificações no total');

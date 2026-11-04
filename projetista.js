@@ -125,6 +125,8 @@
     if (/revers/.test(t)) tipo = 'reversao';
     else if (/estrela/.test(t) && /tri/.test(t)) tipo = 'estrela_triangulo';
     else if (/compensadora/.test(t)) tipo = 'compensadora';
+    else if ((/dois motores|segundo motor|motor\s*2\b|acionamentos sequenciais/.test(t))
+      && (/depois|ap[oó]s|temporiz|segundos?|s\b/.test(t))) tipo = 'sequencia';
     else if (/partida\s+direta/.test(t)) tipo = 'partida_direta';
     else if (/\bclp\b|\bplc\b/.test(t) || /n[ií]vel/.test(t)) tipo = 'clp';
     else if (/ilumina|l[aâ]mpada|lumin[aá]ria|poste/.test(t)) tipo = 'iluminacao';
@@ -160,6 +162,10 @@
       temporizador = 6;
       decisoes.push('Sem tempo de comutação informado: 6 s entre tap e rede.');
     }
+    if (tipo === 'sequencia' && temporizador == null) {
+      temporizador = 5;
+      decisoes.push('Sem tempo informado: o segundo motor entra 5 s depois do primeiro.');
+    }
     if (tipo === 'clp') {
       tensaoComando = 24;
       decisoes.push('CLP com 24 Vcc, 3 entradas digitais e 1 saída para a bomba.');
@@ -170,7 +176,8 @@
     var spec = {
       tipo: tipo, cv: cv, trifasico: trifasico, tensaoPotencia: tensaoPotencia, tensaoComando: tensaoComando,
       emergencia: emergencia, sinalizacao: sinalizacao, temporizador: temporizador,
-      clp: tipo === 'clp', descricao: limpar(bruto, 400)
+      clp: tipo === 'clp', motores: (tipo === 'sequencia' || /dois motores|segundo motor/.test(t)) ? 2 : 1,
+      descricao: limpar(bruto, 400)
     };
     return { ok: true, spec: spec, pendencias: pendencias, decisoes: decisoes };
   }
@@ -203,7 +210,20 @@
     };
   }
 
+  function baseEletrica() {
+    try { return (typeof window !== 'undefined' && window.EletricaBase) || null; } catch (e) { return null; }
+  }
+
   function dimensionar(spec) {
+    var B = baseEletrica();
+    if (B && B.dimensionar) {
+      var d = B.dimensionar(spec || {});
+      if (d && d.ok !== false && d.correnteA) return d;
+    }
+    return dimensionarInterno(spec);
+  }
+
+  function dimensionarInterno(spec) {
     if (!spec.cv) return {};
     var potencia = spec.cv * 736;
     var tensao = spec.trifasico ? spec.tensaoPotencia : spec.tensaoPotencia;
@@ -331,6 +351,39 @@
       'Ao fim do tempo, KT abre o caminho de KY e, pelo NF de KY, energiza KD: o motor passa a triângulo.',
       'S2 ou S0 desliga tudo; KY e KD não podem fechar juntos (NF cruzado).'
     ];
+    return definirRedes(p);
+  }
+
+  function sequenciaMotores(pedido, spec) {
+    var p = novoProjeto(pedido, spec);
+    var add = montador(p);
+    var cmd = comandoBase(p, add, spec);
+    var tempo = spec.temporizador || 5;
+    p.dimensionamento = dimensionar(spec);
+    p.titulo = 'Dois motores em sequência: M2 entra ' + tempo + ' s depois de M1';
+    add('Q1', 'disjuntor3', 'Proteção geral tripolar', { 1: 'L1', 2: 'R1', 3: 'L2', 4: 'R2', 5: 'L3', 6: 'R3' }, { papel: 'protecao' });
+    add('Q2', 'disjuntor3', 'Disjuntor tripolar do motor 2', { 1: 'R1', 2: 'R4', 3: 'R2', 4: 'R5', 5: 'R3', 6: 'R6' }, { papel: 'protecao' });
+    add('K1', 'contator', 'Contator do motor 1', { 1: 'R1', 2: 'S1', 3: 'R2', 4: 'S2', 5: 'R3', 6: 'S3', A1: 'K1A', A2: cmd.retorno, 13: 'CI', 14: 'K1A' }, { papel: 'principal', tensao: spec.tensaoComando });
+    add('F2', 'releTermico', 'Relé térmico do motor 1', { 1: 'S1', 2: 'T1', 3: 'S2', 4: 'T2', 5: 'S3', 6: 'T3' }, { papel: 'protecao' });
+    add('M1', 'motor3', 'Motor 1 — ' + (spec.cv || '?') + ' CV', { U: 'T1', V: 'T2', W: 'T3', PE: 'PE' }, { papel: 'carga' });
+    add('K2', 'contator', 'Contator do motor 2', { 1: 'R4', 2: 'S4', 3: 'R5', 4: 'S5', 5: 'R6', 6: 'S6', A1: 'KT2', A2: cmd.retorno, 13: 'K2S', 14: 'KT2' }, { papel: 'secundario', tensao: spec.tensaoComando });
+    add('F3', 'releTermico', 'Relé térmico do motor 2', { 1: 'S4', 2: 'T4', 3: 'S5', 4: 'T5', 5: 'S6', 6: 'T6' }, { papel: 'protecao' });
+    add('M2', 'motor3', 'Motor 2 — ' + (spec.cv || '?') + ' CV', { U: 'T4', V: 'T5', W: 'T6', PE: 'PE' }, { papel: 'carga' });
+    add('KT', 'temporizador', 'Temporizador do motor 2 (' + tempo + ' s)', { A1: 'K1A', A2: cmd.retorno, 15: 'K1A', 16: 'KT2' }, { papel: 'temporizador', tensao: spec.tensaoComando, tempo: tempo });
+    if (spec.emergencia) add('S0', 'botoeira', 'Botoeira de emergência (NF)', { 1: cmd.fase, 2: 'SL' }, { papel: 'emergencia' });
+    add('S2', 'botoeira', 'Botoeira desliga (NF)', { 1: spec.emergencia ? 'SL' : cmd.fase, 2: 'CI' }, { papel: 'desliga' });
+    add('S1', 'botoeira', 'Botoeira liga (NA)', { 1: 'CI', 2: 'K1A' }, { papel: 'liga' });
+    if (spec.sinalizacao) {
+      add('H1', 'sinaleiro', 'Sinaleiro: motor 1 ligado', { 1: 'K1A', 2: cmd.retorno }, { papel: 'sinalizacao' });
+      add('H2', 'sinaleiro', 'Sinaleiro: motor 2 ligado', { 1: 'K2S', 2: cmd.retorno }, { papel: 'sinalizacao' });
+    }
+    p.sequencia = [
+      'S1 energiza K1; o selo 13/14 mantém o motor 1 ligado depois de soltar o botão.',
+      'Com K1 fechado, o temporizador KT conta ' + tempo + ' s; o contato 15/16 só fecha no fim do tempo.',
+      'Ao fim do tempo, KT energiza K2: o motor 2 parte com o motor 1 já em regime, como pedido.',
+      'S2 ou S0 desliga os dois motores; cada motor tem disjuntor, térmico e contator próprios.'
+    ];
+    p.avisos.push('A partida do motor 2 depende de K1 e do temporizador; se K1 cair, KT zera e o motor 2 para.');
     return definirRedes(p);
   }
 
@@ -464,6 +517,7 @@
       case 'reversao': p = reversao(pedido, spec); break;
       case 'estrela_triangulo': p = estrelaTriangulo(pedido, spec); break;
       case 'compensadora': p = compensadora(pedido, spec); break;
+      case 'sequencia': p = sequenciaMotores(pedido, spec); break;
       case 'iluminacao': p = iluminacao(pedido, spec); break;
       case 'clp': p = clpNivel(pedido, spec); break;
       default: p = comandoSimples(pedido, spec); break;
@@ -618,6 +672,15 @@
         if (!passa) erro('falta_intertravamento', 'Contator ' + id + ' pode ser energizado com ' + outro + ' fechado: falta o contato NF de ' + outro + ' em série com a bobina de ' + id + '.', id);
       });
     });
+
+    if (projeto.spec && projeto.spec.cv) {
+      var EB = baseEletrica();
+      if (EB && EB.conferirDimensionamento) {
+        var cd = EB.conferirDimensionamento(projeto);
+        (cd.faltas || []).forEach(function (f) { erro('dimensionamento_' + f.codigo, f.mensagem); });
+        (cd.avisos || []).forEach(function (t) { avisos.push(t); });
+      }
+    }
 
     if (projeto.tipo === 'estrela_triangulo' || projeto.tipo === 'compensadora') {
       if (!projeto.componentes.some(function (c) { return c.tipo === 'temporizador'; })) {
@@ -1187,10 +1250,109 @@
     };
   }
 
+  /** Segunda análise, independente de validar(): confronta estrutura montada com o objetivo pedido. */
+  function conferirObjetivo(projeto) {
+    var atendidos = [], faltas = [];
+    if (!projeto || !Array.isArray(projeto.componentes)) return { ok: false, atendidos: [], faltas: ['Projeto ausente.'] };
+    var spec = projeto.spec || {};
+    var comps = projeto.componentes;
+    var cargas = comps.filter(function (c) { return TIPOS[c.tipo] && TIPOS[c.tipo].carga; });
+    var temporizadores = comps.filter(function (c) { return c.tipo === 'temporizador'; });
+    var termicos = comps.filter(function (c) { return c.tipo === 'releTermico'; });
+    function exigir(cond, rotulo) { if (cond) atendidos.push(rotulo); else faltas.push(rotulo); }
+    exigir(comps.length > 0, 'tem componentes');
+    if (spec.emergencia) exigir(comps.some(function (c) { return c.papel === 'emergencia'; }), 'tem botoeira de emergência pedida');
+    if (spec.sinalizacao) exigir(comps.some(function (c) { return c.tipo === 'sinaleiro'; }), 'tem sinalização pedida');
+    var tipo = projeto.tipo || spec.tipo;
+    if (tipo === 'sequencia') {
+      exigir(cargas.length >= 2, 'tem dois acionamentos de motor');
+      exigir(temporizadores.length >= 1, 'tem temporizador para o segundo motor');
+      exigir(temporizadores.some(function (t) { return Number(t.tempo) === Number(spec.temporizador); }),
+        'temporizador com o tempo pedido (' + spec.temporizador + ' s)');
+      exigir(termicos.length >= cargas.length, 'cada motor tem proteção térmica própria');
+      var k2 = comps.filter(function (c) { return c.papel === 'secundario'; })[0];
+      exigir(!!k2, 'o segundo motor é comandado por contator próprio');
+      if (k2) {
+        var alimentaK2 = Object.keys(k2.pinos || {}).some(function (p) { return k2.pinos[p] === 'KT2'; });
+        exigir(alimentaK2, 'a bobina do segundo contator vem do contato temporizado');
+      }
+    } else if (tipo === 'reversao') {
+      exigir(comps.filter(function (c) { return c.tipo === 'contator'; }).length >= 2, 'tem dois contatores de sentido');
+      exigir(comps.some(function (c) { return c.papel === 'reverso'; }), 'tem contator de sentido inverso');
+      exigir((projeto.intertravamentos || []).length >= 1, 'tem intertravamento declarado');
+    } else if (tipo === 'estrela_triangulo') {
+      exigir(comps.some(function (c) { return c.tipo === 'motor6'; }), 'motor com seis pontas');
+      exigir(comps.filter(function (c) { return c.tipo === 'contator'; }).length >= 3, 'três contatores (principal, estrela, triângulo)');
+      exigir(temporizadores.length >= 1, 'tem temporizador de comutação');
+    } else if (tipo === 'compensadora') {
+      exigir(comps.some(function (c) { return c.tipo === 'autotransformador'; }), 'tem autotransformador de partida');
+      exigir(temporizadores.length >= 1, 'tem temporizador de comutação');
+      exigir((projeto.intertravamentos || []).length >= 1, 'tem intertravamento tap/rede');
+    } else if (tipo === 'clp') {
+      exigir(comps.some(function (c) { return c.tipo === 'clp'; }), 'tem CLP');
+      exigir((projeto.rungs || []).length >= 1, 'tem lógica ladder verificável');
+    } else if (tipo === 'partida_direta') {
+      exigir(cargas.length >= 1, 'tem motor');
+      exigir(comps.some(function (c) { return c.tipo === 'contator'; }), 'tem contator de manobra');
+      exigir(termicos.length >= 1, 'tem proteção térmica');
+    }
+    return { ok: faltas.length === 0, atendidos: atendidos, faltas: faltas, tipo: tipo };
+  }
+
+  /** Exporta em texto estruturado (NETLIST v1) — base para reconstruir e revisar sem imagem. */
+  function exportarNetlist(projeto) {
+    var linhas = ['# ProjetistaEletrico NETLIST v1', '# tipo ' + (projeto.tipo || 'generico'), '# titulo ' + (projeto.titulo || '')];
+    var redes = projeto.redes || {};
+    ['energia', 'retorno', 'fases'].forEach(function (g) {
+      if ((redes[g] || []).length) linhas.push('REDE ' + g + ' ' + redes[g].join(' '));
+    });
+    (projeto.componentes || []).forEach(function (c) {
+      linhas.push('COMP ' + c.id + ' ' + c.tipo + ' ' + String(c.funcao || '').replace(/\s+/g, ' ').slice(0, 80));
+      Object.keys(c.pinos || {}).forEach(function (k) { linhas.push('PINO ' + c.id + ' ' + k + ' ' + c.pinos[k]); });
+    });
+    return linhas.join('\n') + '\n';
+  }
+
+  /** Reconstrói o projeto a partir da NETLIST v1 (texto). Imagem/foto exige visão por IA. */
+  function importarDiagramaTexto(texto) {
+    var linhas = String(texto || '').split(/\r?\n/);
+    if (!/^#\s*ProjetistaEletrico NETLIST v1/.test(linhas[0] || '')) {
+      return { ok: false, erro: 'Cabeçalho ausente: a primeira linha deve ser "# ProjetistaEletrico NETLIST v1".' };
+    }
+    var comps = {}, ordem = [], redes = { energia: [], retorno: [], fases: [] };
+    for (var i = 1; i < linhas.length; i++) {
+      var l = linhas[i].trim();
+      if (!l || l.charAt(0) === '#') continue;
+      var partes = l.split(/\s+/);
+      if (partes[0] === 'REDE' && partes[1] && redes[partes[1]]) redes[partes[1]] = partes.slice(2);
+      else if (partes[0] === 'COMP' && partes[1] && partes[2]) {
+        var id = partes[1].toUpperCase();
+        if (!TIPOS[partes[2]]) return { ok: false, erro: 'Tipo desconhecido na linha ' + (i + 1) + ': ' + partes[2] };
+        comps[id] = { id: id, tipo: partes[2], funcao: partes.slice(3).join(' ') || TIPOS[partes[2]].nome, pinos: {} };
+        ordem.push(id);
+      } else if (partes[0] === 'PINO' && partes[1] && partes[2] && partes[3]) {
+        var c = comps[partes[1].toUpperCase()];
+        if (!c) return { ok: false, erro: 'PINO antes do COMP na linha ' + (i + 1) + '.' };
+        c.pinos[partes[2]] = partes[3];
+      } else {
+        return { ok: false, erro: 'Linha ' + (i + 1) + ' fora do formato (COMP/PINO/REDE).' };
+      }
+    }
+    if (!ordem.length) return { ok: false, erro: 'A netlist não tem componentes.' };
+    var projeto = {
+      formato: FORMATO, versao: VERSAO, titulo: 'Importado de netlist', tipo: 'generico',
+      pedido: 'Importado de diagrama em texto', spec: { tipo: 'generico', tensaoComando: 220, emergencia: true },
+      redes: redes, componentes: ordem.map(function (k) { return comps[k]; }),
+      sequencia: [], rungs: [], avisos: ['Projeto reconstruído de netlist: confira visualmente as ligações antes de usar.'], decisoes: [], intertravamentos: [], dimensionamento: {}
+    };
+    return { ok: true, projeto: projeto, validacao: validar(projeto) };
+  }
+
   return {
     FORMATO: FORMATO, VERSAO: VERSAO, TIPOS: TIPOS, EXEMPLOS: EXEMPLOS,
     interpretar: interpretar, projetar: projetar, validar: validar, corrigir: corrigir,
-    modificar: modificar, comparar: comparar,
+    modificar: modificar, comparar: comparar, conferirObjetivo: conferirObjetivo,
+    exportarNetlist: exportarNetlist, importarDiagramaTexto: importarDiagramaTexto,
     relatorio: relatorio, ladder: ladder, fios: fios, resumoComponentes: resumoComponentes,
     serializar: serializar, parse: parse, dimensionar: dimensionar,
     salvar: salvar, listar: listar, ler: ler, apagar: apagar,

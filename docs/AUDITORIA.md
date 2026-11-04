@@ -43,6 +43,12 @@ empacotamento criado para o item 1). O `index.html` carrega os dois, mas o workf
 copiava: no aparelho, o painel PC e o reparo/exportação do CAD ficavam sem módulo. Corrigido no mesmo
 workflow; o teste falha se qualquer script do `index.html` ficar fora do pacote.
 
+**3. Dimensionamento sem confronto e sem segunda análise** (corrigido na 1.42.7). O motor calculava corrente,
+contator, disjuntor e térmico, mas não cabo, não faixa de térmico e não memória de cálculo; nada comparava o
+declarado no projeto com o necessário. Agora `eletrica.js` dimensiona com memória e `conferirDimensionamento`
+alimenta `validar()` com `dimensionamento_*`. `conferirObjetivo` faz a segunda análise (estrutura × pedido)
+sem reutilizar `validar()`. A especialização está descrita em `docs/ELETRICA-ESPECIALIZACAO.md`.
+
 Fora esse, nenhum outro achado crítico foi confirmado nos caminhos exercitados pelos testes.
 
 ### Alto
@@ -97,6 +103,8 @@ que só aparecem nesses ambientes não foram descartadas — apenas não foram o
 | `node tests/test_projetista_ui.js` | OK (criar, desenhar, analisar, corrigir, relatório, ladder, salvar, reabrir, modificar, comparar, versões e restaurar) |
 | `npm run test:all` | **EXIT 0, 2.107 verificações** |
 | `python3 tests/test_empacotamento.py` | OK (todo script do `index.html` no pacote Android e no Windows) |
+| `node tests/test_eletrica.js` | 8 grupos OK (dimensionamento, conferência independente, biblioteca, CLP, memória) |
+| `node tests/test_projetista.js` | 73 + sequência de dois motores, segunda análise e netlist OK |
 | Contratos Python | verdes |
 
 ## 6. Não verificado (declarado, não presumido)
