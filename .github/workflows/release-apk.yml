@@ -1,5 +1,9 @@
 name: Publicar release do J.A.R.V.I.S. Nova
 # Versão publicada: 1.42.8 — confira VERSAO.json antes de criar a tag.
+# Notas publicadas: o passo "Publicar release com o APK" gera o texto a partir de VERSAO.json.
+# Novidades da 1.42.8: contexto visual da sessão, acompanhamento ("ele", "quanto custa"),
+# procedência confirmado/loja/estimado, marca só com evidência legível, OCR como dado e ponte
+# de componentes com a base elétrica; sem chave de IA não há medição de precisão.
 
 on:
   push:
