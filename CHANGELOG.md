@@ -1,3 +1,13 @@
+## 1.43.0 — Assinatura de release com chave própria
+
+- **Assinatura de release** (`release-apk.yml`, `patch_gradle.py`): o APK passa a ser assinado com uma chave privada, lida de `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD` ou de `android/app/keystore.properties` no build local, em vez da chave de debug pública.
+- **Falha segura**: sem os segredos, o workflow de release para em vez de publicar um APK assinado com a chave de debug.
+- **Conferência do certificado**: `apksigner verify --print-certs` aborta a publicação se o APK sair com `CN=Android Debug`.
+- **Migração**: a 1.42.9 de debug não atualiza por cima do APK de release; é preciso desinstalar uma vez e instalar o APK novo.
+- **Atualizador** (`JarvisUpdatePlugin`): compara a assinatura do APK baixado com a instalada e explica a troca antes de abrir o instalador.
+- **Suíte no Windows**: `npm run test:all:win` executa a mesma suíte de `test:all`, trocando apenas a invocação do Python.
+- **Limite**: a instalação por cima ainda não foi testada em aparelho físico; a chave privada precisa de backup externo.
+
 ## 1.42.9 — Bloqueio com biometria forte, NFC e central em Ajustes
 
 - **Modos de autenticação** (`seguranca.js`): PIN, biometria, NFC, biometria ou NFC, biometria + NFC, biometria + PIN, NFC + PIN.

@@ -1,4 +1,10 @@
-# J.A.R.V.I.S. Nova 1.42.9
+# J.A.R.V.I.S. Nova 1.43.0
+
+## 1.43.0 — Assinatura de release com chave própria
+
+O APK publicado deixou de usar a chave de debug pública (`ci/debug.keystore`) e passou a ser assinado com uma chave privada de release. Quem instalou a **1.42.9** precisa desinstalar uma vez e instalar este APK: o Android não aceita a troca de chave por cima. O atualizador detecta a diferença e explica o motivo antes de abrir o instalador. O workflow de release agora falha quando os segredos de assinatura não estão configurados e confere o certificado com `apksigner` antes de publicar. A suíte de testes também roda no Windows com `npm run test:all:win`. Nenhum recurso de interface mudou; esta revisão é de assinatura, empacotamento e verificação.
+
+O APK **1.43.0** ainda não foi compilado: a tag `v1.43.0` dispara o workflow e publica o primeiro build assinado com a chave de release. O SHA-256 e o certificado ficam no log do workflow e no release.
 
 ## 1.42.9 — Bloqueio com biometria, NFC e central própria
 
