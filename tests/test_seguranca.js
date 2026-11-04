@@ -33,6 +33,30 @@ grupo('"ou" aceita qualquer alternativa', () => {
   assert.strictEqual(S.avaliarProvas('bio|nfc', {}).ok, false);
 });
 
+grupo('modos novos: PIN ou Digital, PIN ou NFC e qualquer um dos três', () => {
+  assert.strictEqual(S.avaliarProvas('pin|bio', { pin: true }).ok, true);
+  assert.strictEqual(S.avaliarProvas('pin|bio', { bio: true }).ok, true);
+  assert.strictEqual(S.avaliarProvas('pin|bio', {}).ok, false);
+  assert.ok(/PIN ou Digital/.test(S.avaliarProvas('pin|bio', {}).faltam.join(' ')));
+  assert.strictEqual(S.avaliarProvas('pin|nfc', { nfc: true }).ok, true);
+  assert.strictEqual(S.avaliarProvas('pin|bio|nfc', { bio: true }).ok, true);
+  assert.deepStrictEqual(S.metodos('pin|bio|nfc'), ['pin', 'bio', 'nfc']);
+  assert.strictEqual(S.usaMetodo('pin|bio', 'bio'), true);
+  assert.strictEqual(S.usaMetodo('pin', 'bio'), false);
+});
+
+grupo('modo com alternativa não é desabilitado quando uma opção existe', () => {
+  assert.strictEqual(S.modoViavel('bio|nfc', { bio: false, nfc: true }).ok, true);
+  assert.strictEqual(S.modoViavel('bio|nfc', { bio: true, nfc: false }).ok, true);
+  assert.strictEqual(S.modoViavel('bio|nfc', { bio: false, nfc: false }).ok, false);
+  assert.strictEqual(S.modoViavel('pin|bio', { bio: false }).ok, true);
+  // O plugin Android devolve { biometria }, não { bio }.
+  assert.strictEqual(S.modoViavel('bio', { biometria: true }).ok, true);
+  assert.strictEqual(S.modoViavel('bio+pin', { biometria: true }).ok, true);
+  assert.strictEqual(S.modoViavel('bio+nfc+pin', { biometria: true, nfc: true }).ok, true);
+  assert.strictEqual(S.modoViavel('bio+nfc+pin', { biometria: true, nfc: false }).ok, false);
+});
+
 grupo('leitura de tag normaliza UID e sinaliza clonagem', () => {
   const simples = S.tagDeLeitura({ uid: '04:a2:33:1f', tech: ['NfcA'] }, { uidHash: 'abc123' });
   assert.strictEqual(simples.ok, true);

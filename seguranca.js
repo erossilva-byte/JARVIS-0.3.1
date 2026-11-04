@@ -9,13 +9,21 @@
 
   var MODOS = {
     pin: { etapas: ['pin'], rotulo: 'PIN' },
-    bio: { etapas: ['bio'], rotulo: 'Biometria do aparelho' },
+    bio: { etapas: ['bio'], rotulo: 'Biometria/Digital do aparelho' },
     nfc: { etapas: ['nfc'], rotulo: 'Tag NFC' },
+    // "ou": qualquer uma das provas listadas libera sozinha.
+    'pin|bio': { etapas: ['pin'], alternativas: ['pin', 'bio'], rotulo: 'PIN ou Digital' },
+    'pin|nfc': { etapas: ['pin'], alternativas: ['pin', 'nfc'], rotulo: 'PIN ou NFC' },
     'bio|nfc': { etapas: ['bio'], alternativas: ['bio', 'nfc'], rotulo: 'Biometria ou NFC' },
-    'bio+nfc': { etapas: ['bio', 'nfc'], rotulo: 'Biometria + NFC (duas etapas)' },
-    'bio+pin': { etapas: ['bio', 'pin'], rotulo: 'Biometria + PIN' },
-    'nfc+pin': { etapas: ['nfc', 'pin'], rotulo: 'NFC + PIN' }
+    'pin|bio|nfc': { etapas: ['pin'], alternativas: ['pin', 'bio', 'nfc'], rotulo: 'PIN, Digital ou NFC' },
+    // "+": todas as provas listadas são obrigatórias, nesta ordem.
+    'bio+pin': { etapas: ['bio', 'pin'], rotulo: 'Digital + PIN (duas etapas)' },
+    'nfc+pin': { etapas: ['nfc', 'pin'], rotulo: 'NFC + PIN (duas etapas)' },
+    'bio+nfc': { etapas: ['bio', 'nfc'], rotulo: 'Digital + NFC (duas etapas)' },
+    'bio+nfc+pin': { etapas: ['bio', 'nfc', 'pin'], rotulo: 'Digital + NFC + PIN (três etapas)' }
   };
+
+  var ROTULO_ETAPA = { pin: 'PIN', bio: 'Digital', nfc: 'NFC' };
 
   var PADRAO = {
     modo: 'pin',
@@ -85,7 +93,32 @@
     return m.etapas.slice();
   }
 
+  /** Todas as provas que o modo aceita: obrigatórias + alternativas. */
+  function metodos(modo) {
+    var m = MODOS[modo] || MODOS.pin;
+    var lista = m.etapas.slice();
+    (m.alternativas || []).forEach(function (e) { if (lista.indexOf(e) < 0) lista.push(e); });
+    return lista;
+  }
+
+  /** O modo usa esta prova (obrigatória ou como alternativa)? */
+  function usaMetodo(modo, metodo) {
+    return metodos(modo).indexOf(metodo) >= 0;
+  }
+
   function rotulo(modo) { return (MODOS[modo] || MODOS.pin).rotulo; }
+
+  function rotuloEtapa(e) { return ROTULO_ETAPA[e] || String(e || ''); }
+
+  function provaDisponivel(e, d) {
+    if (e === 'pin') return true;
+    // Aceita tanto o formato do núcleo ({ bio }) quanto o devolvido pelo
+    // plugin Android ({ biometria }); antes o dropdown desabilitava todo modo
+    // biométrico por comparar apenas com d.bio.
+    if (e === 'bio') return !!(d && (d.bio || d.biometria));
+    if (e === 'nfc') return !!(d && d.nfc);
+    return false;
+  }
 
   /** Uma prova satisfaz o modo quando cobre todas as etapas exigidas. */
   function avaliarProvas(modo, provas) {
@@ -95,7 +128,8 @@
     if (m.alternativas && m.alternativas.length) {
       var alguma = m.alternativas.filter(function (e) { return p[e] === true; });
       if (alguma.length) return { ok: true, faltam: [], etapas: exigidas, alternativa: alguma[0] };
-      return { ok: false, faltam: ['bio ou nfc'], etapas: exigidas, alternativa: '' };
+      var opcoes = m.alternativas.map(rotuloEtapa).join(' ou ');
+      return { ok: false, faltam: [opcoes], etapas: exigidas, alternativa: '' };
     }
     var faltam = exigidas.filter(function (e) { return p[e] !== true; });
     return { ok: faltam.length === 0, faltam: faltam, etapas: exigidas };
@@ -172,13 +206,28 @@
   }
 
   /** Modo pedido é utilizável? Nunca esconde a limitação: devolve o motivo. */
+  function nomeProva(e) {
+    return e === 'bio' ? 'biometria' : e === 'nfc' ? 'NFC' : 'PIN';
+  }
+
+  /** Modo pedido é utilizável? Nunca esconde a limitação: devolve o motivo. */
   function modoViavel(modo, disp) {
     var d = disp || {};
-    var m = MODOS[modo] ? modo : 'pin';
-    var precisaBio = etapas(m).indexOf('bio') >= 0;
-    var precisaNfc = etapas(m).indexOf('nfc') >= 0;
-    if (precisaBio && !d.bio) return { ok: false, motivo: 'Este aparelho não tem biometria forte disponível para o modo escolhido.' };
-    if (precisaNfc && !d.nfc) return { ok: false, motivo: 'O NFC está ausente ou desligado; ative nas configurações do Android.' };
+    var chave = MODOS[modo] ? modo : 'pin';
+    var m = MODOS[chave];
+    // Modos com "ou" são viáveis quando PELO MENOS UMA alternativa existe.
+    if (m.alternativas && m.alternativas.length) {
+      var disponiveis = m.alternativas.filter(function (e) { return provaDisponivel(e, d); });
+      if (!disponiveis.length) {
+        return { ok: false, motivo: 'Nenhuma das opções está disponível neste aparelho: ' + m.alternativas.map(nomeProva).join(' ou ') + '.' };
+      }
+      return { ok: true, motivo: '' };
+    }
+    // Modos com "+" exigem todas as etapas.
+    var faltam = m.etapas.filter(function (e) { return !provaDisponivel(e, d); });
+    if (faltam.length) {
+      return { ok: false, motivo: 'Este aparelho não tem ' + faltam.map(nomeProva).join(' + ') + ' disponível para o modo escolhido.' };
+    }
     return { ok: true, motivo: '' };
   }
 
@@ -220,7 +269,10 @@
     normalizar: normalizar,
     normalizarTag: normalizarTag,
     etapas: etapas,
+    metodos: metodos,
+    usaMetodo: usaMetodo,
     rotulo: rotulo,
+    rotuloEtapa: rotuloEtapa,
     avaliarProvas: avaliarProvas,
     tagDeLeitura: tagDeLeitura,
     mascararUid: mascararUid,
