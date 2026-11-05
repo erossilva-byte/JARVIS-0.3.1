@@ -15,7 +15,12 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "pendente"
+    "resultado": "success",
+    "apk": "jarvis-nova-1.43.0-10430.apk",
+    "bytes": 81331752,
+    "sha256": "fbfc4712d736cc471e43e2ab700321d390f697a53beee3194e3f11c28ef285c6",
+    "data": "2026-11-05",
+    "observacao": "compilado no GitHub Actions e publicado; conferido por dentro: utilidades.js, jogos.js, cultura.js, briefing.js, utilidades_ui.js, painel e gancho no chat; não instalado em aparelho físico"
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",
