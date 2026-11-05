@@ -1,4 +1,4 @@
-## 1.42.9 — Bloqueio com biometria forte, NFC e central em Ajustes
+## 1.43.0 — Bloqueio com biometria forte, NFC e central em Ajustes
 
 - **Modos de autenticação** (`seguranca.js`): PIN, biometria, NFC, biometria ou NFC, biometria + NFC, biometria + PIN, NFC + PIN.
 - **Biometria facial do sistema**: `BiometricPrompt` com `BIOMETRIC_STRONG`; o app informa se há hardware facial e nunca recebe a imagem do rosto.

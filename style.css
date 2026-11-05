@@ -1678,3 +1678,21 @@ button.anexo{width:44px;min-width:44px;height:44px;min-height:44px;border-radius
 @keyframes bloq-pulso-nfc{0%,100%{transform:scale(.9);opacity:.75}50%{transform:scale(1.12);opacity:1}}
 @media(prefers-reduced-motion:reduce){.bloq-nucleo.lendo-nfc .bloq-miolo{animation:none}}
 @media(max-width:520px){.seg-grade{grid-template-columns:1fr}}
+
+
+/* ---- Central de utilidades (1.43.0) ---- */
+.painel-utilidades .util-tabs{display:flex;gap:6px;overflow-x:auto;padding:0 0 10px}
+.painel-utilidades .util-tabs button{min-height:34px;padding:0 12px;border-radius:999px;color:var(--suave);font-size:12px;white-space:nowrap}
+.painel-utilidades .util-tabs button[aria-selected="true"]{color:var(--texto);border-color:rgba(var(--rgb),.55);background:rgba(var(--rgb),.12)}
+.util-secao{display:grid;gap:10px}
+.util-linha{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.util-linha .util-campo{flex:1 1 120px}
+.util-campo{display:grid;gap:4px;font-size:12px;color:var(--suave)}
+.util-campo input,.util-campo select,.util-campo textarea{width:100%;min-height:40px;border:1px solid var(--linha);border-radius:10px;background:var(--superficie2);padding:8px 10px;color:var(--texto)}
+.util-campo textarea{min-height:64px;resize:vertical}
+.util-saida{margin:0;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:rgba(var(--rgb),.06);font-size:13px;line-height:1.45}
+.util-estado{margin:0;padding:12px;border:1px solid var(--linha);border-radius:10px;background:var(--superficie2);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.5;white-space:pre-wrap;max-height:240px;overflow:auto}
+.util-chips{display:flex;gap:6px;flex-wrap:wrap}
+.util-chip{min-height:32px;padding:0 10px;border-radius:999px;font-size:12px;color:var(--suave)}
+.util-botoes-cultura{flex-wrap:wrap}
+@media (max-width:420px){.util-linha{flex-direction:column;align-items:stretch}.util-linha .util-campo{flex:1 1 auto}}

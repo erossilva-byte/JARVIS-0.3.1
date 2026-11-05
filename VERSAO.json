@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.42.9",
-  "versionCode": 10429,
+  "version": "1.43.0",
+  "versionCode": 10430,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-11-03",
-  "status": "1.42.9 publicada: bloqueio com biometria forte, NFC real, modos combinados e central em Ajustes; APK conferido por dentro.",
+  "status": "1.43.0: Central de Utilidades local (cálculo, conversões, saúde, finanças, jogos, cultura e briefing) integrada ao chat e ao painel.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.42.9 (2026-11-04). Tela de bloqueio com autenticação real: biometria forte pelo BiometricPrompt (sem câmera comum, sem guardar o rosto), leitura NFC pelo NfcAdapter com UID guardado apenas como hash, modos combinados (biometria + NFC em duas etapas, ou alternativas) e PIN como recuperação final. A central em Ajustes ▸ Segurança configura tudo pelo APK: modo, tempo de inatividade, tentativas, tags, histórico e restauração. O PIN passou a PBKDF2 com sal, migrando o hash antigo. A verificação de recursos informa quando o aparelho não tem biometria ou NFC, sem botão falso. O núcleo holográfico ganhou animação de reconhecimento, leitura NFC e estados de acesso; a personalidade e o raciocínio do assistente não mudaram. Nada é salvo sem pedido explícito e o bloqueio continua opcional. Revisão 1.42.8 (2026-11-04). Vision com contexto de sessão (visao_contexto.js): perguntas de acompanhamento resolvem \"ele\", \"essa peça\" e perguntas curtas para o objeto atual; marca e modelo só aparecem com evidência legível (logo, etiqueta, texto), e cada afirmação é rotulada como confirmada, de loja ou estimada. Múltiplos objetos podem ser selecionados e comparados, o texto lido na imagem é tratado como dado (nunca instrução), consultas de pesquisa são montadas por intenção e componentes técnicos conversam com a base elétrica e o Projetista. Nada é salvo sem pedido explícito. Revisão 1.42.7 (2026-11-03). Especialização elétrica: nova base técnica (eletrica.js) com biblioteca de componentes (terminais, função, limites, símbolo IEC), tabelas de referência de ampacidade, contatores, disjuntores e faixas de térmico, dimensionamento com memória de cálculo (In, contator AC-3, disjuntor e curva, ajuste e faixa do térmico, cabo por ampacidade e queda de tensão) e conferência independente do que o projeto declara. Nova topologia para dois motores em sequência, com o segundo entrando X segundos depois do primeiro por temporizador. Segunda análise (conferirObjetivo) confronta a estrutura montada com o que foi pedido, sem reutilizar a verificação estrutural. Netlist v1 permite exportar e reimportar o projeto em texto, preservando pinos. O projetista segue respondendo no chat e na voz, agora também para dimensionamento, consulta de componente e segunda análise. Limites declarados: o `.cad` do CADeSIMU não é gerado nem aberto, não há simulação elétrica, e reconstrução a partir de foto depende de visão por IA (não configurada neste build). Também seguem a animação do núcleo em plasma, o raciocínio em etapas, a personalidade adaptativa e a verificação independente. Seguem também as dez áreas clicáveis e a abertura sem flash.",
+  "notas": "Central de Utilidades: calculadora com funções, equações, matrizes e estatística; conversões de unidade e temperatura; IMC, metabolismo e água; juros, parcelas e ROI; oito jogos de texto; receitas, bebidas, nutrição, treinos, piadas e sugestões; briefing que não inventa dados e monitoramento com comparação. Tudo local, sem nuvem, e a interface mantém o plasma, o núcleo holográfico e a animação de estados.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -15,12 +15,7 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "success",
-    "apk": "jarvis-nova-1.42.9-10429.apk",
-    "bytes": 81302438,
-    "sha256": "e9a313a1fbcafaa4cd653eedcc8c25df7dcbc18970202ea4da15126e50c28bb4",
-    "data": "2026-11-04",
-    "observacao": "compilado no GitHub Actions e publicado; conferido por dentro: seguranca.js, visao_contexto.js, 6 chips 1.42.9, BIOMETRIC_STRONG e NFC no dex; não instalado em aparelho físico (assinatura debug/CI)"
+    "resultado": "pendente"
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",
@@ -45,5 +40,6 @@
       "contrato": "python3 tests/test_pc_windows.py",
       "suite": "npm run test:all — verde"
     }
-  }
+  },
+  "versao": "1.43.0"
 }

@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.42.9';
+const VERSAO_APP = '1.43.0';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -2070,6 +2070,14 @@ function avaliarConta(expressao) {
 async function brainLocal(texto) {
   const n = norm(texto);
   if (!n) return null;
+  // Central de utilidades: cálculo, conversões, jogos, cultura e briefing respondem no
+  // aparelho, sem IA e sem rede. Só devolve texto; nenhuma ação de risco é executada aqui.
+  try {
+    if (window.UtilidadesUI && typeof window.UtilidadesUI.responder === 'function') {
+      const respostaUtil = window.UtilidadesUI.responder(texto);
+      if (respostaUtil) return { fala: respostaUtil };
+    }
+  } catch (e) { /* a central nunca derruba o cérebro local */ }
   const t = trat();
   const conta = /^(?:quanto (?:e|sao|da)|calcule|calcula|resultado de|quanto seria)\s+(.+)$/.exec(n);
   if (conta) {

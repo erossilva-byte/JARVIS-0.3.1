@@ -131,7 +131,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.42.9</span>
+      <span class="orb-sub" aria-hidden="true">v1.43.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -194,6 +194,7 @@
     <div class="dash-card atalhos">
       <div class="dash-head"><span class="dash-eyebrow">ACESSOS DIRETOS</span><span class="dash-signal" aria-hidden="true"></span></div>
       <button id="dash-visao" class="atalho-dash" type="button"><b>Visão</b><small>Câmera, sessão contínua, troca frontal/traseira e captura de tela do PC</small></button>
+      <button id="dash-utilidades" class="atalho-dash" type="button"><b>Utilidades</b><small>Cálculo · conversões · IMC · juros · jogos · receitas · briefing</small></button>
       <button id="dash-info" class="atalho-dash" type="button"><b>Informações</b><small>Bateria · memória · armazenamento · conexões · clima · manchetes</small></button>
       <button class="atalho-dash" type="button" data-abrir-transcricao><b>Transcrição</b><small>Histórico, mensagens e comandos anteriores em uma tela secundária.</small></button>
     </div>
@@ -241,7 +242,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.42.9</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.43.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -618,7 +619,7 @@
 </aside>
 
 <aside id="painel-areas" class="painel painel-areas" hidden aria-label="Áreas do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · MAPA OPERACIONAL</p><h2>Áreas</h2></div><span class="versao-chip">v1.42.9</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · MAPA OPERACIONAL</p><h2>Áreas</h2></div><span class="versao-chip">v1.43.0</span></div>
   <section class="grupo areas-shell">
     <div id="areas-inicio">
       <p class="dica">Dez áreas, cada uma com suas funções. Os painéis antigos continuam disponíveis; esta camada apenas organiza o acesso e evita misturar ferramentas de assuntos diferentes.</p>
@@ -633,7 +634,7 @@
 
 
 <aside id="painel-sistema" class="painel painel-sistema" hidden aria-label="Central operacional do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · NÚCLEO OPERACIONAL</p><h2>Central do sistema</h2></div><span class="versao-chip">v1.42.9</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · NÚCLEO OPERACIONAL</p><h2>Central do sistema</h2></div><span class="versao-chip">v1.43.0</span></div>
   <section class="grupo" data-category="sistema-nucleo">
     <h3>Estado do núcleo</h3>
     <p id="sis-status" class="dica" role="status" aria-live="polite">Carregando ferramentas e tarefas…</p>
@@ -689,7 +690,7 @@
 </aside>
 
 <aside id="painel-core" class="painel painel-core" hidden aria-label="JARVIS Core: agentes, contexto e saúde">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CORE</p><h2>JARVIS Core</h2></div><span class="versao-chip">v1.42.9</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CORE</p><h2>JARVIS Core</h2></div><span class="versao-chip">v1.43.0</span></div>
   <section class="grupo">
     <div class="core-hero">
       <p id="core-status" class="core-status" role="status" aria-live="polite">Consultando o Core…</p>
@@ -804,7 +805,7 @@
 </aside>
 
 <aside id="painel-pessoas" class="painel painel-pessoas" hidden aria-label="Identificação de pessoas do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · IDENTIFICAÇÃO DE PESSOAS</p><h2>Pessoas</h2></div><span class="versao-chip">v1.42.9 · local</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · IDENTIFICAÇÃO DE PESSOAS</p><h2>Pessoas</h2></div><span class="versao-chip">v1.43.0 · local</span></div>
   <section class="grupo" id="idp-inicio">
     <p class="dica">Cada pessoa tem um perfil próprio: foto, informações, campos personalizados e perfil de voz. O reconhecimento compara vetores de características no aparelho — o áudio nunca é guardado e nada é enviado a provedores sem sua autorização. Em dúvida, o J.A.R.V.I.S. responde “inconclusivo” em vez de adivinhar.</p>
     <div class="idp-barra-topo">
@@ -1349,6 +1350,107 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
   <div class="botoes barra"><button id="pcx-fechar" type="button" class="secundario">Fechar</button></div>
 </aside>
 
+<aside id="painel-utilidades" class="painel painel-utilidades" hidden aria-label="Central de utilidades do J.A.R.V.I.S. Nova: cálculo, conversões, jogos, cultura e briefing">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CENTRAL LOCAL</p><h2>Utilidades</h2></div><span class="versao-chip">cálculo · jogos · cultura</span></div>
+  <nav class="util-tabs" role="tablist" aria-label="Seções de utilidades">
+    <button type="button" role="tab" aria-selected="true" data-util-tab="calc">Cálculo</button>
+    <button type="button" role="tab" aria-selected="false" data-util-tab="conversao">Conversões</button>
+    <button type="button" role="tab" aria-selected="false" data-util-tab="saude">Saúde</button>
+    <button type="button" role="tab" aria-selected="false" data-util-tab="financas">Finanças</button>
+    <button type="button" role="tab" aria-selected="false" data-util-tab="jogos">Jogos</button>
+    <button type="button" role="tab" aria-selected="false" data-util-tab="cultura">Cultura</button>
+    <button type="button" role="tab" aria-selected="false" data-util-tab="briefing">Briefing</button>
+  </nav>
+
+  <section class="util-secao" data-util-secao="calc">
+    <p class="dica">Calculadora com funções e comandos em português. Tudo no aparelho, sem enviar nada para a nuvem.</p>
+    <label class="util-campo">Expressão<input id="util-calc-expr" type="text" placeholder="ex.: 2+3*4, raiz(16), 2^10, 5!" autocomplete="off"></label>
+    <div class="botoes"><button id="util-calc-ver" type="button" class="primario">Calcular</button></div>
+    <label class="util-campo">Ou peça em português<input id="util-calc-livre" type="text" placeholder="ex.: 20% de 250, converter 10 km para milhas, senha de 16"></label>
+    <div class="botoes"><button id="util-calc-livre-ver" type="button" class="secundario">Interpretar</button></div>
+    <p id="util-calc-saida" class="util-saida" role="status" aria-live="polite">Digite uma conta ou um pedido.</p>
+  </section>
+
+  <section class="util-secao" data-util-secao="conversao" hidden>
+    <p class="dica">Comprimento, massa, volume, velocidade, tempo, dados, área e temperatura. Valores aproximados, com a unidade sempre explícita.</p>
+    <div class="util-linha">
+      <label class="util-campo">Valor<input id="util-conv-valor" type="text" inputmode="decimal" value="10"></label>
+      <label class="util-campo">De<select id="util-conv-de"></select></label>
+      <label class="util-campo">Para<select id="util-conv-para"></select></label>
+    </div>
+    <div class="botoes"><button id="util-conv-ver" type="button" class="primario">Converter</button></div>
+    <p id="util-conv-saida" class="util-saida" role="status" aria-live="polite">Escolha as unidades.</p>
+  </section>
+
+  <section class="util-secao" data-util-secao="saude" hidden>
+    <p class="dica">IMC, metabolismo basal estimado e água sugerida. São estimativas educativas — não substituem avaliação médica.</p>
+    <div class="util-linha">
+      <label class="util-campo">Peso (kg)<input id="util-saude-peso" type="text" inputmode="decimal" value="80"></label>
+      <label class="util-campo">Altura (m ou cm)<input id="util-saude-altura" type="text" inputmode="decimal" value="1,80"></label>
+      <label class="util-campo">Idade<input id="util-saude-idade" type="text" inputmode="numeric" value="30"></label>
+      <label class="util-campo">Sexo<select id="util-saude-sexo"><option value="m">Masculino</option><option value="f">Feminino</option></select></label>
+    </div>
+    <div class="botoes"><button id="util-saude-ver" type="button" class="primario">Calcular</button></div>
+    <p id="util-saude-saida" class="util-saida" role="status" aria-live="polite">Preencha os dados.</p>
+  </section>
+
+  <section class="util-secao" data-util-secao="financas" hidden>
+    <p class="dica">Simulação local de juros e parcelas. Nenhuma cotação é inventada: para moedas, informe a taxa você mesmo.</p>
+    <div class="util-linha">
+      <label class="util-campo">Capital (R$)<input id="util-fin-capital" type="text" inputmode="decimal" value="1000"></label>
+      <label class="util-campo">Taxa mensal (%)<input id="util-fin-taxa" type="text" inputmode="decimal" value="1"></label>
+      <label class="util-campo">Meses<input id="util-fin-periodos" type="text" inputmode="numeric" value="12"></label>
+    </div>
+    <div class="botoes"><button id="util-fin-ver" type="button" class="primario">Simular</button></div>
+    <p id="util-fin-saida" class="util-saida" role="status" aria-live="polite">Preencha os valores.</p>
+  </section>
+
+  <section class="util-secao" data-util-secao="jogos" hidden>
+    <p class="dica">Oito jogos de texto, sem dinheiro real. O saldo da roleta é só de fichas.</p>
+    <div class="util-linha">
+      <label class="util-campo">Jogo<select id="util-jogo-tipo">
+        <option value="velha">Jogo da velha</option><option value="ligue4">Ligue 4</option><option value="forca">Forca</option>
+        <option value="blackjack">Blackjack</option><option value="ppt">Pedra, papel e tesoura</option>
+        <option value="adivinha">Adivinha o número</option><option value="termo">Termo (5 letras)</option><option value="roleta">Roleta de fichas</option>
+      </select></label>
+      <button id="util-jogo-novo" type="button" class="secundario">Novo jogo</button>
+    </div>
+    <pre id="util-jogo-estado" class="util-estado" aria-live="polite">Escolha um jogo e toque em “Novo jogo”.</pre>
+    <div class="util-linha">
+      <label class="util-campo">Jogada<input id="util-jogo-jogada" type="text" placeholder="ex.: 5, pedir, pedra, 42" autocomplete="off"></label>
+      <button id="util-jogo-enviar" type="button" class="primario">Jogar</button>
+    </div>
+  </section>
+
+  <section class="util-secao" data-util-secao="cultura" hidden>
+    <p class="dica">Receitas, bebidas, nutrição, treinos, piadas, curiosidades e sugestões de filmes/séries/música. Acervo local, sem internet.</p>
+    <div id="util-cultura-lista" class="util-chips"></div>
+    <div class="botoes util-botoes-cultura">
+      <button id="util-cultura-piada" type="button" class="secundario">Piada</button>
+      <button id="util-cultura-curiosidade" type="button" class="secundario">Curiosidade</button>
+      <button id="util-cultura-filme" type="button" class="secundario">Filmes</button>
+      <button id="util-cultura-serie" type="button" class="secundario">Séries</button>
+      <button id="util-cultura-musica" type="button" class="secundario">Música</button>
+      <button id="util-cultura-tedio" type="button" class="secundario">Estou entediado</button>
+    </div>
+    <pre id="util-cultura-saida" class="util-estado" aria-live="polite">Toque em uma receita ou em um botão.</pre>
+  </section>
+
+  <section class="util-secao" data-util-secao="briefing" hidden>
+    <p class="dica">O briefing só mostra o que você fornecer; o que faltar é listado como ausente, nunca inventado. Clima e manchetes podem vir do painel Informações.</p>
+    <div class="util-linha">
+      <label class="util-campo">Seu nome<input id="util-brief-nome" type="text" maxlength="40" placeholder="opcional"></label>
+      <label class="util-campo">Clima<input id="util-brief-clima" type="text" maxlength="80" placeholder="ex.: 24 °C e claro"></label>
+    </div>
+    <label class="util-campo">Tarefas (uma por linha)<textarea id="util-brief-tarefas" rows="3" placeholder="enviar relatório&#10;pagar conta"></textarea></label>
+    <label class="util-campo">Manchetes (uma por linha)<textarea id="util-brief-manchetes" rows="3"></textarea></label>
+    <div class="botoes"><button id="util-brief-ver" type="button" class="primario">Montar briefing</button></div>
+    <pre id="util-brief-saida" class="util-estado" aria-live="polite">Sem briefing ainda.</pre>
+  </section>
+
+  <div class="botoes barra"><button id="util-fechar" type="button">Fechar</button></div>
+</aside>
+
 <script src="plataforma.js"></script>
 <script src="memoria.js"></script>
 <script src="vendor/three.min.js"></script>
@@ -1359,6 +1461,10 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="visao.js"></script>
 <script src="visao_contexto.js"></script>
 <script src="seguranca.js"></script>
+<script src="utilidades.js"></script>
+<script src="cultura.js"></script>
+<script src="briefing.js"></script>
+<script src="jogos.js"></script>
 <script src="pessoas.js"></script>
 <script src="identidade.js"></script>
 <script src="identidade_ui.js"></script>
@@ -1381,6 +1487,7 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="eletrica.js"></script>
 <script src="projetista.js"></script>
 <script src="app.js"></script>
+<script src="utilidades_ui.js"></script>
 <script src="core_ui.js"></script>
 <script src="aprendizado_ui.js"></script>
 <script src="pc.js" defer></script>
