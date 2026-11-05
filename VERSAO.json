@@ -17,10 +17,10 @@
   "build": {
     "resultado": "success",
     "apk": "jarvis-nova-1.43.1-10431.apk",
-    "bytes": 81331752,
-    "sha256": "fbfc4712d736cc471e43e2ab700321d390f697a53beee3194e3f11c28ef285c6",
+    "bytes": 81331968,
+    "sha256": "092c49aff8260d826b98eb00254d12dc59730c1fd60786102770b4899f6403d3",
     "data": "2026-11-05",
-    "observacao": "compilado no GitHub Actions e publicado; conferido por dentro: utilidades.js, jogos.js, cultura.js, briefing.js, utilidades_ui.js, painel e gancho no chat; não instalado em aparelho físico"
+    "observacao": "compilado no GitHub Actions; conferido por dentro: cinco módulos, painel e rota na navegação; correções da 1.43.1 incluídas; não instalado em aparelho físico"
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",
