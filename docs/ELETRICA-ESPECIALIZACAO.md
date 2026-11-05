@@ -111,3 +111,10 @@ rungs). Se o temporizador for removido, a segunda análise reprova — e o teste
 - Cabo que não atende ampacidade/quedas não é mais substituído por 50 mm² com aviso.
 - Iluminação não herda emergência; partida monofásica não exige os polos 5/6 do térmico.
 - Testes: 10 grupos na base elétrica e 84 verificações no projetista.
+
+## 9. Correções da 1.45.0
+
+- Topologias trifásicas (reversão, estrela-triângulo, compensadora e sequência) são recusadas com
+  `topologia_trifasica` quando o motor é monofásico; antes o motor era montado com pinos trifásicos.
+- Ponte CADeSIMU: checklist determinístico e JSON de intercâmbio, sem alegação de formato nativo.
+- Teste novo `tests/test_cadesimu_troca.js` na suíte.

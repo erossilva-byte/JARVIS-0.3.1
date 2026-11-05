@@ -1,3 +1,22 @@
+## 1.45.0
+
+### Corrigido
+- **Topologia trifásica em motor monofásico**: reversão, estrela-triângulo, compensadora e sequência
+  eram montadas mesmo com `monofásico` no pedido, produzindo um circuito que não existe. Agora o
+  projetista recusa com código `topologia_trifasica` e explica que a partida direta é o caminho.
+- **Relatório sem a frente CADeSIMU**: o relatório técnico passou a trazer a ponte de conferência e
+  o que falta para o redesenho.
+
+### CADeSIMU
+- **Ponte de conferência** (`conferirTrocaCadesimu`): valida símbolo mapeado, terminais obrigatórios,
+  redes vazias, curto declarado e netlist.
+- **Pacote de intercâmbio** (`exportarTrocaCadesimu`): JSON `JARVIS-CADESIMU-TROCA` v1 com símbolo
+  IEC, terminais, redes e netlist. **Não é o `.cad` nativo** e o texto diz isso em todo lugar.
+- Comando de chat: `projetista: cadesimu` responde o checklist do projeto atual.
+
+### Testes
+- Novo `tests/test_cadesimu_troca.js` (4 grupos) na suíte `test:all`.
+
 ## 1.44.0
 
 ### Corrigido na engenharia elétrica

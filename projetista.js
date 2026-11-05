@@ -536,6 +536,13 @@
         return { ok: false, erro: preliminar.erro, codigo: preliminar.codigo || 'dimensionamento' };
       }
     }
+    if (spec.trifasico === false && ['reversao', 'estrela_triangulo', 'compensadora', 'sequencia'].indexOf(spec.tipo) >= 0) {
+      return {
+        ok: false, codigo: 'topologia_trifasica',
+        erro: 'Reversão, estrela-triângulo, compensadora e sequência de dois motores exigem motor trifásico. ' +
+          'Para monofásico, peça partida direta (ou informe que o motor é trifásico).'
+      };
+    }
     var p;
     switch (spec.tipo) {
       case 'partida_direta': p = partidaDireta(pedido, spec); break;
@@ -938,10 +945,16 @@
     v.erros.forEach(function (e) { linhas.push('     ERRO [' + e.codigo + '] ' + e.mensagem); });
     v.avisos.forEach(function (a) { linhas.push('     AVISO ' + a); });
     linhas.push('   Elétrica: não executada (o aplicativo não calcula tensão, corrente nem transitórios).');
+    var ponte = conferirTrocaCadesimu(projeto);
+    linhas.push('');
+    linhas.push('7. PONTE CADeSIMU (INTERCÂMBIO)');
+    linhas.push('   Formato nativo do CADeSIMU: NÃO gerado e NÃO lido (proprietário, sem especificação pública).');
+    linhas.push('   Checklist de redesenho: ' + (ponte.ok ? 'completo' : 'com ' + ponte.pendencias.length + ' pendência(s)'));
+    ponte.verificacoes.forEach(function (x) { linhas.push('     ' + (x.ok ? 'OK ' : 'FALTA ') + x.item + (x.ok ? '' : ' — ' + x.detalhe)); });
     linhas.push('   Simulação funcional: não executada.');
     linhas.push('   CADeSIMU: não aberto — o formato nativo do CADe SIMU é proprietário e este projeto usa o formato documentado ProjetistaEletrico CAD v1.');
     linhas.push('');
-    linhas.push('7. LIMITAÇÕES DECLARADAS');
+    linhas.push('8. LIMITAÇÕES DECLARADAS');
     linhas.push('   - A verificação é de continuidade e de regras, não de simulação elétrica.');
     linhas.push('   - O dimensionamento é estimativa didática; o projeto executivo exige cálculo normativo (NBR 5410) e catálogo do fabricante.');
     linhas.push('   - Intertravamento mecânico e ajustes de campo não são representáveis no arquivo.');
@@ -1373,8 +1386,84 @@
     return { ok: true, projeto: projeto, validacao: validar(projeto) };
   }
 
+  /* ---------- Ponte CADeSIMU: conferência sem o formato proprietário ---------- */
+  var MAPA_CADESIMU = {
+    disjuntor3: 'Disjuntor tripolar (3 polos)', disjuntor3p: 'Disjuntor-motor tripolar', disjuntor: 'Disjuntor bipolar',
+    fusivel: 'Fusível', contator: 'Contator com bobina e contatos auxiliares', releTermico: 'Relé térmico',
+    motor3: 'Motor trifásico', motor6: 'Motor trifásico 6 pontas', motor1: 'Motor monofásico', bomba: 'Motor/bomba trifásica',
+    botoeira: 'Botoeira NA/NF', contatoNA: 'Contato auxiliar NA', contatoNF: 'Contato auxiliar NF', sinaleiro: 'Sinaleiro',
+    temporizador: 'Temporizador', transformador: 'Transformador de comando', fonte: 'Fonte de comando', sensor: 'Sensor',
+    interruptor: 'Interruptor', lampada: 'Lâmpada/luminária', clp: 'CLP', autotransformador: 'Autotransformador'
+  };
+
+  function conferirTrocaCadesimu(projeto) {
+    var verificacoes = [], pendencias = [];
+    function item(nome, ok, detalhe) {
+      verificacoes.push({ item: nome, ok: !!ok, detalhe: detalhe || '' });
+      if (!ok) pendencias.push(detalhe || nome);
+    }
+    if (!projeto || !Array.isArray(projeto.componentes) || !projeto.componentes.length) {
+      return { ok: false, nativo: false, verificacoes: [{ item: 'projeto', ok: false, detalhe: 'Projeto ausente.' }],
+        pendencias: ['Projeto ausente.'], resumo: 'Nada para conferir.', aviso: 'Formato nativo do CADeSIMU não é gerado.' };
+    }
+    var v = validar(projeto);
+    item('verificação estrutural', v.ok, v.ok ? 'aprovada' : v.erros.map(function (e) { return e.codigo; }).join(','));
+    var ids = {}, semMapa = [], semRede = [], soltos = [], curto = [];
+    projeto.componentes.forEach(function (c) {
+      if (ids[c.id]) pendencias.push('ID repetido: ' + c.id);
+      ids[c.id] = true;
+      if (!MAPA_CADESIMU[c.tipo]) semMapa.push(c.id + ' (' + c.tipo + ')');
+      var def = TIPOS[c.tipo] || {};
+      (def.obrigatorios || def.pinos || []).forEach(function (p) {
+        if (!c.pinos || !c.pinos[p]) soltos.push(c.id + '.' + p);
+        else if (!String(c.pinos[p]).trim()) semRede.push(c.id + '.' + p);
+      });
+      (def.conducao || []).forEach(function (par) {
+        if (c.pinos && c.pinos[par[0]] && c.pinos[par[0]] === c.pinos[par[1]]) curto.push(c.id + ' ' + par[0] + '/' + par[1]);
+      });
+    });
+    item('todos os tipos têm símbolo mapeado', semMapa.length === 0, semMapa.length ? 'sem mapa: ' + semMapa.join(', ') : 'todos os tipos mapeados');
+    item('todo terminal obrigatório tem rede', soltos.length === 0, soltos.length ? 'soltos: ' + soltos.join(', ') : 'nenhum terminal solto');
+    item('nenhum terminal obrigatório com rede vazia', semRede.length === 0, semRede.length ? 'vazios: ' + semRede.join(', ') : 'redes preenchidas');
+    item('sem curto declarado entre polos do mesmo componente', curto.length === 0, curto.length ? 'curtos: ' + curto.join(', ') : 'sem curto declarado');
+    item('netlist exportável', /^# ProjetistaEletrico NETLIST v1/.test(exportarNetlist(projeto)), 'NETLIST v1');
+    var pronto = pendencias.length === 0;
+    return {
+      ok: pronto, nativo: false, verificacoes: verificacoes, pendencias: pendencias,
+      componentes: projeto.componentes.length, fios: fios(projeto).length,
+      resumo: pronto ? 'Pronto para redesenho/conferência no CADeSIMU a partir do mapa IEC e da netlist.'
+        : 'Faltam ' + pendencias.length + ' item(ns) para o redesenho: ' + pendencias.join('; '),
+      aviso: 'Isto é um pacote de conferência e intercâmbio. O arquivo .cad nativo do CADeSIMU não é gerado nem lido.'
+    };
+  }
+
+  function exportarTrocaCadesimu(projeto) {
+    var conf = conferirTrocaCadesimu(projeto);
+    var dados = {
+      formato: 'JARVIS-CADESIMU-TROCA', versao: 1, nativo: false,
+      titulo: projeto && projeto.titulo || '', tipo: projeto && projeto.tipo || '',
+      spec: projeto && projeto.spec || {}, componentes: [], redes: projeto && projeto.redes || {},
+      netlist: projeto ? exportarNetlist(projeto) : '', conferencia: conf,
+      aviso: 'Pacote de conferência/redesenho. Não é o .cad proprietário do CADeSIMU.'
+    };
+    (projeto && projeto.componentes || []).forEach(function (c) {
+      dados.componentes.push({
+        id: c.id, tipo: c.tipo, funcao: c.funcao || '', simbolo_iec: MAPA_CADESIMU[c.tipo] || null,
+        posicao: { x: c.x, y: c.y }, terminais: c.pinos || {}, tensao: c.tensao == null ? null : c.tensao,
+        tempo: c.tempo == null ? null : c.tempo
+      });
+    });
+    var texto = JSON.stringify(dados, null, 2) + '\n';
+    return {
+      ok: conf.ok, nativo: false, formato: dados.formato, nome: slug(projeto && projeto.titulo || 'circuito') + '.cadesimu-troca.json',
+      texto: texto, dados: dados, bytes: texto.length, conferencia: conf,
+      aviso: conf.aviso + ' Use o JSON para redesenhar e conferir terminais/redes no CADeSIMU.'
+    };
+  }
+
   return {
     FORMATO: FORMATO, VERSAO: VERSAO, TIPOS: TIPOS, EXEMPLOS: EXEMPLOS,
+    conferirTrocaCadesimu: conferirTrocaCadesimu, exportarTrocaCadesimu: exportarTrocaCadesimu, MAPA_CADESIMU: MAPA_CADESIMU,
     interpretar: interpretar, projetar: projetar, validar: validar, corrigir: corrigir,
     modificar: modificar, comparar: comparar, conferirObjetivo: conferirObjetivo,
     exportarNetlist: exportarNetlist, importarDiagramaTexto: importarDiagramaTexto,

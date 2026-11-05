@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.44.0';
+const VERSAO_APP = '1.45.0';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -3801,6 +3801,15 @@ async function responderProjetista(texto) {
     return 'Segunda análise: ' + (c.ok ? 'o projeto atende ao objetivo (' + c.atendidos.length + ' itens)' : 'faltam ' + c.faltas.length + ' item(ns): ' + c.faltas.join('; ')) + '. ' + LIMITE_PROJETISTA;
   }
 
+  if (/cadesimu|cad\s*simu|ponte/.test(n) && api && api.temProjeto() && P.exportarTrocaCadesimu) {
+    const pac = P.exportarTrocaCadesimu(api.estado());
+    if (pac && pac.conferencia) {
+      const c = pac.conferencia;
+      return 'Ponte CADeSIMU: ' + (c.ok ? 'pronta para redesenho (' + c.verificacoes.length + ' verificações)' :
+        'faltam ' + c.pendencias.length + ' item(ns): ' + c.pendencias.join('; ')) +
+        '. O .cad nativo do CADeSIMU não é gerado nem lido. ' + LIMITE_PROJETISTA;
+    }
+  }
   if (/relatorio/.test(n) && api && api.temProjeto()) {
     api.relatorio();
     return 'Relatório técnico gerado na saída do projetista. ' + LIMITE_PROJETISTA;

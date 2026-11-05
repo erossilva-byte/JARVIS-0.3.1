@@ -176,3 +176,12 @@ Cada pino aponta para o **nome da rede**; dois pinos com o mesmo nome estão no 
 Motores acima da série não são mais entregues com contator/disjuntor menor que a corrente: as
 séries vão até 800 A e, acima disso, o pedido é recusado com o motivo. Iluminação não exige
 emergência e a partida monofásica não deixa os polos 5/6 do térmico soltos.
+
+## Ponte CADeSIMU (1.45.0)
+
+O `.cad` nativo continua **não suportado**. O que existe agora é `conferirTrocaCadesimu` (checklist)
+e `exportarTrocaCadesimu` (JSON de intercâmbio com símbolo IEC, terminais e netlist), além do comando
+`projetista: cadesimu`. Detalhes em [CADESIMU-PONTE.md](CADESIMU-PONTE.md).
+
+Reversão, estrela-triângulo, compensadora e sequência são recusadas para motor monofásico com o
+código `topologia_trifasica`: essas topologias exigem três fases.

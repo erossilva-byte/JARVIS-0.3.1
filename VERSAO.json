@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.44.0",
-  "versionCode": 10440,
+  "version": "1.45.0",
+  "versionCode": 10450,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-11-03",
-  "status": "1.44.0: Central de Utilidades local (cálculo, conversões, saúde, finanças, jogos, cultura e briefing) integrada ao chat e ao painel.",
+  "status": "1.45.0: Central de Utilidades local (cálculo, conversões, saúde, finanças, jogos, cultura e briefing) integrada ao chat e ao painel.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Central de Utilidades nas áreas do app: calculadora com funções, equações, matrizes e estatística; conversões de unidade e temperatura; IMC, metabolismo e água; juros, parcelas e ROI; oito jogos de texto; receitas, bebidas, nutrição, treinos, piadas e sugestões; briefing que não inventa dados e monitoramento por comparação. Tudo local, sem nuvem. A abertura mantém o plasma, o flash de inicialização, o núcleo holográfico e a animação de estados. O raciocínio e a personalidade seguem no Hermes, e o app verifica as capacidades novas com testes automatizados antes de publicar. A 1.44.0 corrige a integração do painel com o fechamento geral e a altura com vírgula na saúde. A 1.44.0 amplia as séries elétricas, recusa motores fora da tabela em vez de subdimensionar, corrige iluminação e partida monofásica e aplica o HUD elétrico.",
+  "notas": "Central de Utilidades nas áreas do app: calculadora com funções, equações, matrizes e estatística; conversões de unidade e temperatura; IMC, metabolismo e água; juros, parcelas e ROI; oito jogos de texto; receitas, bebidas, nutrição, treinos, piadas e sugestões; briefing que não inventa dados e monitoramento por comparação. Tudo local, sem nuvem. A abertura mantém o plasma, o flash de inicialização, o núcleo holográfico e a animação de estados. O raciocínio e a personalidade seguem no Hermes, e o app verifica as capacidades novas com testes automatizados antes de publicar. A 1.45.0 corrige a integração do painel com o fechamento geral e a altura com vírgula na saúde. A 1.45.0 amplia as séries elétricas, recusa motores fora da tabela em vez de subdimensionar, corrige iluminação e partida monofásica e aplica o HUD elétrico. A 1.45.0 recusa topologias trifásicas em motor monofásico e adiciona a ponte de conferência CADeSIMU (checklist e JSON de intercâmbio, sem fingir o formato nativo).",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,7 +16,7 @@
   ],
   "build": {
     "resultado": "success",
-    "apk": "jarvis-nova-1.44.0-10440.apk",
+    "apk": "jarvis-nova-1.45.0-10450.apk",
     "bytes": 81333564,
     "sha256": "6453e4a051fd4e388090382ffce2a798154e52b9ce1dd7acf5f3d006fca1cbc7",
     "data": "2026-11-05",
@@ -46,5 +46,5 @@
       "suite": "npm run test:all — verde"
     }
   },
-  "versao": "1.44.0"
+  "versao": "1.45.0"
 }
