@@ -51,7 +51,8 @@
       conducao: [['1', '2'], ['3', '4'], ['5', '6'], ['13', '14'], ['21', '22']],
       bobina: ['A1', 'A2'], na: [['13', '14']], nf: [['21', '22']]
     },
-    releTermico: { nome: 'Relé térmico', grupo: 'potencia', pinos: ['1', '2', '3', '4', '5', '6'], conducao: [['1', '2'], ['3', '4'], ['5', '6']], protege: true },
+    // 5/6 são o terceiro polo: no monofásico só fase e neutro passam, então esses polos podem ficar sem ligação.
+    releTermico: { nome: 'Relé térmico', grupo: 'potencia', pinos: ['1', '2', '3', '4', '5', '6'], obrigatorios: ['1', '2', '3', '4'], conducao: [['1', '2'], ['3', '4'], ['5', '6']], protege: true },
     motor3: { nome: 'Motor trifásico', grupo: 'potencia', pinos: ['U', 'V', 'W', 'PE'], obrigatorios: ['U', 'V', 'W'], carga: true },
     motor6: { nome: 'Motor trifásico (6 pontas)', grupo: 'potencia', pinos: ['U1', 'V1', 'W1', 'U2', 'V2', 'W2', 'PE'], obrigatorios: ['U1', 'V1', 'W1', 'U2', 'V2', 'W2'], carga: true },
     motor1: { nome: 'Motor monofásico', grupo: 'potencia', pinos: ['F', 'N', 'PE'], obrigatorios: ['F', 'N'], carga: true },
@@ -141,8 +142,10 @@
     var trifasico = !/monof[aá]sico|1\s*fase|fase\s*\+\s*neutro|uma\s*fase/.test(t);
     var tensaoPotencia = /440\s*v/.test(t) ? 440 : /380\s*v/.test(t) ? 380 : /220\s*v/.test(t) ? 220 : (trifasico ? 380 : 220);
     var tensaoComando = /24\s*v|24v\b/.test(t) ? 24 : 220;
-    var emergencia = !/sem\s+(?:bot[aã]o\s+de\s+)?emerg/.test(t);
+    // Iluminação não tem botoeira de emergência; marcá-la como obrigatória reprovava o próprio projeto.
+    var emergencia = tipo !== 'iluminacao' && !/sem\s+(?:bot[aã]o\s+de\s+)?emerg/.test(t);
     var sinalizacao = /sinaliza|sinaleiro|l[aâ]mpada|led|sirene/.test(t) || tipo === 'partida_direta';
+    if (tipo === 'iluminacao' && /emerg/.test(t)) pendencias.push('Iluminação não usa botoeira de emergência: o desligamento fica no disjuntor e no interruptor.');
     var temporizador = null;
     var mT = t.match(/(\d+(?:[.,]\d+)?)\s*(?:s\b|seg\b|segundos?\b)/);
     if (mT) temporizador = Number(mT[1].replace(',', '.'));
@@ -210,15 +213,25 @@
     };
   }
 
+  var baseCache = null;
   function baseEletrica() {
-    try { return (typeof window !== 'undefined' && window.EletricaBase) || null; } catch (e) { return null; }
+    if (baseCache) return baseCache;
+    try {
+      if (typeof window !== 'undefined' && window.EletricaBase) baseCache = window.EletricaBase;
+      // No Node (testes e scripts) a base é módulo, não global: antes o projetista caía no
+      // dimensionador reserva e validava com uma série que parava em 200 A.
+      else if (typeof module === 'object' && module.exports && typeof require === 'function') baseCache = require('./eletrica.js');
+    } catch (e) { baseCache = null; }
+    return baseCache;
   }
 
   function dimensionar(spec) {
     var B = baseEletrica();
     if (B && B.dimensionar) {
       var d = B.dimensionar(spec || {});
-      if (d && d.ok !== false && d.correnteA) return d;
+      // Recusa da base (fora da tabela / cabo impossível) NÃO pode cair no reserva e virar projeto.
+      if (d && d.ok === false) return d;
+      if (d && d.correnteA) return d;
     }
     return dimensionarInterno(spec);
   }
@@ -228,13 +241,17 @@
     var potencia = spec.cv * 736;
     var tensao = spec.trifasico ? spec.tensaoPotencia : spec.tensaoPotencia;
     var corrente = spec.trifasico ? potencia / (Math.sqrt(3) * tensao * 0.8 * 0.9) : potencia / (tensao * 0.8 * 0.9);
-    var serie = [6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200];
-    function acima(v) { for (var i = 0; i < serie.length; i++) if (serie[i] >= v) return serie[i]; return serie[serie.length - 1]; }
+    var serie = [6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 300, 400, 500, 630, 800];
+    function acima(v) { for (var i = 0; i < serie.length; i++) if (serie[i] >= v) return serie[i]; return null; }
+    var contator = acima(corrente), disjuntor = acima(corrente * 1.15);
+    if (!contator || !disjuntor) {
+      return { ok: false, codigo: 'fora_da_tabela', erro: 'Corrente de ' + Math.round(corrente) + ' A acima da série disponível; use catálogo do fabricante.' };
+    }
     return {
       potenciaW: Math.round(potencia),
       correnteA: Math.round(corrente * 10) / 10,
-      disjuntorA: acima(corrente * 1.15),
-      contatorA: acima(corrente),
+      disjuntorA: disjuntor,
+      contatorA: contator,
       termicoA: Math.round(corrente * 1.15 * 10) / 10,
       nota: 'Estimativa didática (fp 0,8 / rendimento 0,9). Dimensionamento final exige cálculo normativo e catálogo do fabricante.'
     };
@@ -511,6 +528,14 @@
     spec.tensaoPotencia = numero(spec.tensaoPotencia, spec.trifasico === false ? 220 : 380);
     spec.trifasico = spec.trifasico !== false;
     spec.emergencia = spec.emergencia !== false;
+    // Antes de montar: se a potência está fora da tabela, recusa com explicação em vez de
+    // montar um projeto com aparelho menor que a corrente do motor.
+    if (spec.cv) {
+      var preliminar = dimensionar(spec);
+      if (preliminar && preliminar.ok === false) {
+        return { ok: false, erro: preliminar.erro, codigo: preliminar.codigo || 'dimensionamento' };
+      }
+    }
     var p;
     switch (spec.tipo) {
       case 'partida_direta': p = partidaDireta(pedido, spec); break;

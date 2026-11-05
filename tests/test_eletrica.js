@@ -77,4 +77,23 @@ assert.ok(E.apagarReferencia('Partida direta verificada').ok, 'apaga referência
 assert.strictEqual(E.buscarReferencias('').total, 0, 'lista vazia após apagar');
 ok('memória especializada');
 
+// 9 — séries ampliadas: 150 CV trifásico cabe e continua coerente
+const d150 = E.dimensionar({ cv: 150, trifasico: true, tensaoPotencia: 380 });
+assert.ok(d150.ok, '150 CV trifásico dimensiona: ' + d150.erro);
+assert.ok(d150.contatorA >= d150.correnteA && d150.disjuntorA >= d150.correnteA,
+  'contator/disjuntor >= In em 150 CV: ' + d150.contatorA + '/' + d150.disjuntorA + ' para ' + d150.correnteA);
+assert.ok(d150.caboMm2 >= 95, 'cabo de 150 CV: ' + d150.caboMm2);
+assert.ok(E.conferirDimensionamento({ spec: { cv: 150, trifasico: true, tensaoPotencia: 380 }, dimensionamento: d150 }).ok,
+  'autoconferência de 150 CV');
+ok('série ampliada até 150 CV');
+
+// 10 — acima da tabela recusa em vez de entregar aparelho menor que a corrente
+const dFora = E.dimensionar({ cv: 1000, trifasico: true, tensaoPotencia: 380 });
+assert.strictEqual(dFora.ok, false, 'acima da tabela recusa');
+assert.ok(/tabela|catálogo/i.test(dFora.erro), 'erro explica o limite: ' + dFora.erro);
+const confFora = E.conferirDimensionamento({ spec: { cv: 1000, trifasico: true, tensaoPotencia: 380 }, dimensionamento: {} });
+assert.strictEqual(confFora.ok, false, 'conferência propaga a recusa');
+assert.ok(confFora.faltas.some((f) => f.codigo === 'fora_da_tabela'), 'código da falta: ' + confFora.faltas.map((f) => f.codigo));
+ok('recusa acima da tabela');
+
 console.log('\nBase elétrica: ' + checks + ' grupos de verificação aprovados.');

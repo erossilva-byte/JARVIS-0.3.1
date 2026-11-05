@@ -155,7 +155,7 @@ Cada pino aponta para o **nome da rede**; dois pinos com o mesmo nome estão no 
 
 ## Testes
 
-- `tests/test_projetista.js` — 73 verificações: interpretação dos seis pedidos da missão,
+- `tests/test_projetista.js` — 84 verificações: interpretação dos seis pedidos da missão,
   projeto e aprovação das seis topologias, determinismo, relatório, ladder, arquivo, detecção de
   falta de intertravamento/emergência/proteção, tensão errada, endereço de CLP duplicado, curto,
   terminal solto, a correção de cada um, o histórico de versões com restauração e a modificação de projeto existente.
@@ -170,3 +170,9 @@ Cada pino aponta para o **nome da rede**; dois pinos com o mesmo nome estão no 
 | `app.js` | bloco `projetistaEletricoUI`: interface no painel Arquivos |
 | `index.html` | seção "Projetista elétrico" e carregamento do módulo |
 | `style.css` | vista de projeto (cartões, pinos, fios, destaque de erro) |
+
+## Correções da 1.44.0
+
+Motores acima da série não são mais entregues com contator/disjuntor menor que a corrente: as
+séries vão até 800 A e, acima disso, o pedido é recusado com o motivo. Iluminação não exige
+emergência e a partida monofásica não deixa os polos 5/6 do térmico soltos.

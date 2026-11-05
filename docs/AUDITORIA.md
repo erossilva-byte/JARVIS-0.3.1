@@ -99,11 +99,11 @@ que só aparecem nesses ambientes não foram descartadas — apenas não foram o
 
 | Verificação | Resultado |
 | --- | --- |
-| `node tests/test_projetista.js` | **OK, 73 verificações** (interpretação, topologias, verificação, correção, arquivo, versões, comparação e modificação) |
+| `node tests/test_projetista.js` | **OK, 84 verificações** (interpretação, topologias, verificação, correção, arquivo, versões, comparação e modificação) |
 | `node tests/test_projetista_ui.js` | OK (criar, desenhar, analisar, corrigir, relatório, ladder, salvar, reabrir, modificar, comparar, versões e restaurar) |
 | `npm run test:all` | **EXIT 0, 2.107 verificações** |
 | `python3 tests/test_empacotamento.py` | OK (todo script do `index.html` no pacote Android e no Windows) |
-| `node tests/test_eletrica.js` | 8 grupos OK (dimensionamento, conferência independente, biblioteca, CLP, memória) |
+| `node tests/test_eletrica.js` | 10 grupos OK (dimensionamento, conferência independente, biblioteca, CLP, memória) |
 | `node tests/test_projetista.js` | 73 + sequência de dois motores, segunda análise e netlist OK |
 | Contratos Python | verdes |
 

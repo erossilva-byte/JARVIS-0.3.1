@@ -1,7 +1,7 @@
 name: Publicar release do J.A.R.V.I.S. Nova
-# Versão publicada: 1.43.1 — confira VERSAO.json antes de criar a tag.
+# Versão publicada: 1.44.0 — confira VERSAO.json antes de criar a tag.
 # Notas publicadas: o passo "Publicar release com o APK" gera o texto a partir de VERSAO.json.
-# Novidades da 1.43.1: tela de bloqueio com biometria forte do Android, leitura NFC real,
+# Novidades da 1.44.0: tela de bloqueio com biometria forte do Android, leitura NFC real,
 # modos combinados (biometria/NFC/PIN), central completa em Ajustes ▸ Segurança, histórico sem
 # segredos e PIN em PBKDF2 com migração do hash antigo. NFC é conveniência: UID pode ser clonado.
 # Novidades da 1.42.8: contexto visual da sessão, acompanhamento ("ele", "quanto custa"),

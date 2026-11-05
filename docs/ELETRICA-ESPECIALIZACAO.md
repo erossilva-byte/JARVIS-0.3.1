@@ -100,3 +100,14 @@ rungs). Se o temporizador for removido, a segunda análise reprova — e o teste
 3. Ampliar topologias (partida com inversão temporizada, contadores, fim de curso, alarmes) mantendo o mesmo
    padrão: projeto + verificação + segunda análise + teste.
 4. Catálogo por fabricante (corrente, curva, faixa) como dado versionado, sem inventar valores.
+
+## 8. Correções da 1.44.0
+
+- Séries ampliadas: contator AC-3 até 800 A, disjuntor até 800 A, cabo até 300 mm² e faixas de
+  térmico até 800 A.
+- Fora da tabela, `dimensionar()` devolve `ok:false` com código (`fora_da_tabela` ou
+  `cabo_fora_da_tabela`) e o projetista **não monta** o circuito; antes ele aprovava um contator
+  menor que a corrente.
+- Cabo que não atende ampacidade/quedas não é mais substituído por 50 mm² com aviso.
+- Iluminação não herda emergência; partida monofásica não exige os polos 5/6 do térmico.
+- Testes: 10 grupos na base elétrica e 84 verificações no projetista.

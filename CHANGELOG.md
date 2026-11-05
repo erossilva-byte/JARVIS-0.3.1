@@ -1,3 +1,27 @@
+## 1.44.0
+
+### Corrigido na engenharia elétrica
+- **Motor acima da série saía subdimensionado**: acima de 150 CV o dimensionador devolvia o maior
+  item da tabela mesmo sendo menor que a corrente, e o projeto era aprovado. As séries foram
+  ampliadas (contator até 800 A, disjuntor até 800 A, cabo até 300 mm², térmico até 800 A) e,
+  quando o pedido passa do limite, o projetista **recusa com explicação** em vez de montar.
+- **Projetista não usava a base elétrica no Node**: o fallback interno parava em 200 A e a
+  verificação de dimensionamento era pulada nos testes. Agora a base é ligada também como módulo.
+- **Cabo impossível virava 50 mm² com aviso**: agora a seleção falha de forma explícita
+  (ampacidade ≥ 1,25 × In e queda ≤ 4%) e a recusa chega ao projeto.
+- **Iluminação pedia botoeira de emergência**: a topologia não tem esse botão e o próprio projeto
+  era reprovado. Emergência deixou de ser herdada pela iluminação.
+- **Partida monofásica com terminal solto**: o térmico exigia os seis polos; no monofásico os polos
+  5/6 agora são opcionais, e a montagem passa na verificação.
+
+### Interface
+- HUD elétrico no palco do projetista: grade, brilho ciano nos fios e pinos, cartões em vidro e
+  leitura monoespaçada, mantendo a vista 3D e o desenho IEC existentes.
+
+### Testes
+- Base elétrica: **10 grupos** (150 CV aprovado, 1000 CV recusado com código).
+- Projetista: **84 verificações**, incluindo iluminação válida, 150 CV dimensionado e recusa explicada.
+
 ## 1.43.1
 
 ### Corrigido

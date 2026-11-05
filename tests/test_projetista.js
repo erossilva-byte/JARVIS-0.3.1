@@ -228,4 +228,25 @@ assert.deepStrictEqual(k1net.pinos, k1orig.pinos, 'pinos preservados na netlist'
 assert.strictEqual(P.importarDiagramaTexto('lixo').ok, false, 'netlist inválida recusada');
 checks += 3;
 
+// ILUMINAÇÃO: não herda emergência que a topologia não possui, e valida de verdade
+const rIlum = P.projetar('Faça uma iluminação com sensor de presença.');
+assert.ok(rIlum.ok, 'projetar iluminação: ' + rIlum.erro);
+assert.strictEqual(rIlum.projeto.spec.emergencia, false, 'iluminação não pede emergência de motor');
+const vIlum = P.validar(rIlum.projeto);
+assert.ok(vIlum.ok, 'iluminação válida: ' + vIlum.erros.map((e) => e.codigo).join(','));
+assert.ok(P.conferirObjetivo(rIlum.projeto).ok, 'segunda análise aprova iluminação');
+checks += 2;
+
+// MOTOR GRANDE: 150 CV é dimensionado; 1000 CV é recusado com explicação
+const rGrande = P.projetar('Crie uma partida direta para um motor trifásico de 150 CV.');
+assert.ok(rGrande.ok, 'projetar 150 CV: ' + rGrande.erro);
+const vGrande = P.validar(rGrande.projeto);
+assert.ok(vGrande.ok, '150 CV válido: ' + vGrande.erros.map((e) => e.codigo).join(','));
+assert.ok(rGrande.projeto.dimensionamento && rGrande.projeto.dimensionamento.contatorA >= rGrande.projeto.dimensionamento.correnteA,
+  'contator do 150 CV >= In');
+const rFora = P.projetar('Crie uma partida direta para um motor trifásico de 1000 CV.');
+assert.strictEqual(rFora.ok, false, '1000 CV recusado');
+assert.ok(/tabela|catálogo/i.test(rFora.erro), 'recusa de 1000 CV explica: ' + rFora.erro);
+checks += 2;
+
 console.log('OK: sequência de dois motores, segunda análise e netlist — ' + checks + ' verificações no total');

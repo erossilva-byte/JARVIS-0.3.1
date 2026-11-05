@@ -1696,3 +1696,33 @@ button.anexo{width:44px;min-width:44px;height:44px;min-height:44px;border-radius
 .util-chip{min-height:32px;padding:0 10px;border-radius:999px;font-size:12px;color:var(--suave)}
 .util-botoes-cultura{flex-wrap:wrap}
 @media (max-width:420px){.util-linha{flex-direction:column;align-items:stretch}.util-linha .util-campo{flex:1 1 auto}}
+
+
+/* ---- HUD elétrico (1.44.0): palco, símbolos e leitura ---- */
+.proj-palco{
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(var(--rgb),.12), transparent 62%),
+    repeating-linear-gradient(0deg, rgba(var(--rgb),.055) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, rgba(var(--rgb),.055) 0 1px, transparent 1px 26px),
+    linear-gradient(180deg, rgba(8,18,30,.86), rgba(3,8,15,.94));
+  border-color: rgba(var(--rgb),.34);
+  border-radius:14px;
+  box-shadow:inset 0 0 46px rgba(var(--rgb),.09), 0 20px 54px -36px #000;
+}
+.proj-cartao{fill:rgba(10,26,42,.92);stroke:rgba(var(--rgb),.38);filter:drop-shadow(0 2px 6px rgba(0,0,0,.55))}
+.proj-cartao.sel{stroke:#ff9a9a}
+.proj-comp.sel .proj-titulo{fill:#ffc2c2}
+.proj-fio{stroke:rgba(var(--rgb),.62);stroke-width:1.05;stroke-dasharray:4 3;filter:drop-shadow(0 0 2px rgba(var(--rgb),.35))}
+.proj-pino{fill:#07131f;stroke:rgba(var(--rgb),.78)}
+.proj-pino.sel{fill:rgba(var(--rgb),.92);stroke:#eaffff;filter:drop-shadow(0 0 4px rgba(var(--rgb),.95))}
+.proj-sim{stroke:rgba(var(--rgb),.94);filter:drop-shadow(0 0 2.5px rgba(var(--rgb),.45))}
+.proj-titulo{fill:#e9fbff;font-weight:600}
+.proj-rede{fill:#8de9ff}
+.proj-simb-txt{fill:#d8f8ff}
+#proj-status{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em}
+#proj-saida{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:linear-gradient(180deg,rgba(5,14,24,.97),rgba(3,9,17,.99));border-color:rgba(var(--rgb),.3);box-shadow:inset 0 0 0 1px rgba(var(--rgb),.05),inset 0 16px 38px -30px rgba(var(--rgb),.85)}
+#proj-palco:focus-visible{outline:2px solid rgba(var(--rgb),.72);outline-offset:3px}
+@media (prefers-reduced-motion: no-preference){
+  .proj-comp{transition:filter .18s ease}
+  .proj-comp:hover{filter:drop-shadow(0 0 9px rgba(var(--rgb),.4))}
+}

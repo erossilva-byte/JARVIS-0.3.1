@@ -107,11 +107,13 @@
   // Ampacidade (A) para cobre, isolação PVC, em eletroduto, método B1, 30 °C — referência didática.
   var AMPACIDADE = [
     { mm2: 1.5, A: 17.5 }, { mm2: 2.5, A: 24 }, { mm2: 4, A: 32 }, { mm2: 6, A: 41 },
-    { mm2: 10, A: 57 }, { mm2: 16, A: 76 }, { mm2: 25, A: 101 }, { mm2: 35, A: 125 }, { mm2: 50, A: 153 }
+    { mm2: 10, A: 57 }, { mm2: 16, A: 76 }, { mm2: 25, A: 101 }, { mm2: 35, A: 125 }, { mm2: 50, A: 153 },
+    { mm2: 70, A: 187 }, { mm2: 95, A: 226 }, { mm2: 120, A: 261 }, { mm2: 150, A: 300 },
+    { mm2: 185, A: 341 }, { mm2: 240, A: 400 }, { mm2: 300, A: 460 }
   ];
-  var CONTATORES = [6, 9, 12, 16, 18, 25, 32, 40, 50, 65, 80, 95, 115, 150, 185, 225];
-  var DISJUNTORES = [6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250];
-  var FAIXAS_TERMICO = [[0.63, 1], [1, 1.6], [1.6, 2.5], [2.5, 4], [4, 6], [5.5, 8], [7, 10], [9, 13], [12, 18], [17, 25], [23, 32], [30, 40], [37, 50], [48, 65], [60, 80], [80, 100]];
+  var CONTATORES = [6, 9, 12, 16, 18, 25, 32, 40, 50, 65, 80, 95, 115, 150, 185, 225, 265, 300, 400, 500, 630, 800];
+  var DISJUNTORES = [6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 300, 400, 500, 630, 800];
+  var FAIXAS_TERMICO = [[0.63, 1], [1, 1.6], [1.6, 2.5], [2.5, 4], [4, 6], [5.5, 8], [7, 10], [9, 13], [12, 18], [17, 25], [23, 32], [30, 40], [37, 50], [48, 65], [60, 80], [80, 100], [100, 160], [125, 200], [160, 250], [200, 320], [250, 400], [320, 500], [400, 630], [500, 800]];
   var REFERENCIAS = [
     'Ampacidade: tabela de referência para cobre/PVC em eletroduto (método B1), 30 °C — valor didático, não substitui a NBR 5410 nem o catálogo.',
     'Contatores: série comercial AC-3 (6 A a 225 A); escolha pelo maior valor ≥ In do motor.',
@@ -154,6 +156,16 @@
     var fator = o.fatorServico === true ? 1.15 : 1;
     var contatorA = acima(CONTATORES, In * fator);
     var disjuntorA = acima(DISJUNTORES, In * 1.2);
+    // A tabela tem limite. Antes, acima de 150 CV ela devolvia o maior item da série mesmo sendo
+    // MENOR que a corrente do motor, e o projeto saía "válido" com contator subdimensionado.
+    if (In * fator > CONTATORES[CONTATORES.length - 1] || In * 1.2 > DISJUNTORES[DISJUNTORES.length - 1]) {
+      return {
+        ok: false, codigo: 'fora_da_tabela',
+        erro: 'Corrente de ' + In + ' A acima da maior série desta tabela (contator ' +
+          CONTATORES[CONTATORES.length - 1] + ' A / disjuntor ' + DISJUNTORES[DISJUNTORES.length - 1] +
+          ' A). Use catálogo do fabricante e partida compatível: não gerei aparelho menor que a corrente.'
+      };
+    }
     var ajusteTermico = arred(In * 1.05, 1);
     var faixa = faixaPara(ajusteTermico) || { min: ajusteTermico, max: ajusteTermico };
     var cabo = null;
@@ -167,7 +179,13 @@
         if (queda <= 4) { cabo = { mm2: c.mm2, ampacidade: c.A, quedaV: arred(queda, 2) }; break; }
       }
     }
-    if (!cabo) cabo = { mm2: 50, ampacidade: 153, quedaV: null, aviso: 'Nenhum cabo da tabela atende ampacidade e queda em ' + comprimento + ' m; aumente a seção ou divida o circuito.' };
+    if (!cabo) {
+      return {
+        ok: false, codigo: 'cabo_fora_da_tabela',
+        erro: 'Nenhum cabo de 1,5 a 300 mm² atende ampacidade (≥ 1,25 × In) e queda ≤ 4% em ' + comprimento +
+          ' m para ' + In + ' A. Aumente a seção, divida o circuito ou encurte o trecho: não entreguei cabo menor que o necessário.'
+      };
+    }
     var bobinas = o.bobinas || 2;
     var correnteComando = arred(bobinas * 0.15 + 0.1, 2);
     return {
@@ -202,7 +220,7 @@
     if (!projeto || !projeto.spec || !projeto.spec.cv) return { ok: true, faltas: faltas, avisos: ['Projeto sem potência declarada: dimensionamento não conferido.'] };
     var d = projeto.dimensionamento || {};
     var calc = dimensionar(projeto.spec, { comprimento: projeto.spec.comprimento });
-    if (!calc.ok) return { ok: false, faltas: [{ codigo: 'sem_potencia', mensagem: calc.erro }], avisos: avisos };
+    if (!calc.ok) return { ok: false, faltas: [{ codigo: calc.codigo || 'sem_potencia', mensagem: calc.erro }], avisos: avisos };
     function falso(codigo, mensagem) { faltas.push({ codigo: codigo, mensagem: mensagem }); }
     if (d.correnteA && Math.abs(Number(d.correnteA) - calc.correnteA) > Math.max(0.5, calc.correnteA * 0.15)) {
       avisos.push('Corrente declarada ' + d.correnteA + ' A difere do cálculo ' + calc.correnteA + ' A: confira η e fp.');
