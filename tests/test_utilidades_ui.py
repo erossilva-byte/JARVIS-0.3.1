@@ -61,7 +61,7 @@ def verificar():
     entrada = pkg.get('scripts', {}).get('test:all', '')
     checks['testes novos entram no test:all'] = all(t in entrada for t in [
         'tests/test_utilidades.js', 'tests/test_jogos.js', 'tests/test_cultura.js',
-        'tests/test_briefing.js', 'tests/test_utilidades_ui.py',
+        'tests/test_briefing.js', 'tests/test_utilidades_dom.js', 'tests/test_utilidades_ui.py',
     ])
     return checks
 

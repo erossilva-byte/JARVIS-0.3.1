@@ -1,6 +1,6 @@
-# J.A.R.V.I.S. Nova 1.43.0
+# J.A.R.V.I.S. Nova 1.43.1
 
-## 1.43.0 — Bloqueio com biometria, NFC e central própria
+## 1.43.1 — Bloqueio com biometria, NFC e central própria
 
 A tela de bloqueio opcional ganhou autenticação real: biometria forte do Android (nunca câmera comum), leitura NFC com UID guardado só como hash e modos combinados, incluindo duas etapas. Tudo é configurado em Ajustes ▸ Segurança, com tempo de inatividade, limite de tentativas, tags, histórico e restauração. O PIN passou a PBKDF2 com sal e o hash antigo migra sozinho. Sem biometria ou NFC, a tela diz isso e o PIN continua sendo a recuperação; nada foi testado em aparelho físico e o APK segue com assinatura debug/CI.
 
@@ -12,7 +12,7 @@ O Vision passou a lembrar o que foi analisado: perguntas como "ele é bom para c
 
 O projetista ganhou uma base de engenharia própria (`eletrica.js`): componentes com terminais, função, limites e símbolo IEC; tabelas de ampacidade, contator, disjuntor e térmico; dimensionamento com memória de cálculo e conferência independente. Nova topologia monta dois motores em sequência, com o segundo entrando X segundos depois do primeiro. A segunda análise (`conferirObjetivo`) verifica se o projeto montado atende ao pedido, e a netlist permite exportar e reimportar o diagrama em texto. O `.cad` do CADeSIMU continua não sendo gerado nem aberto, e não há simulação elétrica.
 
-O APK **1.43.0** (`jarvis-nova-1.43.0-10430.apk`) tem **81331752 bytes** e SHA-256 `fbfc4712d736cc471e43e2ab700321d390f697a53beee3194e3f11c28ef285c6`, compilado no GitHub Actions e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.43.0 . Os cinco módulos novos, o painel Utilidades e o gancho no chat foram conferidos dentro do pacote. Ele **não foi instalado em aparelho físico**: toque, desempenho e leitura de tela seguem sem validação física, e a assinatura é debug/CI.
+O APK **1.43.1** (`jarvis-nova-1.43.1-10431.apk`) está sendo compilado e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.43.1 ; bytes e SHA-256 são registrados em `VERSAO.json` depois do build. Ele **não foi instalado em aparelho físico**.
 
 ## 1.42.6 — Correção do pacote Android
 

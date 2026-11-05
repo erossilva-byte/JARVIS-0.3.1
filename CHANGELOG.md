@@ -1,3 +1,15 @@
+## 1.43.1
+
+### Corrigido
+- **Painel Utilidades fora da navegação geral**: não estava em `PAINEIS`, então o scrim, o
+  botão Voltar e o fechamento dos outros painéis não o controlavam. Agora entra na lista,
+  tem ação “utilidades” na área Início e fecha pelo caminho normal.
+- **Altura com vírgula na Saúde**: “1,80” não virava centímetros no metabolismo basal e o
+  cálculo saía incompleto. A interface passou a normalizar metro/centímetro.
+- **Teste de DOM real** da central (27 verificações), cobrindo cálculo, conversões,
+  unidades incompatíveis, saúde, finanças, jogos, cultura, briefing e comandos do chat.
+- Contagem de testes na documentação corrigida de 31 para 33 grupos.
+
 ## 1.43.0 — Bloqueio com biometria forte, NFC e central em Ajustes
 
 - **Modos de autenticação** (`seguranca.js`): PIN, biometria, NFC, biometria ou NFC, biometria + NFC, biometria + PIN, NFC + PIN.

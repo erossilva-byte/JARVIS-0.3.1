@@ -189,7 +189,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.43.0';
+const VERSAO_APP = '1.43.1';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -5938,7 +5938,7 @@ async function executarDiagnostico() {
 }
 const PAINEIS_ESSENCIAIS = !!($('#painel-config') && $('#painel-sistema') && $('#painel-memoria') && $('#painel-tarefas') && $('#painel-visao') && $('#painel-info') && $('#painel-arquivos') && $('#painel-pessoas') && $('#painel-dev'));
 const H = (typeof history !== 'undefined') ? history : null;
-const PAINEIS = ['#painel-areas', '#painel-config', '#painel-core', '#painel-sistema', '#painel-log', '#painel-tarefas', '#painel-visao', '#painel-info', '#painel-memoria', '#painel-arquivos', '#painel-pessoas', '#painel-dev', '#painel-pc'];
+const PAINEIS = ['#painel-areas', '#painel-config', '#painel-core', '#painel-sistema', '#painel-log', '#painel-tarefas', '#painel-visao', '#painel-info', '#painel-memoria', '#painel-arquivos', '#painel-pessoas', '#painel-dev', '#painel-pc', '#painel-utilidades'];
 const estadoPainelJarvis = (estado) => Boolean(estado && estado.jarvisPainel === true);
 function algumPainelAberto() {
   return PAINEIS.some((sel) => { const el = $(sel); return Boolean(el && !el.hidden); });
@@ -6004,6 +6004,10 @@ function acaoNavegacao(nome) {
     case 'info': abrirInformacoesUI(); break;
     case 'celular': abrirConfig(); mudarCategoriaConfig('celular'); atualizarStatusCelular(); break;
     case 'log': mostrarLog(); abrirPainel('#painel-log'); break;
+    case 'utilidades':
+      if (window.UtilidadesUI) window.UtilidadesUI.abrir('calc');
+      else abrirPainel('#painel-utilidades');
+      break;
     case 'config-ia': abrirConfig(); mudarCategoriaConfig('ia'); break;
     case 'config-voz': abrirConfig(); mudarCategoriaConfig('voz'); break;
     case 'config-memoria': abrirConfig(); mudarCategoriaConfig('memoria'); break;

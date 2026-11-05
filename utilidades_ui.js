@@ -12,9 +12,15 @@
   let jogo = null, tipoJogo = '';
 
   function abrir(aba) {
-    const p = el('painel-utilidades');
-    if (p) p.hidden = false;
+    const nav = raiz.JarvisNavegacao;
+    if (nav && typeof nav.abrirPainel === 'function') nav.abrirPainel('#painel-utilidades');
+    else { const p = el('painel-utilidades'); if (p) p.hidden = false; }
     selecionar(aba || 'calc');
+  }
+  function fechar() {
+    const nav = raiz.JarvisNavegacao;
+    if (nav && typeof nav.fecharPaineis === 'function') nav.fecharPaineis();
+    else { const p = el('painel-utilidades'); if (p) p.hidden = true; }
   }
   function selecionar(aba) {
     document.querySelectorAll('[data-util-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.utilTab === aba)));
@@ -59,7 +65,10 @@
     const idade = (el('util-saude-idade') || {}).value, sexo = (el('util-saude-sexo') || {}).value || 'm';
     const imc = U.imc(peso, altura);
     if (!imc) return txt('util-saude-saida', 'Informe peso em kg e altura em metros (ou centímetros).');
-    const bmr = U.taxaMetabolica(sexo, peso, Number(altura) > 3 ? altura : Number(altura) * 100, idade);
+    // A altura pode vir com vírgula ("1,80") ou em centímetros ("180"); o núcleo usa a mesma regra.
+    const alturaNum = U.numero(altura);
+    const alturaCm = Number.isFinite(alturaNum) ? (alturaNum <= 3 ? alturaNum * 100 : alturaNum) : altura;
+    const bmr = U.taxaMetabolica(sexo, peso, alturaCm, idade);
     let texto = 'IMC ' + U.formatar(imc.valor, 1) + ' — ' + imc.classe + '. Faixa saudável: ' + U.formatar(imc.pesoIdeal.min, 1) + ' a ' + U.formatar(imc.pesoIdeal.max, 1) + ' kg.';
     if (bmr) texto += ' Metabolismo basal estimado: ' + U.formatar(bmr.bmr, 0) + ' kcal/dia. Água sugerida: ' + bmr.aguaMl + ' ml/dia.';
     texto += ' Estimativas educativas, não substituem avaliação médica.';
@@ -221,14 +230,14 @@
     liga('util-cultura-musica', 'click', () => culturaAleatoria('musica'));
     liga('util-cultura-tedio', 'click', () => culturaAleatoria('tedio'));
     liga('util-brief-ver', 'click', montarBriefing);
-    liga('util-fechar', 'click', () => { const p = el('painel-utilidades'); if (p) p.hidden = true; });
+    liga('util-fechar', 'click', fechar);
     const dash = el('dash-utilidades');
     if (dash) dash.addEventListener('click', () => abrir('calc'));
     document.querySelectorAll('[data-util-tab]').forEach((b) => b.addEventListener('click', () => selecionar(b.dataset.utilTab)));
     document.querySelectorAll('[data-util-abrir]').forEach((b) => b.addEventListener('click', () => abrir(b.dataset.utilAbrir)));
   }
 
-  raiz.UtilidadesUI = { abrir, selecionar, responder, novoJogo, calcular, converter };
+  raiz.UtilidadesUI = { abrir, fechar, selecionar, responder, novoJogo, calcular, converter };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
   else iniciar();
 })(typeof window !== 'undefined' ? window : globalThis);
