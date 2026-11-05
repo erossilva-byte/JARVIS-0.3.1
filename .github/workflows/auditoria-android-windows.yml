@@ -103,12 +103,21 @@ jobs:
           test -s app/build/outputs/apk/debug/app-debug.apk
           sha256sum app/build/outputs/apk/debug/app-debug.apk | tee apk-sha256.txt
 
+      - name: Habilitar acesso KVM para acelerar o emulador
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          ls -l /dev/kvm
+
       - name: Inicializar emulador e testar instalação, abertura e estabilidade
         uses: reactivecircus/android-emulator-runner@v2
         timeout-minutes: 45
         with:
           api-level: 35
           emulator-boot-timeout: 1800
+          disable-linux-hw-accel: false
           target: google_apis
           arch: x86_64
           profile: pixel_6
