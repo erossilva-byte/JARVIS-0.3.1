@@ -12,7 +12,7 @@ O Vision passou a lembrar o que foi analisado: perguntas como "ele é bom para c
 
 O projetista ganhou uma base de engenharia própria (`eletrica.js`): componentes com terminais, função, limites e símbolo IEC; tabelas de ampacidade, contator, disjuntor e térmico; dimensionamento com memória de cálculo e conferência independente. Nova topologia monta dois motores em sequência, com o segundo entrando X segundos depois do primeiro. A segunda análise (`conferirObjetivo`) verifica se o projeto montado atende ao pedido, e a netlist permite exportar e reimportar o diagrama em texto. O `.cad` do CADeSIMU continua não sendo gerado nem aberto, e não há simulação elétrica.
 
-O APK **1.45.0** (`jarvis-nova-1.45.0-10450.apk`) está sendo compilado e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.45.0 ; bytes e SHA-256 são registrados em `VERSAO.json` depois do build. Ele **não foi instalado em aparelho físico**.
+O APK **1.45.0** (`jarvis-nova-1.45.0-10450.apk`) tem **81335868 bytes** e SHA-256 `f02ca7cf24c82d789bbc7558572d0290dfa8fe8a150f1260ad5a5cf6590b1b99`, compilado no GitHub Actions e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.45.0 . O pacote foi conferido por dentro (recusa monofásica, ponte CADeSIMU, séries até 800 A e HUD), mas **não foi instalado em aparelho físico**; a assinatura é debug/CI.
 
 ## 1.42.6 — Correção do pacote Android
 

@@ -17,10 +17,10 @@
   "build": {
     "resultado": "success",
     "apk": "jarvis-nova-1.45.0-10450.apk",
-    "bytes": 81333564,
-    "sha256": "6453e4a051fd4e388090382ffce2a798154e52b9ce1dd7acf5f3d006fca1cbc7",
+    "bytes": 81335868,
+    "sha256": "f02ca7cf24c82d789bbc7558572d0290dfa8fe8a150f1260ad5a5cf6590b1b99",
     "data": "2026-11-05",
-    "observacao": "compilado no GitHub Actions; conferido por dentro: séries até 800 A, recusa fora da tabela, correções de iluminação/monofásico e HUD; não instalado em aparelho físico"
+    "observacao": "compilado no GitHub Actions; conferido por dentro: recusa monofásica, ponte CADeSIMU, séries até 800 A e HUD; não instalado em aparelho físico"
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",
