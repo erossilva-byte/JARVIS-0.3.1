@@ -1,21 +1,29 @@
-name: Publicar APK com utilitários (build 10460)
+name: Publicar Central de Comandos — Android e Windows (build 10461)
 
-# Workflow próprio desta entrega: compila o APK e publica o release com o utilitarios.js dentro.
-# A tag `release-*` não colide com `v*` (release-apk.yml) nem dispara aquele pipeline.
+# Um fluxo, duas plataformas. O APK e o instalador do PC saem do MESMO código web, então
+# a interface nova precisa aparecer igual nos dois: se um falhar, o outro continua e o
+# relatório do release diz o que saiu.
+#
+# A tag `central-*` não colide com `v*` (release-apk.yml / release-pc.yml) nem com
+# `release-*` (build anterior). O job do Windows depende do Android apenas para que o
+# release já exista quando os arquivos do PC forem anexados — dois jobs criando o mesmo
+# release ao mesmo tempo é a receita para um deles falhar com 422.
+
 on:
   push:
-    tags: ['release-*']
+    tags: ['central-*']
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: jarvis-utilitarios
+  group: jarvis-central
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: Compilar APK e publicar release
+  android:
+    name: APK com a Central de Comandos
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -51,7 +59,7 @@ jobs:
       - name: Testes estáticos e regressão
         run: npm run test:all
 
-      - name: Conferir o módulo de utilitários
+      - name: Conferir o módulo de utilitários (checagem funcional)
         run: |
           node --check utilitarios.js
           node - <<'JS'
@@ -73,17 +81,29 @@ jobs:
           ok('jogo da velha abre e responde', u.velhaNovo().casas.length === 9 && u.velhaJogar(5).casas[4] === 'X');
           JS
 
+      - name: Conferir a Central de Comandos
+        run: |
+          node --check vendor/catalogo_jarvis.js
+          node --check vendor/central_nova.js
+          node --check plataforma.js
+          python3 tests/test_catalogo.py
+
       - name: Preparar os recursos web do aplicativo
         run: |
           mkdir -p www/vendor
           cp index.html style.css www/
           cp *.js www/
-          cp vendor/three.min.js www/vendor/three.min.js
+          cp vendor/*.js www/vendor/
           # carga o módulo depois do app.js, como os outros módulos
           sed -i 's#<script src="app.js"></script>#<script src="app.js"></script>\n<script src="utilitarios.js"></script>#' www/index.html
           grep -q 'src="utilitarios.js"' www/index.html || { echo 'Falha ao carregar utilitarios.js no index.html'; exit 1; }
           test -s www/utilitarios.js
           test -s www/cad_projeto.js
+          test -s www/vendor/catalogo_jarvis.js
+          test -s www/vendor/central_nova.js
+          # a Central é carregada pelo plataforma.js: se ele não citar os dois arquivos,
+          # o APK sairia sem a interface nova mesmo com os arquivos dentro.
+          grep -q "vendor/central_nova.js" www/plataforma.js || { echo 'plataforma.js não carrega a Central.'; exit 1; }
 
       - name: Gerar estrutura nativa do Android
         run: |
@@ -103,12 +123,12 @@ jobs:
           done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
           python3 patch_gradle.py android/app/build.gradle
-          # build 10460 sobre a revisao 1.31.2: o VERSAO.json do repositorio nao muda,
+          # build 10461 sobre a revisao 1.31.2: o VERSAO.json do repositorio nao muda,
           # o metadado do APK e gerado aqui para o Android aceitar a atualizacao por cima da 1.45.0.
           python3 - <<'PYBUILD'
           import json
           m = json.load(open('VERSAO.json'))
-          m['versionCode'] = 10460
+          m['versionCode'] = 10461
           json.dump(m, open('/tmp/versao-build.json', 'w'))
           PYBUILD
           python3 patch_android_version.py android/app/build.gradle /tmp/versao-build.json
@@ -132,24 +152,148 @@ jobs:
           echo "apk=$APK" >> "$GITHUB_OUTPUT"
           echo "sha=${APK%.apk}.sha256" >> "$GITHUB_OUTPUT"
 
+      - name: Guardar o APK como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-nova-apk
+          path: |
+            *.apk
+            *.sha256
+          if-no-files-found: error
+
       - name: Publicar release com o APK
         uses: softprops/action-gh-release@v2
         with:
-          name: 1.31.2 — utilitários no aparelho (build 10460)
+          name: 1.31.2 — Central de Comandos (build 10461)
           body: |
-            APK assinado com a assinatura fixa de CI (ci/debug.keystore), a mesma do atualizador embutido.
+            **A interface mudou.** Esta build traz a **Central de Comandos**: uma tela única que
+            reúne as capacidades do aplicativo, com busca, estado honesto de cada uma e atalho
+            `Ctrl+K` (ou `⌘K`). No celular ela sobe de baixo, como uma gaveta, com cartões grandes;
+            no computador abre em painel, com áreas à esquerda, teclado (setas, Enter, Barra) e
+            três colunas de leitura. Tocar em qualquer item abre o painel que já existe ou executa
+            o comando de verdade — o que ainda não existe aparece como "ainda não tem", com o motivo.
 
-            **Novidades desta build:** utilitários resolvidos no próprio aparelho, sem gastar chave de IA —
-            IMC com classificação da OMS, conversões (temperatura, comprimento, massa, volume, velocidade,
-            tempo, dados), decimal ↔ binário ↔ hexadecimal, 24 piadas, 24 curiosidades, **QR Code gerado
-            sem internet** e jogos (jogo da velha, adivinhação, pedra-papel-tesoura, dados, moeda e sorteio).
-            Também corrige o empacotamento do cad_projeto.js, que era usado pelo index.html e não entrava no APK.
+            Também continua valendo o que veio na build 10460: utilitários resolvidos no próprio
+            aparelho, sem gastar chave de IA — IMC com classificação da OMS, conversões, decimal ↔
+            binário ↔ hexadecimal, 24 piadas, 24 curiosidades, QR Code gerado sem internet e jogos.
 
-            **Como usar:** fale ou escreva, por exemplo, "calcule meu IMC, 80 kg e 1,80 m",
-            "converta 10 km para milhas", "gere um QR Code de jarvis nova" ou "jogo da velha".
+            **Para experimentar:** abra o app, toque em "Central" (canto inferior direito no celular)
+            e procure por "IMC", "QR" ou "alarme". No computador, `Ctrl+K`.
 
-            O versionCode é 10460, então a instalação é uma atualização por cima da 1.45.0 (10450).
+            O APK é assinado com a mesma chave de CI das builds anteriores, então instalar por cima
+            da 1.45.0 (10450) funciona como atualização. O versionCode desta build é 10461.
           files: |
             ${{ steps.versao.outputs.apk }}
             ${{ steps.versao.outputs.sha }}
+          make_latest: true
+
+  pc:
+    name: Instalador do PC (Windows) com a Central de Comandos
+    needs: android
+    if: always()
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Conferir os fontes web obrigatórios
+        shell: bash
+        run: |
+          for f in index.html style.css app.js pc.js hermes.js plataforma.js memoria.js orbita.js cad.js utilitarios.js vendor/three.min.js vendor/catalogo_jarvis.js vendor/central_nova.js platforms/desktop/main.js platforms/desktop/arquivos.js platforms/desktop/cad_pc.js; do
+            test -s "$f" || { echo "Falta $f: o pacote do PC sairia incompleto."; exit 1; }
+          done
+          # mesmo contrato do APK: quem carrega a Central é o plataforma.js
+          grep -q "vendor/central_nova.js" plataforma.js || { echo 'plataforma.js não carrega a Central.'; exit 1; }
+
+      - name: Instalar dependências
+        run: npm install --ignore-scripts --legacy-peer-deps
+
+      - name: Verificar sintaxe dos módulos
+        shell: bash
+        run: |
+          node --check platforms/desktop/main.js
+          node --check app.js
+          node --check pc.js
+          node --check vendor/catalogo_jarvis.js
+          node --check vendor/central_nova.js
+          node --check platforms/desktop/arquivos.js
+          node --check platforms/desktop/cad_pc.js
+
+      - name: Testar motores de arquivos e CAD do PC
+        shell: bash
+        run: |
+          node tests/test_pc_arquivos.js
+          node tests/test_pc_cad.js
+
+      - name: Empacotar Windows (instalador NSIS + portátil)
+        run: npx electron-builder --win nsis portable --publish never
+
+      - name: Conferir instalador e portátil (nunca publicar stub)
+        shell: bash
+        run: |
+          ls -lh dist || true
+          SETUP=$(find dist -maxdepth 1 -type f -name '*Setup*.exe' -print -quit)
+          PORTATIL=$(find dist -maxdepth 1 -type f -name '*.exe' ! -name '*Setup*' -print -quit)
+          test -n "$SETUP" || { echo 'Instalador NSIS não foi gerado.' >&2; exit 1; }
+          test -n "$PORTATIL" || { echo 'Executável portátil não foi gerado.' >&2; exit 1; }
+          # O electron-builder deixa um stub de ~160 kB quando falha no meio; exigir tamanho
+          # mínimo impede publicar um instalador que não instala nada.
+          for f in "$SETUP" "$PORTATIL"; do
+            BYTES=$(wc -c < "$f")
+            echo "$f · $BYTES bytes"
+            test "$BYTES" -gt 20000000 || { echo "Artefato pequeno demais (possível stub): $f" >&2; exit 1; }
+          done
+          grep -a -q 'Nullsoft' "$SETUP" || { echo 'O Setup.exe não é um instalador NSIS válido.' >&2; exit 1; }
+
+      - name: Conferir a Central dentro do pacote empacotado
+        shell: bash
+        run: |
+          # Os módulos novos precisam estar no pacote, senão o instalador abriria sem a
+          # interface nova mesmo com o código no repositório.
+          find dist/win-unpacked -name 'central_nova.js' -o -name 'catalogo_jarvis.js' | sort
+          test -n "$(find dist/win-unpacked -name 'central_nova.js' -print -quit)" || { echo 'Central ausente no pacote do PC.' >&2; exit 1; }
+
+      - name: Gerar checksums
+        shell: bash
+        run: |
+          cd dist
+          for f in *.exe; do sha256sum "$f" > "$f.sha256"; done
+          cat *.sha256
+
+      - name: Guardar artefatos do build
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-nova-pc
+          path: |
+            dist/*.exe
+            dist/*.sha256
+            dist/*.yml
+          if-no-files-found: error
+
+      - name: Anexar o pacote do PC ao mesmo release
+        uses: softprops/action-gh-release@v2
+        with:
+          append_body: true
+          body: |
+            ---
+
+            **Pacote do PC (Windows)** — mesmo código web do APK, empacotado com Electron.
+
+            - `J.A.R.V.I.S. Nova Setup <versão>.exe` — instalador (NSIS).
+            - `J.A.R.V.I.S. Nova <versão>.exe` — executável portátil, sem instalação.
+
+            No computador a Central abre com `Ctrl+K` e vira um painel em colunas; `Esc` fecha.
+            O Windows pode exibir aviso do SmartScreen porque o executável não é assinado
+            digitalmente. Instalar apenas a partir deste release.
+          files: |
+            dist/*.exe
+            dist/*.sha256
           make_latest: true
