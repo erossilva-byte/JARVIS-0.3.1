@@ -111,6 +111,12 @@ jobs:
           test -r /dev/kvm && test -w /dev/kvm
           ls -l /dev/kvm
 
+      - name: Iniciar daemon ADB antes do emulador
+        run: |
+          adb start-server
+          adb version
+          adb devices -l
+
       - name: Inicializar emulador e testar instalação, abertura e estabilidade
         uses: reactivecircus/android-emulator-runner@v2
         timeout-minutes: 45
@@ -133,17 +139,42 @@ jobs:
             timeout 20s adb shell settings put global transition_animation_scale 0
             timeout 20s adb shell settings put global window_animation_scale 0
             timeout 20s adb logcat -c
+            adb logcat -v threadtime > "$GITHUB_WORKSPACE/artifacts/android/logcat-live.txt" 2>&1 &
+            LOGCAT_PID=$!
+            cleanup_logcat() {
+              kill "$LOGCAT_PID" 2>/dev/null || true
+              wait "$LOGCAT_PID" 2>/dev/null || true
+            }
+            trap cleanup_logcat EXIT
             test -s "$GITHUB_WORKSPACE/android/app/build/outputs/apk/debug/app-debug.apk"
             timeout 240s adb install -r "$GITHUB_WORKSPACE/android/app/build/outputs/apk/debug/app-debug.apk"
             timeout 30s adb shell monkey -p com.jarvis.nova 1
-            sleep 35
+            sleep 5
+            timeout 20s adb shell pidof com.jarvis.nova > "$GITHUB_WORKSPACE/artifacts/android/app-pid-after-launch.txt" 2>&1 || true
+            grep -Eq '[0-9]+' "$GITHUB_WORKSPACE/artifacts/android/app-pid-after-launch.txt" || {
+              echo "O app não apresentou PID após o comando de abertura; consulte logcat-live.txt." >&2
+              exit 1
+            }
+            for attempt in 1 2 3 4 5 6 7; do
+              if ! timeout 10s adb get-state 2>/dev/null | grep -qx device; then
+                echo "O emulador perdeu a conexão ADB durante o período de estabilidade (tentativa $attempt)." >&2
+                adb devices -l > "$GITHUB_WORKSPACE/artifacts/android/adb-devices-disconnect.txt" 2>&1 || true
+                exit 1
+              fi
+              sleep 5
+            done
             timeout 20s adb shell pidof com.jarvis.nova > "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt" 2>&1 || true
-            timeout 30s adb logcat -d -v threadtime > "$GITHUB_WORKSPACE/artifacts/android/logcat.txt" || true
+            grep -Eq '[0-9]+' "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt" || {
+              echo "O processo com.jarvis.nova não permaneceu ativo após a inicialização." >&2
+              exit 1
+            }
             timeout 30s adb shell dumpsys activity activities > "$GITHUB_WORKSPACE/artifacts/android/activities.txt" 2>&1 || true
             timeout 20s adb shell uiautomator dump /sdcard/jarvis-window.xml || true
             timeout 20s adb pull /sdcard/jarvis-window.xml "$GITHUB_WORKSPACE/artifacts/android/window.xml" || true
             timeout 20s adb exec-out screencap -p > "$GITHUB_WORKSPACE/artifacts/android/home.png" || true
-            grep -Eq '[0-9]+' "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt" || { echo "O processo com.jarvis.nova não permaneceu ativo após a inicialização." >&2; exit 1; }
+            cleanup_logcat
+            trap - EXIT
+            cp "$GITHUB_WORKSPACE/artifacts/android/logcat-live.txt" "$GITHUB_WORKSPACE/artifacts/android/logcat.txt"
             ! grep -E -i 'FATAL EXCEPTION|Fatal signal|ANR in com\\.jarvis\\.nova' "$GITHUB_WORKSPACE/artifacts/android/logcat.txt" || { echo "Crash/ANR detectado durante o smoke test." >&2; exit 1; }
             test -s "$GITHUB_WORKSPACE/artifacts/android/home.png"
 
@@ -155,6 +186,17 @@ jobs:
           timeout 20s adb logcat -d -v threadtime > artifacts/android/logcat-final.txt 2>&1 || true
           timeout 15s adb shell dumpsys meminfo com.jarvis.nova > artifacts/android/meminfo.txt 2>&1 || true
           timeout 15s adb shell dumpsys activity activities > artifacts/android/activities-final.txt 2>&1 || true
+          {
+            echo "=== Memória do runner ==="
+            free -h || true
+            echo "=== Processos Android/ADB ==="
+            ps -eo pid,ppid,stat,rss,comm,args | grep -E '[e]mulator|[q]emu|[a]db' || true
+            echo "=== Eventos de OOM/kernel ==="
+            sudo dmesg --ctime 2>/dev/null | grep -Ei 'out of memory|oom-kill|killed process|qemu|emulator' | tail -80 || true
+            echo "=== Arquivos de crash do emulador ==="
+            find /tmp/android-runner -maxdepth 2 -type f -print 2>/dev/null || true
+            find /tmp/android-runner -maxdepth 2 -type f -name 'emu-crash*.db' -exec cp -f {} artifacts/android/ ; 2>/dev/null || true
+          } > artifacts/android/host-diagnostics.txt 2>&1
 
       - name: Publicar APK Android para download
         if: always()
