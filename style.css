@@ -801,9 +801,9 @@ body[data-state=thinking] .hud-meta{color:rgba(var(--rgb),.8)}
 @keyframes bnGira{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes bnPulsa{0%,100%{opacity:.55}50%{opacity:1}}
 
-/* Enquanto a abertura não termina, o resto da interface fica visível mas inerte — é o
-   "libera as demais opções" do reconhecimento de voz. */
-body.travado header,body.travado nav,body.travado main,body.travado footer{pointer-events:none;opacity:.35;transition:opacity .4s ease}
+/* A interface principal permanece oculta até o splash terminar; isso evita o flash do menu
+   antes da abertura e impede toques em controles ainda não inicializados. */
+body.travado header,body.travado nav,body.travado main,body.travado footer{visibility:hidden;pointer-events:none;opacity:0}
 
 @media (prefers-reduced-motion:reduce){
   .bn1,.bn2,.bn3,.bn-nucleo,.boot-voz{animation:none!important}
@@ -972,15 +972,37 @@ body[data-nucleo=orbita] .hud-meta,
 body[data-nucleo=orbita] .hud .plas{opacity:0;transition:opacity .45s ease}
 body[data-nucleo=orbita] .hud{filter:drop-shadow(0 0 22px rgba(var(--rgb),.18))}
 body[data-nucleo=orbita] .orb-marca,body[data-nucleo=orbita] .orb-sub{opacity:.85}
+/* O avatar usa o mesmo canvas, mas com um rosto próprio; as camadas técnicas saem. */
+body[data-nucleo=avatar] .hud .nucleo-orbita{opacity:1}
+body[data-nucleo=avatar] .hud .cam,
+body[data-nucleo=avatar] .hud .halo,
+body[data-nucleo=avatar] .hud-grade,
+body[data-nucleo=avatar] .hud-meta,
+body[data-nucleo=avatar] .hud .plas{opacity:0;transition:opacity .45s ease}
+body[data-nucleo=avatar] .hud{filter:drop-shadow(0 0 24px rgba(90,240,235,.22))}
+body[data-nucleo=avatar] .orb-marca,body[data-nucleo=avatar] .orb-sub{opacity:.85}
 body.oculto .nucleo-orbita{opacity:0}
 .nucleo-preview .np-orb{display:none}
 body[data-nucleo=orbita] .nucleo-preview .np-hud,
-body[data-nucleo=orbita] .nucleo-preview .np-plas{display:none}
+body[data-nucleo=orbita] .nucleo-preview .np-plas,
+body[data-nucleo=orbita] .nucleo-preview .np-avatar{display:none}
 body[data-nucleo=orbita] .nucleo-preview .np-orb{display:block;width:88px;height:88px;border-radius:50%;
   background:
     radial-gradient(circle at 34% 28%,rgba(212,255,252,.9),rgba(34,211,238,.42) 38%,rgba(6,182,212,0) 70%),
     repeating-radial-gradient(circle at 50% 50%,rgba(120,250,245,.28) 0 1px,transparent 1px 6px),
     radial-gradient(circle,rgba(10,90,120,.55),rgba(4,20,34,.2) 72%);
+  box-shadow:0 0 20px rgba(34,211,238,.35),inset 0 0 18px rgba(120,250,245,.18)}
+.nucleo-preview .np-avatar{display:none}
+body[data-nucleo=avatar] .nucleo-preview .np-hud,
+body[data-nucleo=avatar] .nucleo-preview .np-plas,
+body[data-nucleo=avatar] .nucleo-preview .np-orb{display:none}
+body[data-nucleo=avatar] .nucleo-preview .np-avatar{display:block;width:86px;height:86px;border-radius:48% 48% 44% 44%;
+  background:
+    radial-gradient(circle at 35% 38%,rgba(200,255,255,.9) 0 3px,transparent 4px),
+    radial-gradient(circle at 65% 38%,rgba(200,255,255,.9) 0 3px,transparent 4px),
+    radial-gradient(ellipse at 50% 72%,rgba(120,250,245,.65) 0 3px,transparent 5px),
+    radial-gradient(circle at 50% 38%,rgba(28,83,105,.75),rgba(5,18,30,.92) 70%);
+  border:1px solid rgba(120,250,245,.55);
   box-shadow:0 0 20px rgba(34,211,238,.35),inset 0 0 18px rgba(120,250,245,.18)}
 @media (prefers-reduced-motion:reduce){.nucleo-orbita{transition:none}}
 
@@ -1573,3 +1595,22 @@ button.anexo{width:44px;min-width:44px;height:44px;min-height:44px;border-radius
 .idp-hist small{color:#7f96a8;font-size:10.5px}
 #painel-pessoas label.linha span{min-width:0}
 @media(max-width:560px){.idp-grid{grid-template-columns:1fr}.idp-dupla{grid-template-columns:1fr}#painel-pessoas{width:100vw}.idp-foto{flex-basis:54px;width:54px;height:54px}}
+
+/* Central operacional (1.32.0) */
+.sis-lista{display:flex;flex-direction:column;gap:8px}
+.sis-item{display:flex;flex-direction:column;gap:3px;padding:9px 11px;border:1px solid var(--linha);border-radius:10px;background:rgba(8,20,34,.55);font-size:12.5px;color:var(--texto);min-width:0}
+.sis-item b{font-size:12.5px;font-weight:600;line-height:1.3}
+.sis-item small{color:var(--suave);line-height:1.4;overflow-wrap:anywhere}
+.sis-item .sis-selo{align-self:flex-start;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:#74d7ff}
+.sis-item[data-estado="falhou"] .sis-selo{color:#ff9a9a}
+.sis-item[data-estado="pausada"] .sis-selo{color:#ffd479}
+@media(max-width:560px){.painel-sistema{width:100%}}
+
+/* Aprendizado explícito (1.36.0) */
+.aprend-lista{display:flex;flex-direction:column;gap:7px;margin:8px 0}
+.aprend-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid rgba(117,177,219,.18);border-radius:10px;background:rgba(8,20,34,.55)}
+.aprend-item b{display:block;font-size:12px;color:var(--texto)}
+.aprend-item small{display:block;color:var(--suave);font-size:11px;overflow-wrap:anywhere}
+.aprend-item button{min-height:32px;padding:0 9px;font-size:11px}
+.aprend-pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;color:var(--suave);background:rgba(8,16,28,.7);padding:9px;border-radius:9px;max-height:180px;overflow:auto}
+.aprend-contexto summary{cursor:pointer;color:var(--cor);font-size:12px}

@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.31.2",
-  "versionCode": 10312,
+  "version": "1.38.1",
+  "versionCode": 10381,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
-  "gerado": "2026-10-30",
-  "status": "1.31.2: auditoria de consentimento (argumentos no plano), coerência do humor e correções de classificação preservadas.",
+  "gerado": "2026-11-01",
+  "status": "1.38.1: auditoria de cancelamento, Visão, senha e roteador; APK compilado, assinado e conferido por aapt/apksigner.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.31.2 (2026-10-30). Terceira fase da evolução baseada nos oito repositórios. O módulo plano.js transforma um objetivo em até seis etapas usando apenas ações reais do catálogo, recusando ação inventada, indisponível, argumentos grandes ou plano recursivo. O usuário confirma o plano antes de qualquer execução. Cada etapa passa pelo executarSeguro e pelo recibo da 1.30.0: ok avança; incerto pausa e exige autorização explícita; falha, bloqueio e cancelamento interrompem o restante. O planejamento usa o provedor de IA já configurado, mas salva e restaura o histórico para não contaminar a conversa. O comando é explícito (planeje..., status do plano, cancelar plano); não há execução autônoma silenciosa. O núcleo (HUD, plasma e órbita 3D), a animação, a personalidade, o humor, a memória, a identificação de pessoas, a visão, o VAD, a voz neural, a IA local e o Windows seguem intactos. O que não foi possível testar aqui: aparelho Android, microfone, câmera, Windows e efeitos nativos reais; o motor de plano foi testado com executor e confirmações injetados, e a geração por IA depende do provedor configurado. Correção 1.31.2: texto de falha (\"não encontrei\", \"sem permissão\", \"indisponível\") vence a marca otimista de verificação; notificações e verificação de arquivo deixam de ser leitura comprovada e podem pausar o plano. Auditoria 1.31.2: a confirmação do plano passa a mostrar os argumentos de cada etapa; o resumo padrão continua sem valores; texto de humor corrigido para 90%.",
+  "notas": "Revisão 1.38.1 (2026-11-01). Corrige cancelamento de tarefa durante a última etapa (o resultado tardio não pode marcar a tarefa como concluída), remove declarações duplicadas da Visão 2.0, limpa a análise anterior ao reabrir o painel de Visão, trata exceções na preparação de ações e elimina o viés de módulo do gerador de senha. O roteador de IA agora descarta IDs de provedor desconhecidos em vez de aceitá-los. Preservados identidade, voz, memória, personalidade, agentes, núcleo 3D, avatar, planos, confirmações e recursos anteriores. Limitações: instalação, microfone, wake word, câmera, acessibilidade, segundo plano e avatar em tela não foram validados em aparelho; chaves/modelos reais, Windows, ESP32 e Home Assistant não foram testados. Preservados também: HUD, plasma, órbita e animação do núcleo.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,12 +16,12 @@
   ],
   "build": {
     "resultado": "success",
-    "sha256": "89a0c511e1fd0ab720d2927e89a822f76a94ae1e040c08d0b3c9e6192f100c42",
-    "bytes": 81102865,
-    "arquivo": "jarvis-nova-1.31.2-10312.apk",
-    "data": "2026-10-30",
-    "ambiente": "compilação limpa local (JDK 21 + AGP 8.7.3 + Gradle 8.9 + Android SDK 35; npx cap copy + gradlew clean assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.31.2 com plano.js, agentes.js, app.js, escuta.js, identidade.js, identidade_ui.js, voz_motor.js e humor.js; suíte npm run test:all exit 0; build limpo com 151 tarefas. Inclui argumentos na confirmação do plano e correção do texto de humor. Sem aparelho/microfone neste ambiente: efeitos nativos reais, geração por IA e captura de voz precisam ser conferidos no aparelho."
+    "sha256": "28a87cb3ec4eaa6d890047406c481190ff8868d080391ce679a0cf832ca8af5b",
+    "bytes": 81195283,
+    "arquivo": "jarvis-nova-1.38.1-10381.apk",
+    "data": "2026-11-01",
+    "ambiente": "build local: Android SDK 35, build-tools 35.0.0, JDK 21, Gradle 8.9, assembleDebug",
+    "observacao": "APK 1.38.1 com as correções da auditoria; versionCode 10381, minSdk 26, targetSdk 34, assinatura v2. Sem instalação em aparelho físico."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",

@@ -84,6 +84,15 @@ receiver = '    <receiver android:name=".JarvisAlarmReceiver" android:exported="
 if '.JarvisAlarmReceiver' not in m:
     j = m.rindex('</application>')
     m = m[:j] + receiver + m[j:]
+acessibilidade = ('    <service android:name=".JarvisAcessibilidade" android:exported="true"\n'
+                 '        android:label="J.A.R.V.I.S. Nova — Automação"\n'
+                 '        android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">\n'
+                 '        <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>\n'
+                 '        <meta-data android:name="android.accessibilityservice" android:resource="@xml/jarvis_acessibilidade" />\n'
+                 '    </service>\n')
+if '.JarvisAcessibilidade' not in m:
+    j = m.rindex('</application>')
+    m = m[:j] + acessibilidade + m[j:]
 notification_listener = ('    <service android:name=".JarvisNotificationListener" android:label="J.A.R.V.I.S. Nova" '
                         'android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="true">\n'
                         '        <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>\n'
@@ -186,6 +195,17 @@ try:
     if not caminhos.exists() or caminhos.read_text(encoding="utf-8") != conteudo_caminhos:
         caminhos.write_text(conteudo_caminhos, encoding="utf-8")
         print(f"Caminhos do FileProvider do atualizador gravados: {caminhos}")
+    acess = res_xml / "jarvis_acessibilidade.xml"
+    conteudo_acess = ('<?xml version="1.0" encoding="utf-8"?>\n'
+                      '<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"\n'
+                      '    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"\n'
+                      '    android:accessibilityFeedbackType="feedbackGeneric"\n'
+                      '    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews"\n'
+                      '    android:canRetrieveWindowContent="true"\n'
+                      '    android:notificationTimeout="100" />\n')
+    if not acess.exists() or acess.read_text(encoding="utf-8") != conteudo_acess:
+        acess.write_text(conteudo_acess, encoding="utf-8")
+        print(f"Configuração do serviço de acessibilidade gravada: {acess}")
 except Exception as e:
     raise SystemExit(f"Não consegui criar jarvis_paths.xml: {e}")
 path.write_text(m, encoding="utf-8")

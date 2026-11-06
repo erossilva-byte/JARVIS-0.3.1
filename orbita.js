@@ -220,7 +220,7 @@
   Render3D.prototype.montar = function () {
     var T = this.T;
     this.compacto = (raiz.innerWidth || 400) < 640;
-    var total = reduzido ? 620 : (this.compacto ? 1100 : 2100);
+    var total = reduzido ? 520 : (this.compacto ? 820 : 1600);
     this.totalParticulas = total;
 
     var geo = new T.BufferGeometry();
@@ -326,7 +326,7 @@
     if (largura === this.largura && altura === this.altura) return;
     this.largura = largura;
     this.altura = altura;
-    var dpr = Math.min(raiz.devicePixelRatio || 1, largura < 640 ? 1.5 : 2);
+    var dpr = Math.min(raiz.devicePixelRatio || 1, largura < 640 ? 1.25 : 1.75);
     if (this.dprTravado) dpr = 1;
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(largura, altura, false);
@@ -344,10 +344,14 @@
     this.clock.start();
     this.inicioFps = 0;
     this.quadros = 0;
-    var self = this;
-    var laco = function () {
+    var self = this, ultimoQuadro = 0;
+    var intervalo = this.compacto ? (1000 / 30) : (1000 / 50);
+    var laco = function (tempo) {
       if (!self.rodando) return;
       self.raf = raiz.requestAnimationFrame(laco);
+      tempo = Number.isFinite(tempo) ? tempo : (raiz.performance ? raiz.performance.now() : Date.now());
+      if (tempo - ultimoQuadro < intervalo) return;
+      ultimoQuadro = tempo;
       self.quadro();
     };
     this.raf = raiz.requestAnimationFrame(laco);
@@ -521,9 +525,14 @@
     this.desejado = true;
     this.rodando = true;
     this.ultimo = 0;
-    var self = this, laco = function (t) {
+    var self = this, ultimoQuadro = 0;
+    var intervalo = (raiz.innerWidth || 400) < 640 ? (1000 / 30) : (1000 / 50);
+    var laco = function (t) {
       if (!self.rodando) return;
       self.raf = raiz.requestAnimationFrame(laco);
+      t = Number.isFinite(t) ? t : (raiz.performance ? raiz.performance.now() : Date.now());
+      if (t - ultimoQuadro < intervalo) return;
+      ultimoQuadro = t;
       self.quadro(t);
     };
     this.raf = raiz.requestAnimationFrame(laco);

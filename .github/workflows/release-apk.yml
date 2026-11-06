@@ -51,16 +51,18 @@ jobs:
           mkdir -p "$HOME/.android"
           cp ci/debug.keystore "$HOME/.android/debug.keystore"
 
-      - name: Testes estáticos e regressão
-        run: npm run test:all
-
       - name: Preparar os recursos web do aplicativo
         run: |
           mkdir -p www
           # Todo recurso web do app precisa estar aqui: sem hermes.js o app.js recusa
           # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
           cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
-          cp identidade.js identidade_ui.js escuta.js agentes.js plano.js www/
+          cp avatar.js www/
+          cp interface.css www/
+          cp core.css www/
+          cp identidade.js identidade_ui.js escuta.js agentes.js sistema.js plano.js interface.js www/
+          cp core.js core_ui.js www/
+          cp aprendizado.js aprendizado_ui.js www/
           cp arquivos_dev.js www/
           cp voz_motor.js www/
           cp humor.js www/
@@ -68,6 +70,9 @@ jobs:
           cp identidade_ui.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
+
+      - name: Limpar projeto Android gerado
+        run: rm -rf android
 
       - name: Gerar estrutura nativa do Android
         run: |
@@ -89,13 +94,16 @@ jobs:
           mkdir -p "$D"
           find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
           # Lista alinhada com o workflow de build: toda classe nativa da raiz é obrigatória.
-          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java; do
+          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java JarvisAcessibilidade.java JarvisAcessibilidadePlugin.java; do
             test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
           done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
           python3 patch_gradle.py android/app/build.gradle
           python3 patch_android_version.py android/app/build.gradle VERSAO.json
           python3 patch_visual.py android
+
+      - name: Testes estáticos e regressão
+        run: npm run test:all
 
       - name: Compilar APK
         working-directory: android
@@ -145,7 +153,17 @@ jobs:
             completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
             contra exceções que antes fechavam o app.
 
-            **Novidades da 1.31.2:** **planos multi-etapas supervisionados**. Peça “planeje …” e o app monta até seis
+            **Novidades da 1.38.1:** correção do cancelamento de tarefa durante a etapa em voo, remoção das declarações duplicadas da Visão 2.0, reset da análise ao reabrir a Visão, tratamento de exceções na preparação de ações e sorteio uniforme no gerador de senha. O roteador também descarta provedores desconhecidos.
+
+            **Novidades da 1.38.0:** **avatar 3D procedural** no núcleo: rosto holográfico desenhado localmente
+            com Three.js, olhos que piscam e boca que abre pela **amplitude real da voz** — não é visema por fonema
+            nem modelo facial baixado. O plano validado agora vira **tarefa persistente** do núcleo, com checkpoint,
+            pausa e retomada sem repetir etapa; a confirmação da etapa é única (a ação real continua confirmando quando
+            é sensível). O Core ganhou executores de leitura para voz, automação, atualização e planejamento, e a
+            auditoria de IA/repertório está em `docs/IA-1.38.0.md` e `docs/REPERTORIO-1.38.0.md`. Validação em aparelho
+            físico continua pendente e não foi simulada.
+
+            **Novidades da 1.37.0:** **planos multi-etapas supervisionados**. Peça “planeje …” e o app monta até seis
             etapas usando apenas ferramentas reais do aparelho. O plano é mostrado e confirmado antes de executar; cada
             etapa passa pelo recibo: efeito confirmado avança, efeito incerto **pausa** e pede autorização, falha ou
             bloqueio interrompem o restante. As proteções existentes (risco, PIN, modo seguro, offline) continuam valendo.

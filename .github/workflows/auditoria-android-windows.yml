@@ -1,0 +1,259 @@
+name: J.A.R.V.I.S. Nova — auditoria Android e Windows
+
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+      - 'work/**'
+    paths:
+      - '**.js'
+      - '**.css'
+      - '**.html'
+      - '**.java'
+      - '**.py'
+      - '**.json'
+      - '**.gradle'
+      - '**.properties'
+      - '.github/workflows/**'
+      - 'tests/**'
+      - 'platforms/**'
+      - 'ci/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jarvis-audit-v9-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-emulator:
+    name: Testes Android API 35 (emulador Linux x86_64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Configurar Android SDK sem pacote legado
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools emulator'
+
+      - name: Instalar dependências
+        run: npm install --ignore-scripts --legacy-peer-deps
+
+      - name: Preparar assinatura fixa de CI
+        run: |
+          test -s ci/debug.keystore
+          mkdir -p "$HOME/.android"
+          cp ci/debug.keystore "$HOME/.android/debug.keystore"
+
+      - name: Preparar recursos web
+        run: |
+          mkdir -p www
+          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
+          cp avatar.js interface.css core.css www/
+          cp identidade.js identidade_ui.js escuta.js agentes.js sistema.js plano.js interface.js www/
+          cp core.js core_ui.js aprendizado.js aprendizado_ui.js arquivos_dev.js voz_motor.js humor.js www/
+          mkdir -p www/vendor
+          cp vendor/three.min.js www/vendor/three.min.js
+
+      - name: Gerar projeto Capacitor Android
+        run: |
+          rm -rf android
+          npx cap add android
+          npx cap sync android
+          python3 baixar_sherpa.py android/app
+          D=android/app/src/main/java/com/jarvis/nova
+          mkdir -p "$D"
+          find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
+          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java JarvisAcessibilidade.java JarvisAcessibilidadePlugin.java; do
+            test -s "$D/$f" || { echo "Classe nativa ausente: $f"; exit 1; }
+          done
+          python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
+          python3 patch_gradle.py android/app/build.gradle
+          python3 patch_android_version.py android/app/build.gradle VERSAO.json
+          python3 patch_visual.py android
+
+      - name: Testes estáticos e regressão
+        run: npm run test:all
+
+      - name: Compilar APK de teste
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          sha256sum app/build/outputs/apk/debug/app-debug.apk | tee apk-sha256.txt
+
+      - name: Habilitar acesso KVM para acelerar o emulador
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          ls -l /dev/kvm
+
+      - name: Iniciar daemon ADB antes do emulador
+        run: |
+          adb start-server
+          adb version
+          adb devices -l
+
+      - name: Inicializar emulador e testar instalação, abertura e estabilidade
+        uses: reactivecircus/android-emulator-runner@v2
+        timeout-minutes: 45
+        with:
+          api-level: 35
+          emulator-boot-timeout: 1800
+          disable-linux-hw-accel: false
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -camera-back none -gpu swangle
+          script: |
+            set -eu
+            mkdir -p "$GITHUB_WORKSPACE/artifacts/android"
+            timeout 60s adb wait-for-device
+            adb devices -l > "$GITHUB_WORKSPACE/artifacts/android/adb-devices.txt"
+            cat "$GITHUB_WORKSPACE/artifacts/android/adb-devices.txt"
+            timeout 20s adb shell settings put global animator_duration_scale 0
+            timeout 20s adb shell settings put global transition_animation_scale 0
+            timeout 20s adb shell settings put global window_animation_scale 0
+            timeout 20s adb logcat -c
+            test -s "$GITHUB_WORKSPACE/android/app/build/outputs/apk/debug/app-debug.apk"
+            timeout 240s adb install -r "$GITHUB_WORKSPACE/android/app/build/outputs/apk/debug/app-debug.apk"
+            timeout 30s adb shell monkey -p com.jarvis.nova 1
+            sleep 5
+            timeout 20s adb shell pidof com.jarvis.nova > "$GITHUB_WORKSPACE/artifacts/android/app-pid-after-launch.txt" 2>&1 || true
+            grep -Eq '[0-9]+' "$GITHUB_WORKSPACE/artifacts/android/app-pid-after-launch.txt" || { echo "O app não apresentou PID após o comando de abertura." >&2; exit 1; }
+            timeout 30s adb logcat -d -v threadtime > "$GITHUB_WORKSPACE/artifacts/android/logcat-after-launch.txt" 2>&1 || true
+            sleep 10
+            timeout 20s adb get-state > "$GITHUB_WORKSPACE/artifacts/android/adb-state-1.txt" || { echo "Emulador desconectado após 15 segundos de execução do app." >&2; adb devices -l || true; exit 1; }
+            sleep 10
+            timeout 20s adb get-state > "$GITHUB_WORKSPACE/artifacts/android/adb-state-2.txt" || { echo "Emulador desconectado após 25 segundos de execução do app." >&2; adb devices -l || true; exit 1; }
+            sleep 10
+            timeout 20s adb get-state > "$GITHUB_WORKSPACE/artifacts/android/adb-state-3.txt" || { echo "Emulador desconectado após 35 segundos de execução do app." >&2; adb devices -l || true; exit 1; }
+            timeout 30s adb logcat -d -v threadtime > "$GITHUB_WORKSPACE/artifacts/android/logcat-before-final-pid.txt" 2>&1 || true
+            timeout 20s adb shell dumpsys meminfo com.jarvis.nova > "$GITHUB_WORKSPACE/artifacts/android/meminfo-before-final-pid.txt" 2>&1 || true
+            timeout 20s adb shell pidof com.jarvis.nova > "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt" 2>&1 || true
+            grep -Eq '[0-9]+' "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt" || { echo "O processo com.jarvis.nova não permaneceu ativo após a inicialização." >&2; exit 1; }
+            timeout 30s adb logcat -d -v threadtime > "$GITHUB_WORKSPACE/artifacts/android/logcat.txt" 2>&1 || true
+            timeout 30s adb shell dumpsys activity activities > "$GITHUB_WORKSPACE/artifacts/android/activities.txt" 2>&1 || true
+            timeout 20s adb shell uiautomator dump /sdcard/jarvis-window.xml || true
+            timeout 20s adb pull /sdcard/jarvis-window.xml "$GITHUB_WORKSPACE/artifacts/android/window.xml" || true
+            timeout 20s adb exec-out screencap -p > "$GITHUB_WORKSPACE/artifacts/android/home.png" || true
+            ! grep -E -i 'FATAL EXCEPTION|Fatal signal|ANR in com\\.jarvis\\.nova' "$GITHUB_WORKSPACE/artifacts/android/logcat.txt" || { echo "Crash/ANR detectado durante o smoke test." >&2; exit 1; }
+            test -s "$GITHUB_WORKSPACE/artifacts/android/home.png"
+
+      - name: Coletar logs mesmo em caso de falha
+        if: always()
+        run: |
+          mkdir -p artifacts/android
+          adb devices -l > artifacts/android/adb-devices-final.txt 2>&1 || true
+          timeout 20s adb logcat -d -v threadtime > artifacts/android/logcat-final.txt 2>&1 || true
+          timeout 15s adb shell dumpsys meminfo com.jarvis.nova > artifacts/android/meminfo.txt 2>&1 || true
+          timeout 15s adb shell dumpsys activity activities > artifacts/android/activities-final.txt 2>&1 || true
+          {
+            echo "=== Memória do runner ==="
+            free -h || true
+            echo "=== Processos Android/ADB ==="
+            ps -eo pid,ppid,stat,rss,comm,args | grep -E '[e]mulator|[q]emu|[a]db' || true
+            echo "=== Eventos de OOM/kernel ==="
+            sudo dmesg --ctime 2>/dev/null | grep -Ei 'out of memory|oom-kill|killed process|qemu|emulator' | tail -80 || true
+            echo "=== Arquivos de crash do emulador ==="
+            find /tmp/android-runner -maxdepth 2 -type f -print 2>/dev/null || true
+            cp /tmp/android-runner/netsimd/netsim_stderr.log artifacts/android/ 2>/dev/null || true
+            cp /tmp/android-runner/netsimd/netsim_stdout.log artifacts/android/ 2>/dev/null || true
+            cp -a /tmp/android-runner/emu-crash-*.db artifacts/android/ 2>/dev/null || true
+            find /tmp/android-runner -maxdepth 2 -type f -print 2>/dev/null || true
+          } > artifacts/android/host-diagnostics.txt 2>&1
+
+      - name: Publicar APK Android para download
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-nova-android-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publicar evidências Android
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-android-api35-evidencias
+          path: |
+            artifacts/android/
+            android/apk-sha256.txt
+          if-no-files-found: warn
+          retention-days: 30
+
+  windows-build:
+    name: Compilação Windows
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: 'utf-8'
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm install --ignore-scripts --legacy-peer-deps
+
+      - name: Testes de sintaxe e módulos compartilhados
+        run: npm run test:syntax
+
+      - name: Testes específicos do Windows
+        shell: pwsh
+        run: |
+          node --check platforms/desktop/main.js
+          node --check platforms/desktop/preload.js
+          node --check platforms/desktop/arquivos.js
+          node --check platforms/desktop/cad_pc.js
+          node --check pc.js
+          node tests/test_pc_arquivos.js
+          node tests/test_pc_cad.js
+          python tests/test_arquivos_sistema.py
+          python tests/test_pc_windows.py
+
+      - name: Gerar instalador Windows
+        run: npm run dist:win -- --publish never
+
+      - name: Publicar artefatos Windows
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-windows-build
+          path: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml
+          if-no-files-found: warn
+          retention-days: 30

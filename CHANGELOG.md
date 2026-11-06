@@ -1,3 +1,77 @@
+## 1.38.1 — Auditoria corretiva
+
+- `sistema.js`: cancelamento durante etapa em voo não pode ser sobrescrito por `concluida`; a etapa fica incerta e a trava só é liberada no `finally`.
+- `sistema.js`: sorteio uniforme com rejeição para senhas, sem viés de módulo.
+- `app.js`: removidas as declarações mortas duplicadas da Visão 2.0; reabrir a Visão limpa balões/texto anterior; `prep` de ação agora trata exceção e devolve falha explícita.
+- `hermes.js`: roteador descarta IDs de provedor desconhecidos e duplicados; não estoura com lista inválida.
+- Testes: `test_sistema.js` com cancelamento em voo e senha; `test_hermes.js` com provedor inválido; contrato `test_v1_38_1.py`.
+
+## 1.38.0 — Avatar 3D, plano persistente e executores
+
+- `avatar.js`: rosto holográfico procedural com Three.js, boca por amplitude de voz, piscada, estados e fallback Canvas 2D; opção Avatar em Aparência do núcleo.
+- Plano validado vira tarefa persistente do `SISTEMA`; etapa interna `plano_etapa` não duplica confirmação e a ação real continua protegida.
+- Core ganha executores de leitura para voz, automação, atualização e planejamento.
+- Auditorias `docs/IA-1.38.0.md` e `docs/REPERTORIO-1.38.0.md`.
+- Testes `tests/test_avatar.js`, contrato `tests/test_v1_38_0.py` e 19 verificações do `test_sistema.js`.
+
+## 1.37.0 — Retomada segura e pausa de tarefas
+
+- Corrigida a retomada de etapa incerta: autorizar não reexecuta a ação, evitando mensagens/chamadas duplicadas.
+- Adicionada pausa manual entre etapas, com checkpoint e continuação sem repetir etapas concluídas.
+- Botões Iniciar, Continuar e Pausar na central do sistema.
+- Texto de lembretes de tarefa alinhado ao agendador real do Android.
+- Testes de não duplicação, pausa e contrato 1.37.
+
+## 1.36.0 — Aprendizado explícito e revisável
+
+- `aprendizado.js`: preferências/correções/fatos somente por instrução clara, com confiança, deduplicação, bloqueio de conteúdo sensível e contexto limitado.
+- `aprendizado_ui.js`: revisão, remoção, exportação, limpeza e visualização do contexto no painel Memória.
+- `app.js`: registro no turno e aplicação no prompt sem alterar permissões ou segurança.
+- Testes `tests/test_aprendizado.js` e `tests/test_v1_36_0.py`.
+- Preservação integral dos módulos anteriores.
+
+## 1.35.0 — Confiabilidade, causa e recuperação controlada
+
+- `core.js`: causa provável, evidências, orientação, dependências, pré-checagem, recuperação segura e histórico persistido.
+- Recuperação com timeout de 4 s, rechecagem, espera de 20 s e limite de 2 tentativas por 5 min; automático somente opt-in.
+- Diagnóstico de Ajustes inclui o Core; painel do Core mostra saúde, aviso, recuperação e histórico.
+- RAM JavaScript e bateria somente quando disponíveis; CPU não inventada.
+- Testes de recuperação, repetição bloqueada, automático e pré-checagem; contrato 1.35.
+
+## 1.34.0 — Core, agentes e contexto
+
+- `core.js`: 12 agentes descritivos, seleção por sinais, contexto local, projetos/tarefas, verificação conservadora, saúde, habilidades e watchdog.
+- Delegação só executa com executor registrado; sem executor retorna `nao_configurado` e não simula sucesso.
+- Recibo `incerto` não pode ser promovido a `confirmado` por um `ok` genérico.
+- `core_ui.js`/`core.css`: painel de status, agentes, projetos, saúde e habilidades; fecha pelo botão e pelo padrão dos painéis.
+- `app.js`: Core integrado ao boot, à navegação, aos componentes e aos comandos de consulta.
+- Testes `tests/test_core.js` e `tests/test_v1_34_0.py`; build/CI copiam os arquivos novos.
+- Limites declarados: MCP, RAG vetorial, tutorial, visão de tela ampla, pareamento PC/TV/ESP32, atualização modular e validação física.
+
+## 1.33.0 — Auditoria, áreas e nova experiência
+
+- Auditoria dos 13 tópicos e matriz de rastreabilidade dos oito repositórios.
+- Navegação por dez áreas: Início, IA, Voz, Automação, Memória, Ferramentas, Dispositivos, Segurança, Personalização e Sistema.
+- Quatro modos persistentes: Completo, Discreto, Silencioso e Holográfico.
+- Modo Silencioso suprime a fala, mantendo respostas em texto, alarmes e confirmações.
+- Página inicial com tarefas, traces e estado real do núcleo.
+- Núcleo 3D passa ao estado `processing` durante ferramentas e volta ao estado anterior.
+- Limpeza de APKs antigos, builds, caches e artefatos regeneráveis; backup em `artifacts/pre-1.33.0-src.tar.gz`.
+- Nenhum painel ou função original removido.
+- APK Android 1.33.0 (versionCode 10330) gerado e verificado por dentro; instalação física ainda não testada.
+
+## 1.32.0 — Núcleo operacional e acessibilidade Android
+
+- **JarvisOS (`sistema.js`)**: catálogo de ferramentas com descoberta, níveis leitura/escrita/execução, confirmação independente do modelo, timeout, eventos e traces sem valores de argumentos.
+- **Ferramentas locais reais**: calculadora com parser próprio (sem `eval`), conversão de unidades/temperatura, senha com Web Crypto, estatísticas de texto, JSON, SHA-256 e datas.
+- **Tarefas persistentes**: checkpoint após cada etapa, pausa em efeito incerto e retomada que não repete etapa concluída; testes provam persistência entre instâncias.
+- **Acessibilidade Android opt-in**: árvore sanitizada, clique por texto, digitação, rolagem, espera, voltar e início. Campos de senha são omitidos; não há clique por coordenada livre.
+- **Parada de emergência**: cancela tarefas, interrompe fala, fecha câmera e marca a automação para parar.
+- **Microfone**: seleção de entrada e diagnóstico real de nível, piso de ruído, pico e clipes, sem gravar áudio.
+- **Interface**: nova central Sistema com ferramentas, tarefas, traces, automação e áudio.
+- **Preservado**: planos, agentes, recibos, VAD, pessoas, memória, visão, IA local, CAD, Windows e tela de bloqueio.
+- **Pendente**: validação em aparelho, barge-in por energia, RAG vetorial, MCP remoto, visemas/avatar e integração PC/TV/ESP32.
+
 ## 1.31.2 — Auditoria de consentimento e coerência da interface
 
 - **Confirmação de plano mostra argumentos**: antes de autorizar, o usuário vê destinatário, texto e demais parâmetros de cada etapa; o resumo padrão (usado em logs/testes) continua sem valores.

@@ -1,0 +1,446 @@
+/* J.A.R.V.I.S. Nova 1.33.0 — camada visual da navegação por áreas.
+   Carregado depois de style.css para não reescrever as regras antigas. */
+
+.areas-toggle {
+  border-color: rgba(45, 221, 224, .38);
+  background: rgba(28, 225, 226, .07);
+  color: #bff6f4;
+}
+
+.lat-grupo {
+  width: 100%;
+  margin: 9px 0 2px;
+  padding: 0 4px;
+  color: rgba(110, 175, 177, .62);
+  font-size: 7px;
+  letter-spacing: .16em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+#lateral .lat-btn {
+  min-height: 48px;
+}
+
+/* Modos de uso: uma escolha por vez, persistida por interface.js. */
+.modos-uso {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 6px;
+  width: min(680px, 100%);
+  margin-top: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 4px;
+  scrollbar-width: none;
+}
+
+.modos-uso::-webkit-scrollbar { display: none; }
+
+.modo-btn {
+  flex: 0 1 auto;
+  min-height: 40px;
+  padding: 5px 12px;
+  border-radius: 11px;
+  border: 1px solid rgba(45, 221, 224, .22);
+  background: rgba(8, 26, 31, .58);
+  color: var(--suave);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.modo-btn span {
+  color: var(--cor);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.modo-btn b {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.modo-btn.ativo {
+  color: #eafdff;
+  border-color: rgba(45, 221, 224, .65);
+  background: rgba(28, 225, 226, .15);
+  box-shadow: 0 0 18px rgba(28, 225, 226, .12);
+}
+
+.modo-status {
+  margin: 3px 0 0;
+  color: var(--suave);
+  font-size: 10.5px;
+  text-align: center;
+}
+
+body[data-modo=holografico] .hud {
+  filter: drop-shadow(0 0 24px rgba(var(--rgb), .5)) drop-shadow(0 0 60px rgba(var(--rgb), .15));
+}
+
+body[data-modo=holografico] .hud::before {
+  border-color: rgba(var(--rgb), .35);
+  animation: jv-holo-pulso 4.5s ease-in-out infinite;
+}
+
+body[data-modo=holografico] .dash-card,
+body[data-modo=holografico] .painel .grupo {
+  border-color: rgba(45, 221, 224, .32);
+  box-shadow: inset 0 0 28px rgba(28, 225, 226, .035);
+}
+
+body[data-modo=holografico]::after {
+  opacity: .24;
+}
+
+body[data-modo=discreto] .hud {
+  width: min(31vh, 230px);
+}
+
+body[data-modo=discreto] .hud-meta,
+body[data-modo=discreto] .chips,
+body[data-modo=discreto] .modo-status,
+body[data-modo=discreto] .dash .monitor,
+body[data-modo=discreto] .dash .atalhos,
+body[data-modo=discreto] .dash-card.atividades {
+  display: none !important;
+}
+
+body[data-modo=discreto] .dash {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body[data-modo=discreto] .cmd-lista {
+  justify-content: center;
+}
+
+body[data-modo=discreto] .chat-area {
+  width: min(760px, 100%);
+}
+
+body[data-modo=silencioso] #ondas-voz {
+  opacity: .35;
+}
+
+body[data-modo=holografico] .modo-btn.ativo {
+  box-shadow: 0 0 24px rgba(28, 225, 226, .24);
+}
+
+@keyframes jv-holo-pulso {
+  50% { opacity: .7; transform: scale(1.015); }
+}
+
+/* Atividades na página inicial. */
+.dash-card.atividades {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dash-atividades {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 34px;
+}
+
+.dash-atividade {
+  overflow: hidden;
+  color: #bff6f4;
+  font-size: 10.5px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-card.atividades .atalho-dash {
+  margin-top: auto;
+}
+
+/* Mapa de áreas. */
+.painel-areas {
+  width: min(600px, 96%);
+}
+
+.areas-shell {
+  gap: 14px;
+}
+
+.areas-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.area-card {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid rgba(45, 221, 224, .2);
+  border-radius: 15px;
+  background: linear-gradient(150deg, rgba(8, 26, 31, .86), rgba(4, 13, 16, .72));
+  color: var(--texto);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 112px;
+  transition: border-color .18s, background .18s, transform .18s;
+}
+
+.area-card:active {
+  transform: scale(.985);
+}
+
+.area-card-topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.area-card-icone {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(var(--rgb), .28);
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: var(--cor);
+  font-size: 17px;
+  flex: none;
+}
+
+.area-card-nome {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.area-card-seta {
+  color: var(--cor);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.area-card-desc {
+  color: var(--suave);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.area-card-meta {
+  margin-top: auto;
+  color: rgba(var(--rgb), .8);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.areas-detalhe-topo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.areas-detalhe-topo h3 {
+  margin: 2px 0 4px;
+  font-size: 18px;
+}
+
+.areas-voltar {
+  align-self: flex-start;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--cor);
+  border-color: rgba(var(--rgb), .3);
+  background: rgba(var(--rgb), .06);
+}
+
+.areas-acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.area-acao {
+  position: relative;
+  width: 100%;
+  min-height: 58px;
+  padding: 10px 36px 10px 12px;
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+  background: rgba(13, 24, 41, .5);
+  color: var(--texto);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.area-acao b {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.area-acao small {
+  color: var(--suave);
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+.area-acao-seta {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  color: var(--cor);
+  font-size: 20px;
+}
+
+.area-acao.perigo {
+  border-color: rgba(255, 107, 107, .3);
+}
+
+.area-acao.perigo b,
+.area-acao.perigo .area-acao-seta {
+  color: #ff9a8a;
+}
+
+.modos-areas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  margin-top: 4px;
+  overflow: visible;
+}
+
+.modos-areas .modo-btn {
+  min-height: 64px;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 10px;
+  white-space: normal;
+  text-align: left;
+}
+
+.modos-areas .modo-btn b {
+  display: block;
+}
+
+.modos-areas .modo-btn small {
+  display: block;
+  color: var(--suave);
+  font-size: 10.5px;
+  font-weight: 400;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+.modos-config {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  overflow: visible;
+}
+
+.modos-config .modo-btn {
+  min-height: 58px;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 9px;
+  white-space: normal;
+  text-align: left;
+}
+
+.modos-config .modo-btn b,
+.modos-config .modo-btn small {
+  display: block;
+}
+
+.modos-config .modo-btn small {
+  color: var(--suave);
+  font-size: 10.5px;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+@media (hover: hover) {
+  .area-card:hover {
+    border-color: rgba(45, 221, 224, .48);
+    background: rgba(28, 225, 226, .09);
+  }
+}
+
+@media (max-width: 520px) {
+  .areas-grid,
+  .modos-areas,
+  .modos-config {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .area-card {
+    min-height: 96px;
+  }
+
+  .modos-uso {
+    justify-content: flex-start;
+  }
+
+  .modo-btn {
+    padding-inline: 10px;
+  }
+
+  .modo-btn b {
+    font-size: 10.5px;
+  }
+}
+
+@media (min-width: 900px) {
+  .dash {
+    grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  }
+
+  .dash-card.atividades {
+    grid-column: 1 / -1;
+  }
+
+  .areas-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  body[data-plataforma=desktop] .dash {
+    grid-template-columns: minmax(0, 300px) minmax(0, 1fr) minmax(0, 280px);
+  }
+
+  body[data-plataforma=desktop] .dash-card.atividades {
+    grid-column: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-modo=holografico] .hud::before,
+  body[data-modo=holografico] .modo-btn.ativo {
+    animation: none !important;
+  }
+}
+
+/* O estado "executando" usa a mesma linguagem visual de atenção do núcleo. */
+body[data-state=processing] .chip.estado {
+  color: #fcd34d;
+}
+
+body[data-state=processing] .chip.estado::before {
+  background: #fcd34d;
+}
+
+body[data-state=processing] .hud {
+  filter: drop-shadow(0 0 26px rgba(252, 211, 77, .32));
+}
