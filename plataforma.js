@@ -96,3 +96,45 @@
   raiz.Plataforma = adaptador;
   if (typeof module === 'object' && module.exports) module.exports = adaptador;
 })(typeof window !== 'undefined' ? window : globalThis);
+
+/* Central de Comandos: carrega a interface nova sem depender de edição no index.html.
+ * Os dois módulos ficam em vendor/ porque o pacote do PC já inclui vendor/** e o build do
+ * APK copia vendor/ inteiro. Assim o celular e o computador recebem exatamente a mesma
+ * interface, sem uma segunda lista de arquivos para esquecer de atualizar.
+ * Sem estes arquivos o app continua abrindo normalmente: a Central apenas não aparece. */
+(function (raiz) {
+  'use strict';
+  if (!raiz || !raiz.document || raiz.__centralSolicitada) return;
+  raiz.__centralSolicitada = true;
+  var doc = raiz.document;
+  function carregar(src, proximo) {
+    try {
+      var s = doc.createElement('script');
+      s.src = src;
+      s.async = false;
+      s.defer = true;
+      s.onload = function () { if (typeof proximo === 'function') proximo(); };
+      s.onerror = function () { /* interface nova ausente: o app segue como antes */ };
+      (doc.head || doc.documentElement).appendChild(s);
+    } catch (e) { /* ambientes sem DOM */ }
+  }
+  // No APK o utilitarios.js já entra por uma tag no index.html; no pacote do PC ele não
+  // estava em lugar nenhum — por isso IMC, QR Code e jogos funcionavam no celular e
+  // falhavam no computador. Aqui ele é carregado uma única vez, nas duas plataformas.
+  function jaCarregado(fim) {
+    try {
+      var tags = doc.querySelectorAll('script[src]');
+      for (var i = 0; i < tags.length; i++) {
+        if (String(tags[i].src).indexOf(fim) >= 0) return true;
+      }
+    } catch (e) { /* sem querySelector: segue e carrega */ }
+    return false;
+  }
+  if (jaCarregado('utilitarios.js')) {
+    carregar('vendor/catalogo_jarvis.js', function () { carregar('vendor/central_nova.js'); });
+  } else {
+    carregar('utilitarios.js', function () {
+      carregar('vendor/catalogo_jarvis.js', function () { carregar('vendor/central_nova.js'); });
+    });
+  }
+})(typeof window !== 'undefined' ? window : null);
