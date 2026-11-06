@@ -1,0 +1,155 @@
+name: Publicar APK com utilitários (build 10460)
+
+# Workflow próprio desta entrega: compila o APK e publica o release com o utilitarios.js dentro.
+# A tag `release-*` não colide com `v*` (release-apk.yml) nem dispara aquele pipeline.
+on:
+  push:
+    tags: ['release-*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jarvis-utilitarios
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Compilar APK e publicar release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configurar Java para o Android
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Garantir Android SDK 35
+        run: |
+          SDKM="$(command -v sdkmanager || true)"
+          [ -n "$SDKM" ] || SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" "platforms;android-35" "build-tools;35.0.0" >/dev/null
+
+      - name: Instalar dependências Node
+        run: npm install --ignore-scripts --legacy-peer-deps
+
+      - name: Fixar assinatura de debug do CI
+        run: |
+          test -s ci/debug.keystore || { echo 'ci/debug.keystore ausente.'; exit 1; }
+          mkdir -p "$HOME/.android"
+          cp ci/debug.keystore "$HOME/.android/debug.keystore"
+
+      - name: Testes estáticos e regressão
+        run: npm run test:all
+
+      - name: Conferir o módulo de utilitários
+        run: |
+          node --check utilitarios.js
+          node - <<'JS'
+          const u = require('./utilitarios.js');
+          const ok = (nome, cond) => {
+            if (!cond) { console.error('FALHOU: ' + nome); process.exit(1); }
+            console.log('ok: ' + nome);
+          };
+          ok('IMC 80 kg e 1,80 m', Math.abs(u.imc(80, 1.8).valor - 24.69) < 0.01);
+          ok('IMC classifica pela OMS', u.imc(80, 1.8).classe === 'peso normal');
+          ok('10 km em milhas', Math.abs(u.converter(10, 'km', 'milhas').valor - 6.2137) < 0.001);
+          ok('30 C em F', Math.abs(u.converter(30, 'c', 'f').valor - 86) < 1e-9);
+          ok('decimal 10 em binario', u.baseNumerica('10', 'dec', 'bin').texto === '1010');
+          ok('QR do texto curto fica na versao 1', u.qrMatriz('oi').versao === 1);
+          ok('QR versao 1 tem 21 por 21', u.qrMatriz('oi').tamanho === 21);
+          ok('QR aceita 260 caracteres', u.qrMatriz('x'.repeat(260)).versao === 10);
+          ok('QR recusa texto grande demais', u.qrMatriz('y'.repeat(400)) === null);
+          ok('24 piadas e 24 curiosidades', u.PIADAS.length === 24 && u.CURIOSIDADES.length === 24);
+          ok('jogo da velha abre e responde', u.velhaNovo().casas.length === 9 && u.velhaJogar(5).casas[4] === 'X');
+          JS
+
+      - name: Preparar os recursos web do aplicativo
+        run: |
+          mkdir -p www/vendor
+          cp index.html style.css www/
+          cp *.js www/
+          cp vendor/three.min.js www/vendor/three.min.js
+          # carga o módulo depois do app.js, como os outros módulos
+          sed -i 's#<script src="app.js"></script>#<script src="app.js"></script>\n<script src="utilitarios.js"></script>#' www/index.html
+          grep -q 'src="utilitarios.js"' www/index.html || { echo 'Falha ao carregar utilitarios.js no index.html'; exit 1; }
+          test -s www/utilitarios.js
+          test -s www/cad_projeto.js
+
+      - name: Gerar estrutura nativa do Android
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Baixar bibliotecas nativas de voz (sherpa-onnx)
+        run: python3 baixar_sherpa.py android/app
+
+      - name: Aplicar identidade, permissões e versão
+        run: |
+          D=android/app/src/main/java/com/jarvis/nova
+          mkdir -p "$D"
+          find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
+          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java; do
+            test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
+          done
+          python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
+          python3 patch_gradle.py android/app/build.gradle
+          # build 10460 sobre a revisao 1.31.2: o VERSAO.json do repositorio nao muda,
+          # o metadado do APK e gerado aqui para o Android aceitar a atualizacao por cima da 1.45.0.
+          python3 - <<'PYBUILD'
+          import json
+          m = json.load(open('VERSAO.json'))
+          m['versionCode'] = 10460
+          json.dump(m, open('/tmp/versao-build.json', 'w'))
+          PYBUILD
+          python3 patch_android_version.py android/app/build.gradle /tmp/versao-build.json
+          python3 patch_visual.py android
+
+      - name: Compilar APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          test -s app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Nomear o APK da release
+        id: versao
+        run: |
+          V=$(python3 -c "import json;print(json.load(open('VERSAO.json'))['version'])")
+          C=$(python3 -c "import json;print(json.load(open('/tmp/versao-build.json'))['versionCode'])")
+          APK="jarvis-nova-${V}-${C}.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$APK"
+          sha256sum "$APK" > "${APK%.apk}.sha256"
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+          echo "sha=${APK%.apk}.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar release com o APK
+        uses: softprops/action-gh-release@v2
+        with:
+          name: 1.31.2 — utilitários no aparelho (build 10460)
+          body: |
+            APK assinado com a assinatura fixa de CI (ci/debug.keystore), a mesma do atualizador embutido.
+
+            **Novidades desta build:** utilitários resolvidos no próprio aparelho, sem gastar chave de IA —
+            IMC com classificação da OMS, conversões (temperatura, comprimento, massa, volume, velocidade,
+            tempo, dados), decimal ↔ binário ↔ hexadecimal, 24 piadas, 24 curiosidades, **QR Code gerado
+            sem internet** e jogos (jogo da velha, adivinhação, pedra-papel-tesoura, dados, moeda e sorteio).
+            Também corrige o empacotamento do cad_projeto.js, que era usado pelo index.html e não entrava no APK.
+
+            **Como usar:** fale ou escreva, por exemplo, "calcule meu IMC, 80 kg e 1,80 m",
+            "converta 10 km para milhas", "gere um QR Code de jarvis nova" ou "jogo da velha".
+
+            O versionCode é 10460, então a instalação é uma atualização por cima da 1.45.0 (10450).
+          files: |
+            ${{ steps.versao.outputs.apk }}
+            ${{ steps.versao.outputs.sha }}
+          make_latest: true
