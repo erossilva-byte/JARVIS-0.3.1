@@ -128,7 +128,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          emulator-options: -no-window -no-audio -no-boot-anim -camera-back none -gpu swiftshader_indirect
+          emulator-options: -no-window -no-audio -no-boot-anim -camera-back none -gpu swangle
           script: |
             set -eu
             mkdir -p "$GITHUB_WORKSPACE/artifacts/android"
@@ -152,6 +152,8 @@ jobs:
             timeout 20s adb get-state > "$GITHUB_WORKSPACE/artifacts/android/adb-state-2.txt" || { echo "Emulador desconectado após 25 segundos de execução do app." >&2; adb devices -l || true; exit 1; }
             sleep 10
             timeout 20s adb get-state > "$GITHUB_WORKSPACE/artifacts/android/adb-state-3.txt" || { echo "Emulador desconectado após 35 segundos de execução do app." >&2; adb devices -l || true; exit 1; }
+            timeout 30s adb logcat -d -v threadtime > "$GITHUB_WORKSPACE/artifacts/android/logcat-before-final-pid.txt" 2>&1 || true
+            timeout 20s adb shell dumpsys meminfo com.jarvis.nova > "$GITHUB_WORKSPACE/artifacts/android/meminfo-before-final-pid.txt" 2>&1 || true
             timeout 20s adb shell pidof com.jarvis.nova > "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt" 2>&1 || true
             grep -Eq '[0-9]+' "$GITHUB_WORKSPACE/artifacts/android/app-pid.txt" || { echo "O processo com.jarvis.nova não permaneceu ativo após a inicialização." >&2; exit 1; }
             timeout 30s adb logcat -d -v threadtime > "$GITHUB_WORKSPACE/artifacts/android/logcat.txt" 2>&1 || true
@@ -179,6 +181,9 @@ jobs:
             sudo dmesg --ctime 2>/dev/null | grep -Ei 'out of memory|oom-kill|killed process|qemu|emulator' | tail -80 || true
             echo "=== Arquivos de crash do emulador ==="
             find /tmp/android-runner -maxdepth 2 -type f -print 2>/dev/null || true
+            cp /tmp/android-runner/netsimd/netsim_stderr.log artifacts/android/ 2>/dev/null || true
+            cp /tmp/android-runner/netsimd/netsim_stdout.log artifacts/android/ 2>/dev/null || true
+            cp -a /tmp/android-runner/emu-crash-*.db artifacts/android/ 2>/dev/null || true
             find /tmp/android-runner -maxdepth 2 -type f -print 2>/dev/null || true
           } > artifacts/android/host-diagnostics.txt 2>&1
 
