@@ -1,4 +1,151 @@
-# J.A.R.V.I.S. Nova 1.31.2
+# J.A.R.V.I.S. Nova 1.45.0
+
+## 1.45.0 — Bloqueio com biometria, NFC e central própria
+
+A tela de bloqueio opcional ganhou autenticação real: biometria forte do Android (nunca câmera comum), leitura NFC com UID guardado só como hash e modos combinados, incluindo duas etapas. Tudo é configurado em Ajustes ▸ Segurança, com tempo de inatividade, limite de tentativas, tags, histórico e restauração. O PIN passou a PBKDF2 com sal e o hash antigo migra sozinho. Sem biometria ou NFC, a tela diz isso e o PIN continua sendo a recuperação; nada foi testado em aparelho físico e o APK segue com assinatura debug/CI.
+
+## 1.42.8 — Contexto visual da sessão
+
+O Vision passou a lembrar o que foi analisado: perguntas como "ele é bom para corrida?" e "e quanto custa?" usam o mesmo objeto, sem repetir a foto. Marca e modelo só são afirmados com evidência legível; cada informação é marcada como confirmada, de loja ou estimada. Vários objetos podem ser selecionados e comparados, texto lido na imagem é tratado como dado (nunca instrução) e componentes técnicos são ligados à base elétrica e ao Projetista. Nada é salvo sem pedido explícito. Sem chave de IA, a precisão de identificação não foi medida.
+
+## 1.42.7 — Base técnica elétrica e sequência de motores
+
+O projetista ganhou uma base de engenharia própria (`eletrica.js`): componentes com terminais, função, limites e símbolo IEC; tabelas de ampacidade, contator, disjuntor e térmico; dimensionamento com memória de cálculo e conferência independente. Nova topologia monta dois motores em sequência, com o segundo entrando X segundos depois do primeiro. A segunda análise (`conferirObjetivo`) verifica se o projeto montado atende ao pedido, e a netlist permite exportar e reimportar o diagrama em texto. O `.cad` do CADeSIMU continua não sendo gerado nem aberto, e não há simulação elétrica.
+
+O APK **1.45.0** (`jarvis-nova-1.45.0-10450.apk`) está sendo compilado e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.45.0 ; bytes e SHA-256 são registrados em `VERSAO.json` depois do build. Ele **não foi instalado em aparelho físico**.
+
+## 1.42.6 — Correção do pacote Android
+
+O APK **1.42.5** foi publicado sem o `projetista.js`: o painel do projetista abria no Android, mas o módulo não existia no pacote e o recurso não funcionava. A 1.42.6 corrige o workflow de build e adiciona `tests/test_empacotamento.py`, que falha se qualquer script do `index.html` ficar fora do pacote Android ou da lista do Windows. A mesma verificação encontrou `pc.js` e `cad_projeto.js` fora do pacote Android desde versões anteriores (painel PC e reparo/exportação do CAD sem módulo no aparelho); os dois foram incluídos. Use esta versão no lugar da 1.42.5.
+
+O APK **1.42.6** (`jarvis-nova-1.42.6-10426.apk`) tem **81273094 bytes** e SHA-256 `e0eae803b9d73de2207cfab52dd398bd5ce7eca19fb189eb67dd3a3f3c0b014d`, compilado no GitHub Actions e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.6 . Conferido por dentro: `projetista.js`, `pc.js` e `cad_projeto.js` presentes em `assets/public`. Ele **não foi instalado em aparelho físico** — toque, arrastar, microfone no aparelho e desempenho no Poco X7 seguem sem validação física, e o APK é assinado em debug/CI.
+
+## 1.42.5 — Projetista elétrico editável
+
+O painel **Arquivos ▸ Projetista elétrico** monta o circuito a partir de um pedido em português: partida direta, reversão, estrela-triângulo, compensadora, comando com selo, iluminação e CLP de nível. O projeto vem com componentes, pinos, fios numerados, sequência de operação e verificação estrutural (curto, terminal solto, bobina sem alimentação, falta de proteção, falta de intertravamento), com correção do que o motor sabe corrigir e relatório que separa o que foi verificado do que **não** foi.
+
+Projetos existentes podem ser modificados (temporizador, remoção de componente, proteção, tensão de comando e troca de topologia), com histórico de versões, restauração e comparação estrutural. A vista usa símbolos IEC por tipo e os pinos podem ser religados tocando neles; o mesmo projetista responde no chat e na voz ("projetista: crie uma partida direta de 5 CV..."). O arquivo é o formato próprio `ProjetistaEletrico CAD` v1. O `.cad` nativo do CADeSIMU é proprietário: não é gerado nem aberto, e a simulação elétrica não é executada no aplicativo. Detalhes em [docs/PROJETISTA-ELETRICO.md](docs/PROJETISTA-ELETRICO.md).
+
+## 1.42.4 — Editor de circuito no palco
+
+O painel **Arquivos ▸ Montar circuito** virou editor: o palco desenha símbolos, terminais e fios. Arraste um componente para mover (a posição vai para o `.cad`), toque em dois terminais para ligar, toque no componente para selecionar e **Aplicar edição** (id/valor) ou **Apagar selecionado**. **Carregar .cad salvo** traz de volta o circuito do cofre para continuar editando.
+
+Ressalva mantida: o formato é o **`CadSimu CAD` v1** deste projeto, com `x`/`y` opcionais; o `.cad` nativo do CADeSIMU é proprietário e **não** é gerado. A netlist continua servindo de entrada para simuladores de PC, e o celular não simula eletricamente.
+
+O APK 1.42.4 tem **81222586 bytes** e SHA-256 `d0a331d65c704ec0c2d52d3007f8bf1d857b396680286f0898817cb70ee1eada`, compilado no GitHub Actions e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.4. Ele **não foi instalado em aparelho físico**: toque real, arrastar com o dedo e desempenho no Poco X7 continuam sem validação física.
+
+## 1.42.3 — Montar circuito na interface e perguntar sobre a imagem
+
+O painel **Arquivos** ganhou a seção **Montar circuito**: escolha o componente, informe id e valor, ligue os terminais (`V1.1` ↔ `R1.1`), valide, veja a netlist e salve o `.cad` — sem escrever JSON. O arquivo salvo leva a placa de 120×80×2 mm como geometria e o circuito validado; o cofre, a análise e o download continuam os mesmos.
+
+Sobre o CADeSIMU, com transparência: o formato gravado é o **`CadSimu CAD` v1** documentado neste projeto (`docs/CAD-CIRCUITOS.md`). O `.cad` nativo do CADeSIMU é proprietário e **não** é gerado; a netlist é texto para simulador de PC. Isso está escrito no próprio painel, não escondido.
+
+Na **Visão**, depois de qualquer análise, o campo **Perguntar sobre a análise** deixa você questionar a mesma imagem (“quantas portas aparecem?”) sem abrir a câmera de novo. A resposta entra no texto da análise e é falada.
+
+O APK 1.42.3 tem **81218070 bytes** e SHA-256 `ca9803324a2cd919463d13719074a470d4ea9405e93b431ed23535ef62f90ffe`; foi compilado no GitHub Actions (JDK 21/Android SDK 35) e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.3, junto dos instaladores Windows `J.A.R.V.I.S.Nova.1.42.3.exe` e `Setup`. Ele **não foi instalado em aparelho físico**: microfone real, wake word, segundo plano e desempenho no Poco X7 continuam sem validação física.
+
+## 1.42.2 — Circuitos elétricos no .cad e fluidez
+
+O `.cad` agora aceita uma seção opcional de circuito elétrico: componentes com terminais, conexões entre terminais (`R1.1`), validação de verdade (id repetido, terminal inexistente, curto na fonte, componente solto, LED sem resistor, circuito sem fonte) e netlist pronta para o PC. Arquivos antigos continuam abrindo. O passo a passo e o exemplo estão em `docs/CAD-CIRCUITOS.md`.
+
+O aplicativo também ficou mais leve: a busca da memória não re-renderiza a cada tecla, a vigilância da interface e as atividades do painel param com o app oculto, e os desfoques de fundo caros saíram dos chips e das mensagens. É ajuste medido no código e nos testes; o ganho em aparelho físico ainda não foi medido aqui.
+
+O APK 1.42.2 tem **81.212.410 bytes** (81.212.410) e SHA-256 `e6b796a09bb10fb908c9efb3f7a59d683400e97a1a5d9181a9659d9929d97632`; foi compilado pelo release workflow com JDK 21/Android SDK 35 e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.2. O release também traz os instaladores Windows (`J.A.R.V.I.S.Nova.1.42.2.exe` e `Setup`). Ele **não foi instalado em aparelho físico**: microfone real, wake word, segundo plano e desempenho no Poco X7 continuam sem validação física.
+
+## 1.42.1 — Auditoria de botões e correções honestas
+
+Esta revisão varreu a interface inteira com clique de verdade (jsdom), não só leitura de código: 300 botões, 239 medidos depois de abrir cada painel e cada aba de Ajustes, zero exceções de clique. Dos 15 cliques que não mudavam nada, 13 eram comportamento correto (seletor de arquivo, atualização idempotente, aba já ativa, painel já aberto) e 2 eram falha: “Liberar memória” da voz neural ficava mudo sem o plugin JarvisVoz, e o microfone do núcleo voltava ao repouso sem explicar quando o ambiente não tem gravação. Os dois agora respondem com mensagem e têm teste de regressão (`tests/test_botoes_honestos.js`).
+
+Também passaram a valer verificações novas em toda a rodada: toda ação das áreas tem caso no roteador de navegação, o HTML não tem IDs duplicados nem rótulos quebrados, e não existe `href="#"`, `onclick` inline ou handler vazio. Nada foi removido ou simulado; as funções, a identidade e o núcleo 3D seguem intactos.
+
+O APK 1.42.1 tem **81.209.170 bytes** (81.209.170) e SHA-256 `506ee0a5c45919f095942f91b496a1fad1c00bc6c99038d15f730d68502ae013`; foi compilado pelo release workflow com JDK 21/Android SDK 35 e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.1. O release também traz os instaladores Windows (`J.A.R.V.I.S.Nova.1.42.1.exe` e `Setup`). Ele **não foi instalado em aparelho físico**: microfone real, wake word, toque, segundo plano, câmera e desempenho no Poco X7 continuam sem validação física.
+
+## 1.42.0 — Voz: VAD/WAV, motor STT selecionável e métricas
+
+Esta revisão fecha os problemas encontrados no caminho real de comando. A captura normal passou a usar o VAD testável e WAV PCM, com teto de 20 s, reamostragem para 16 kHz e aplicação dos controles de eco, supressão de ruído, AGC e filtro. O usuário escolhe entre Automático, Groq, Android e Android local; o fallback Android não acontece mais quando o motor Groq foi selecionado, e um parcial contendo apenas “Jarvis” não consome a ativação antes do comando.
+
+O diagnóstico registra duração do áudio, bytes enviados, captura média e upload médio. O APK 1.42.0 tem **81,209,022 bytes** (81.209.022) e SHA-256 `f9b9adf6a55a35c59a6939971322f3fcbcbe76740342e30589b46074a7348455`; foi compilado pelo release workflow com JDK 21/Android SDK 35 e publicado em https://github.com/erossilva-byte/JARVIS-0.3.1/releases/tag/v1.42.0. Ele **não foi instalado em aparelho físico**: instalação, microfone, wake word, TTS, câmera, segundo plano, desempenho no Poco X7 e precisão acústica em PT-BR continuam sem validação física.
+
+## 1.41.0 — Voz PT-BR: confiança, filtros, replay e diagnóstico
+
+Esta revisão ataca o caminho real de voz, não só a interface. O reconhecedor do Android agora devolve a confiança e até cinco hipóteses alternativas; o app usa esses sinais para recusar comandos de ação abaixo de 45% e pedir repetição, sem inventar confiança quando o motor não a fornece. O Whisper da Groq continua sendo o motor de maior qualidade quando há chave e rede; o Android local/online continua sendo o fallback.
+
+A captura normal ganhou um filtro high-pass de 85 Hz e um compressor suave antes do `MediaRecorder`; o perfil de locutor usa a mesma cadeia. O centroide do perfil passou a ponderar as amostras por SNR e duração, e um indício de reprodução agora impede a confirmação de identidade em vez de ser apenas exibido. Quando o WebView não oferece `MediaRecorder`, um caminho WAV PCM de emergência usa o VAD já existente.
+
+Em Ajustes ▸ Voz há um teste de transcrição: você digita a frase esperada, grava, e o app mostra o reconhecido, o acerto por palavra (WER), a latência real e a confiança quando disponível. O histórico fica local e pode ser apagado. Não há taxa de acerto de campo nesta revisão: a suíte prova o contrato e o cálculo, não a acústica do seu aparelho.
+
+O APK 1.41.0 tem **81.220.373 bytes** e SHA-256 `d05aab92eb158a27e50fcd249dc2ff64e89927aa8167371b07acc787e0b32953`; é debug/CI, compilado com Android SDK 35, build-tools 35.0.0, JDK 21 e Gradle 8.9. Os assets foram conferidos dentro do pacote: `app.js` com `VERSAO_APP = '1.41.0'`, `fala.js` 1.1.0, `audio_pcm.js` e `index.html` com os controles novos. O `aapt` confirma `com.jarvis.nova`, versionCode 10410, minSdk 26, targetSdk 34. Ele **não foi instalado em aparelho físico**; instalação, microfone, wake word, TTS, câmera, segundo plano e desempenho continuam sem validação física nesta máquina. A instalação, o microfone físico, a wake word, o TTS, a câmera, o segundo plano e o desempenho no Poco X7 continuam **sem validação física** nesta máquina.
+
+## 1.40.0 — Núcleo protagonista, áreas corrigidas e abertura limpa
+
+Esta revisão coloca o núcleo no centro do menu e remove a opção independente **Conversa**. O chat, o histórico, a transcrição, o microfone, os comandos digitados e as respostas faladas continuam funcionando; a transcrição virou uma tela secundária, aberta pelo botão próprio, pelo cartão de última resposta ou pelo cartão de acessos.
+
+As **Áreas** foram corrigidas na origem: o `<body>` recebia `data-modo` e a delegação tratava qualquer clique como troca de modo, retornando antes da ação. O seletor agora aceita somente `.modo-btn[data-modo]`, o cartão tem listener direto e o clique em nó de texto da WebView sobe para o elemento. Os 10 cartões e as 44 ações são exercitados por `tests/test_interface_dom.js` (80 verificações em jsdom).
+
+O **flash de abertura** vinha de `#boot` começar oculto, do menu aparecer e de o boot só iniciar 700 ms depois; o bloqueio ainda era aberto 520 ms depois de o boot sumir. Agora o boot nasce visível, o corpo nasce travado, o boot roda no primeiro ciclo e o bloqueio é montado antes de liberar o corpo.
+
+Preservados Obsidian, bloqueio opcional, provedores, humor, voz, pessoas, perfis, memória, executores e confirmações. O APK 1.40.0 tem 81.404.118 bytes e SHA-256 `307245cfcde586f92dc4122d24a539996ad7be8afe237226da075b0c6796dffb`; é debug/CI e os assets foram conferidos dentro do pacote (app.js 1.40.0, index.html 1.40.0 e a correção de `.modo-btn[data-modo]`). Ele não foi instalado em aparelho físico. A instalação, o toque real no WebView, o microfone, a wake word, o TTS, a câmera, o segundo plano e o desempenho no Poco X7 continuam **sem validação física** nesta máquina.
+
+## 1.39.0 — Raciocínio em etapas e personalidade adaptativa
+
+Esta revisão acrescenta uma camada cognitiva determinística antes e depois da IA. Ela identifica intenção, complexidade, pressa, assunto sensível, referências e necessidade de pesquisa, cálculo ou ferramenta; monta um plano interno de cinco etapas; seleciona o histórico relevante; e verifica/revisa a fala contra respostas vazias, aberturas genéricas, repetição e alegação de execução não feita.
+
+A personalidade ganhou três controles persistidos em Ajustes ▸ IA: profundidade, iniciativa e comportamento conversacional. Os três níveis de humor e os seis eixos existentes foram preservados. O Hermes, o Core, o catálogo de ferramentas, as confirmações, a memória, a voz, o avatar e o núcleo 3D não foram substituídos.
+
+O módulo e os testes estão em `cognicao.js`, `tests/test_cognicao.js` e `tests/test_v1_39_0.py`; a arquitetura e as limitações estão em `docs/COGNICAO-1.39.0.md`. O APK 1.39.0 tem 81.202.290 bytes e SHA-256 `39341a23fc2bf16680ee89b74b9109799d6b08669755e53695a9241c81f3bcce`; é debug/CI, assinado com a chave de CI, e não foi instalado em aparelho físico.
+
+## 1.38.1 — Auditoria corretiva
+
+Esta revisão corrige quatro defeitos encontrados na auditoria: uma tarefa cancelada durante a última etapa podia terminar como concluída; a Visão 2.0 tinha declarações antigas duplicadas e não limpava a análise ao reabrir; a preparação de algumas ações podia lançar exceção sem resposta; e o gerador de senha usava módulo tendencioso. O roteador de IA também passou a descartar IDs de provedor desconhecidos. Não há recurso novo nem remoção de funcionalidade.
+
+O APK 1.38.1 tem 81.195.283 bytes e SHA-256 `28a87cb3ec4eaa6d890047406c481190ff8868d080391ce679a0cf832ca8af5b`; é debug/CI e está descrito abaixo; a instalação, o microfone, a câmera, a acessibilidade, o segundo plano e o avatar em tela real continuam pendentes de validação no Poco X7. Esta é uma correção de engenharia, não uma declaração de teste de campo.
+
+## 1.38.0 — Avatar 3D, plano persistente e executores
+
+Esta revisão acrescenta um **avatar holográfico procedural** escolhível em Aparência do núcleo, desenhado localmente com Three.js e fallback em Canvas 2D. Os olhos piscam e a boca abre conforme a **amplitude real** da fala ou do microfone; não há modelo facial baixado nem visemas por fonema, e a interface diz isso.
+
+O comando “planeje …” agora converte o plano validado em uma **tarefa persistente** do Sistema. Cada etapa tem checkpoint, pausa e retomada sem repetir etapa concluída; a etapa interna não pede confirmação duplicada, mas a ação real continua passando pelo `executarSeguro`. O Core ganhou executores de leitura para **voz**, **automação**, **atualização** e **planejamento**.
+
+A auditoria de IA e o inventário do repertório estão em `docs/IA-1.38.0.md` e `docs/REPERTORIO-1.38.0.md`. O APK 1.38.0 foi compilado e conferido por hash/aapt (81196059 bytes; SHA-256 `3fbe237a672eca13f308a266c86e0503d13ddcfa54fdd4e75308bb0b8cae27ba`); **não foi instalado nem executado em aparelho físico nesta máquina**. Instalação, microfone, wake word, acessibilidade, segundo plano, notificações e avatar em tela real continuam pendentes de validação no Poco X7. Voz, câmera, Windows, ESP32/Home Assistant e inferência com chave/modelo reais não foram simulados.
+
+## 1.37.0 — Retomada segura e pausa
+
+Uma tarefa pausada por efeito incerto agora continua **sem reexecutar** a etapa que pode já ter sido disparada. Também é possível pausar manualmente entre etapas: a ferramenta em curso termina, mas a próxima não começa, e o checkpoint permanece. A tela de tarefas descreve corretamente o lembrete de prazo às 09:00 no Android.
+
+Pausa não é cancelamento: ela não interrompe um efeito já iniciado. Voz, câmera, wake word, notificações, Windows, ESP32/Home Assistant e instalação em aparelho continuam dependendo de validação física.
+
+## 1.36.0 — Aprendizado explícito
+
+Esta revisão adiciona um módulo local de aprendizado que só registra instruções claras do usuário (“prefiro”, “evite”, “lembre”, “corrija”). Tudo é revisável em Memória, pode ser removido, desfeito, exportado ou apagado, e conteúdo sensível é recusado. O aprendizado entra no prompt como preferência de estilo, nunca como autorização para contornar segurança, permissões ou confirmações.
+
+Aprendizado automático de hábitos, permissões por pessoa, canal autenticado Android↔Windows, ESP32/Home Assistant e reformulação visual completa continuam pendentes e não foram simulados.
+
+## 1.35.0 — Confiabilidade, autodiagnóstico e recuperação
+
+Esta revisão fortalece o Core sem remover a 1.34.0. Falhas agora têm causa provável, evidência e orientação; a delegação faz pré-checagem de dependências; componentes podem declarar uma recuperação segura, executada com timeout, rechecagem, espera e limite de tentativas. O automático só ocorre quando o próprio componente autoriza. Nada reinicia serviços Android nem contorna permissões.
+
+O diagnóstico integrado mostra o Core, e o painel do Core mostra o histórico de recuperação. RAM JavaScript e bateria só aparecem quando a WebView fornece o dado; o uso de CPU não é inventado. A validação em aparelho físico, microfone, câmera, acessibilidade real, segundo plano, RAM, bateria e instalação continua pendente.
+
+## 1.34.0 — Core, agentes e contexto
+
+Esta revisão acrescenta o **JARVIS Core** sem remover a camada de áreas da 1.33.0. O Core registra 12 agentes descritivos, escolhe o agente por sinais explícitos, mantém último pedido/agente/decisões, gerencia projetos e tarefas e verifica resultados de forma conservadora. Sem executor registrado, a delegação devolve `nao_configurado` e não finge execução. O painel mostra status, agentes, projetos, saúde e habilidades; o watchdog diagnostica sem reiniciar serviços em loop.
+
+O APK 1.34.0 mantém a instalação por cima quando usa a mesma assinatura de CI. A validação em aparelho físico, microfone, câmera, acessibilidade real, RAM, bateria e instalação continua pendente. MCP remoto, RAG vetorial, tutorial, visão de tela ampla, pareamento PC/TV/ESP32 e atualização modular não foram implementados; a classificação completa está em `docs/EVOLUCAO-1.34.0.md`.
+
+## 1.33.0 — Auditoria, áreas e reconstrução da experiência
+
+Esta revisão audita os 13 tópicos da evolução, organiza a interface em dez áreas, cria quatro modos de uso persistentes, conecta atividades reais à página inicial e faz o núcleo 3D reagir à execução de ferramentas. A auditoria completa está em `docs/AUDITORIA-1.33.0.md`; a limpeza está em `docs/LIMPEZA-1.33.0.md`. O APK 1.33.0 foi gerado e verificado por dentro; a instalação em aparelho físico continua pendente. O APK 1.32.0 permanece como referência.
+
+## 1.32.0 — Núcleo operacional, ferramentas e acessibilidade
+
+O `sistema.js` adiciona um catálogo de ferramentas com permissões, traces, tarefas com checkpoint e detecção de
+injeção. A voz resolve calculadora, conversão, senha e status do núcleo sem chamar a nuvem. A nova central
+**Sistema** mostra tudo isso. No Android, um AccessibilityService opt-in permite ler a tela, clicar por texto,
+digitar, rolar e esperar — sempre com confirmação, campos de senha omitidos e botão **Parar tudo**.
+
+O microfone ganhou seleção de entrada e um diagnóstico de 1,2 s que mede nível, ruído, pico e clipes sem gravar.
+O que não foi possível validar aqui: aparelho físico, microfone real, wake word em segundo plano, TTS, automação
+de UI e instalação do APK. O relatório de rastreabilidade está em `docs/AUDITORIA-1.33.0.md`.
 
 ## 1.31.2 — Consentimento e coerência
 

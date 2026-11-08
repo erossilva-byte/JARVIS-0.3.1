@@ -677,6 +677,9 @@ public class JarvisService extends Service {
         if (!definitivo && !cfg.aceitaParcial) return false;
         if (!JarvisAtivacao.presente(texto, cfg)) return false;
         if (!definitivo && texto.trim().length() < cfg.minimoParcial) return false;
+        // Um parcial com apenas "Jarvis" não deve consumir a ativação: o comando
+        // pode estar no próximo resultado. O definitivo pode acordar só com o nome.
+        if (!definitivo && !JarvisAtivacao.temComando(texto, cfg)) return false;
         if (picoDb < cfg.ruidoDb) {
             // Porteiro de ruído: a transcrição veio, mas o microfone mal registrou som —
             // típico de televisão, conversa ao fundo ou ruído que o reconhecimento tentou

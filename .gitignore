@@ -7,3 +7,9 @@ __pycache__/
 .DS_Store
 Thumbs.db
 www/
+
+# Binários de release não entram no repositório (ficam nos assets do GitHub Releases)
+/*.apk
+/*.apk.sha256
+/*.sha256
+/*-fonte.zip

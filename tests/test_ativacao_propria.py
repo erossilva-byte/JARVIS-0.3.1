@@ -47,6 +47,8 @@ if 'JarvisAtivacao.config(' not in servico:
     issues.append('Serviço não monta a calibragem do detector próprio')
 if 'onPartialResults' not in servico or 'conferirEmLote' not in servico:
     issues.append('Detector não confere resultado parcial (latência da ativação)')
+if 'temComando' not in ativacao or '!JarvisAtivacao.temComando' not in servico:
+    issues.append('Parcial só com a wake word pode consumir a ativação e perder o comando')
 if 'picoDb' not in servico or 'cfg.ruidoDb' not in servico:
     issues.append('Detector não tem porteiro de ruído')
 if 'JarvisPrefs.rejeitadas(' not in servico:

@@ -10,15 +10,21 @@
 <title>J.A.R.V.I.S. Nova</title>
 <link rel="preconnect" href="https://api.groq.com">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="interface.css">
+<link rel="stylesheet" href="core.css">
 </head>
-<body data-state="idle">
-<div id="boot" class="boot" hidden>
+<body data-state="idle" class="travado">
+<div id="boot" class="boot" aria-busy="true" aria-label="Inicializando o J.A.R.V.I.S. Nova">
+  <div class="boot-grade" aria-hidden="true"></div>
   <div class="boot-nucleo" aria-hidden="true">
+    <span class="bn-orbita bn-orbita-a"></span><span class="bn-orbita bn-orbita-b"></span>
     <span class="bn-aro bn1"></span><span class="bn-aro bn2"></span><span class="bn-aro bn3"></span><span class="bn-nucleo"></span>
   </div>
+  <p class="boot-kicker">STARK INDUSTRIES · NÚCLEO DE COMANDO</p>
   <p class="boot-marca">J.A.R.V.I.S. NOVA</p>
   <div id="boot-barra" class="boot-barra" role="progressbar" aria-label="Inicialização do sistema" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="boot-preenche"></span></div>
   <p id="boot-status" class="boot-status" role="status" aria-live="polite">Iniciando o núcleo…</p>
+  <div class="boot-telemetria" aria-hidden="true"><span>ARC 01</span><span>IA CORE</span><span>VOZ</span><span>SENSORES</span></div>
   <p id="boot-voz" class="boot-voz" hidden>Fale para eu confirmar a sua voz.</p>
   <div class="boot-acoes">
     <button id="boot-tentar" type="button" class="secundario" hidden>Analisar minha voz de novo</button>
@@ -31,7 +37,10 @@
     <button id="btn-parar" class="parar" title="Parar tudo (Esc)" aria-label="Parar tudo">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3"/></svg><span>Parar</span>
     </button>
-    <button id="btn-conversa" class="wake-toggle" type="button" title="Abrir a conversa" aria-label="Abrir a conversa" aria-pressed="false">Conversa</button>
+    <button id="btn-areas" class="wake-toggle areas-toggle" type="button" title="Abrir as áreas do sistema" aria-label="Abrir as áreas do sistema">Áreas</button>
+    <button id="btn-transcricao" class="icone transcricao-toggle" type="button" title="Abrir a transcrição" aria-label="Abrir a transcrição" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+    </button>
     <button id="btn-wake-toggle" class="wake-toggle" type="button" title="Pausar ativação por voz" aria-label="Pausar ativação por voz" aria-pressed="false" hidden><span class="wake-dot"></span><span id="wake-toggle-text">Escuta ativa</span></button>
     <button id="btn-chat-ampliado" class="icone" type="button" title="Ampliar a conversa" aria-label="Ampliar a conversa" aria-pressed="false">
       <svg class="ic-expandir" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/><path d="M3 3l6 6M21 3l-6 6M3 21l6-6M21 21l-6-6"/></svg>
@@ -52,21 +61,29 @@
   </div>
 </header>
 
-<nav id="lateral" aria-label="Central de comando">
+<nav id="lateral" aria-label="Áreas do J.A.R.V.I.S.">
   <p class="lat-eyebrow">COMMAND CENTER</p>
-  <button type="button" class="lat-btn ativo" data-lat="central" title="Voltar à tela de comando"><span aria-hidden="true">◎</span>Comando</button>
-  <button type="button" class="lat-btn" data-lat="ia" title="Inteligência artificial e chaves"><span aria-hidden="true">◈</span>IA Core</button>
+  <button type="button" class="lat-btn ativo" data-lat="central" title="Voltar à tela de comando"><span aria-hidden="true">◎</span>Início</button>
+  <button type="button" class="lat-btn" data-lat="areas" title="Mapa de todas as áreas"><span aria-hidden="true">◫</span>Áreas</button>
+  <p class="lat-grupo">INTELIGÊNCIA</p>
+  <button type="button" class="lat-btn" data-lat="ia" title="Inteligência artificial, modelos e chaves"><span aria-hidden="true">◈</span>IA</button>
+  <button type="button" class="lat-btn" data-lat="core" title="JARVIS Core: agentes, contexto, projetos e saúde"><span aria-hidden="true">◉</span>Core</button>
   <button type="button" class="lat-btn" data-lat="voz" title="Voz, microfone e palavra de ativação"><span aria-hidden="true">◉</span>Voz</button>
-  <button type="button" class="lat-btn" data-lat="visao" title="Visão: câmera, sessão e reconhecimento de objetos"><span aria-hidden="true">⌖</span>Visão</button>
-  <button type="button" class="lat-btn" data-lat="tarefas" title="Lista de tarefas"><span aria-hidden="true">▤</span>Tarefas</button>
-  <button type="button" class="lat-btn" data-lat="pessoas" title="Cadastro de pessoas conhecidas"><span aria-hidden="true">♟</span>Pessoas</button>
-  <button type="button" class="lat-btn" data-lat="dev" title="Desenvolvimento de arquivos: receber, analisar, corrigir, criar e exportar"><span aria-hidden="true">▦</span>Dev. Arquivos</button>
+  <p class="lat-grupo">OPERAÇÃO</p>
+  <button type="button" class="lat-btn" data-lat="sistema" title="Ferramentas, tarefas, acessibilidade e traces"><span aria-hidden="true">⚙</span>Sistema</button>
   <button type="button" class="lat-btn" data-lat="rotinas" title="Rotinas automáticas"><span aria-hidden="true">⚡</span>Rotinas</button>
-  <button type="button" class="lat-btn" data-lat="celular" title="Status do celular"><span aria-hidden="true">▰</span>Celular</button>
-  <button type="button" class="lat-btn" data-lat="info" title="Aparelho, clima e manchetes do momento"><span aria-hidden="true">ⓘ</span>Informações</button>
+  <button type="button" class="lat-btn" data-lat="tarefas" title="Lista de tarefas"><span aria-hidden="true">▤</span>Tarefas</button>
+  <p class="lat-grupo">CONHECIMENTO</p>
   <button type="button" class="lat-btn" data-lat="memoria" title="Memória conectada: notas por tema"><span aria-hidden="true">◫</span>Memória</button>
-  <button type="button" class="lat-btn" data-lat="arquivos" title="Arquivos .cad do CadSimu"><span aria-hidden="true">▧</span>Arquivos</button>
-  <button type="button" class="lat-btn" data-lat="pc" hidden title="Computador: arquivos, CAD, tarefas e diagnóstico"><span aria-hidden="true">▣</span>Computador</button>
+  <button type="button" class="lat-btn" data-lat="pessoas" title="Cadastro de pessoas conhecidas"><span aria-hidden="true">♟</span>Pessoas</button>
+  <button type="button" class="lat-btn" data-lat="arquivos" title="Arquivos e projetos CAD"><span aria-hidden="true">▧</span>Arquivos</button>
+  <button type="button" class="lat-btn" data-lat="dev" title="Desenvolvimento de arquivos: receber, analisar, corrigir e exportar"><span aria-hidden="true">▦</span>Dev. Arquivos</button>
+  <p class="lat-grupo">DISPOSITIVOS</p>
+  <button type="button" class="lat-btn" data-lat="visao" title="Visão: câmera, sessão e objetos"><span aria-hidden="true">⌖</span>Visão</button>
+  <button type="button" class="lat-btn" data-lat="celular" title="Status do celular"><span aria-hidden="true">▰</span>Celular</button>
+  <button type="button" class="lat-btn" data-lat="info" title="Aparelho, clima e manchetes"><span aria-hidden="true">ⓘ</span>Info</button>
+  <button type="button" class="lat-btn" data-lat="pc" hidden title="Computador: arquivos, CAD, tarefas e diagnóstico"><span aria-hidden="true">▣</span>PC</button>
+  <p class="lat-grupo">MANUTENÇÃO</p>
   <button type="button" class="lat-btn" data-lat="atualizacao" title="Atualização pelo GitHub"><span aria-hidden="true">⇪</span>Atualizar</button>
   <button type="button" class="lat-btn" data-lat="diagnostico" title="Diagnóstico do sistema"><span aria-hidden="true">⌘</span>Diagnóstico</button>
   <div class="lat-rodape"><span class="lat-dot" aria-hidden="true"></span><small>SYSTEM STATUS</small><b id="lat-estado">ONLINE</b></div>
@@ -114,7 +131,7 @@
         <circle class="n-ponto" cx="200" cy="200" r="13"/>
       </svg>
       <span class="orb-marca" aria-hidden="true">JARVIS</span>
-      <span class="orb-sub" aria-hidden="true">v1.31.2</span>
+      <span class="orb-sub" aria-hidden="true">v1.45.0</span>
       <span class="hud-meta hm-a" aria-hidden="true">AUDIO</span>
       <span class="hud-meta hm-b" aria-hidden="true">LINK</span>
       <span class="hud-meta hm-c" aria-hidden="true">SYS</span>
@@ -128,6 +145,18 @@
       <span class="chip" id="chip-chuva">chuva --%</span>
       <span class="chip seguro" id="chip-seg">proteção ativa</span>
     </div>
+    <div id="resposta-atual" class="resposta-atual" hidden role="status">
+      <span class="ra-eyebrow">ÚLTIMA RESPOSTA</span>
+      <p id="resposta-atual-texto"></p>
+      <button type="button" class="ra-transcricao" data-abrir-transcricao>Transcrição completa <span aria-hidden="true">›</span></button>
+    </div>
+    <div id="modos-uso" class="modos-uso" role="group" aria-label="Modo de uso">
+      <button type="button" class="modo-btn" data-modo="completo" aria-pressed="true"><span aria-hidden="true">◎</span><b>Completo</b></button>
+      <button type="button" class="modo-btn" data-modo="discreto" aria-pressed="false"><span aria-hidden="true">◌</span><b>Discreto</b></button>
+      <button type="button" class="modo-btn" data-modo="silencioso" aria-pressed="false"><span aria-hidden="true">◍</span><b>Silencioso</b></button>
+      <button type="button" class="modo-btn" data-modo="holografico" aria-pressed="false"><span aria-hidden="true">◇</span><b>Holográfico</b></button>
+    </div>
+    <p id="modo-status" class="modo-status" role="status" aria-live="polite">Completo · núcleo, painéis e todos os recursos.</p>
     <div id="ondas-voz" class="ondas-voz" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
     <button id="btn-status-celular" class="atalho-status-celular" type="button" aria-label="Abrir status do celular" title="Bateria, armazenamento, RAM e conexões"><span class="atalho-status-icone" aria-hidden="true">▯</span><span><b>Status do celular</b><small>Bateria · RAM · Wi-Fi · dados móveis</small></span><span class="atalho-status-seta" aria-hidden="true">›</span></button>
   </section>
@@ -163,14 +192,23 @@
       </div>
     </div>
     <div class="dash-card atalhos">
-      <div class="dash-head"><span class="dash-eyebrow">CONVERSA E INFORMAÇÕES</span></div>
-      <button id="dash-conversa" class="atalho-dash" type="button"><b>Conversa</b><small id="dash-ultima">O histórico completo fica na tela de conversa.</small></button>
+      <div class="dash-head"><span class="dash-eyebrow">ACESSOS DIRETOS</span><span class="dash-signal" aria-hidden="true"></span></div>
       <button id="dash-visao" class="atalho-dash" type="button"><b>Visão</b><small>Câmera, sessão contínua, troca frontal/traseira e captura de tela do PC</small></button>
+      <button id="dash-utilidades" class="atalho-dash" type="button"><b>Utilidades</b><small>Cálculo · conversões · IMC · juros · jogos · receitas · briefing</small></button>
       <button id="dash-info" class="atalho-dash" type="button"><b>Informações</b><small>Bateria · memória · armazenamento · conexões · clima · manchetes</small></button>
+      <button class="atalho-dash" type="button" data-abrir-transcricao><b>Transcrição</b><small>Histórico, mensagens e comandos anteriores em uma tela secundária.</small></button>
+    </div>
+    <div class="dash-card atividades">
+      <div class="dash-head"><span class="dash-eyebrow">ATIVIDADES</span><button id="dash-abrir-areas" class="mini" type="button" data-abrir-areas="1">Áreas ›</button></div>
+      <div id="dash-atividades" class="dash-atividades" aria-live="polite"><p class="dash-nota">Núcleo em espera. Tarefas e ferramentas aparecem aqui.</p></div>
+      <button id="dash-ver-tarefas" class="atalho-dash" type="button"><b>Tarefas e execuções</b><small>Abrir a central do sistema</small></button>
     </div>
   </section>
 
-  <div class="chat-area"><div class="fade"></div><section id="chat" aria-live="polite"></section></div>
+  <div id="chat-area" class="chat-area">
+    <div class="chat-cab"><div><span class="eyebrow">REGISTRO DE COMANDO</span><b>Transcrição</b></div><button id="btn-transcricao-voltar" type="button">‹ Central</button></div>
+    <div class="fade"></div><section id="chat" aria-live="polite"></section>
+  </div>
   <div class="context-tools" aria-label="Controles de contexto da conversa">
     <label title="Quando desativado, o Jarvis só recebe a mensagem atual."><input id="ctx-historico" type="checkbox" checked><span>Contexto da conversa</span></label>
     <label title="Permite incluir a memória pessoal editada nos ajustes nesta conversa."><input id="ctx-memoria" type="checkbox" checked><span>Memória pessoal</span></label>
@@ -204,7 +242,7 @@
 <div id="wake-mini" class="wake-mini" hidden role="status" aria-live="polite"><div class="wake-mini-orb"><span></span></div><div><b>J.A.R.V.I.S.</b><p id="wake-mini-status">Estou ouvindo seu comando…</p></div><button id="wake-mini-close" type="button" aria-label="Fechar indicador de voz">×</button></div>
 
 <aside id="painel-config" class="painel" hidden aria-label="Configurações do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.31.2</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CONTROLE</p><h2>Configurações</h2></div><span class="versao-chip">v1.45.0</span></div>
   <nav id="config-tabs" class="config-tabs" aria-label="Categorias de configuração" role="tablist">
     <button type="button" class="config-tab ativo" role="tab" aria-selected="true" data-config-tab="ia">IA</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="voz">Voz</button>
@@ -216,6 +254,7 @@
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="atualizacao">Atualização</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="diagnostico">Diagnóstico</button>
     <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="identificacao">Identificação</button>
+    <button type="button" class="config-tab" role="tab" aria-selected="false" data-config-tab="personalizacao">Personalização</button>
   </nav>
 
   <section class="grupo" data-category="ia" role="tabpanel">
@@ -260,6 +299,13 @@
     </details>
     <div id="c-personalidade-preview" class="personalidade-preview" aria-live="polite"><b>Prévia da personalidade</b><p>Altere o humor ou o estilo para ver como o J.A.R.V.I.S. deve responder.</p></div>
     <label>Estilo de resposta<select id="c-estilo"><option value="equilibrado">Equilibrado</option><option value="formal">Formal e objetivo</option><option value="amigavel">Amigável e descontraído</option><option value="tecnico">Técnico e detalhado</option></select></label>
+    <details class="pers-controles" open>
+      <summary>Raciocínio, profundidade e iniciativa</summary>
+      <p class="dica">Estes controles mudam como o JARVIS organiza o turno antes de responder. O plano interno não é exibido; a decisão final continua no Hermes e no núcleo de ferramentas.</p>
+      <label>Profundidade das respostas<select id="c-cog-profundidade"><option value="curta">Curta — direto ao ponto</option><option value="equilibrada">Equilibrada — explica o necessário</option><option value="detalhada">Detalhada — causa, alternativas e verificação</option></select></label>
+      <label>Nível de iniciativa<select id="c-cog-iniciativa"><option value="baixa">Baixa — só responde ao pedido</option><option value="normal">Normal — sugere o próximo passo</option><option value="alta">Alta — antecipa etapas e alertas</option></select></label>
+      <label>Comportamento conversacional<select id="c-cog-conversa"><option value="natural">Natural — acompanha o fio da conversa</option><option value="objetiva">Objetiva — menos rodeio, foco no resultado</option></select></label>
+    </details>
     <label>Cidade usada para o clima<input id="c-cidade" type="text" placeholder="São Paulo"></label>
   </section>
 
@@ -271,8 +317,8 @@
     <div class="nucleo-card">
       <div class="nucleo-card-cabecalho"><div><span class="eyebrow">APARÊNCIA DO NÚCLEO</span><b>Estilo do núcleo central</b></div><span class="status-pill" id="c-nucleo-pill">HUD</span></div>
       <p class="dica">O núcleo é o círculo do topo da tela: ele gira, respira e reage ao nível do seu microfone. Escolha o estilo que combina com o seu aparelho — a troca vale na hora e fica salva.</p>
-      <label>Estilo do núcleo<select id="c-nucleo-estilo"><option value="hud">HUD técnico — anéis, marcas e grades do painel</option><option value="plasma">Plasma — anel de energia irregular (como na referência)</option><option value="orbita">Órbita 3D — esfera de partículas com anéis holográficos (nova)</option></select></label>
-      <div class="nucleo-preview" aria-hidden="true"><span class="np np-plas"></span><span class="np np-hud"></span><span class="np np-orb"></span></div>
+      <label>Estilo do núcleo<select id="c-nucleo-estilo"><option value="hud">HUD técnico — anéis, marcas e grades do painel</option><option value="plasma">Plasma — anel de energia irregular (como na referência)</option><option value="orbita">Órbita 3D — esfera de partículas com anéis holográficos</option><option value="avatar">Avatar 3D — rosto holográfico procedural que reage à voz</option></select></label>
+      <div class="nucleo-preview" aria-hidden="true"><span class="np np-plas"></span><span class="np np-hud"></span><span class="np np-orb"></span><span class="np np-avatar"></span></div>
       <label class="linha"><input id="c-efeitos" type="checkbox"><span>Reduzir efeitos visuais<small>Desliga a inclinação 3D do núcleo, os brilhos em movimento e as animações de profundidade. A interface continua completa; só fica mais leve, indicado para aparelhos modestos ou para economizar bateria.</small></span></label>
       <p id="c-nucleo-status" class="dica" role="status" aria-live="polite">Núcleo em HUD técnico: anéis e grades do painel, reagindo ao nível do microfone.</p>
     </div>
@@ -302,12 +348,15 @@
     <label>Perfil ativo<select id="c-voz-perfil-ativo"></select></label>
     <label>Limiar de decisão <output id="c-voz-limiar-valor">72%</output><input id="c-voz-limiar" type="range" min="0.55" max="0.9" step="0.01" value="0.72"></label>
     <label class="linha"><input id="c-voz-identificar" type="checkbox" checked><span>Identificar entre os perfis cadastrados<small>Com mais de um perfil, compara todos e exige margem entre o primeiro e o segundo. Uma voz parecida com duas pessoas resulta em inconclusivo.</small></span></label>
+    <label>Motor de reconhecimento de fala<select id="c-stt-motor"><option value="auto">Automático — Whisper quando houver chave; Android como reserva</option><option value="groq">Groq Whisper — nuvem, máxima precisão, exige chave</option><option value="android">Android — reconhecedor do aparelho, pode usar rede</option><option value="android-local">Android local — pacote de português offline</option></select></label>
+    <p id="c-stt-motor-status" class="dica" role="status" aria-live="polite">Automático: usa o Whisper da Groq quando há chave e internet; sem chave ou offline, usa o reconhecimento do Android.</p>
     <div class="botoes">
       <label class="linha"><input id="c-mic-ec" type="checkbox" checked><span>Cancelar eco</span></label>
       <label class="linha"><input id="c-mic-ns" type="checkbox" checked><span>Suprimir ruído</span></label>
-      <label class="linha"><input id="c-mic-agc" type="checkbox" checked><span>Ganho automático</span></label>
+      <label class="linha"><input id="c-mic-agc" type="checkbox" checked><span>Ganho automático</span></label><label class="linha"><input id="c-mic-filtro" type="checkbox" checked><span>Filtro de graves e compressor<small>Remove ruído de sala e aproxima a voz baixa sem saturar. Pode ser desligado se o aparelho tiver processamento próprio.</small></span></label>
     </div>
     <p id="c-voz-qualidade" class="dica" role="status" aria-live="polite">Nenhuma captura nesta sessão. O relatório mostra duração de fala, SNR, clipping e pitch.</p>
+    <div class="info-card"><span class="info-icon">◈</span><div><b>Teste de transcrição e precisão</b><p class="dica">Digite a frase que vai falar, inicie o teste e compare o esperado com o reconhecido. O cálculo usa distância por palavra (WER) e a latência real da captura até o texto; nada de precisão inventada.</p><label>Frase esperada<input id="c-voz-teste-esperado" type="text" maxlength="180" autocomplete="off" placeholder="Ex.: Jarvis, abre o Spotify"></label><div class="botoes"><button id="c-voz-teste-transcrever" type="button" class="secundario">Testar transcrição agora</button><button id="c-voz-teste-limpar" type="button" class="secundario">Limpar histórico de testes</button></div><p id="c-voz-teste-status" class="dica" role="status" aria-live="polite">Nenhum teste de transcrição nesta sessão.</p><p id="c-voz-metricas" class="dica" role="status" aria-live="polite">A precisão aparece só depois de comparar uma frase esperada com uma transcrição real.</p></div></div>
     <p id="c-voz-perfil-status" class="dica" role="status" aria-live="polite">Nenhum perfil vocal salvo.</p>
     <div id="c-voz-perfis" class="pessoas-lista" aria-live="polite"></div>
     <label>Quando conferir a voz<select id="c-wake-perfil-modo"><option value="sessao">Uma vez por sessão (primeiro acesso e depois de ligar o celular)</option><option value="sempre">Em toda ativação</option></select></label>
@@ -446,9 +495,41 @@
     <h3>Proteção e permissões</h3>
     <label class="linha"><input id="c-seguro" type="checkbox"><span>Modo seguro<small>Quando ligado, bloqueia ligações e mensagens. Desligue para permitir essas ações; a confirmação continua obrigatória.</small></span></label>
     <label>Novo PIN de segurança (4 a 8 dígitos)<input id="c-pin" type="password" inputmode="numeric" placeholder="deixe vazio para manter" autocomplete="new-password"></label>
-    <label class="linha"><input id="c-bloqueio" type="checkbox"><span>Pedir desbloqueio ao abrir o aplicativo<small>Opcional e desligado por padrão. Não substitui o bloqueio do Android: protege só a abertura do J.A.R.V.I.S. Exige um PIN cadastrado e aceita biometria/credencial do aparelho quando existir.</small></span></label>
+    <label class="linha"><input id="c-bloqueio" type="checkbox"><span>Pedir desbloqueio ao abrir o aplicativo<small>Opcional e desligado por padrão. Protege só a abertura do J.A.R.V.I.S. e não substitui o bloqueio do Android. Exige PIN cadastrado; biometria e NFC são etapas extras quando o aparelho permite.</small></span></label>
+    <div class="seg-grade">
+      <label>Modo de desbloqueio
+        <select id="c-bloq-modo">
+          <option value="pin">Somente PIN</option>
+          <option value="bio">Biometria do aparelho</option>
+          <option value="nfc">Tag NFC</option>
+          <option value="bio|nfc">Biometria ou NFC</option>
+          <option value="bio+nfc">Biometria + NFC (duas etapas)</option>
+          <option value="bio+pin">Biometria + PIN</option>
+          <option value="nfc+pin">NFC + PIN</option>
+        </select>
+      </label>
+      <label>Bloquear após inatividade (segundos)<input id="c-bloq-timeout" type="number" min="15" max="3600" step="15" value="120" inputmode="numeric"></label>
+      <label>Tentativas antes do limite<input id="c-bloq-max" type="number" min="3" max="10" step="1" value="5" inputmode="numeric"></label>
+    </div>
+    <label class="linha"><input id="c-bloq-bio" type="checkbox" checked><span>Permitir biometria/reconhecimento facial<small>Usa o BiometricPrompt com biometria forte do Android. Uma foto ou vídeo não passa: a prova é feita pelo sensor e pelo sistema, nunca pela câmera comum do app. Nenhuma imagem do rosto é guardada.</small></span></label>
+    <label class="linha"><input id="c-bloq-nfc" type="checkbox" checked><span>Permitir desbloqueio por tag NFC<small>Somente tags cadastradas aqui liberam o app. O UID é guardado apenas como hash; tags de UID simples podem ser clonadas, por isso NFC é conveniência e pode ser combinado com biometria.</small></span></label>
+    <p id="c-bloq-dispositivo" class="dica" role="status" aria-live="polite">Consultando os recursos deste aparelho…</p>
     <div class="botoes"><button id="c-bloqueio-recuperacao" type="button" class="secundario">Gerar código de recuperação</button><button id="c-bloqueio-biometria" type="button" class="secundario" hidden>Testar biometria</button></div>
     <output id="c-bloqueio-codigo" class="codigo-recuperacao" hidden></output>
+
+    <h3>Tags NFC autorizadas</h3>
+    <p class="dica">Cadastre a tag com um nome. Para cadastrar, renomear, bloquear ou remover, confirme com biometria ou com o PIN atual. Tags desconhecidas nunca desbloqueiam.</p>
+    <div class="seg-grade">
+      <label>Nome da nova tag<input id="c-nfc-nome" type="text" maxlength="40" placeholder="Ex.: chaveiro do escritório" autocomplete="off"></label>
+      <label>PIN atual (confirmação)<input id="c-nfc-senha" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password" placeholder="necessário sem biometria"></label>
+    </div>
+    <div class="botoes"><button id="c-nfc-cadastrar" type="button" class="primario">Cadastrar tag NFC</button><button id="c-nfc-testar" type="button" class="secundario">Testar leitura NFC</button></div>
+    <div id="c-nfc-lista" class="nfc-lista" role="list">Nenhuma tag cadastrada.</div>
+
+    <h3>Histórico de desbloqueios</h3>
+    <p class="dica">Método, resultado e horário. PIN, UID e código de recuperação nunca entram no histórico.</p>
+    <div id="c-bloq-historico" class="seg-historico" role="log" aria-live="polite">Nenhum desbloqueio registrado ainda.</div>
+    <div class="botoes"><button id="c-bloq-restaurar" type="button" class="secundario perigo">Restaurar configurações de segurança</button></div>
     <p id="c-bloqueio-status" class="dica" role="status" aria-live="polite">Desativado.</p>
     <div class="info-card"><span class="info-icon">⌁</span><div><b>Permissões do aparelho</b><p>O app solicita microfone quando necessário. Notificações, reconhecimento de voz, economia de bateria e permissões em segundo plano variam por Android e fabricante.</p></div></div>
   </section>
@@ -493,7 +574,7 @@
       <span class="diag-chip cfg">Não configurado</span><span class="diag-chip off">Desativado</span><span class="diag-chip na">Não aplicável</span><span class="diag-chip nig">Não verificado</span>
     </div>
     <p class="dica">Os resultados aparecem agrupados por área: aplicativo e pacote, inteligência artificial, voz e áudio, memória e dados, permissões e sistema, rede. Cada linha traz estado, impacto e como resolver; os detalhes técnicos ficam recolhidos.</p>
-    <div class="botoes"><button id="c-diagnostico" type="button" class="primario">Executar diagnóstico</button><button id="diag-abrir-log" type="button" class="secundario">Abrir registro de erros</button></div>
+    <div class="botoes"><button id="c-diagnostico" type="button" class="primario">Executar diagnóstico</button><button id="c-recuperar-core" type="button" class="secundario">Verificar e recuperar Core</button><button id="diag-abrir-log" type="button" class="secundario">Abrir registro de erros</button></div>
     <div id="c-diagnostico-result" class="diag-lista diag-grupos" aria-live="polite"><p class="dica">Ainda não executado.</p></div>
     <p class="dica">Este diagnóstico não substitui o teste em um aparelho físico. O funcionamento de wake word, tela bloqueada, serviço em segundo plano e permissões precisa ser validado no Android alvo.</p>
   </section>
@@ -515,13 +596,85 @@
     <p class="dica">As referências de voz são cifradas com AES-GCM no armazenamento local. Isso protege contra leitura casual do armazenamento e de backups, mas não substitui o cofre de hardware do aparelho. A identificação é indicativa e não serve como senha ou prova de identidade.</p>
   </section>
 
+  <section class="grupo" data-category="personalizacao" role="tabpanel" hidden>
+    <div class="config-intro"><div><span class="eyebrow">EXPERIÊNCIA</span><h3>Modos e personalização</h3><p>Os modos mudam a apresentação sem remover funções. O modo silencioso mantém as respostas em texto e interrompe a fala.</p></div></div>
+    <div class="modos-uso modos-config" role="group" aria-label="Modo de uso">
+      <button type="button" class="modo-btn" data-modo="completo" aria-pressed="true"><span aria-hidden="true">◎</span><b>Completo</b><small>Núcleo, painéis e todos os recursos.</small></button>
+      <button type="button" class="modo-btn" data-modo="discreto" aria-pressed="false"><span aria-hidden="true">◌</span><b>Discreto</b><small>Interface reduzida, menos distração.</small></button>
+      <button type="button" class="modo-btn" data-modo="silencioso" aria-pressed="false"><span aria-hidden="true">◍</span><b>Silencioso</b><small>Sem respostas faladas; texto continua.</small></button>
+      <button type="button" class="modo-btn" data-modo="holografico" aria-pressed="false"><span aria-hidden="true">◇</span><b>Holográfico</b><small>Mais profundidade, brilho e partículas.</small></button>
+    </div>
+    <p id="modo-aviso" class="dica" role="status" aria-live="polite">Completo: núcleo, painéis e todos os recursos.</p>
+    <h3>Aparência e núcleo</h3>
+    <p class="dica">HUD, plasma e órbita 3D continuam disponíveis. A troca de estilo, a redução de efeitos e as animações do núcleo ficam em Aparência do núcleo, abaixo.</p>
+    <div class="botoes"><button type="button" class="secundario" data-area-acao="config-voz">Abrir aparência do núcleo</button><button type="button" class="secundario" data-area-acao="config-ia">Personalidade e humor</button></div>
+    <h3>Avatar e sincronização labial</h3>
+    <div class="info-card"><span class="info-icon">◇</span><div><b>Avatar 3D procedural</b><p>O estilo Avatar desenha um rosto geométrico local, com olhos que piscam e boca que abre conforme a amplitude real da fala ou do microfone. É sincronização por volume, não visemas por fonema nem um modelo facial realista; escolha Órbita ou HUD a qualquer momento.</p></div></div>
+    <h3>Acessibilidade visual</h3>
+    <p class="dica">A interface respeita movimento reduzido, alvos de toque, foco visível, rolagem e áreas seguras. O modo discreto reduz elementos não essenciais; o modo holográfico é desativado automaticamente quando o sistema pede menos movimento.</p>
+    <button type="button" class="secundario" data-area-acao="config-voz">Revisar voz e efeitos</button>
+  </section>
+
   <div class="botoes barra"><button id="c-fechar" type="button">Fechar</button><button id="c-salvar" type="button" class="primario">Salvar alterações</button></div>
 </aside>
 
+<aside id="painel-areas" class="painel painel-areas" hidden aria-label="Áreas do J.A.R.V.I.S. Nova">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · MAPA OPERACIONAL</p><h2>Áreas</h2></div><span class="versao-chip">v1.45.0</span></div>
+  <section class="grupo areas-shell">
+    <div id="areas-inicio">
+      <p class="dica">Dez áreas, cada uma com suas funções. Os painéis antigos continuam disponíveis; esta camada apenas organiza o acesso e evita misturar ferramentas de assuntos diferentes.</p>
+        <div id="areas-grid" class="areas-grid"></div>
+      <p class="dica">O modo de uso escolhido fica salvo no aparelho. O modo silencioso suprime a fala, mas mantém o texto e os controles.</p>
+    </div>
+    <div id="areas-detalhe" hidden></div>
+    <p id="areas-status" class="dica" role="status" aria-live="polite">Selecione uma área para ver os acessos.</p>
+  </section>
+</aside>
+
+
+
+<aside id="painel-sistema" class="painel painel-sistema" hidden aria-label="Central operacional do J.A.R.V.I.S. Nova">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · NÚCLEO OPERACIONAL</p><h2>Central do sistema</h2></div><span class="versao-chip">v1.45.0</span></div>
+  <section class="grupo" data-category="sistema-nucleo">
+    <h3>Estado do núcleo</h3>
+    <p id="sis-status" class="dica" role="status" aria-live="polite">Carregando ferramentas e tarefas…</p>
+    <div class="botoes"><button id="sis-atualizar" type="button">Atualizar</button><button id="sis-parar" type="button" class="secundario perigo">Parar tudo</button></div>
+    <p class="dica">Parar tudo cancela tarefas persistentes, interrompe a fala e marca a automação para parar. Nenhuma ferramenta de escrita roda sem confirmação.</p>
+  </section>
+  <section class="grupo" data-category="sistema-ferramentas">
+    <h3>Ferramentas descobertas</h3>
+    <div id="sis-ferramentas" class="sis-lista"></div>
+    <p class="dica">As ferramentas de leitura rodam direto; escrita e execução pedem confirmação independente do modelo. Argumentos não são gravados nos traces.</p>
+  </section>
+  <section class="grupo" data-category="sistema-tarefas">
+    <h3>Tarefas com checkpoint</h3>
+    <div id="sis-tarefas" class="sis-lista"></div>
+    <p class="dica">O checkpoint é salvo no aparelho após cada etapa. Uma etapa sem efeito confirmado pausa a tarefa e não é repetida sem autorização explícita.</p>
+  </section>
+  <section class="grupo" data-category="sistema-acessibilidade">
+    <h3>Automação Android</h3>
+    <p id="sis-acess-status" class="dica">Verificando o serviço de acessibilidade…</p>
+    <div class="botoes"><button id="sis-acess-abrir" type="button">Ativar acessibilidade</button><button id="sis-acess-capturar" type="button" class="secundario">Ler tela</button><button id="sis-acess-parar" type="button" class="secundario perigo">Parar automação</button></div>
+    <div id="sis-acess-saida" class="sis-lista"></div>
+    <p class="dica">O serviço só lê a janela ativa depois de você habilitá-lo nas configurações especiais. Campos de senha são omitidos; não há clique por coordenada livre.</p>
+  </section>
+  <section class="grupo" data-category="sistema-audio">
+    <h3>Microfone e entrada</h3>
+    <label>Entrada de áudio<select id="sis-mic"><option value="">Padrão do sistema</option></select></label>
+    <div class="botoes"><button id="sis-audio" type="button">Testar microfone</button></div>
+    <p id="sis-audio-saida" class="dica" role="status" aria-live="polite">O teste mede ruído, pico e clipes por 1,2 s; nada é gravado nem enviado.</p>
+  </section>
+  <section class="grupo" data-category="sistema-traces">
+    <h3>Trace de operações</h3>
+    <div id="sis-traces" class="sis-lista"></div>
+    <div class="botoes"><button id="sis-limpar" type="button" class="secundario">Limpar traces</button></div>
+    <p class="dica">Cada linha mostra ferramenta, origem, duração e resultado — nunca o valor de telefone, texto ou caminho.</p>
+  </section>
+</aside>
 <aside id="painel-tarefas" class="painel" hidden aria-label="Lista de tarefas do J.A.R.V.I.S. Nova">
   <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · ORGANIZAÇÃO</p><h2>Minhas tarefas</h2></div><span class="versao-chip">Salvas neste aparelho</span></div>
   <section class="grupo">
-    <p class="dica">As tarefas ficam armazenadas localmente e podem ser consultadas sem internet. Os prazos aqui são registros; notificações de tarefa em segundo plano ainda não são agendadas automaticamente.</p>
+    <p class="dica">As tarefas ficam armazenadas localmente e podem ser consultadas sem internet. No Android, um prazo agenda um lembrete às 09:00 do dia marcado; concluir ou excluir cancela o aviso. O agendamento depende da permissão de notificações e do agendador do sistema.</p>
     <label>Nova tarefa<input id="tarefa-titulo" type="text" maxlength="180" placeholder="Ex.: estudar eletrônica" autocomplete="off"></label>
     <label>Prazo (opcional)<input id="tarefa-prazo" type="date"></label>
     <label>Prioridade<select id="tarefa-prioridade"><option value="normal">Normal</option><option value="alta">Alta</option><option value="baixa">Baixa</option></select></label>
@@ -534,6 +687,45 @@
     <button id="tarefas-limpar-feitas" type="button" class="secundario">Remover concluídas</button>
   </section>
   <div class="botoes barra"><button id="tarefas-fechar" type="button" class="primario">Fechar</button></div>
+</aside>
+
+<aside id="painel-core" class="painel painel-core" hidden aria-label="JARVIS Core: agentes, contexto e saúde">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CORE</p><h2>JARVIS Core</h2></div><span class="versao-chip">v1.45.0</span></div>
+  <section class="grupo">
+    <div class="core-hero">
+      <p id="core-status" class="core-status" role="status" aria-live="polite">Consultando o Core…</p>
+      <p id="core-contexto" class="core-contexto"></p>
+      <p id="core-integracoes" class="core-integracoes"></p>
+      <div class="core-botoes"><button id="core-atualizar" type="button">Atualizar</button><button id="core-diag" type="button" class="secundario">Diagnosticar Core</button><button id="core-vigia" type="button" class="secundario">Iniciar vigia</button><button id="core-exportar" type="button" class="secundario">Exportar contexto</button><button id="core-fechar" type="button" class="secundario">Fechar</button></div>
+      <p id="core-vigia-status" class="core-nota" role="status" aria-live="polite">O vigia diagnostica e tenta somente recuperações seguras declaradas; ele não reinicia serviços Android nem contorna permissões.</p>
+    </div>
+  </section>
+  <section class="grupo core-secao">
+    <h3>Agentes especializados</h3>
+    <p class="dica">O agente é uma função de coordenação, não uma promessa de execução. “Descritivo” significa que o Core o reconhece, mas ainda não há executor autorizado para ele.</p>
+    <div id="core-agentes" class="core-grid" aria-live="polite"></div>
+  </section>
+  <section class="grupo core-secao">
+    <h3>Projetos e contexto</h3>
+    <p class="dica">Projetos ficam neste aparelho, separados dos projetos de CAD. O contexto só guarda o último pedido e decisões resumidas; não guarda chaves, áudio ou conteúdo de arquivo.</p>
+    <div class="core-projeto-criar"><input id="core-projeto-nome" type="text" maxlength="80" placeholder="Nome do novo projeto" autocomplete="off"><button id="core-projeto-criar" type="button">Criar projeto</button></div>
+    <p id="core-projeto-status" class="core-nota" role="status" aria-live="polite">Crie um projeto para separar tarefas e decisões.</p>
+    <div id="core-projetos" class="core-lista" aria-live="polite"></div>
+  </section>
+  <section class="grupo core-secao">
+    <h3>Saúde operacional</h3>
+    <p id="core-saude-resumo" class="core-nota" role="status" aria-live="polite">Nenhum diagnóstico nesta sessão.</p>
+    <div id="core-saude" class="core-lista" aria-live="polite"></div>
+    <p id="core-recuperacao-status" class="core-nota" role="status" aria-live="polite">Nenhuma recuperação tentada nesta sessão.</p>
+    <div class="core-acoes"><button id="core-recuperar" type="button" class="secundario">Tentar recuperar falhas</button></div>
+    <div id="core-recuperacoes" class="core-lista" aria-live="polite"></div>
+  </section>
+  <section class="grupo core-secao">
+    <h3>Habilidades e permissões</h3>
+    <p class="dica">O catálogo vem do SISTEMA. Desativar aqui remove a habilidade do escopo do Core; a confirmação e o modo seguro do SISTEMA continuam valendo.</p>
+    <div id="core-habilidades" class="core-lista" aria-live="polite"></div>
+    <p id="core-habilidade-status" class="core-nota" role="status" aria-live="polite"></p>
+  </section>
 </aside>
 
 <aside id="painel-log" class="painel" hidden>
@@ -559,6 +751,15 @@
       <button id="visao-botao-analisar" type="button" class="primario">Analisar o que estou vendo</button>
       <button id="visao-botao-nova" type="button" class="secundario">Nova análise</button>
       <button id="visao-abrir-ajustes" type="button" class="secundario">Chaves de IA</button>
+    </div>
+
+    <div class="visao-pergunta">
+      <label>Perguntar sobre a análise<input id="visao-pergunta" type="text" maxlength="280" autocomplete="off" placeholder="Ex.: quantas portas aparecem?"></label>
+      <div class="botoes">
+        <button id="visao-perguntar" type="button" class="secundario">Perguntar</button>
+        <button id="visao-pergunta-limpar" type="button" class="secundario">Limpar pergunta</button>
+      </div>
+      <p id="visao-pergunta-status" class="dica" role="status" aria-live="polite">Depois de uma análise, pergunte sobre a mesma imagem: ela é reaproveitada, sem abrir a câmera de novo.</p>
     </div>
     <div class="botoes">
       <button id="visao-escolher-imagem" type="button" class="secundario">Analisar imagem da galeria</button>
@@ -604,7 +805,7 @@
 </aside>
 
 <aside id="painel-pessoas" class="painel painel-pessoas" hidden aria-label="Identificação de pessoas do J.A.R.V.I.S. Nova">
-  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · IDENTIFICAÇÃO DE PESSOAS</p><h2>Pessoas</h2></div><span class="versao-chip">v1.31.2 · local</span></div>
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · IDENTIFICAÇÃO DE PESSOAS</p><h2>Pessoas</h2></div><span class="versao-chip">v1.45.0 · local</span></div>
   <section class="grupo" id="idp-inicio">
     <p class="dica">Cada pessoa tem um perfil próprio: foto, informações, campos personalizados e perfil de voz. O reconhecimento compara vetores de características no aparelho — o áudio nunca é guardado e nada é enviado a provedores sem sua autorização. Em dúvida, o J.A.R.V.I.S. responde “inconclusivo” em vez de adivinhar.</p>
     <div class="idp-barra-topo">
@@ -756,7 +957,7 @@
       <button type="button" data-mem-tema="rotinas">Rotinas</button>
       <button type="button" data-mem-tema="mensagens">Conversas</button>
     </div>
-    <label>Buscar na memória<input id="mem-busca" type="text" autocomplete="off" placeholder="palavra, projeto, assunto…"></label>
+    <label>Buscar por significado<input id="mem-busca" type="text" autocomplete="off" placeholder="ex.: onde guardei o programa do projeto Atlas?"></label><p class="dica">A busca combina palavras exatas com um embedding lexical local; o resultado mostra a relevância. Nada sai do aparelho.</p>
     <div id="mem-lista" class="mem-lista" aria-live="polite"></div>
     <div class="divider-small"></div>
     <h3>Nova nota</h3>
@@ -795,6 +996,17 @@
     <button id="pc-criar" type="button" class="primario">Criar arquivo</button>
     <p id="pc-msg" class="dica" role="status" aria-live="polite">Arquivos criados por aqui ficam em ~/Jarvis.</p>
   </section>
+  <section class="grupo" id="aprend-bloco">
+    <h3>Aprendizado e preferências</h3>
+    <p class="dica">O JARVIS aprende somente instruções explícitas como “prefiro respostas curtas”, “evite listas” ou “lembre que o projeto usa Python”. Nada é inferido sozinho, nada sensível é guardado e tudo pode ser revisado ou apagado aqui. Isso não altera permissões, segurança ou configurações do aparelho.</p>
+    <label class="linha"><input id="aprend-ativo" type="checkbox" checked><span>Usar aprendizados no contexto da IA<small>Desligar mantém os itens salvos, mas o prompt deixa de aplicá-los.</small></span></label>
+    <p id="aprend-resumo" class="dica" role="status" aria-live="polite">Calculando…</p>
+    <div id="aprend-lista" class="aprend-lista" aria-live="polite"></div>
+    <label>Ensinar uma preferência, correção ou fato<textarea id="aprend-texto" rows="3" maxlength="260" placeholder="Ex.: prefiro explicações curtas. / evite listas quando eu estiver com pressa. / lembre que o projeto Atlas usa Python."></textarea></label>
+    <div class="botoes"><button id="aprend-adicionar" type="button" class="primario">Registrar aprendizado</button><button id="aprend-exportar" type="button" class="secundario">Exportar</button><button id="aprend-limpar" type="button" class="secundario perigo">Apagar tudo</button></div>
+    <p id="aprend-status" class="dica" role="status" aria-live="polite">O aprendizado é local, explícito e reversível.</p>
+    <details class="aprend-contexto"><summary>Ver o que entra no prompt</summary><pre id="aprend-contexto" class="aprend-pre"></pre></details>
+  </section>
     <div class="botoes barra"><button id="mem-fechar" type="button" class="primario">Fechar</button></div>
 </aside>
 
@@ -823,6 +1035,84 @@
     <label>Unidade<select id="cad-unidades"><option value="mm">milímetros</option><option value="cm">centímetros</option><option value="m">metros</option><option value="pol">polegadas</option></select></label>
     <div class="botoes"><button id="cad-gerar" type="button" class="primario">Gerar .cad</button><button id="cad-exemplo" type="button" class="secundario">Usar exemplo</button></div>
     <div class="divider-small"></div>
+    <h3>Montar circuito</h3>
+    <p class="dica">Monte sem escrever JSON: cada componente tem terminais numerados a partir de 1. O arquivo gerado usa o formato <code>CadSimu CAD</code> v1 documentado neste projeto. O palco é um editor: arraste, ligue terminais e edite o componente selecionado. O arquivo salvo leva a placa de 120×80×2 mm como base, o circuito ligado a ela e a posição de cada componente (x/y). O <code>.cad</code> nativo do CADeSIMU é proprietário e <b>não</b> é produzido; a netlist abaixo serve para simulação no PC.</p>
+    <div class="cad-circuito">
+      <label>Nome do circuito<input id="circ-nome" type="text" maxlength="60" autocomplete="off" placeholder="pisca-led"></label>
+      <div class="botoes">
+        <label>Componente<select id="circ-tipo"></select></label>
+        <label>Id<input id="circ-id" type="text" maxlength="12" autocomplete="off" placeholder="R1"></label>
+      </div>
+      <label>Valor<input id="circ-valor" type="text" maxlength="24" inputmode="decimal" autocomplete="off" placeholder="330"></label>
+      <div class="botoes">
+        <button id="circ-add" type="button" class="secundario">Adicionar componente</button>
+        <button id="circ-exemplo" type="button" class="secundario">Circuito de exemplo</button>
+      </div>
+      <div class="botoes">
+        <label>Terminal A<input id="circ-de" type="text" maxlength="16" autocomplete="off" placeholder="V1.1"></label>
+        <label>Terminal B<input id="circ-para" type="text" maxlength="16" autocomplete="off" placeholder="R1.1"></label>
+      </div>
+      <div class="botoes">
+        <button id="circ-ligar" type="button" class="secundario">Ligar terminais</button>
+        <button id="circ-desfazer" type="button" class="secundario">Desfazer ligação</button>
+      </div>
+      <svg id="circ-palco" class="circ-palco" viewBox="0 0 320 200" role="group" aria-label="Palco do circuito: arraste os componentes e toque nos terminais para ligar"></svg>
+      <p class="dica">Toque num componente para selecionar e arraste para mover; toque num terminal e depois no outro para ligar; toque fora para limpar a seleção.</p>
+      <div class="botoes">
+        <label>Editar id<input id="circ-edit-id" type="text" maxlength="12" autocomplete="off" placeholder="R1"></label>
+        <label>Editar valor<input id="circ-edit-valor" type="text" maxlength="24" inputmode="decimal" autocomplete="off" placeholder="330"></label>
+      </div>
+      <div class="botoes">
+        <button id="circ-aplicar" type="button" class="secundario">Aplicar edição</button>
+        <button id="circ-apagar" type="button" class="secundario perigo">Apagar selecionado</button>
+        <button id="circ-carregar" type="button" class="secundario">Carregar .cad salvo</button>
+      </div>
+      <div id="circ-lista" class="mem-lista cad-lista" aria-live="polite"></div>
+      <div class="botoes">
+        <button id="circ-validar" type="button" class="secundario">Validar</button>
+        <button id="circ-netlist" type="button" class="secundario">Gerar netlist</button>
+      </div>
+      <div class="botoes">
+        <button id="circ-salvar" type="button" class="primario">Salvar .cad do circuito</button>
+        <button id="circ-limpar" type="button" class="secundario">Limpar circuito</button>
+      </div>
+      <p id="circ-status" class="dica" role="status" aria-live="polite">Adicione componentes, ligue os terminais, valide e salve.</p>
+    </div>
+    <div class="divider-small"></div>
+    <h3>Projetista elétrico</h3>
+    <p class="dica">Descreva o circuito e o projeto é montado por regras: componentes, pinos, fios numerados, sequência de operação e verificação de curto, terminal solto, bobina sem alimentação, falta de proteção e falta de intertravamento. O resultado usa o formato <code>ProjetistaEletrico CAD</code> v1 deste projeto. O <code>.cad</code> nativo do CADeSIMU é proprietário e <b>não</b> é gerado, e a simulação elétrica não é executada aqui.</p>
+    <label>Pedido<textarea id="proj-pedido" rows="3" spellcheck="false">Crie uma partida direta para um motor trifásico de 5 CV, com proteção, botão de emergência, liga/desliga e sinalização.</textarea></label>
+    <div class="botoes">
+      <button id="proj-criar" type="button" class="primario">Criar circuito</button>
+      <button id="proj-analisar" type="button" class="secundario">Analisar</button>
+      <button id="proj-corrigir" type="button" class="secundario">Corrigir erros</button>
+    </div>
+    <div class="botoes">
+      <button id="proj-relatorio" type="button" class="secundario">Relatório técnico</button>
+      <button id="proj-ladder" type="button" class="secundario">Ladder do CLP</button>
+      <button id="proj-salvar" type="button" class="secundario">Salvar projeto</button>
+    </div>
+    <label>Modificação do projeto<textarea id="proj-mod" rows="2" spellcheck="false" placeholder="ex.: adicionar temporizador de 10 segundos"></textarea></label>
+    <div class="botoes">
+      <button id="proj-modificar" type="button" class="primario">Aplicar modificação</button>
+      <button id="proj-versoes" type="button" class="secundario">Versões</button>
+      <button id="proj-comparar" type="button" class="secundario">Comparar</button>
+    </div>
+    <div class="botoes">
+      <label>Pino<textarea id="proj-pino" rows="1" readonly placeholder="toque num pino do desenho"></textarea></label>
+      <label>Rede (fio)<input id="proj-rede" type="text" maxlength="24" list="proj-redes" autocomplete="off" placeholder="ex.: K1A"></label>
+    </div>
+    <datalist id="proj-redes"></datalist>
+    <div class="botoes">
+      <button id="proj-pino-aplicar" type="button" class="secundario">Ligar pino à rede</button>
+      <button id="proj-pino-desfazer" type="button" class="secundario">Desfazer ligação</button>
+    </div>
+    <svg id="proj-palco" class="proj-palco" viewBox="0 0 640 560" role="img" aria-label="Vista do projeto elétrico: componentes com pinos e fios"></svg>
+    <p class="dica">Vista de projeto: cada cartão é um componente e mostra o pino com a rede (fio) em que ele está; as linhas tracejadas são os fios.</p>
+    <div id="proj-lista" class="mem-lista cad-lista" aria-live="polite"></div>
+    <label>Saída técnica<textarea id="proj-saida" rows="8" spellcheck="false" placeholder="Relatório, verificação e ladder aparecem aqui"></textarea></label>
+    <div id="proj-arquivos" class="mem-lista cad-lista" aria-live="polite"></div>
+    <p id="proj-status" class="dica" role="status" aria-live="polite">Descreva o circuito e toque em Criar circuito.</p>
     <h3>Analisar .cad</h3>
     <label>Arquivo do aparelho<input id="cad-importar" type="file" accept=".cad,.dxf,.stl,.3mf,.step,.stp,.ifc,application/json,model/stl,model/3mf"></label>
     <label>Ou cole o conteúdo<textarea id="cad-texto" rows="5" spellcheck="false" placeholder='{"formato":"CadSimu CAD","versao":1,"unidades":"mm","objetos":[…]}'></textarea></label>
@@ -883,6 +1173,7 @@
     </div>
     <p class="eyebrow">J.A.R.V.I.S. NOVA · ACESSO</p>
     <h2 id="bloqueio-titulo">Sistema bloqueado</h2>
+    <span id="bloq-metodo" aria-live="polite">PIN</span>
     <p class="dica" id="bloqueio-dica">Digite seu PIN para liberar o assistente.</p>
     <div class="bloq-campo">
       <label for="bloqueio-pin">PIN de acesso</label>
@@ -890,9 +1181,11 @@
       <div class="bloq-pontos" id="bloqueio-pontos" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     </div>
     <p id="bloqueio-erro" class="erro" role="alert" aria-live="assertive"></p>
+    <p id="bloq-fase" role="status" aria-live="polite"></p>
     <div class="botoes bloq-acoes">
       <button id="bloqueio-entrar" type="button" class="primario">Desbloquear</button>
       <button id="bloqueio-bio" type="button" class="secundario" hidden>Usar biometria</button>
+      <button id="bloqueio-nfc" type="button" class="secundario" hidden>Aproximar tag NFC</button>
     </div>
     <button id="bloqueio-esqueci" type="button" class="link-botao">Esqueci o PIN</button>
     <div id="bloqueio-recuperacao" class="bloq-recuperacao" hidden>
@@ -1057,26 +1350,146 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
   <div class="botoes barra"><button id="pcx-fechar" type="button" class="secundario">Fechar</button></div>
 </aside>
 
+<aside id="painel-utilidades" class="painel painel-utilidades" hidden aria-label="Central de utilidades do J.A.R.V.I.S. Nova: cálculo, conversões, jogos, cultura e briefing">
+  <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · CENTRAL LOCAL</p><h2>Utilidades</h2></div><span class="versao-chip">cálculo · jogos · cultura</span></div>
+  <nav class="util-tabs" role="tablist" aria-label="Seções de utilidades">
+    <button type="button" role="tab" aria-selected="true" data-util-tab="calc">Cálculo</button>
+    <button type="button" role="tab" aria-selected="false" data-util-tab="conversao">Conversões</button>
+    <button type="button" role="tab" aria-selected="false" data-util-tab="saude">Saúde</button>
+    <button type="button" role="tab" aria-selected="false" data-util-tab="financas">Finanças</button>
+    <button type="button" role="tab" aria-selected="false" data-util-tab="jogos">Jogos</button>
+    <button type="button" role="tab" aria-selected="false" data-util-tab="cultura">Cultura</button>
+    <button type="button" role="tab" aria-selected="false" data-util-tab="briefing">Briefing</button>
+  </nav>
+
+  <section class="util-secao" data-util-secao="calc">
+    <p class="dica">Calculadora com funções e comandos em português. Tudo no aparelho, sem enviar nada para a nuvem.</p>
+    <label class="util-campo">Expressão<input id="util-calc-expr" type="text" placeholder="ex.: 2+3*4, raiz(16), 2^10, 5!" autocomplete="off"></label>
+    <div class="botoes"><button id="util-calc-ver" type="button" class="primario">Calcular</button></div>
+    <label class="util-campo">Ou peça em português<input id="util-calc-livre" type="text" placeholder="ex.: 20% de 250, converter 10 km para milhas, senha de 16"></label>
+    <div class="botoes"><button id="util-calc-livre-ver" type="button" class="secundario">Interpretar</button></div>
+    <p id="util-calc-saida" class="util-saida" role="status" aria-live="polite">Digite uma conta ou um pedido.</p>
+  </section>
+
+  <section class="util-secao" data-util-secao="conversao" hidden>
+    <p class="dica">Comprimento, massa, volume, velocidade, tempo, dados, área e temperatura. Valores aproximados, com a unidade sempre explícita.</p>
+    <div class="util-linha">
+      <label class="util-campo">Valor<input id="util-conv-valor" type="text" inputmode="decimal" value="10"></label>
+      <label class="util-campo">De<select id="util-conv-de"></select></label>
+      <label class="util-campo">Para<select id="util-conv-para"></select></label>
+    </div>
+    <div class="botoes"><button id="util-conv-ver" type="button" class="primario">Converter</button></div>
+    <p id="util-conv-saida" class="util-saida" role="status" aria-live="polite">Escolha as unidades.</p>
+  </section>
+
+  <section class="util-secao" data-util-secao="saude" hidden>
+    <p class="dica">IMC, metabolismo basal estimado e água sugerida. São estimativas educativas — não substituem avaliação médica.</p>
+    <div class="util-linha">
+      <label class="util-campo">Peso (kg)<input id="util-saude-peso" type="text" inputmode="decimal" value="80"></label>
+      <label class="util-campo">Altura (m ou cm)<input id="util-saude-altura" type="text" inputmode="decimal" value="1,80"></label>
+      <label class="util-campo">Idade<input id="util-saude-idade" type="text" inputmode="numeric" value="30"></label>
+      <label class="util-campo">Sexo<select id="util-saude-sexo"><option value="m">Masculino</option><option value="f">Feminino</option></select></label>
+    </div>
+    <div class="botoes"><button id="util-saude-ver" type="button" class="primario">Calcular</button></div>
+    <p id="util-saude-saida" class="util-saida" role="status" aria-live="polite">Preencha os dados.</p>
+  </section>
+
+  <section class="util-secao" data-util-secao="financas" hidden>
+    <p class="dica">Simulação local de juros e parcelas. Nenhuma cotação é inventada: para moedas, informe a taxa você mesmo.</p>
+    <div class="util-linha">
+      <label class="util-campo">Capital (R$)<input id="util-fin-capital" type="text" inputmode="decimal" value="1000"></label>
+      <label class="util-campo">Taxa mensal (%)<input id="util-fin-taxa" type="text" inputmode="decimal" value="1"></label>
+      <label class="util-campo">Meses<input id="util-fin-periodos" type="text" inputmode="numeric" value="12"></label>
+    </div>
+    <div class="botoes"><button id="util-fin-ver" type="button" class="primario">Simular</button></div>
+    <p id="util-fin-saida" class="util-saida" role="status" aria-live="polite">Preencha os valores.</p>
+  </section>
+
+  <section class="util-secao" data-util-secao="jogos" hidden>
+    <p class="dica">Oito jogos de texto, sem dinheiro real. O saldo da roleta é só de fichas.</p>
+    <div class="util-linha">
+      <label class="util-campo">Jogo<select id="util-jogo-tipo">
+        <option value="velha">Jogo da velha</option><option value="ligue4">Ligue 4</option><option value="forca">Forca</option>
+        <option value="blackjack">Blackjack</option><option value="ppt">Pedra, papel e tesoura</option>
+        <option value="adivinha">Adivinha o número</option><option value="termo">Termo (5 letras)</option><option value="roleta">Roleta de fichas</option>
+      </select></label>
+      <button id="util-jogo-novo" type="button" class="secundario">Novo jogo</button>
+    </div>
+    <pre id="util-jogo-estado" class="util-estado" aria-live="polite">Escolha um jogo e toque em “Novo jogo”.</pre>
+    <div class="util-linha">
+      <label class="util-campo">Jogada<input id="util-jogo-jogada" type="text" placeholder="ex.: 5, pedir, pedra, 42" autocomplete="off"></label>
+      <button id="util-jogo-enviar" type="button" class="primario">Jogar</button>
+    </div>
+  </section>
+
+  <section class="util-secao" data-util-secao="cultura" hidden>
+    <p class="dica">Receitas, bebidas, nutrição, treinos, piadas, curiosidades e sugestões de filmes/séries/música. Acervo local, sem internet.</p>
+    <div id="util-cultura-lista" class="util-chips"></div>
+    <div class="botoes util-botoes-cultura">
+      <button id="util-cultura-piada" type="button" class="secundario">Piada</button>
+      <button id="util-cultura-curiosidade" type="button" class="secundario">Curiosidade</button>
+      <button id="util-cultura-filme" type="button" class="secundario">Filmes</button>
+      <button id="util-cultura-serie" type="button" class="secundario">Séries</button>
+      <button id="util-cultura-musica" type="button" class="secundario">Música</button>
+      <button id="util-cultura-tedio" type="button" class="secundario">Estou entediado</button>
+    </div>
+    <pre id="util-cultura-saida" class="util-estado" aria-live="polite">Toque em uma receita ou em um botão.</pre>
+  </section>
+
+  <section class="util-secao" data-util-secao="briefing" hidden>
+    <p class="dica">O briefing só mostra o que você fornecer; o que faltar é listado como ausente, nunca inventado. Clima e manchetes podem vir do painel Informações.</p>
+    <div class="util-linha">
+      <label class="util-campo">Seu nome<input id="util-brief-nome" type="text" maxlength="40" placeholder="opcional"></label>
+      <label class="util-campo">Clima<input id="util-brief-clima" type="text" maxlength="80" placeholder="ex.: 24 °C e claro"></label>
+    </div>
+    <label class="util-campo">Tarefas (uma por linha)<textarea id="util-brief-tarefas" rows="3" placeholder="enviar relatório&#10;pagar conta"></textarea></label>
+    <label class="util-campo">Manchetes (uma por linha)<textarea id="util-brief-manchetes" rows="3"></textarea></label>
+    <div class="botoes"><button id="util-brief-ver" type="button" class="primario">Montar briefing</button></div>
+    <pre id="util-brief-saida" class="util-estado" aria-live="polite">Sem briefing ainda.</pre>
+  </section>
+
+  <div class="botoes barra"><button id="util-fechar" type="button">Fechar</button></div>
+</aside>
+
 <script src="plataforma.js"></script>
 <script src="memoria.js"></script>
 <script src="vendor/three.min.js"></script>
 <script src="orbita.js"></script>
+<script src="avatar.js"></script>
 <script src="cad.js"></script>
 <script src="cad_projeto.js"></script>
 <script src="visao.js"></script>
+<script src="visao_contexto.js"></script>
+<script src="seguranca.js"></script>
+<script src="utilidades.js"></script>
+<script src="cultura.js"></script>
+<script src="briefing.js"></script>
+<script src="jogos.js"></script>
 <script src="pessoas.js"></script>
 <script src="identidade.js"></script>
 <script src="identidade_ui.js"></script>
 <script src="apps.js"></script>
 <!-- Núcleo de linguagem e decisão: precisa vir antes de app.js. -->
 <script src="hermes.js"></script>
+<script src="cognicao.js"></script>
 <script src="humor.js"></script>
 <script src="voz_motor.js"></script>
 <script src="agentes.js"></script>
+<script src="core.js"></script>
+<script src="interface.js"></script>
+<script src="sistema.js"></script>
 <script src="plano.js"></script>
 <script src="escuta.js"></script>
+<script src="fala.js"></script>
+<script src="audio_pcm.js"></script>
 <script src="arquivos_dev.js"></script>
+<script src="aprendizado.js"></script>
+<script src="eletrica.js"></script>
+<script src="projetista.js"></script>
 <script src="app.js"></script>
+<script src="utilidades_ui.js"></script>
+<script src="core_ui.js"></script>
+<script src="aprendizado_ui.js"></script>
 <script src="pc.js" defer></script>
 </body>
 </html>

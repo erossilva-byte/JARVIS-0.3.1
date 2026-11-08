@@ -54,6 +54,39 @@
   var LIMITE_TEXTO = 4000;
   var LIMITE_TITULO = 120;
   var LIMITE_TAGS = 8;
+  var LIMITE_VERSOES = 3;
+  var DIM_EMBEDDING = 128;
+  var LIMIAR_SEMANTICO = 0.14;
+
+  // Expansão lexical controlada. Não é um modelo neural: é um dicionário fechado
+  // de equivalentes em português para que uma pergunta com outras palavras ainda
+  // encontre a nota certa. Nenhuma palavra é inventada na nota.
+  var PALAVRAS_VAZIAS = { de:1, da:1, do:1, das:1, dos:1, e:1, ou:1, a:1, o:1, as:1, os:1,
+    um:1, uma:1, para:1, por:1, com:1, que:1, em:1, no:1, na:1, nos:1, nas:1, se:1,
+    ao:1, aos:1, sobre:1, como:1, qual:1, quais:1, quando:1, onde:1, porque:1, meu:1,
+    minha:1, meus:1, minhas:1, seu:1, sua:1, seus:1, suas:1, esta:1, este:1, isso:1 };
+  var GRUPOS_SINONIMOS = [
+    ['computador', 'pc', 'notebook', 'laptop', 'desktop'],
+    ['codigo', 'programa', 'script', 'software', 'aplicativo', 'app'],
+    ['projeto', 'repositorio', 'repo', 'sprint', 'backlog'],
+    ['reuniao', 'encontro', 'call', 'chamada'],
+    ['comprar', 'adquirir', 'compra'],
+    ['casa', 'residencia', 'apartamento', 'lar'],
+    ['carro', 'automovel', 'veiculo'],
+    ['medico', 'doutor', 'consulta'],
+    ['senha', 'password', 'credencial'],
+    ['voz', 'audio', 'microfone', 'fala'],
+    ['memoria', 'lembranca', 'nota', 'anotacao'],
+    ['erro', 'bug', 'falha', 'problema'],
+    ['rapido', 'veloz', 'agil'],
+    ['bonito', 'bonita', 'belo', 'bela'],
+    ['dinheiro', 'grana', 'salario', 'orcamento'],
+    ['estudar', 'aprender', 'curso', 'aula'],
+    ['trabalho', 'emprego', 'servico'],
+    ['familia', 'filho', 'filha', 'mae', 'pai'],
+    ['viagem', 'viajar', 'ferias'],
+    ['saude', 'medicamento', 'remedio']
+  ];
 
   var memoriaStore = null;
   function storePadrao() {
@@ -117,6 +150,68 @@
     return String(txt == null ? '' : txt).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
   }
+  function radical(t) {
+    var x = String(t || '');
+    if (x.length > 4 && /s$/.test(x)) x = x.slice(0, -1);
+    if (x.length > 5 && /(?:cao|coes)$/.test(x)) x = x.replace(/(?:cao|coes)$/, 'cao');
+    return x;
+  }
+  function grupoDe(t) {
+    var r = radical(t);
+    for (var i = 0; i < GRUPOS_SINONIMOS.length; i++) {
+      var g = GRUPOS_SINONIMOS[i];
+      for (var j = 0; j < g.length; j++) if (radical(g[j]) === r) return g;
+    }
+    return null;
+  }
+  /** Tokens normalizados + equivalentes fechados, sem alterar o texto original. */
+  function expandir(txt) {
+    var base = normalizar(txt).split(' ').filter(function (t) { return t.length > 2 && !PALAVRAS_VAZIAS[t]; });
+    var vistos = Object.create(null), saida = [];
+    function add(t) {
+      var r = radical(t);
+      if (r && !vistos[r]) { vistos[r] = true; saida.push(r); }
+    }
+    base.forEach(function (t) {
+      add(t);
+      var g = grupoDe(t);
+      if (g) g.forEach(add);
+    });
+    return saida.slice(0, 40);
+  }
+  function fnv1a(txt) {
+    var h = 2166136261;
+    for (var i = 0; i < txt.length; i++) {
+      h ^= txt.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h >>> 0;
+  }
+  /** Embedding lexical determinístico: palavra + trigramas, 128 dimensões. */
+  function embedding(txt) {
+    var v = new Float32Array(DIM_EMBEDDING);
+    expandir(txt).forEach(function (t) {
+      var h = fnv1a('w:' + t);
+      v[h % DIM_EMBEDDING] += (h & 1) ? -1 : 1;
+      var s = '^' + t + '$';
+      for (var i = 0; i + 3 <= s.length; i++) {
+        var g = s.slice(i, i + 3);
+        var h2 = fnv1a('g:' + g);
+        v[h2 % DIM_EMBEDDING] += (h2 & 1) ? -0.35 : 0.35;
+      }
+    });
+    var n = 0;
+    for (var i = 0; i < v.length; i++) n += v[i] * v[i];
+    n = Math.sqrt(n);
+    if (n > 0) for (var j = 0; j < v.length; j++) v[j] /= n;
+    return v;
+  }
+  function cosseno(a, b) {
+    if (!a || !b || a.length !== b.length) return 0;
+    var s = 0;
+    for (var i = 0; i < a.length; i++) s += a[i] * b[i];
+    return Math.max(-1, Math.min(1, s));
+  }
   function agora() { return Date.now(); }
   function novoId() {
     return 'n' + agora().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -143,7 +238,15 @@
         tags: (Array.isArray(n.tags) ? n.tags : []).map(function (t) { return limpar(t, 24); }).filter(Boolean).slice(0, LIMITE_TAGS),
         criado: Number(n.criado) || agora(),
         atualizado: Number(n.atualizado) || Number(n.criado) || agora(),
-        origem: n.origem === 'voz' ? 'voz' : 'painel'
+        origem: n.origem === 'voz' ? 'voz' : 'painel',
+        importancia: Math.max(0, Math.min(3, Math.round(Number(n.importancia) || 0))),
+        usos: Math.max(0, Math.min(999, Math.round(Number(n.usos) || 0))),
+        versoes: (Array.isArray(n.versoes) ? n.versoes : []).filter(function (v) {
+          return v && typeof v.texto === 'string' && v.texto.trim();
+        }).slice(-LIMITE_VERSOES).map(function (v) {
+          return { titulo: limpar(v.titulo, LIMITE_TITULO), texto: limpar(v.texto, 1200),
+            tags: (Array.isArray(v.tags) ? v.tags : []).slice(0, LIMITE_TAGS), atualizado: Number(v.atualizado) || 0 };
+        })
       };
     }).filter(validaNota);
   }
@@ -164,12 +267,50 @@
     return lista.sort(function (a, b) { return b.atualizado - a.atualizado; });
   }
 
+  function buscarSemantica(q, limite) {
+    var consulta = normalizar(q);
+    if (!consulta) return listar().map(function (n) { return { nota: n, score: 1, cosseno: 1, motivo: 'lista' }; });
+    var qv = embedding(consulta), qts = expandir(consulta), tema = temaPorPalavras(consulta);
+    var max = Math.max(1, Math.min(50, Number(limite) || 10));
+    var saida = [];
+    carregar().forEach(function (n) {
+      var corpo = n.titulo + ' ' + n.texto + ' ' + n.tema + ' ' + (n.tags || []).join(' ');
+      var norm = normalizar(corpo);
+      var cos = cosseno(qv, embedding(corpo));
+      var lex = 0;
+      qts.forEach(function (t) {
+        if (normalizar(n.titulo).indexOf(t) >= 0) lex += 3;
+        else if ((n.tags || []).some(function (tag) { return radical(normalizar(tag)).indexOf(t) >= 0; })) lex += 2;
+        else if (norm.indexOf(t) >= 0) lex += 1;
+      });
+      // Sem nenhuma palavra em comum, só entra se o significado for realmente
+      // próximo. Isso evita despejar o cofre inteiro no RAG por colisão de hash.
+      if (!lex && cos < 0.42) return;
+      var idadeDias = Math.max(0, (agora() - n.atualizado) / 86400000);
+      var recencia = Math.max(0, 0.04 * Math.exp(-idadeDias / 30));
+      var uso = Math.min(0.03, (Number(n.usos) || 0) * 0.005);
+      var score = Math.min(0.99, cos * 0.70 + Math.min(0.25, lex * 0.035) +
+        (n.tema === tema ? 0.05 : 0) + Math.min(0.03, (n.importancia || 0) * 0.01) +
+        recencia + uso);
+      if (score < LIMIAR_SEMANTICO && !lex) return;
+      saida.push({ nota: n, score: +score.toFixed(4), cosseno: +cos.toFixed(4),
+        motivo: cos >= 0.35 ? 'significado' : (lex ? 'termos' : 'tema') });
+    });
+    saida.sort(function (a, b) { return b.score - a.score || b.nota.atualizado - a.nota.atualizado; });
+    // Um resultado forte não deve arrastar cinco notas fracas para o prompt.
+    var melhor = saida.length ? saida[0].score : 0;
+    return saida.filter(function (x) { return x.score >= Math.max(LIMIAR_SEMANTICO, melhor * 0.55); }).slice(0, max);
+  }
   function buscar(q) {
     var alvo = normalizar(q);
     if (!alvo) return listar();
-    return listar().filter(function (n) {
+    // A busca literal continua tendo prioridade; a semântica só entra quando ela
+    // não encontra nada. Isso preserva o comportamento antigo e amplia a cobertura.
+    var exata = listar().filter(function (n) {
       return normalizar(n.titulo + ' ' + n.texto + ' ' + n.tema + ' ' + n.tags.join(' ')).indexOf(alvo) >= 0;
     });
+    if (exata.length) return exata;
+    return buscarSemantica(q, 50).map(function (x) { return x.nota; });
   }
 
   function criar(dados) {
@@ -192,7 +333,9 @@
     }
     var nota = {
       id: novoId(), tema: tema, titulo: titulo, texto: texto, tags: tags,
-      criado: agora(), atualizado: agora(), origem: d.origem === 'voz' ? 'voz' : 'painel'
+      criado: agora(), atualizado: agora(), origem: d.origem === 'voz' ? 'voz' : 'painel',
+      importancia: Math.max(0, Math.min(3, Math.round(Number(d.importancia) || 0))),
+      usos: 0, versoes: []
     };
     lista.unshift(nota);
     if (!salvar(lista)) return { ok: false, erro: 'Não há espaço no armazenamento local para essa nota.' };
@@ -204,17 +347,70 @@
     var i = lista.findIndex(function (n) { return n.id === id; });
     if (i < 0) return { ok: false, erro: 'Nota não encontrada.' };
     var c = campos || {};
-    if (c.titulo != null) lista[i].titulo = limpar(c.titulo, LIMITE_TITULO) || lista[i].titulo;
+    var antes = { titulo: lista[i].titulo, texto: lista[i].texto, tags: lista[i].tags.slice(), atualizado: lista[i].atualizado };
+    var mudou = false;
+    if (c.titulo != null) {
+      var nt = limpar(c.titulo, LIMITE_TITULO) || lista[i].titulo;
+      if (nt !== lista[i].titulo) { lista[i].titulo = nt; mudou = true; }
+    }
     if (c.texto != null) {
       var t = limpar(c.texto, LIMITE_TEXTO);
-      if (t) lista[i].texto = t;
+      if (t && t !== lista[i].texto) { lista[i].texto = t; mudou = true; }
     }
-    if (c.tema != null) lista[i].tema = temaValido(c.tema);
-    if (c.tags != null) lista[i].tags = (Array.isArray(c.tags) ? c.tags : String(c.tags).split(','))
-      .map(function (x) { return limpar(x, 24); }).filter(Boolean).slice(0, LIMITE_TAGS);
-    lista[i].atualizado = agora();
+    if (c.tema != null) {
+      var ntema = temaValido(c.tema);
+      if (ntema !== lista[i].tema) { lista[i].tema = ntema; mudou = true; }
+    }
+    if (c.tags != null) {
+      var ntags = (Array.isArray(c.tags) ? c.tags : String(c.tags).split(','))
+        .map(function (x) { return limpar(x, 24); }).filter(Boolean).slice(0, LIMITE_TAGS);
+      if (normalizar(ntags.join(' ')) !== normalizar(lista[i].tags.join(' '))) { lista[i].tags = ntags; mudou = true; }
+    }
+    if (c.importancia != null) lista[i].importancia = Math.max(0, Math.min(3, Math.round(Number(c.importancia) || 0)));
+    if (mudou) {
+      lista[i].versoes = (lista[i].versoes || []).concat([antes]).slice(-LIMITE_VERSOES);
+      lista[i].atualizado = agora();
+    }
     if (!salvar(lista)) return { ok: false, erro: 'Não foi possível gravar a alteração.' };
+    return { ok: true, nota: lista[i], alterada: mudou };
+  }
+  function restaurar(id, indice) {
+    var lista = carregar();
+    var i = lista.findIndex(function (n) { return n.id === id; });
+    if (i < 0) return { ok: false, erro: 'Nota não encontrada.' };
+    var v = (lista[i].versoes || [])[Number(indice)];
+    if (!v) return { ok: false, erro: 'Versão não encontrada.' };
+    var antes = { titulo: lista[i].titulo, texto: lista[i].texto, tags: lista[i].tags.slice(), atualizado: lista[i].atualizado };
+    lista[i].titulo = v.titulo || lista[i].titulo;
+    lista[i].texto = v.texto;
+    lista[i].tags = Array.isArray(v.tags) ? v.tags.slice(0, LIMITE_TAGS) : lista[i].tags;
+    lista[i].versoes = (lista[i].versoes || []).concat([antes]).slice(-LIMITE_VERSOES);
+    lista[i].atualizado = agora();
+    if (!salvar(lista)) return { ok: false, erro: 'Não foi possível restaurar agora.' };
     return { ok: true, nota: lista[i] };
+  }
+  function historico(id) {
+    var n = carregar().filter(function (x) { return x.id === id; })[0];
+    return n ? (n.versoes || []).map(function (v, i) { return Object.assign({ indice: i }, v); }) : [];
+  }
+  function reforcarVarios(ids) {
+    var alvo = {};
+    (ids || []).forEach(function (id) { if (id) alvo[id] = true; });
+    var lista = carregar();
+    var mudou = false;
+    lista.forEach(function (n) {
+      if (!alvo[n.id]) return;
+      n.usos = Math.min(999, (Number(n.usos) || 0) + 1);
+      mudou = true;
+    });
+    return mudou ? salvar(lista) : true;
+  }
+  function reforcar(id) {
+    var lista = carregar();
+    var i = lista.findIndex(function (n) { return n.id === id; });
+    if (i < 0) return false;
+    lista[i].usos = Math.min(999, (Number(lista[i].usos) || 0) + 1);
+    return salvar(lista);
   }
 
   function apagar(id) {
@@ -365,7 +561,7 @@
     var achado;
     while ((achado = re.exec(bruto))) blocos.push({ meta: achado[1], corpo: achado[2] });
     if (!blocos.length) blocos.push({ meta: '', corpo: bruto });
-    var criadas = 0, repetidas = 0, ignoradas = 0;
+    var criadas = 0, repetidas = 0, ignoradas = 0, conflitos = [];
     blocos.forEach(function (b) {
       var meta = {};
       String(b.meta || '').split('\n').forEach(function (linha) {
@@ -396,20 +592,27 @@
       }
       secoes.forEach(function (sec) {
         var tema = temaBase || temaPorPalavras(sec.titulo + ' ' + sec.texto);
-        // Mesmo título no mesmo tópico já existe: não duplica nem sobrescreve o que o
-        // usuário possa ter editado no Obsidian. Conta como repetida e segue.
-        var jaExiste = carregar().some(function (n) {
+        // Mesmo título no mesmo tópico já existe. Se o conteúdo é igual, é repetição;
+        // se é diferente, NÃO sobrescrevemos: registramos o conflito para o usuário
+        // decidir. O arquivo do Obsidian e a nota interna ficam intactos.
+        var existente = carregar().filter(function (n) {
           return n.tema === tema && normalizar(n.titulo) === normalizar(sec.titulo);
-        });
-        if (jaExiste) { repetidas++; return; }
+        })[0];
+        if (existente) {
+          if (normalizar(existente.texto) === normalizar(sec.texto)) repetidas++;
+          else conflitos.push({ titulo: sec.titulo, tema: tema, notaId: existente.id,
+            motivo: 'mesmo título, conteúdo diferente; nada foi sobrescrito' });
+          return;
+        }
         var r = criar({ tema: tema, titulo: sec.titulo, texto: sec.texto, tags: tags, origem: 'painel' });
         if (r.ok && r.duplicada) repetidas++;
         else if (r.ok) criadas++;
         else ignoradas++;
       });
     });
-    if (!criadas && !repetidas) return { ok: false, erro: 'Nenhuma nota legível encontrada no Markdown.' };
-    return { ok: true, criadas: criadas, repetidas: repetidas, ignoradas: ignoradas };
+    if (!criadas && !repetidas && !conflitos.length) return { ok: false, erro: 'Nenhuma nota legível encontrada no Markdown.' };
+    return { ok: true, criadas: criadas, repetidas: repetidas, ignoradas: ignoradas,
+      conflitos: conflitos.slice(0, 20), aviso: conflitos.length ? conflitos.length + ' conflito(s) preservado(s); nada foi sobrescrito.' : '' };
   }
 
   /* ---------- Tópicos: um arquivo Markdown por assunto ---------- */
@@ -467,44 +670,26 @@
     var limite = Math.max(200, Number(maxChars) || 1600);
     var lista = carregar();
     if (!lista.length) return '';
-    var ts = termos(pergunta);
-    if (!ts.length) return '';
-    var temaProvavel = temaPorPalavras(pergunta);
-    var pontuadas = lista.map(function (n) {
-      var titulo = normalizar(n.titulo);
-      var texto = normalizar(n.texto);
-      var tags = normalizar((n.tags || []).join(' '));
-      var pontos = 0;
-      ts.forEach(function (t) {
-        if (titulo.indexOf(t) >= 0) pontos += 4;
-        if (tags.indexOf(t) >= 0) pontos += 3;
-        if (texto.indexOf(t) >= 0) pontos += 1;
-      });
-      if (n.tema === temaProvavel) pontos += 2;
-      return { nota: n, pontos: pontos };
-    }).filter(function (x) { return x.pontos > 0; })
-      .sort(function (a, b) { return b.pontos - a.pontos || b.nota.atualizado - a.nota.atualizado; });
-
-    // Pergunta por assunto ("quais são minhas preferências?") raramente repete as palavras
-    // da nota. Sem nenhuma pista textual, devolve as notas recentes do tópico da pergunta —
-    // e só dele — em vez de mandar o cofre inteiro ou inventar lembrança.
-    if (!pontuadas.length) {
-      pontuadas = lista.filter(function (n) { return n.tema === temaProvavel; })
+    var achados = buscarSemantica(pergunta, 8);
+    if (!achados.length) {
+      // Pergunta por assunto sem pista textual: usa só as notas recentes do tema
+      // provável, nunca o cofre inteiro.
+      var tema = temaPorPalavras(pergunta);
+      achados = lista.filter(function (n) { return n.tema === tema; })
         .sort(function (a, b) { return b.atualizado - a.atualizado; })
-        .slice(0, 3)
-        .map(function (n) { return { nota: n, pontos: 1 }; });
+        .slice(0, 3).map(function (n) { return { nota: n, score: 1 }; });
     }
-
-    var partes = [];
-    var usado = 0;
-    for (var i = 0; i < pontuadas.length; i++) {
-      var n = pontuadas[i].nota;
+    var partes = [], usado = 0, usados = [];
+    achados.forEach(function (x) {
+      var n = x.nota;
       var linha = '[' + temaNome(n.tema) + '] ' + n.titulo + ': ' +
         n.texto.replace(/\s+/g, ' ').slice(0, 280);
-      if (usado + linha.length > limite) break;
-      partes.push(linha);
-      usado += linha.length + 1;
-    }
+      if (usado + linha.length > limite) return;
+      partes.push(linha); usado += linha.length + 1; usados.push(n.id);
+    });
+    // O RAG realimenta a prioridade: a nota que resolveu a pergunta fica mais
+    // forte nas próximas buscas, sem alterar o texto nem inflar uma nota por vez.
+    if (usados.length) reforcarVarios(usados);
     return partes.join('\n');
   }
   /** Trechos relevantes para a interface (busca com pontuação, sem prompt). */
@@ -557,8 +742,15 @@
     carregar: carregar,
     listar: listar,
     buscar: buscar,
+    buscarSemantica: buscarSemantica,
+    embedding: embedding,
+    cosseno: cosseno,
     criar: criar,
     atualizar: atualizar,
+    restaurar: restaurar,
+    historico: historico,
+    reforcar: reforcar,
+    LIMITE_VERSOES: LIMITE_VERSOES,
     apagar: apagar,
     apagarTema: apagarTema,
     apagarTudo: apagarTudo,

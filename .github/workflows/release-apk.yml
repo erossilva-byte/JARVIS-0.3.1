@@ -1,4 +1,12 @@
 name: Publicar release do J.A.R.V.I.S. Nova
+# Versão publicada: 1.45.0 — confira VERSAO.json antes de criar a tag.
+# Notas publicadas: o passo "Publicar release com o APK" gera o texto a partir de VERSAO.json.
+# Novidades da 1.45.0: tela de bloqueio com biometria forte do Android, leitura NFC real,
+# modos combinados (biometria/NFC/PIN), central completa em Ajustes ▸ Segurança, histórico sem
+# segredos e PIN em PBKDF2 com migração do hash antigo. NFC é conveniência: UID pode ser clonado.
+# Novidades da 1.42.8: contexto visual da sessão, acompanhamento ("ele", "quanto custa"),
+# procedência confirmado/loja/estimado, marca só com evidência legível, OCR como dado e ponte
+# de componentes com a base elétrica; sem chave de IA não há medição de precisão.
 
 on:
   push:
@@ -51,23 +59,29 @@ jobs:
           mkdir -p "$HOME/.android"
           cp ci/debug.keystore "$HOME/.android/debug.keystore"
 
-      - name: Testes estáticos e regressão
-        run: npm run test:all
-
       - name: Preparar os recursos web do aplicativo
         run: |
           mkdir -p www
           # Todo recurso web do app precisa estar aqui: sem hermes.js o app.js recusa
           # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
-          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
-          cp identidade.js identidade_ui.js escuta.js agentes.js plano.js www/
+          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js eletrica.js projetista.js pc.js cad_projeto.js visao.js visao_contexto.js seguranca.js pessoas.js utilidades.js cultura.js briefing.js jogos.js utilidades_ui.js www/
+          cp avatar.js www/
+          cp interface.css www/
+          cp core.css www/
+          cp identidade.js identidade_ui.js escuta.js agentes.js sistema.js plano.js interface.js www/
+          cp core.js core_ui.js www/
+          cp aprendizado.js aprendizado_ui.js www/
           cp arquivos_dev.js www/
-          cp voz_motor.js www/
+          cp voz_motor.js fala.js audio_pcm.js www/
+          cp cognicao.js www/
           cp humor.js www/
           cp identidade.js www/
           cp identidade_ui.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
+
+      - name: Limpar projeto Android gerado
+        run: rm -rf android
 
       - name: Gerar estrutura nativa do Android
         run: |
@@ -89,13 +103,16 @@ jobs:
           mkdir -p "$D"
           find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
           # Lista alinhada com o workflow de build: toda classe nativa da raiz é obrigatória.
-          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java; do
+          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java JarvisAcessibilidade.java JarvisAcessibilidadePlugin.java; do
             test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
           done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
           python3 patch_gradle.py android/app/build.gradle
           python3 patch_android_version.py android/app/build.gradle VERSAO.json
           python3 patch_visual.py android
+
+      - name: Testes estáticos e regressão
+        run: npm run test:all
 
       - name: Compilar APK
         working-directory: android
@@ -124,137 +141,14 @@ jobs:
 
       - name: Publicar release com o APK
         if: github.ref_type == 'tag'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            ${{ steps.versao.outputs.apk }}
-            ${{ steps.versao.outputs.sha }}
-          generate_release_notes: true
-          body: |
-            APK do J.A.R.V.I.S. Nova assinado com a assinatura fixa de CI (ci/debug.keystore),
-            que é a assinatura esperada pelo atualizador embutido no app.
-            Instale a partir deste release para que as próximas atualizações funcionem.
-            Confira o checksum em `${{ steps.versao.outputs.sha }}`.
-
-            **Vozes neurais (opcional):** a partir da 1.9.0 o app pode falar com Piper (pt-BR)
-            ou Kokoro (vozes britânicas) rodando no próprio aparelho. Os modelos são baixados
-            dentro do app (67 MB e 132 MB) em Ajustes ▸ Voz; nada disso vai no APK.
-
-            **Novidades da 1.10.0:** personalidade centralizada (`PERSONALIDADE`), aviso falado
-            “analisando sua voz” na ativação (conferência uma vez por sessão), chamadas realmente
-            completadas (`ACTION_CALL`), player que toca a música do próprio aparelho e proteção
-            contra exceções que antes fechavam o app.
-
-            **Novidades da 1.31.2:** **planos multi-etapas supervisionados**. Peça “planeje …” e o app monta até seis
-            etapas usando apenas ferramentas reais do aparelho. O plano é mostrado e confirmado antes de executar; cada
-            etapa passa pelo recibo: efeito confirmado avança, efeito incerto **pausa** e pede autorização, falha ou
-            bloqueio interrompem o restante. As proteções existentes (risco, PIN, modo seguro, offline) continuam valendo.
-
-            **Novidades da 1.30.0:** agentes especializados e **recibos de execução verificáveis**. Toda ferramenta passa
-            por um registro que separa **efeito confirmado** de **ação apenas disparada**: abrir um app, preparar um SMS ou
-            solicitar uma chamada não é anunciado como tarefa concluída. O diagnóstico mostra confirmados, incertos, falhas,
-            bloqueios e cancelamentos, além da taxa de verificação. O recibo guarda só o nome da ação e as chaves dos
-            argumentos — nunca texto de mensagem, telefone, caminho ou conteúdo de memória. Nove agentes (conversa, pesquisa,
-            dispositivo, arquivos, memória, pessoas, visão, computador e sistema) classificam as ferramentas sem duplicar o
-            roteamento do Hermes.
-
-            **Novidades da 1.29.0:** captura de voz com **pré-roll de 600 ms** e **fim por silêncio** (1,2 s), com piso de ruído
-            adaptativo e confirmação de 160 ms contra blips. A primeira sílaba não é mais cortada, o microfone fica aberto menos
-            tempo e o teste de voz fica mais rápido. Inclui o relatório comparativo dos oito repositórios de referência, com
-            arquitetura, licenças e o que é adotável sem copiar código.
-
-            **Novidades da 1.28.0:** a aba **Identificação de Pessoas** passou a ser um sistema completo: cadastro com foto
-            (galeria ou câmera, recorte e prévia), nome, apelido, nascimento com idade calculada, altura, profissão, relação,
-            telefone, e-mail, endereço, cidade, descrição, preferências, interesses, observações, contexto e campos personalizados.
-            Cada pessoa tem **perfil de voz próprio**: três a oito amostras guiadas, análise real de VAD/FFT, mel, pitch, formantes
-            e prosódia, recusa de áudio curto/ruidoso/saturado e apenas o vetor guardado — o áudio nunca. A identificação compara
-            todos os perfis com limiar e margem e responde **identificado**, **não identificado** ou **inconclusivo**, sem adivinhar.
-            Consentimento separado para voz e referência visual, histórico de alterações, exportação sem biometria, migração do
-            cadastro antigo e uma aba **Identificação** em Configurações com limiar mínimo seguro, qualidade mínima, testes de
-            microfone/reconhecimento e exclusão de toda a biometria. A biometria é cifrada em repouso (AES-GCM, chave local).
-            A referência visual usa hash de imagem e é declarada como semelhança, nunca prova de identidade.
-
-            **Novidades da 1.27.0:** o humor virou **personalidade permanente**. O prompt abre com regras obrigatórias,
-            proíbe aberturas neutras e exige uma observação contextual integrada em toda resposta; um banco por assunto
-            evita repetir ângulos e silencia o humor em emergência, saúde, luto, violência, segurança e dinheiro perdido.
-            Os padrões subiram para 90% (sarcasmo 90, ironia 90, brincadeiras 85, espontaneidade 85, provocação 70,
-            formalidade 15) e a IA local recebe as mesmas regras. A voz ganhou prosódia por frase: ironia mais grave e
-            lenta, exclamação mais viva, pergunta com subida de tom.
-
-            **Novidades da 1.26.0:** reconhecimento de **locutor local**. O vetor experimental de 6 números deu lugar a
-            um motor com VAD, FFT/mel, pitch por HPS, formantes, prosódia e 59 dimensões; a comparação pondera espectro,
-            formantes e pitch, e responde **compatível**, **diferente** ou **inconclusivo** (nunca adivinha). O cadastro
-            é guiado em três frases, exige consentimento, recusa áudio curto/saturado/ruidoso e guarda **apenas o vetor**,
-            nunca o áudio. Até cinco perfis, limiar ajustável, identificação entre perfis com margem, medidor de nível,
-            relatório de qualidade e diagnóstico. A captura permite cancelar eco, suprimir ruído e ativar AGC.
-
-            **Novidades da 1.25.0:** nova aba **Desenvolvimento de Arquivos**, separada da conversa: recebe vários
-            arquivos ou um projeto `.zip`,
-            mostra idioma/tamanho/linhas e analisa de verdade JSON inválido, importações ausentes, duplicatas,
-            segredos, marcadores de conflito e símbolos desbalanceados — sem executar o código recebido. Correções
-            (JSON, CRLF/LF, espaços, BOM) guardam o original e entram no histórico; a criação gera **PDF, DOCX, XLSX,
-            CSV, JSON e ZIP** com estrutura real, e “crie um projeto Python chamado X” monta README, `main.py` e
-            `requirements.txt`. Exportação individual ou do projeto em `.zip`. A comparação de voz agora responde
-            compatível, diferente ou inconclusivo, com margem em torno do limiar e o aviso de que timbre não é prova
-            de identidade. Pessoas, memória, visão, IA local e Windows seguem intactos.
-
-            **Novidades da 1.24.0:** a **IA local** deixou de fechar o aplicativo. O runtime MediaPipe subiu de
-            `0.10.14` para **`0.10.24`** porque a versão antiga não suporta Gemma 3 e abortava o processo ao abrir
-            o `.task` (SIGABRT nativo, invisível para try/catch Java). O prompt local agora cabe nos 2048 tokens do
-            modelo (persona condensada + histórico curto, teto de 6000 caracteres), a engine é fechada apenas depois
-            da geração e na mesma thread, o backend é CPU e as respostas voltam na UI thread. A área de IA local mostra
-            importado ≠ validado ≠ testado ≠ pronto, mede o tempo do teste, ganhou **Descarregar** e recusa GGUF
-            renomeado com mensagem clara. Nenhum provedor remoto, voz, memória ou recurso do Windows foi alterado.
-
-            **Novidades da 1.23.1:** corrigido o erro `store is not defined` que abortava a
-            inicialização (o bloco da opção de efeitos estava fora do escopo do app); corrigido o texto
-            vertical do diagnóstico (nome com largura mínima e quebra em duas linhas, selo que não encolhe);
-            e o chat ganhou **anexos reais** — clipe no rodapé, seletor nativo do Android/Windows, lista com
-            nome/tipo/tamanho, remoção e envio do conteúdo de texto para a IA. Imagem e binário são
-            identificados com a limitação escrita. **Ainda não incluído:** geração de .cad do CADe SIMU,
-            automação de janelas/aplicativos do Windows e alarme do Windows.
-
-            **Novidades da 1.23.0:** reformulação visual holográfica. O núcleo em HUD ganhou camadas
-            reais em profundidade (halo atrás, aro à frente, marca e telemetria acima) e inclina com o
-            ponteiro, produzindo paralaxe de verdade; os painéis entram em perspectiva pela borda direita e
-            o scrim dissolve o fundo; cartões de ajustes, diagnóstico, pessoas, memória e arquivos passaram a
-            compartilhar o mesmo vidro com filete de luz e elevação; botões afundam ao toque; o balão de
-            carregamento tem varredura e o diagnóstico confirma ou alerta conforme o resultado real. Nova opção
-            **Reduzir efeitos visuais** em Ajustes ▸ Voz, persistida no aparelho, além do respeito a
-            `prefers-reduced-motion`. Nenhuma função, tela ou integração foi removida.
-
-            **Novidades da 1.22.0:** o Núcleo 3D voltou a funcionar no celular e no PC — o tamanho
-            das partículas estava ~46x maior do que devia e saturava a tela em branco; agora respeita o
-            pixel ratio, tem máscara circular, recupera contexto WebGL perdido e se redimensiona com o
-            painel e a rotação. O serviço em primeiro plano ganhou uma segunda tentativa mínima de
-            `startForeground()` (fim do crash de timeout), o player limpa o estado ao encerrar,
-            `minSdkVersion` está coerente e o app bloqueia tráfego HTTP.
-
-            **Novidades da 1.17.0:** o núcleo **Órbita** virou uma cena 3D de verdade — partículas com shader próprio, três anéis em planos diferentes e miolo luminoso renderizados na GPU com Three.js empacotado no app (sem CDN) —, com animação por delta time, resolução adaptativa, pausa com a tela oculta e fallback em Canvas 2D quando não há WebGL.
-
-            **Novidades da 1.16.0:** o Núcleo ganhou um segundo estilo — o **plasma**, um anel de
-            energia irregular no desenho da referência — escolhido em Ajustes ▸ Voz ▸ Aparência do
-            núcleo, com prévia na própria tela; a troca vale na hora, fica salva e a abertura nasce
-            com o mesmo estilo. A animação tem giro, deformação do contorno, respiração e pulso em
-            camadas e reage ao nível do microfone, com pausa quando a tela sai de vista.
-
-            **Novidades da 1.14.0:** escuta contínua pela transcrição da Groq (além do detector próprio),
-            com variações de pronúncia, porteiro de ruído e mensagens claras para limite de uso, chave
-            recusada, falha de rede e permissão de microfone; menu Informações (aparelho, clima e
-            manchetes) aberto por botão, barra lateral e por voz; conversa em tela própria, com o
-            histórico inteiro e sem mensagens ou falas duplicadas; e conjunto coeso de animações
-            (verificação do sistema, ondas de voz, transições de tela e de status).
-
-            **Novidades da 1.13.0:** o Picovoice saiu do projeto e a palavra de ativação passou a ser
-            um detector próprio (reconhecimento do Android + regras de fonética locais), sem chave e
-            sem SDK de terceiro, com sensibilidade ajustável, tolerância a sotaque e porteiro de ruído;
-            roteador de motores no núcleo Hermes (Groq, Cerebras, Mistral e Gemini) escolhido por tipo de
-            tarefa, latência medida e disponibilidade, com fallback automático; câmera que reconhece
-            objetos e mostra balões informativos sobre a imagem; diagnóstico ampliado (câmera, chaves e
-            motores); e área de mensagens com estado de carregamento e legibilidade.
-
-            **Novidades da 1.12.0:** núcleo Hermes Agent decidindo toda resposta, briefing diário
-            (temperatura e manchetes) no primeiro “bom dia”, autodiagnóstico por voz com resumo falado
-            e abertura que só libera o app depois de reconhecer a sua voz.
-
-            **1.10.1:** correções de estabilidade do segundo plano (player, vigia, escuta em espera e lembretes após reiniciar).
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -c "import json;print(json.load(open('VERSAO.json'))['notas'])" > notas-release.md
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --notes-file notas-release.md
+          else
+            gh release create "$GITHUB_REF_NAME" --title "J.A.R.V.I.S. Nova ${GITHUB_REF_NAME#v}" --notes-file notas-release.md
+          fi
+          gh release upload "$GITHUB_REF_NAME" "${{ steps.versao.outputs.apk }}" "${{ steps.versao.outputs.sha }}" --clobber
+          gh release view "$GITHUB_REF_NAME" --json assets --jq '[.assets[].name]'

@@ -1,18 +1,22 @@
-name: Build e testes do J.A.R.V.I.S. Nova 1.31.2
+name: Build e testes do J.A.R.V.I.S. Nova 1.45.0
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
+      - 'JARVIS-Nova-*-fonte.zip'
       - 'JARVIS-NOVA-*-fonte.zip'
       - '.github/workflows/build-apk.yml'
       - 'app.js'
       - 'identidade.js'
+      - 'fala.js'
+      - 'audio_pcm.js'
       - 'identidade_ui.js'
       - 'escuta.js'
       - 'agentes.js'
       - 'plano.js'
+      - 'avatar.js'
       - 'apps.js'
       - 'main.js'
       - 'hermes.js'
@@ -36,7 +40,7 @@ concurrency:
 
 jobs:
   build:
-    name: Testar e compilar APK debug 1.23.1
+    name: Testar e compilar APK debug 1.45.0
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -62,7 +66,7 @@ jobs:
 
       - name: Extrair código-fonte enviado ao repositório
         run: |
-          ZIP="$(find . -maxdepth 1 -type f -name 'JARVIS-NOVA-*-fonte.zip' -print | sort | tail -n 1)"
+          ZIP="$(find . -maxdepth 1 -type f \( -name 'JARVIS-Nova-*-fonte.zip' -o -name 'JARVIS-NOVA-*-fonte.zip' \) -print | sort | tail -n 1)"
           if [ -n "$ZIP" ]; then
             mkdir -p /tmp/jarvis-source
             unzip -q "$ZIP" -d /tmp/jarvis-source
@@ -87,21 +91,27 @@ jobs:
           mkdir -p "$HOME/.android"
           cp ci/debug.keystore "$HOME/.android/debug.keystore"
 
-      - name: Testes estáticos e regressão
-        run: npm run test:all
-
       - name: Preparar os recursos web do aplicativo
         run: |
           mkdir -p www
-          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
-          cp identidade.js identidade_ui.js escuta.js agentes.js plano.js www/
+          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js eletrica.js projetista.js pc.js cad_projeto.js visao.js visao_contexto.js seguranca.js pessoas.js utilidades.js cultura.js briefing.js jogos.js utilidades_ui.js www/
+          cp avatar.js www/
+          cp interface.css www/
+          cp core.css www/
+          cp identidade.js identidade_ui.js escuta.js agentes.js sistema.js plano.js interface.js www/
+          cp core.js core_ui.js www/
+          cp aprendizado.js aprendizado_ui.js www/
           cp arquivos_dev.js www/
-          cp voz_motor.js www/
+          cp voz_motor.js fala.js audio_pcm.js www/
+          cp cognicao.js www/
           cp humor.js www/
           cp identidade.js www/
           cp identidade_ui.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
+
+      - name: Limpar projeto Android gerado
+        run: rm -rf android
 
       - name: Gerar estrutura nativa do Android
         run: |
@@ -120,13 +130,16 @@ jobs:
           find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
           # Falha cedo se algum componente nativo essencial não estiver no código-fonte.
           # Lista alinhada com o workflow de release: toda classe nativa da raiz é obrigatória.
-          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java; do
+          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java JarvisAcessibilidade.java JarvisAcessibilidadePlugin.java; do
             test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
           done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
           python3 patch_gradle.py android/app/build.gradle
           python3 patch_android_version.py android/app/build.gradle VERSAO.json
           python3 patch_visual.py android
+
+      - name: Testes estáticos e regressão
+        run: npm run test:all
 
       - name: Compilar APK debug
         working-directory: android
@@ -146,7 +159,7 @@ jobs:
       - name: Publicar APK e checksum
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-Nova-1.23.1-APK
+          name: JARVIS-Nova-1.45.0-APK
           if-no-files-found: error
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk

@@ -1,0 +1,144 @@
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, work/1.46.0-auditoria-funcoes-apk]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jarvis-nova-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Testar suíte completa e compilar APK de auditoria
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configurar Java para o Android
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Garantir Android SDK 35
+        run: |
+          SDKM="$(command -v sdkmanager || true)"
+          [ -n "$SDKM" ] || SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" "platforms;android-35" "build-tools;35.0.0" >/dev/null
+
+      - name: Extrair código-fonte enviado ao repositório
+        run: |
+          ZIP="$(find . -maxdepth 1 -type f \( -name 'JARVIS-Nova-*-fonte.zip' -o -name 'JARVIS-NOVA-*-fonte.zip' \) -print | sort | tail -n 1)"
+          if [ -n "$ZIP" ]; then
+            mkdir -p /tmp/jarvis-source
+            unzip -q "$ZIP" -d /tmp/jarvis-source
+            if [ -f /tmp/jarvis-source/package.json ]; then
+              SRC=/tmp/jarvis-source
+            elif [ -f /tmp/jarvis-source/JARVIS-NOVA/package.json ]; then
+              SRC=/tmp/jarvis-source/JARVIS-NOVA
+            else
+              SRC="$(find /tmp/jarvis-source -mindepth 2 -maxdepth 4 -type f -name package.json -print -quit | xargs -r dirname)"
+            fi
+            test -n "$SRC" && test -f "$SRC/package.json"
+            find "$SRC" -mindepth 1 -maxdepth 1 ! -name '.github' -exec cp -a {} . \;
+          fi
+          test -f package.json || { echo 'Envie JARVIS-NOVA-*-fonte.zip para a raiz do repositório ou mantenha os fontes na raiz.'; exit 1; }
+
+      - name: Instalar dependências Node
+        run: npm install --ignore-scripts --legacy-peer-deps
+
+      - name: Fixar assinatura de debug do CI (releases atualizáveis entre si)
+        run: |
+          test -s ci/debug.keystore || { echo 'ci/debug.keystore ausente: builds diferentes teriam assinaturas diferentes.'; exit 1; }
+          mkdir -p "$HOME/.android"
+          cp ci/debug.keystore "$HOME/.android/debug.keystore"
+
+      - name: Preparar os recursos web do aplicativo
+        run: |
+          mkdir -p www
+          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js eletrica.js projetista.js pc.js cad_projeto.js visao.js visao_contexto.js seguranca.js pessoas.js utilidades.js cultura.js briefing.js jogos.js utilidades_ui.js www/
+          cp avatar.js www/
+          cp interface.css www/
+          cp core.css www/
+          cp identidade.js identidade_ui.js escuta.js agentes.js sistema.js plano.js interface.js www/
+          cp core.js core_ui.js www/
+          cp aprendizado.js aprendizado_ui.js www/
+          cp arquivos_dev.js www/
+          cp voz_motor.js fala.js audio_pcm.js www/
+          cp cognicao.js www/
+          cp humor.js www/
+          cp identidade.js www/
+          cp identidade_ui.js www/
+          mkdir -p www/vendor
+          cp vendor/three.min.js www/vendor/three.min.js
+
+      - name: Limpar projeto Android gerado
+        run: rm -rf android
+
+      - name: Gerar estrutura nativa do Android
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Baixar bibliotecas nativas de voz (sherpa-onnx)
+        run: python3 baixar_sherpa.py android/app
+
+      - name: Aplicar identidade, permissões, versão e detector local
+        id: native-patches
+        run: |
+          D=android/app/src/main/java/com/jarvis/nova
+          mkdir -p "$D"
+          # Copia todos os recursos Java nativos da raiz, incluindo plugins adicionados em versões futuras.
+          find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
+          # Falha cedo se algum componente nativo essencial não estiver no código-fonte.
+          # Lista alinhada com o workflow de release: toda classe nativa da raiz é obrigatória.
+          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java JarvisAcessibilidade.java JarvisAcessibilidadePlugin.java; do
+            test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
+          done
+          python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
+          python3 patch_gradle.py android/app/build.gradle
+          python3 patch_android_version.py android/app/build.gradle VERSAO.json
+          python3 patch_visual.py android
+
+      - name: Testes estáticos e regressão
+        run: npm run test:all
+
+      - name: Compilar APK debug
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          if ! ./gradlew assembleDebug --no-daemon; then
+            echo "Primeira compilação falhou; tentando novamente sem as personalizações de splash/ícone."
+            python3 ../patch_visual.py . desfazer
+            ./gradlew assembleDebug --no-daemon
+          fi
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          sha256sum app/build/outputs/apk/debug/app-debug.apk | tee apk-sha256.txt
+          ./gradlew --version | tee gradle-version.txt
+          java -version 2> java-version.txt
+          cat ../VERSAO.json
+
+      - name: Publicar APK e checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: JARVIS-Nova-baseline-1.45.0-APK
+          if-no-files-found: error
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/apk-sha256.txt
+            android/gradle-version.txt
+            android/java-version.txt
+            VERSAO.json
+          retention-days: 14

@@ -281,7 +281,7 @@
   function planejarIA(entrada) {
     const e = entrada || {};
     const tarefa = e.tarefa && e.tarefa !== 'auto' ? e.tarefa : tarefaDe(e.texto, e);
-    const ids = (Array.isArray(e.provedores) ? e.provedores : []).filter((id) => CATALOGO[id] || true);
+    const ids = Array.from(new Set((Array.isArray(e.provedores) ? e.provedores : []).filter((id) => !!CATALOGO[id])));
     const latencias = e.latencias || {};
     const erros = e.erros || {};
     const precisaVisao = tarefa === 'visao';

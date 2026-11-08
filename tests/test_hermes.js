@@ -90,6 +90,17 @@ ok('pergunta comum não é capturada por nenhuma habilidade', () => {
   assert.equal(Hermes.planejar('explique a teoria da relatividade'), null);
 });
 
+ok('roteador descarta provedor desconhecido e duplicado', () => {
+  const r = Hermes.planejarIA({ provedores: ['inventado', 'groq', 'groq'], texto: 'oi' });
+  assert.deepEqual(r.ordem, ['groq']);
+  assert.ok(!('inventado' in r.notas));
+});
+ok('roteador não estoura quando só há id inválido', () => {
+  const r = Hermes.planejarIA({ provedores: ['inventado'], texto: 'oi' });
+  assert.deepEqual(r.ordem, []);
+  assert.match(r.motivo, /nenhum provedor disponível/);
+});
+
 // --- 3. Despacho e telemetria -----------------------------------------------
 okAsync('despacho marca a rota da habilidade própria', async () => {
   const m = novo({ briefing_auto: '0' });

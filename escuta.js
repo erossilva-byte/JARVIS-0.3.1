@@ -153,7 +153,100 @@
     };
   }
 
-  return { PADRAO: PADRAO, criar: criar, rms: rmsDeParaTeste };
+
+  /* Detector de fluxo por RMS, para o caminho em que o MediaRecorder/AudioContext
+   * entrega apenas o nível (não as amostras). É puro e testável: o app chama
+   * processar(rms, agora) a cada ~50 ms. O piso é aprendido fora da fala, então
+   * ventilador/música não elevam o limiar junto com a voz; a confirmação evita
+   * que um estalo feche a escuta, e o teto impede microfone aberto para sempre. */
+  var DETECTOR_PADRAO = {
+    calibracaoMs: 400,
+    minRms: 0.006,
+    ratio: 2.2,
+    sensibilidade: 1,
+    confirmacaoMs: 180,
+    minFalaMs: 200,
+    silencioMs: 1000,
+    semFalaMs: 5000,
+    maxMs: 15000
+  };
+
+  function criarDetectorRms(opcoes) {
+    var o = Object.assign({}, DETECTOR_PADRAO, opcoes || {});
+    var inicio = null, ultimo = null, calibrando = true, calN = 0, piso = 0;
+    var falaRunMs = 0, falaMs = 0, silencioRunMs = 0;
+    var ouviu = false, fim = false, motivo = '';
+    var sens = Math.max(0.5, Math.min(2.5, Number(o.sensibilidade) || 1));
+
+    function status() {
+      var limiar = Math.max(o.minRms, piso * o.ratio) / sens;
+      return {
+        ouviu: ouviu, fim: fim, motivo: motivo,
+        piso: +piso.toFixed(6), limiar: +limiar.toFixed(6),
+        falaMs: Math.round(falaMs), silencioMs: Math.round(silencioRunMs),
+        ruidoDb: piso > 1e-8 ? +(20 * Math.log10(piso)).toFixed(1) : null
+      };
+    }
+    function encerrar(m) { fim = true; motivo = m; return status(); }
+    function reiniciar() {
+      inicio = null; ultimo = null; calibrando = true; calN = 0; piso = 0;
+      falaRunMs = 0; falaMs = 0; silencioRunMs = 0; ouviu = false; fim = false; motivo = '';
+    }
+
+    function processar(rms, agora) {
+      if (fim) return status();
+      rms = Math.max(0, Number(rms) || 0);
+      var nAgora = Number(agora);
+      agora = isFinite(nAgora) ? nAgora : Date.now();
+      if (inicio === null) { inicio = agora; ultimo = agora; }
+      var dt = Math.max(0, Math.min(250, agora - ultimo));
+      ultimo = agora;
+
+      // Piso inicial: menor energia observada na calibração. O mínimo (não a média)
+      // evita que a primeira sílaba, dita imediatamente, vire o próprio ruído.
+      if (calibrando) {
+        calN++;
+        piso = piso > 0 ? Math.min(piso, rms) : rms;
+        if (agora - inicio >= o.calibracaoMs || calN >= 12) {
+          calibrando = false;
+          piso = Math.max(o.minRms * 0.5, piso);
+        }
+        return status();
+      }
+
+      var limiar = Math.max(o.minRms, piso * o.ratio) / sens;
+      // O piso só aprende fora da fala confirmada. Um blip não o desloca.
+      if (!ouviu && rms < limiar) {
+        piso = 0.98 * piso + 0.02 * Math.min(rms, Math.max(0.001, piso * 3));
+      }
+
+      if (!ouviu) {
+        if (rms >= limiar) falaRunMs += dt; else falaRunMs = 0;
+        if (falaRunMs >= o.confirmacaoMs) {
+          ouviu = true;
+          falaMs = Math.max(falaRunMs, o.confirmacaoMs);
+          silencioRunMs = 0;
+        } else if (agora - inicio >= o.semFalaMs) {
+          return encerrar('sem-fala');
+        }
+        return status();
+      }
+
+      if (rms >= limiar) {
+        falaMs += dt;
+        silencioRunMs = 0;
+      } else {
+        silencioRunMs += dt;
+      }
+      if (agora - inicio >= o.maxMs) return encerrar('maximo');
+      if (falaMs >= o.minFalaMs && silencioRunMs >= o.silencioMs) return encerrar('silencio');
+      return status();
+    }
+
+    return { processar: processar, status: status, reiniciar: reiniciar, opcoes: o };
+  }
+
+  return { PADRAO: PADRAO, DETECTOR_PADRAO: DETECTOR_PADRAO, criar: criar, criarDetectorRms: criarDetectorRms, rms: rmsDeParaTeste };
   function rmsDeParaTeste(chunk) {
     var soma = 0;
     for (var i = 0; i < chunk.length; i++) { var v = Number(chunk[i]) || 0; soma += v * v; }

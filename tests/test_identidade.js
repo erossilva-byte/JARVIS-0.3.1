@@ -102,6 +102,14 @@ function amostra(seed, extra) {
   assert.strictEqual(igual.estado, I.ESTADOS.IDENTIFICADO, JSON.stringify(igual));
   assert.strictEqual(igual.pessoa.id, bia.perfil.id);
   assert.ok(igual.confianca >= 78, 'confiança passa do limiar');
+  const replay = await I.identificar(amostra(1, {
+    qualidade: { ok: true, falaSeg: 2.4, snrDb: 45, clipping: 0, pausaRatio: 0.01, problemas: [] },
+    metricas: { pitchHz: 118, pitchDesvio: 0.5, formantes: [520, 1400, 2500], falaSeg: 2.4 }
+  }));
+  assert.strictEqual(replay.estado, I.ESTADOS.INCONCLUSIVO, 'indício de replay não vira identidade');
+  assert.strictEqual(replay.replay, true);
+  assert.ok(/reprodução/i.test((replay.motivos || []).join(' ')));
+  console.log('OK: indício de reprodução bloqueia identidade e pede fala ao vivo');
   const desconhecido = await I.identificar(amostra(9));
   assert.ok(desconhecido.estado === I.ESTADOS.NAO_IDENTIFICADO || desconhecido.estado === I.ESTADOS.INCONCLUSIVO,
     'voz diferente não é identificada como a pessoa cadastrada');

@@ -28,6 +28,16 @@ plugin = ler("JarvisBackgroundPlugin.java")
 patch_gradle = ler("patch_gradle.py")
 build_wf = ler(".github/workflows/build-apk.yml")
 release_wf = ler(".github/workflows/release-apk.yml")
+
+
+def linha_www(texto):
+    """Linha única que copia os módulos principais para www/ (deve ser a mesma nos dois workflows)."""
+    for linha in texto.splitlines():
+        limpa = linha.strip()
+        if limpa.startswith("cp index.html") and " www/" in limpa:
+            return limpa
+    return None
+
 versao = json.loads(ler("VERSAO.json"))
 pacote = json.loads(ler("package.json"))
 leituras = ler("LEIA-ME.md") + ler("CHANGELOG.md")
@@ -157,8 +167,10 @@ checagens = {
 
     # 8. Empacotamento e release
     "hermes.js vai para o www nos dois workflows": (
-        build_wf.count("cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/") == 1
-        and release_wf.count("cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/") == 1),
+        linha_www(build_wf) is not None
+        and linha_www(build_wf) == linha_www(release_wf)
+        and "hermes.js" in linha_www(build_wf)
+        and "index.html" in linha_www(build_wf)),
     "JarvisAtivacao.java é exigido no build e no release": (
         "JarvisAtivacao.java" in build_wf and "JarvisAtivacao.java" in release_wf
         and "JarvisAtivacao.java" not in ler(".gitignore")),

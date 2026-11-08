@@ -619,7 +619,16 @@
       if (!Array.isArray(lista) || !lista.length) return;
       var dim = lista[0].v.length;
       var media = new Array(dim).fill(0);
-      lista.forEach(function (a) { a.v.forEach(function (x, i) { media[i] += x / lista.length; }); });
+      // Amostra com SNR e duração melhores pesa mais; uma captura ruidosa não arrasta
+      // o centroide do perfil inteiro para o ruído.
+      var pesos = lista.map(function (a) {
+        var q = a.qualidade || {};
+        return Math.max(0.25, Math.min(3, 1 + (Number(q.snrDb) || 0) / 30 + (Number(q.falaSeg) || 0) / 4));
+      });
+      var somaPeso = pesos.reduce(function (a, b) { return a + b; }, 0) || 1;
+      lista.forEach(function (a, indice) {
+        a.v.forEach(function (x, i) { media[i] += x * pesos[indice] / somaPeso; });
+      });
       var melhor = lista.slice().sort(function (a, b) {
         return ((b.qualidade || {}).snrDb || 0) - ((a.qualidade || {}).snrDb || 0);
       })[0] || {};
@@ -654,6 +663,13 @@
     if (!lista.length) return { estado: ESTADOS.SEM_PERFIL, motivos: ['Nenhuma pessoa tem perfil de voz autorizado neste aparelho.'] };
     var m = motor;
     if (!m) return { estado: ESTADOS.INCONCLUSIVO, motivos: ['O motor de voz não carregou.'] };
+    // Um indício de reprodução nunca vira identidade confirmada. É um portão
+    // conservador, não uma prova forense; o usuário ainda pode repetir a amostra.
+    var replay = typeof m.pistaReplay === 'function' ? m.pistaReplay(analise) : { suspeita: false };
+    if (replay.suspeita) {
+      return { estado: ESTADOS.INCONCLUSIVO, pessoa: null, confianca: 0, replay: true,
+        motivos: ['A amostra tem características de reprodução. Repita a fala ao vivo para confirmar.'] };
+    }
     var r = m.identificar(lista, analise, { limiar: cfg.limiar, margem: cfg.margem });
     var base = {
       similaridade: Number(r.similaridade) || 0,
@@ -662,7 +678,8 @@
       candidatos: (r.candidatos || []).slice(0, 4).map(function (c) {
         return { id: c.id, nome: c.nome, similaridade: +Number(c.sim || 0).toFixed(3) };
       }),
-      motivos: r.motivos || []
+      motivos: r.motivos || [],
+      replay: false
     };
     if (r.estado === 'compativel') {
       var p = obter(r.id);

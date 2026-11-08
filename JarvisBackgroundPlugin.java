@@ -16,6 +16,7 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
 import androidx.core.content.ContextCompat;
@@ -419,6 +420,26 @@ public class JarvisBackgroundPlugin extends Plugin {
                 JSObject ret = new JSObject();
                 ret.put("texto", texto.trim());
                 ret.put("mecanismo", local ? "local-no-dispositivo" : "servico-android");
+                // O Android expõe até cinco hipóteses e uma confiança por hipótese (0..1).
+                // Antes o app descartava as duas coisas e não podia recusar um comando duvidoso.
+                float[] confiancas = results == null ? null : results.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES);
+                JSArray alternativas = new JSArray();
+                if (lista != null) {
+                    for (int i = 0; i < lista.size() && i < 5; i++) {
+                        String hipotese = lista.get(i);
+                        if (hipotese == null || hipotese.trim().isEmpty()) continue;
+                        JSObject item = new JSObject();
+                        item.put("texto", hipotese.trim());
+                        if (confiancas != null && i < confiancas.length && confiancas[i] >= 0f) {
+                            item.put("confianca", (double) confiancas[i]);
+                        }
+                        alternativas.put(item);
+                    }
+                }
+                ret.put("alternativas", alternativas);
+                if (confiancas != null && confiancas.length > 0 && confiancas[0] >= 0f) {
+                    ret.put("confianca", (double) confiancas[0]);
+                }
                 atual.resolve(ret);
             }
 

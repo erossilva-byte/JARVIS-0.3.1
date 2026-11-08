@@ -1,3 +1,272 @@
+## 1.45.0
+
+### Corrigido
+- **Topologia trifásica em motor monofásico**: reversão, estrela-triângulo, compensadora e sequência
+  eram montadas mesmo com `monofásico` no pedido, produzindo um circuito que não existe. Agora o
+  projetista recusa com código `topologia_trifasica` e explica que a partida direta é o caminho.
+- **Relatório sem a frente CADeSIMU**: o relatório técnico passou a trazer a ponte de conferência e
+  o que falta para o redesenho.
+
+### CADeSIMU
+- **Ponte de conferência** (`conferirTrocaCadesimu`): valida símbolo mapeado, terminais obrigatórios,
+  redes vazias, curto declarado e netlist.
+- **Pacote de intercâmbio** (`exportarTrocaCadesimu`): JSON `JARVIS-CADESIMU-TROCA` v1 com símbolo
+  IEC, terminais, redes e netlist. **Não é o `.cad` nativo** e o texto diz isso em todo lugar.
+- Comando de chat: `projetista: cadesimu` responde o checklist do projeto atual.
+
+### Testes
+- Novo `tests/test_cadesimu_troca.js` (4 grupos) na suíte `test:all`.
+
+## 1.44.0
+
+### Corrigido na engenharia elétrica
+- **Motor acima da série saía subdimensionado**: acima de 150 CV o dimensionador devolvia o maior
+  item da tabela mesmo sendo menor que a corrente, e o projeto era aprovado. As séries foram
+  ampliadas (contator até 800 A, disjuntor até 800 A, cabo até 300 mm², térmico até 800 A) e,
+  quando o pedido passa do limite, o projetista **recusa com explicação** em vez de montar.
+- **Projetista não usava a base elétrica no Node**: o fallback interno parava em 200 A e a
+  verificação de dimensionamento era pulada nos testes. Agora a base é ligada também como módulo.
+- **Cabo impossível virava 50 mm² com aviso**: agora a seleção falha de forma explícita
+  (ampacidade ≥ 1,25 × In e queda ≤ 4%) e a recusa chega ao projeto.
+- **Iluminação pedia botoeira de emergência**: a topologia não tem esse botão e o próprio projeto
+  era reprovado. Emergência deixou de ser herdada pela iluminação.
+- **Partida monofásica com terminal solto**: o térmico exigia os seis polos; no monofásico os polos
+  5/6 agora são opcionais, e a montagem passa na verificação.
+
+### Interface
+- HUD elétrico no palco do projetista: grade, brilho ciano nos fios e pinos, cartões em vidro e
+  leitura monoespaçada, mantendo a vista 3D e o desenho IEC existentes.
+
+### Testes
+- Base elétrica: **10 grupos** (150 CV aprovado, 1000 CV recusado com código).
+- Projetista: **84 verificações**, incluindo iluminação válida, 150 CV dimensionado e recusa explicada.
+
+## 1.43.1
+
+### Corrigido
+- **Painel Utilidades fora da navegação geral**: não estava em `PAINEIS`, então o scrim, o
+  botão Voltar e o fechamento dos outros painéis não o controlavam. Agora entra na lista,
+  tem ação “utilidades” na área Início e fecha pelo caminho normal.
+- **Altura com vírgula na Saúde**: “1,80” não virava centímetros no metabolismo basal e o
+  cálculo saía incompleto. A interface passou a normalizar metro/centímetro.
+- **Teste de DOM real** da central (27 verificações), cobrindo cálculo, conversões,
+  unidades incompatíveis, saúde, finanças, jogos, cultura, briefing e comandos do chat.
+- Contagem de testes na documentação corrigida de 31 para 33 grupos.
+
+## 1.43.0 — Bloqueio com biometria forte, NFC e central em Ajustes
+
+- **Modos de autenticação** (`seguranca.js`): PIN, biometria, NFC, biometria ou NFC, biometria + NFC, biometria + PIN, NFC + PIN.
+- **Biometria facial do sistema**: `BiometricPrompt` com `BIOMETRIC_STRONG`; o app informa se há hardware facial e nunca recebe a imagem do rosto.
+- **NFC real** (`JarvisSeguranca`): `enableReaderMode` com A/B/F/V, encerrado no timeout e na pausa; cadastro, nome, ativar, bloquear, remover, testar e último uso.
+- **Privacidade das tags**: só o SHA-256 do UID é guardado; a lista mostra `•••• 1A2B`. Tag desconhecida não libera nada.
+- **PIN reforçado**: PBKDF2-SHA256 com sal e 120.000 iterações; o hash antigo é aceito uma vez e migrado.
+- **Central em Ajustes ▸ Segurança**: modo, tempo de inatividade, tentativas, ligar/desligar biometria e NFC, histórico e restauração.
+- **Tela**: selo do método, fases ("Reconhecendo o rosto…", "Tag autorizada", "Acesso negado") e estados do núcleo, sem atrasar o desbloqueio.
+- **Limite**: leitura NFC, rosto e digital **não foram testados em aparelho físico**; não há tag nem sensor nesta máquina e o APK é debug/CI.
+
+## 1.42.8 — Contexto visual da sessão
+
+- **Memória visual** (`visao_contexto.js`): objetos da análise, objeto atual, seleção e histórico curto de perguntas.
+- **Acompanhamento**: "ele é bom para corrida?", "e quanto custa?" resolvem para o mesmo objeto, sem repetir a imagem; o referente explícito vai junto no pedido ao modelo.
+- **Procedência**: confirmado (fabricante/manual/etiqueta), loja (anúncio) ou estimado (visual); marca e modelo são descartados quando não há evidência legível.
+- **Múltiplos objetos**: lista, seleção por índice e comparação determinística de atributos.
+- **OCR como dado**: linhas que tentam instruir o sistema são descartadas; o restante é marcado como dado.
+- **Ponte técnica**: contator, disjuntor, térmico, motor, CLP, temporizador, transformador, sensor e sinaleiro consultam a base elétrica e se relacionam ao Projetista.
+- **Privacidade**: nada é salvo automaticamente; a imagem não é guardada.
+- **Limite**: sem chave de IA não há medição de precisão nem busca de preço validada; nada foi testado em aparelho físico.
+
+## 1.42.7 — Base técnica elétrica, sequência de motores e segunda análise
+
+- **Base técnica** (`eletrica.js`): 12 componentes com terminais, função, limites e símbolo IEC 60617; tabelas de ampacidade (cobre/PVC, método B1), contatores AC-3, disjuntores e faixas de térmico; `consultar(termo)` com fonte declarada.
+- **Dimensionamento com memória de cálculo**: In por fórmula declarada (η 0,90 / fp 0,80), contator, disjuntor e curva, ajuste e faixa do térmico, cabo por ampacidade e queda ≤ 4% em 30 m.
+- **Verificação independente**: `conferirDimensionamento` reprova contator, disjuntor, térmico ou cabo menores que o necessário e alimenta `validar()` com o código `dimensionamento_*`.
+- **Sequência de dois motores**: nova topologia em que M2 entra X segundos depois de M1, com contator, disjuntor e térmico por motor e temporizador comandado por K1.
+- **Segunda análise**: `conferirObjetivo` confronta a estrutura montada com o pedido (dois motores, tempo do temporizador, intertravamento, proteção por motor, CLP com rungs) sem reutilizar `validar()`.
+- **Netlist v1**: `exportarNetlist`/`importarDiagramaTexto` levam o projeto para texto e trazem de volta com os pinos preservados.
+- **Chat e voz**: novos pedidos — dimensionamento, consulta de componente e "o projeto atende ao objetivo?".
+- **Limites**: o `.cad` nativo do CADeSIMU não é gerado nem aberto; não há simulação elétrica; foto de diagrama depende de visão por IA, não configurada neste build.
+
+## 1.42.6 — Correção do pacote Android do projetista
+
+- **Crítico**: o release 1.42.5 saiu sem `projetista.js` no APK (o workflow copiava uma lista fixa de arquivos para `www/`). No Android o painel do projetista abria sem o módulo e o chat respondia "não carregou". Corrigido no workflow.
+- **Regressão**: `tests/test_empacotamento.py` compara os `<script src>` do `index.html` com a cópia para `www/` e com a lista de arquivos do pacote Windows; divergência derruba o teste.
+- **Também corrigido**: `pc.js` e `cad_projeto.js` estavam fora da cópia para `www/` desde antes — painel PC e reparo/exportação do CAD no Android sem módulo. O teste de empacotamento passou a cobrir todos os scripts do `index.html`.
+- Nenhuma funcionalidade da 1.42.5 foi alterada: projetista editável, versões, restauração, comparação, símbolos IEC, edição de pinos e uso pelo chat/voz.
+
+## 1.42.5 — Projetista elétrico editável, versões e auditoria
+
+- **Projetista pelo chat e pela voz**: pedidos de projeto elétrico são resolvidos localmente no turno (texto digitado e fala reconhecida), com resumo falado, painel Arquivos aberto e declaração de que simulação elétrica e CADeSIMU não são executados. Perguntas comuns não são capturadas.
+- **Símbolos IEC e edição de pinos**: a vista de projeto desenha contator, térmico, motor, disjuntor, botoeira, temporizador, transformador, sensor, CLP e demais tipos; tocar num pino preenche componente/pino, e a rede pode ser trocada (com lista de redes), revalidada e desfeita.
+- **Edição de projeto existente** (`modificar`): temporizador com sinalização retardada, remoção de componente, proteção térmica, troca de tensão de comando e reconstrução como partida direta, reversão, estrela-triângulo ou compensadora — sempre sobre uma cópia, com o original intacto e a diferença calculada.
+- **Histórico de versões**: cada gravação da mesma projeto guarda a anterior (até 5), com listagem, restauração (a versão atual continua no histórico) e comparação estrutural entre dois projetos.
+- **Auditoria registrada** em `docs/AUDITORIA.md`: verificação estática sem ids duplicados, funções duplicadas ou segredos; gravação no desktop conferida por releitura de hash; nada de crítico confirmado nos caminhos testados, com o que não foi verificado declarado.
+- **Área própria no painel Arquivos**: pedido em português, criar, analisar, corrigir, relatório técnico, ladder do CLP, salvar e reabrir projeto.
+- **Motor determinístico** (`projetista.js`): interpreta potência (CV), trifásico/monofásico, tensões, temporizador, emergência e sinalização; monta partida direta, reversão, estrela-triângulo, compensadora, comando com selo, iluminação e CLP de nível, com pinos nomeados, redes, fios numerados, sequência de operação e dimensionamento didático.
+- **Verificação estrutural por regras**: terminal solto, curto, curto entre fases, bobina sem alimentação, falta de emergência, falta de proteção, falta de intertravamento, tensão de bobina incompatível, temporizador ausente e endereço de CLP duplicado/inválido — por busca em largura nos fios e contatos.
+- **Correção estrutural**: insere NF cruzado, emergência, relé térmico e ajusta tensão de bobina, dizendo o que fez; o que não é corrigível continua listado.
+- **Relatório honesto**: separa verificação estrutural, elétrica, simulação funcional e abertura no CADeSIMU (as três últimas não são executadas).
+- **Formato próprio documentado** `ProjetistaEletrico CAD` v1, com reabertura e revalidação. O `.cad` nativo do CADeSIMU continua não sendo gerado.
+- **Regressões**: `tests/test_projetista.js` (57 verificações) e `tests/test_projetista_ui.js` (app inteiro no jsdom).
+
+## 1.42.4 — Editor de circuito no palco
+
+- **Palco SVG** no painel Arquivos: cada componente aparece com símbolo próprio, terminais tocáveis e fios entre os terminais ligados.
+- **Arrastar** move o componente (limitado ao palco) e a posição `x`/`y` é gravada no `.cad`; `CAD.validarCircuito` valida a posição quando presente e continua aceitando arquivos antigos sem ela.
+- **Ligar por toque**: toque num terminal (fica destacado) e no outro para criar a ligação; toque de novo no mesmo terminal cancela. Os campos Terminal A/B continuam como alternativa precisa.
+- **Selecionar e editar**: toque no componente preenche id/valor; **Aplicar edição** renomeia (com atualização das ligações) e troca o valor; **Apagar selecionado** remove o componente e as ligações dele.
+- **Carregar .cad salvo** devolve o circuito mais recente do cofre para edição, com as posições preservadas.
+- Regressões: `tests/test_cad_posicao.js` (x/y opcional, validado e preservado na ida e volta) e `tests/test_cad_circuito_ui.js` (jsdom: 4 símbolos, 4 fios, editar 330→470, arrastar para 200,90, salvar, apagar D1 e recarregar).
+
+## 1.42.3 — Montar circuito na interface e perguntar sobre a imagem
+
+- `.cad`: montagem de circuito dentro do painel Arquivos — tipo, id, valor, ligação terminal a terminal (`V1.1` ↔ `R1.1`), **Validar**, **Gerar netlist**, desfazer ligação, remover componente e salvar, sem escrever JSON.
+- O `.cad` do circuito é salvo com a **placa de 120×80×2 mm** como geometria e o circuito validado; `CAD.criar` não injeta mais caixa fantasma em documento que já traz circuito.
+- Regressão nova em `tests/test_cad_circuito_ui.js` (jsdom com o app inteiro): monta o exemplo, valida, gera netlist, salva e relê o arquivo do cofre.
+- **Visão:** campo “Perguntar sobre a análise” + botão Perguntar que reaproveita a última imagem analisada (sem reabrir a câmera); sem imagem guardada, a pergunta analisa o quadro atual. A resposta entra no texto da análise, em ordem cronológica, e é falada.
+- Compatibilidade declarada no próprio painel: o formato gravado é o `CadSimu CAD` v1 deste projeto; o `.cad` nativo do CADeSIMU é proprietário e **não** é produzido.
+- Correção de estrutura: os blocos novos foram colocados dentro do escopo do `app.js` (o arquivo é um IIFE), para enxergarem `CAD`, `renderArquivos` e `falar`.
+
+## 1.42.2 — Circuitos elétricos no .cad e fluidez do WebView
+
+- `.cad`: seção opcional `circuito` com componentes elétricos (resistor, capacitor, indutor, fonte, LED, diodo, chave, terra, carga, motor, fusível), conexões por terminal (`R1.1`), limite de 200 componentes e 400 conexões.
+- Validação real do circuito: id repetido, terminal inexistente, terminal ligado nele mesmo, valor inválido, **fonte em curto**, componente solto, LED sem resistor e circuito sem fonte — erro com motivo, aviso quando o arquivo abre mas pede atenção.
+- `CAD.netlist(doc)` gera netlist com terra na rede 0 e numeração derivada das conexões; a análise do aplicativo passa a resumir componentes, conexões, redes e erros no mesmo cartão.
+- Compatibilidade: `.cad` sem `circuito` continua válido; os demais formatos (DXF/STL/3MF/STEP/IFC) não mudaram.
+- Regressão em `tests/test_cad_circuito.js` (10 verificações) dentro do `test:all`.
+- Fluidez: busca da memória com espera de digitação (180 ms) em vez de re-render por tecla; `garantirInterfaceVisivel` e as atividades do painel não rodam com o app oculto; o `backdrop-filter` saiu dos chips e das mensagens (repintura mais barata no WebView), com fundo equivalente.
+- Nada de função removida ou simulada; identidade, humor, núcleo 3D, voz masculina PT-BR, Obsidian e bloqueio opcional intactos.
+
+## 1.42.1 — Auditoria de botões e correções honestas
+
+- Auditoria de efeito com clique real em jsdom: 300 botões, 239 medidos com os painéis/abas abertos um a um (rodadas até fixar), zero exceções de clique e zero erros globais de boot.
+- Os 15 cliques sem efeito foram classificados um a um: seletor de arquivo, atualização idempotente, aba já ativa, filtro já aplicado, painel já aberto, `window.open` simulado e ambiente sem áudio. Dois eram falha de verdade e foram corrigidos.
+- `#c-neural-liberar` (“Liberar memória”, Ajustes ▸ Voz) não morre mais em silêncio quando o plugin `JarvisVoz` não existe: responde com mensagem de indisponibilidade, igual aos irmãos “Testar voz neural” e “Parar”.
+- Microfone do núcleo: quando o ambiente não tem backend de áudio (`AudioContext`/`MediaRecorder`), o clique agora explica a falha em vez de voltar ao repouso sem dizer nada; antes o estado passava por `listening` e voltava a `idle` sem mensagem.
+- Regressão em `tests/test_botoes_honestos.js` (no `test:all`): executa o handler do botão neural nos três cenários (sem plugin, com plugin, plugin com falha) e sobe o app inteiro para clicar no microfone.
+- Verificações estáticas novas: as 24 ações das áreas dinâmicas têm caso no `acaoNavegacao`, nenhum ID duplicado no HTML, nenhum `label for` quebrado, nenhum `href="#"`, nenhum `onclick` inline, nenhum `$('#id')` apontando para elemento inexistente e nenhum handler vazio.
+- Botões `disabled`/ocultos foram separados dos medidos (243 na primeira varredura): todos correspondem a estado real (tela de abertura, editor sem seleção, painel PC sem Electron, PIN ativo, modelo local carregado) e não são botões falsos.
+- Nenhuma função removida ou simulada; identidade, humor, núcleo 3D, voz masculina PT-BR, Obsidian em Ajustes ▸ Memória e bloqueio em Ajustes ▸ Segurança permanecem intactos.
+
+## 1.42.0 — Voz, memória semântica e auditoria do Core
+
+- Voz: captura de comando passou a usar o VAD testável e WAV PCM como caminho principal, com teto de 20 s e reamostragem para 16 kHz; o `MediaRecorder` ficou como reserva. Os controles de eco, ruído, AGC e filtro agora chegam ao gravador normal.
+- Voz: seletor real de motor STT (Automático, Groq, Android e Android local) com fallback explícito; 400 do Groq tenta o turbo uma vez, 429 não é repetido. Parcial da wake word contendo apenas “Jarvis” não consome mais a ativação.
+- Voz: diagnóstico passou a registrar duração do áudio, bytes enviados, captura média e upload médio; WAV de 48 kHz caiu para 16 kHz (cerca de 3× menos dados).
+- `core.js`: um `ok: true` não confirma mais um resultado quando o próprio texto diz “não consegui”, “falhou”, “sem permissão” ou equivalente; texto explícito de falha vence recibo otimista. Regressão em `tests/test_core.js`.
+- Auditoria de runtime em jsdom: 18 abas e 287 botões acionados, zero exceções no subconjunto de scripts carregado; o mapa do auditor passou a reconhecer Áreas, Core, Pessoas e Dev, e “Central” é testada como ação de fechamento.
+- `app.js`: `fecharPaineis()` não usa mais `history.back()` assíncrono; o estado é limpo com `replaceState`, evitando que um `popstate` atrasado feche o painel recém-aberto. Um guardião visual também remove `scrim`/`travado` órfãos.
+- A abertura demorada mostra “Continuar sem reconhecer” após 8 s; o guardião visual não mexe no corpo com modal de confirmação aberto e revalida ao voltar do segundo plano.
+
+- `memoria.js`: busca híbrida com embedding lexical local de 128 dimensões, sinônimos em português, corte de stopwords e limite relativo para não mandar notas irrelevantes ao RAG.
+- Prioridade por importância, recência e frequência de uso; o RAG registra as notas efetivamente usadas.
+- Histórico de até três versões, restauração e conflito de importação do Obsidian sem sobrescrever a nota original.
+- Painel mostra “Buscar por significado”, relevância e conflitos preservados.
+- Novo `tests/test_memoria_semantica.js`, incluído em `test:all`; suíte completa com `EXIT:0`.
+- Ainda não é um modelo neural nem uma sincronização automática bidirecional; os demais módulos da evolução continuam pendentes.
+
+## 1.41.0
+
+- Android passa a devolver confiança e até cinco alternativas do `SpeechRecognizer`; o app avalia antes de executar.
+- Comando de ação abaixo de 45% pede repetição; confiança ausente ou zero não é convertida em 100% nem bloqueia tudo.
+- Filtro high-pass de 85 Hz + compressor no caminho do microfone e no cadastro do perfil de locutor.
+- Centroide de voz ponderado por SNR/duração; indício de replay bloqueia identidade e pede fala ao vivo.
+- Caminho WAV PCM de emergência para WebView sem `MediaRecorder`; Groq recebe o nome/extensão corretos.
+- Teste de transcrição esperado × reconhecido com WER, acerto, latência e histórico local apagável.
+- Corrigido `pistaReplay` lendo `pausaRatio` do objeto errado; a proteção antes nunca disparava.
+- Testes: `test_fala.js`, `test_audio_pcm.js`, `test_stt_avancado.py`, casos de replay em `test_identidade.js`.
+- Sem alegação de precisão de campo: microfone e aparelho físico continuam pendentes.
+
+## 1.40.0
+
+- Núcleo central protagonista, HUD holográfico, estados reais e cartão de última resposta.
+- Removida a opção independente Conversa do menu; chat, histórico, transcrição, voz e comandos preservados em tela secundária.
+- Corrigida a causa raiz do clique das áreas: `body[data-modo]` capturava toda a delegação; seletores restritos a `.modo-btn`, listeners diretos e suporte a nós de texto da WebView.
+- Corrigido o flash inicial: boot visível desde o primeiro quadro, corpo travado, início em 0 ms e bloqueio aberto antes de liberar o menu.
+- Teste de DOM com 10 áreas, 44 ações e retorno; contrato `tests/test_v1_40_0.py`.
+
+## 1.39.0
+
+- Camada cognitiva determinística: análise de intenção, complexidade, risco, referências e necessidade de ferramentas.
+- Plano interno de cinco etapas (compreender, contextualizar, decidir, responder e verificar).
+- Seleção de histórico por relevância, com suporte a referências conversacionais.
+- Verificação e revisão da fala: vazio, abertura genérica, repetição, humor em assunto sensível e alegação de execução não feita.
+- Controles persistidos de profundidade, iniciativa e comportamento conversacional.
+- Preservados os três níveis de humor, os seis eixos, Hermes, Core, SISTEMA, memória, voz, avatar e núcleo 3D.
+
+## 1.38.1 — Auditoria corretiva
+
+- `sistema.js`: cancelamento durante etapa em voo não pode ser sobrescrito por `concluida`; a etapa fica incerta e a trava só é liberada no `finally`.
+- `sistema.js`: sorteio uniforme com rejeição para senhas, sem viés de módulo.
+- `app.js`: removidas as declarações mortas duplicadas da Visão 2.0; reabrir a Visão limpa balões/texto anterior; `prep` de ação agora trata exceção e devolve falha explícita.
+- `hermes.js`: roteador descarta IDs de provedor desconhecidos e duplicados; não estoura com lista inválida.
+- Testes: `test_sistema.js` com cancelamento em voo e senha; `test_hermes.js` com provedor inválido; contrato `test_v1_38_1.py`.
+
+## 1.38.0 — Avatar 3D, plano persistente e executores
+
+- `avatar.js`: rosto holográfico procedural com Three.js, boca por amplitude de voz, piscada, estados e fallback Canvas 2D; opção Avatar em Aparência do núcleo.
+- Plano validado vira tarefa persistente do `SISTEMA`; etapa interna `plano_etapa` não duplica confirmação e a ação real continua protegida.
+- Core ganha executores de leitura para voz, automação, atualização e planejamento.
+- Auditorias `docs/IA-1.38.0.md` e `docs/REPERTORIO-1.38.0.md`.
+- Testes `tests/test_avatar.js`, contrato `tests/test_v1_38_0.py` e 19 verificações do `test_sistema.js`.
+
+## 1.37.0 — Retomada segura e pausa de tarefas
+
+- Corrigida a retomada de etapa incerta: autorizar não reexecuta a ação, evitando mensagens/chamadas duplicadas.
+- Adicionada pausa manual entre etapas, com checkpoint e continuação sem repetir etapas concluídas.
+- Botões Iniciar, Continuar e Pausar na central do sistema.
+- Texto de lembretes de tarefa alinhado ao agendador real do Android.
+- Testes de não duplicação, pausa e contrato 1.37.
+
+## 1.36.0 — Aprendizado explícito e revisável
+
+- `aprendizado.js`: preferências/correções/fatos somente por instrução clara, com confiança, deduplicação, bloqueio de conteúdo sensível e contexto limitado.
+- `aprendizado_ui.js`: revisão, remoção, exportação, limpeza e visualização do contexto no painel Memória.
+- `app.js`: registro no turno e aplicação no prompt sem alterar permissões ou segurança.
+- Testes `tests/test_aprendizado.js` e `tests/test_v1_36_0.py`.
+- Preservação integral dos módulos anteriores.
+
+## 1.35.0 — Confiabilidade, causa e recuperação controlada
+
+- `core.js`: causa provável, evidências, orientação, dependências, pré-checagem, recuperação segura e histórico persistido.
+- Recuperação com timeout de 4 s, rechecagem, espera de 20 s e limite de 2 tentativas por 5 min; automático somente opt-in.
+- Diagnóstico de Ajustes inclui o Core; painel do Core mostra saúde, aviso, recuperação e histórico.
+- RAM JavaScript e bateria somente quando disponíveis; CPU não inventada.
+- Testes de recuperação, repetição bloqueada, automático e pré-checagem; contrato 1.35.
+
+## 1.34.0 — Core, agentes e contexto
+
+- `core.js`: 12 agentes descritivos, seleção por sinais, contexto local, projetos/tarefas, verificação conservadora, saúde, habilidades e watchdog.
+- Delegação só executa com executor registrado; sem executor retorna `nao_configurado` e não simula sucesso.
+- Recibo `incerto` não pode ser promovido a `confirmado` por um `ok` genérico.
+- `core_ui.js`/`core.css`: painel de status, agentes, projetos, saúde e habilidades; fecha pelo botão e pelo padrão dos painéis.
+- `app.js`: Core integrado ao boot, à navegação, aos componentes e aos comandos de consulta.
+- Testes `tests/test_core.js` e `tests/test_v1_34_0.py`; build/CI copiam os arquivos novos.
+- Limites declarados: MCP, RAG vetorial, tutorial, visão de tela ampla, pareamento PC/TV/ESP32, atualização modular e validação física.
+
+## 1.33.0 — Auditoria, áreas e nova experiência
+
+- Auditoria dos 13 tópicos e matriz de rastreabilidade dos oito repositórios.
+- Navegação por dez áreas: Início, IA, Voz, Automação, Memória, Ferramentas, Dispositivos, Segurança, Personalização e Sistema.
+- Quatro modos persistentes: Completo, Discreto, Silencioso e Holográfico.
+- Modo Silencioso suprime a fala, mantendo respostas em texto, alarmes e confirmações.
+- Página inicial com tarefas, traces e estado real do núcleo.
+- Núcleo 3D passa ao estado `processing` durante ferramentas e volta ao estado anterior.
+- Limpeza de APKs antigos, builds, caches e artefatos regeneráveis; backup em `artifacts/pre-1.33.0-src.tar.gz`.
+- Nenhum painel ou função original removido.
+- APK Android 1.33.0 (versionCode 10330) gerado e verificado por dentro; instalação física ainda não testada.
+
+## 1.32.0 — Núcleo operacional e acessibilidade Android
+
+- **JarvisOS (`sistema.js`)**: catálogo de ferramentas com descoberta, níveis leitura/escrita/execução, confirmação independente do modelo, timeout, eventos e traces sem valores de argumentos.
+- **Ferramentas locais reais**: calculadora com parser próprio (sem `eval`), conversão de unidades/temperatura, senha com Web Crypto, estatísticas de texto, JSON, SHA-256 e datas.
+- **Tarefas persistentes**: checkpoint após cada etapa, pausa em efeito incerto e retomada que não repete etapa concluída; testes provam persistência entre instâncias.
+- **Acessibilidade Android opt-in**: árvore sanitizada, clique por texto, digitação, rolagem, espera, voltar e início. Campos de senha são omitidos; não há clique por coordenada livre.
+- **Parada de emergência**: cancela tarefas, interrompe fala, fecha câmera e marca a automação para parar.
+- **Microfone**: seleção de entrada e diagnóstico real de nível, piso de ruído, pico e clipes, sem gravar áudio.
+- **Interface**: nova central Sistema com ferramentas, tarefas, traces, automação e áudio.
+- **Preservado**: planos, agentes, recibos, VAD, pessoas, memória, visão, IA local, CAD, Windows e tela de bloqueio.
+- **Pendente**: validação em aparelho, barge-in por energia, RAG vetorial, MCP remoto, visemas/avatar e integração PC/TV/ESP32.
+
 ## 1.31.2 — Auditoria de consentimento e coerência da interface
 
 - **Confirmação de plano mostra argumentos**: antes de autorizar, o usuário vê destinatário, texto e demais parâmetros de cada etapa; o resumo padrão (usado em logs/testes) continua sem valores.
