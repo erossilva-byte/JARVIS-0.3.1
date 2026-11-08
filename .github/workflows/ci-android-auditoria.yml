@@ -1,35 +1,9 @@
-name: Auditoria e build Android — branch de evolução
-
 on:
   workflow_dispatch:
   push:
-    branches: [work/1.46.0-auditoria-funcoes-apk]
-    paths:
-      - 'JARVIS-Nova-*-fonte.zip'
-      - 'JARVIS-NOVA-*-fonte.zip'
-      - '.github/workflows/build-apk.yml'
-      - 'app.js'
-      - 'identidade.js'
-      - 'fala.js'
-      - 'audio_pcm.js'
-      - 'identidade_ui.js'
-      - 'escuta.js'
-      - 'agentes.js'
-      - 'plano.js'
-      - 'avatar.js'
-      - 'apps.js'
-      - 'main.js'
-      - 'hermes.js'
-      - 'index.html'
-      - 'style.css'
-      - 'patch_*.py'
-      - 'Jarvis*.java'
-      - 'MainActivity.java'
-      - 'package.json'
-      - 'VERSAO.json'
-      - 'tests/**'
-      - 'ci/**'
-      - 'capacitor.config.json'
+    branches: [main, work/1.46.0-auditoria-funcoes-apk]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
