@@ -41,8 +41,6 @@ check('patch Gradle aplica a versão e build gerado acompanha quando existe',
 check('app e HTML mostram a versão corrente',
       ("const VERSAO_APP = '%s';" % meta.get('version')) in app
       and ('v%s' % meta.get('version')) in html)
-      ("const VERSAO_APP = '%s';" % meta.get('version')) in app
-      and ('v%s' % meta.get('version')) in html)
 
 # Núcleo protagonista e Conversa fora do menu, sem apagar o sistema de conversa.
 check('núcleo e resposta central no menu',
