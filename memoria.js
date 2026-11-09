@@ -331,8 +331,12 @@
     if (lista.length >= LIMITE_NOTAS) {
       return { ok: false, erro: 'O cofre está cheio (' + LIMITE_NOTAS + ' notas). Apague alguma nota antes de criar outra.' };
     }
+    if (d.id && lista.some(function (n) { return n.id === d.id; })) {
+      return { ok: false, erro: 'O identificador da nota já existe neste cofre.' };
+    }
+    var idSeguro = typeof d.id === 'string' && /^[a-z0-9_-]{1,80}$/i.test(d.id) ? d.id : novoId();
     var nota = {
-      id: novoId(), tema: tema, titulo: titulo, texto: texto, tags: tags,
+      id: idSeguro, tema: tema, titulo: titulo, texto: texto, tags: tags,
       criado: agora(), atualizado: agora(), origem: d.origem === 'voz' ? 'voz' : 'painel',
       importancia: Math.max(0, Math.min(3, Math.round(Number(d.importancia) || 0))),
       usos: 0, versoes: []
@@ -540,6 +544,7 @@
     return '---\n' +
       'title: "' + escaparYaml(n.titulo) + '"\n' +
       'tema: ' + n.tema + '\n' +
+      'jarvis_id: ' + n.id + '\n' +
       'tags: [' + (n.tags || []).map(escaparYaml).join(', ') + ']\n' +
       'criado: ' + new Date(n.criado).toISOString() + '\n' +
       'atualizado: ' + new Date(n.atualizado).toISOString() + '\n' +
@@ -629,6 +634,7 @@
       var atualizado = new Date(doTema[0].atualizado).toISOString();
       var corpo = doTema.map(function (n) {
         return '## ' + n.titulo + '\n\n' +
+          '<!-- jarvis_id: ' + n.id + ' -->\n' +
           '_atualizado: ' + new Date(n.atualizado).toISOString() +
           (n.tags && n.tags.length ? ' · tags: ' + n.tags.join(', ') : '') +
           ' · origem: ' + n.origem + '_\n\n' + n.texto + '\n';
