@@ -4733,7 +4733,7 @@ function configAtivacaoAtual() {
 function descricaoCalibragem() {
   const c = wakeCalibragem();
   const limiar = c.sensibilidade >= 75 ? 0.25 : (c.sensibilidade >= 45 ? 0.35 : 0.45);
-  const extras = c.variantes.split(/[,;\\n/]+/).map((x) => x.trim()).filter(Boolean).slice(0, 10);
+  const extras = c.variantes.split(/[,;\/\n]+/).map((x) => x.trim()).filter(Boolean).slice(0, 10);
   return 'sensibilidade ' + c.sensibilidade + '% · limiar KWS ' + limiar.toFixed(2) +
     ' · palavras base: Jarvis/Javis' + (extras.length ? ' · extras: ' + extras.join(', ') : ' · sem palavras extras');
 }
@@ -6970,7 +6970,7 @@ if (chkVozChime) { chkVozChime.checked = store.get('voz_chime', '0') === '1'; ch
 function gerenciarVariantesWake() {
   const alvo = $('#c-wake-variantes-lista');
   if (!alvo) return;
-  const extras = wakeCalibragem().variantes.split(/[,;\\n/]+/).map((x) => x.trim()).filter(Boolean).slice(0, 10);
+  const extras = wakeCalibragem().variantes.split(/[,;\/\n]+/).map((x) => x.trim()).filter(Boolean).slice(0, 10);
   alvo.textContent = 'Palavras base: Jarvis, Javis' + (extras.length ? ' · extras: ' + extras.join(', ') : '') +
     '. O modelo acústico é treinado em inglês; a taxa de acerto com pronúncia PT-BR deve ser validada no teste.';
 }
