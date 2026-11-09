@@ -76,7 +76,7 @@ vm.runInContext(fonte, ctx);
   const r2 = await ctx.diagnosticoSegundoPlano(false);
   ok.push(['tudo certo mostra pronto', nos['bg-resumo'].textContent === 'pronto']);
   ok.push(['fala confirma o KWS acústico local', /KWS acústico local/.test(r2.resumo)]);
-  ok.push(['mostra a calibragem e os descartes por ruído', /sensibilidade 55%/.test(texto(nos['bg-diag'])) && /3 ativação\(ões\) descartada/.test(texto(nos['bg-diag']))]);
+  ok.push(['mostra modelo e limiar KWS reais', /GigaSpeech inglês/.test(texto(nos['bg-diag'])) && /limiar 0.35/.test(texto(nos['bg-diag']))]);
 
   let falhas = 0;
   for (const [nome, passou] of ok) {
