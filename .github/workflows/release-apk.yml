@@ -88,6 +88,7 @@ jobs:
           cp core.js core_ui.js www/
           cp aprendizado.js aprendizado_ui.js www/
           cp arquivos_dev.js www/
+          cp sandbox.js www/
           cp voz_motor.js fala.js audio_pcm.js www/
           cp cognicao.js www/
           cp humor.js www/
