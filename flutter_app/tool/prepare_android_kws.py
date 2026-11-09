@@ -41,7 +41,7 @@ if faltantes:
         abertura = inicio + len("dependencies {")
         gradle = gradle[:abertura] + "\n" + "\n".join(faltantes) + gradle[abertura:]
     else:
-        gradle = gradle.rstrip() + "\\n\\ndependencies {\\n" + "\n".join(dependencias) + "\\n}\\n"
+        gradle = gradle.rstrip() + "\n\ndependencies {\n" + "\n".join(dependencias) + "\n}\n"
 if "minSdk = 26" not in gradle:
     if "minSdk = flutter.minSdkVersion" in gradle:
         gradle = gradle.replace("minSdk = flutter.minSdkVersion", "minSdk = 26", 1)
