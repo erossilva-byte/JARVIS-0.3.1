@@ -1136,3 +1136,13 @@ Revisão do segundo plano. Nada de funcionalidade nova: são os defeitos que imp
 - Workflow agora registra checksum e metadados de compilação no artefato.
 - Criados auditoria técnica e checklist específico para validação no POCO X7.
 - Limitações mantidas explícitas: Porcupine exige AccessKey; IA local depende de modelo .task compatível; perfil acústico não é autenticação biométrica; APK e dispositivo físico ainda precisam ser validados.
+
+
+## 1.46.0 — desenvolvimento
+- Adicionado OpenRouter como provedor de reserva com DeepSeek como modelo inicial, mantendo Groq como prioridade e chave separada no cofre seguro Android/Windows.
+- Adicionado motor KWS acústico sherpa-onnx ao serviço Android: AudioRecord, PCM 16 kHz mono, inferência CPU e sem fallback de rede antes da palavra-chave.
+- Incluídos preparação do modelo GigaSpeech e geração de palavras-chave no pipeline de APK/CI.
+- Interface de voz atualizada para informar limiar KWS, palavras adicionais e limitação do modelo inglês.
+- Removido o contador de descarte por ruído que não era produzido pelo novo motor.
+- Corrigida a documentação do formato interno Jarvis CAD versus CADeSIMU nativo.
+- **Ainda pendente:** CI executado, compilação e instalação de APK, teste KWS com pronúncia PT-BR, testes de segundo plano/HyperOS, Flutter, segurança AND/OR, CADeSIMU nativo e paridade Windows. Não é release estável.
