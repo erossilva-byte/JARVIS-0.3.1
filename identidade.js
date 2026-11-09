@@ -346,6 +346,7 @@
         if (String(antes[campo]) !== String(depois)) registrar(p, campo, antes[campo], depois);
       });
     }
+    if (p.nascimento) { p.idadeBase = ''; p.idadeEm = ''; }
     p.atualizado = relogio();
     return p;
   }
@@ -883,26 +884,19 @@
     if (!nome) return { ok: false, erro: 'Não consegui identificar o nome. Diga, por exemplo: “cadastre meu amigo Marcelo, idade 27 anos, peso 72 kg e altura 1,78 m”.' };
     var dados = { nome: nome };
     if (relacao) dados.relacao = relacao.toLowerCase();
-    if (idadeMatch) {
+    if (nascimentoMatch) {
+      var dataNascimento = nascimentoMatch[1];
+      dados.nascimento = /^\d{4}-/.test(dataNascimento)
+        ? dataNascimento : dataNascimento.split(/[/.]/).reverse().join('-');
+    } else if (idadeMatch) {
       var idadeInformada = Number(idadeMatch[1]);
       if (!Number.isInteger(idadeInformada) || idadeInformada < 0 || idadeInformada >= 130) {
         return { ok: false, erro: 'A idade informada deve ficar entre 0 e 129 anos.' };
       }
       dados.idadeBase = String(idadeInformada);
-      if (nascimentoMatch) {
-        var data = nascimentoMatch[1];
-        dados.nascimento = /^\d{4}-/.test(data)
-          ? data
-          : data.split(/[/.]/).reverse().join('-');
-      } else {
-        var hoje = new Date(relogio());
-        dados.idadeEm = [hoje.getFullYear(), String(hoje.getMonth() + 1).padStart(2, '0'),
-          String(hoje.getDate()).padStart(2, '0')].join('-');
-      }
-    } else if (nascimentoMatch) {
-      var dataNascimento = nascimentoMatch[1];
-      dados.nascimento = /^\d{4}-/.test(dataNascimento)
-        ? dataNascimento : dataNascimento.split(/[/.]/).reverse().join('-');
+      var hoje = new Date(relogio());
+      dados.idadeEm = [hoje.getFullYear(), String(hoje.getMonth() + 1).padStart(2, '0'),
+        String(hoje.getDate()).padStart(2, '0')].join('-');
     }
     if (pesoMatch) dados.pesoKg = pesoMatch[1].replace(',', '.');
     if (alturaMatch) {
