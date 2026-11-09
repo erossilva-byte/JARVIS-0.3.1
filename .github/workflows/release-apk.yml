@@ -49,7 +49,7 @@ jobs:
           cache: pip
 
       - name: Instalar tokenizer oficial do sherpa-onnx
-        run: python3 -m pip install --upgrade pip 'click>=8.1.7,<9.0' sherpa-onnx==1.13.8
+        run: python3 -m pip install --upgrade pip 'click>=8.1.7,<9.0' 'sentencepiece>=0.2,<0.3' sherpa-onnx==1.13.8
 
       - name: Configurar Android SDK sem pacote legado tools
         uses: android-actions/setup-android@v4
