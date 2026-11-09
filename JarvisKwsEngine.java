@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * KWS acústico local. O microfone é capturado por AudioRecord e inferido pelo
- * sherpa-onnx no próprio aparelho. Não usa SpeechRecognizer, rede ou serviço de nuvem.
+ * sherpa-onnx no próprio aparelho; não usa SpeechRecognizer, rede ou serviço de nuvem.
  *
  * O modelo GigaSpeech é treinado em inglês; "Jarvis" é a palavra-chave configurada.
  * A aceitação de sotaques brasileiros deve ser medida em aparelhos/vozes reais antes
