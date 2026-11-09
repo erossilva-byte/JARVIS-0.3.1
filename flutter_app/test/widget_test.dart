@@ -20,7 +20,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('CADeSIMU e elétrica'),
       280,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('CADeSIMU e elétrica'), findsOneWidget);
 
