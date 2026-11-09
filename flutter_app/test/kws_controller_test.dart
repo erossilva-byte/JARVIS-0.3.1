@@ -5,6 +5,7 @@ import 'package:jarvis_nova/services/kws_controller.dart';
 
 class FakeKwsGateway implements KwsGateway {
   final StreamController<String> events = StreamController<String>.broadcast();
+  final StreamController<KwsCommandEvent> commands = StreamController<KwsCommandEvent>.broadcast();
   KwsStatus current = const KwsStatus(
     available: false,
     listening: false,
@@ -16,6 +17,9 @@ class FakeKwsGateway implements KwsGateway {
 
   @override
   Stream<String> get wakeEvents => events.stream;
+
+  @override
+  Stream<KwsCommandEvent> get commandEvents => commands.stream;
 
   @override
   Future<KwsStatus> status() async => current;
@@ -60,6 +64,7 @@ void main() {
   tearDown(() async {
     controller.dispose();
     await gateway.events.close();
+    await gateway.commands.close();
   });
 
   test('plugin ausente nunca é apresentado como KWS ativo', () async {
@@ -96,6 +101,17 @@ void main() {
     await controller.start();
     await Future<void>.delayed(Duration.zero);
     expect(controller.lastWake, 'Jarvis');
+  });
+
+  test('encaminha transcrição reconhecida para o barramento do aplicativo', () async {
+    final received = <KwsCommandEvent>[];
+    final subscription = KwsController.commandBus.listen(received.add);
+    await controller.initialize();
+    gateway.commands.add(const KwsCommandEvent(type: 'command_result', text: 'Que horas são?'));
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.lastCommand, 'Que horas são?');
+    expect(received.last.text, 'Que horas são?');
+    await subscription.cancel();
   });
 
   test('falha no comando não deixa estado falsamente ativo', () async {
