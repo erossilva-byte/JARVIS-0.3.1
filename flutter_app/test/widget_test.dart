@@ -9,6 +9,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Capacidades do J.A.R.V.I.S.'), findsOneWidget);
     expect(find.text('Hermes Agent'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('CADeSIMU e elétrica'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('CADeSIMU e elétrica'), findsOneWidget);
   });
 }
