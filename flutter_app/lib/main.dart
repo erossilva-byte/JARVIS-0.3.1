@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'services/provider_service.dart';
+import 'services/kws_settings_page.dart';
 
 void main()=>runApp(const JarvisApp());
 const cyan=Color(0xFF55DFFF),bg=Color(0xFF050A12),panel=Color(0xFF0B1725),muted=Color(0xFF8CA5B9);
@@ -177,7 +178,13 @@ class SettingsPage extends StatelessWidget{
    onTap:()=>Navigator.of(c).push(MaterialPageRoute<void>(builder:(_)=>const ProviderSettingsPage())),
   )),
   const SizedBox(height:9),
-  const _Setting(icon:Icons.graphic_eq_rounded,title:'Voz e palavra de ativação',detail:'A detecção deve usar exclusivamente KWS acústico local sherpa-onnx. O motor existe no Android legado; a ponte Kotlin ↔ Flutter e a validação no aparelho ainda são necessárias. Picovoice não será utilizado.'),
+  Material(color:panel,borderRadius:BorderRadius.circular(14),child:ListTile(
+   leading:const Icon(Icons.graphic_eq_rounded,color:cyan),
+   title:const Text('Voz e palavra de ativação',style:TextStyle(fontSize:12,fontWeight:FontWeight.w600)),
+   subtitle:const Text('Controlar KWS sherpa-onnx local, testar e consultar diagnóstico',style:TextStyle(color:muted,fontSize:10)),
+   trailing:const Icon(Icons.chevron_right_rounded,color:muted),
+   onTap:()=>Navigator.of(c).push(MaterialPageRoute<void>(builder:(_)=>const KwsSettingsPage())),
+  )),
   const _Setting(icon:Icons.memory_rounded,title:'Memória semântica e Obsidian',detail:'A migração precisa preservar notas e IDs, integrar busca vetorial multilíngue e sincronização bidirecional sem duplicações.'),
   const _Setting(icon:Icons.shield_outlined,title:'Privacidade e permissões',detail:'As permissões serão solicitadas somente quando uma função real precisar delas.'),
   const _Setting(icon:Icons.devices_rounded,title:'Dispositivos conectados',detail:'O pareamento QR Android–Windows precisa de autenticação mútua, criptografia, expiração, escopos e revogação. ESP32 fica fora desta sequência.'),
