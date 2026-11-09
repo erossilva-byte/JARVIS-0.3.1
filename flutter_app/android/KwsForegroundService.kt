@@ -65,7 +65,19 @@ class KwsForegroundService : Service() {
             return START_NOT_STICKY
         }
         val testSeconds = intent.getIntExtra(EXTRA_TEST_SECONDS, 0).coerceIn(0, 60)
-        if (engine?.isRunning == true) return START_NOT_STICKY
+
+        // Um pedido "Ativar" recebido durante o teste deve transformar a sessão
+        // temporária em escuta contínua, não ser ignorado e deixar o timer desligá-la.
+        if (engine?.isRunning == true) {
+            testStop?.let(handler::removeCallbacks)
+            testStop = null
+            if (testSeconds > 0) scheduleTestStop(testSeconds)
+            else updateNotification("Ouvindo palavra de ativação localmente")
+            return START_NOT_STICKY
+        }
+
+        testStop?.let(handler::removeCallbacks)
+        testStop = null
         error = ""
         listening = false
         engine?.stop()
@@ -107,16 +119,21 @@ class KwsForegroundService : Service() {
             ""
         )
         engine?.start()
-        testStop?.let(handler::removeCallbacks)
-        if (testSeconds > 0) {
-            testStop = Runnable {
-                engine?.stop()
-                listening = false
-                updateNotification("Teste de ativação concluído")
-                stopSelf()
-            }.also { handler.postDelayed(it, testSeconds * 1000L) }
-        }
+        if (testSeconds > 0) scheduleTestStop(testSeconds)
         return START_NOT_STICKY
+    }
+
+    private fun scheduleTestStop(seconds: Int) {
+        testStop?.let(handler::removeCallbacks)
+        val stopTest = Runnable {
+            testStop = null
+            engine?.stop()
+            listening = false
+            updateNotification("Teste de ativação concluído")
+            stopSelf()
+        }
+        testStop = stopTest
+        handler.postDelayed(stopTest, seconds * 1000L)
     }
 
     override fun onDestroy() {
