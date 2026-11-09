@@ -142,12 +142,6 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
                 if (error != null) ...[
                   const SizedBox(height: 12),
                   Text(error!, style: TextStyle(color: colors.error, fontSize: 12, height: 1.4)),
-                  if (history.isEmpty)
-                    TextButton.icon(
-                      onPressed: () => Navigator.of(context).pushNamed('/settings'),
-                      icon: const Icon(Icons.key_rounded),
-                      label: const Text('Verifique a configuração do provedor nas Configurações'),
-                    ),
                 ],
               ],
             ),
