@@ -44,13 +44,16 @@ Requisitos de implementação:
 
 ## 4. Palavra de ativação e voz
 
-- `JarvisAtivacao.java` implementa comparação textual/fonética para a palavra “Jarvis”.
-- `JarvisService.java` usa `SpeechRecognizer`, preferindo `createOnDeviceSpeechRecognizer` quando o idioma offline está instalado.
-- Se o reconhecimento local não estiver disponível, o código pode alternar para `createSpeechRecognizer` (serviço padrão, potencialmente em rede).
-- O workflow baixa o AAR sherpa-onnx 1.13.8, mas o fluxo observado em `JarvisService.java` usa `SpeechRecognizer`; a presença do AAR não prova que um KWS acústico sherpa esteja ligado ao ciclo de ativação.
-- `escuta.js` implementa VAD/segmentação PCM com pré-roll, limiar adaptativo e fim de fala.
+- A auditoria inicial encontrou `SpeechRecognizer` como detector de ativação. Na linha 1.46.0, o serviço foi alterado para usar `JarvisKwsEngine.java`: captura contínua por `AudioRecord`, PCM mono 16 kHz, inferência `KeywordSpotter` sherpa-onnx em CPU e sem `SpeechRecognizer` ou fallback de rede no ciclo anterior à palavra-chave.
+- `preparar_kws.py` baixa o modelo `sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01`, gera as palavras-chave com `sherpa-onnx-cli text2token` e as inclui em `android/app/src/main/assets/kws`.
+- Sensibilidade muda o limiar KWS; palavras extras configuradas pelo usuário são passadas ao `createStream` do sherpa.
+- O `SpeechRecognizer` que permanece em `JarvisBackgroundPlugin.java` é para transcrever o comando **depois** que o KWS acorda o app, não para ouvir a palavra de ativação.
+- A ponte `JarvisWakeBus` continua a guardar e entregar o evento quando a interface reabre; o fluxo `aoAcordar` chama o microfone do comando somente depois da palavra-chave.
+- O modelo KWS GigaSpeech é treinado em inglês. A biblioteca sherpa-onnx lista modelos KWS pré-treinados em inglês e chinês, não um modelo PT-BR pronto. Portanto, a implementação é KWS acústico real e local, mas a taxa de acerto com pronúncia brasileira ainda precisa ser medida; não declarar precisão PT-BR sem teste de campo.
+- O pipeline de Release agora prepara o modelo e o tokenizer antes de compilar o APK; o CI de desenvolvimento também ganhou um job de compilação Android com esse modelo.
+- `escuta.js` continua responsável pelo VAD/segmentação PCM do fluxo de comandos e de voz, separado do KWS.
 
-Conclusão: existe serviço de escuta em segundo plano e detecção textual de “Jarvis”, mas isso não equivale a um KWS acústico dedicado, comprovadamente local e sem fallback de rede antes da ativação. A migração deve integrar KWS local real, confirmar licença/modelo, testar português brasileiro, falsos positivos, consumo e recuperação em Android 16/HyperOS e Windows. O reconhecimento de comando depois da ativação pode usar provedores configurados conforme consentimento.
+Conclusão atual: o caminho de ativação foi substituído por KWS acústico sherpa-onnx e não envia áudio à rede antes do gatilho. Ainda falta compilar o APK, executar o CI, validar a palavra “Jarvis” com sotaques brasileiros e testar continuidade/consumo/recuperação no Android 16/HyperOS. O reconhecimento do comando pós-ativação permanece separado e pode usar o modo offline ou o provedor configurado conforme a preferência do usuário.
 
 ## 5. Visão, segurança, CADeSIMU e Windows
 
@@ -115,13 +118,28 @@ O workflow `release-pc.yml` ainda empacota Electron/NSIS/portátil. A documenta�
 - [x] Teste estático de contrato criado e incluído em `test:all` e `test:syntax`.
 - [x] Pipeline CI de desenvolvimento criado para pull requests e pushes nas branches de trabalho.
 - [x] Documentação do Windows corrigida: `.cad` é formato interno Jarvis CAD, não formato nativo CADeSIMU.
-- [ ] Executar CI remoto e corrigir todos os erros encontrados.
+- [ ] Executar CI remoto e corrigir todos os erros encontrados (workflow criado; ainda sem execução confirmada).
 - [ ] Validar OpenRouter com chave real sem expor segredo em logs.
 - [ ] Iniciar workspace Flutter e migrar uma tela/fluxo por vez, com paridade funcional.
-- [ ] Implementar e validar KWS acústico local sem fallback de rede antes da palavra de ativação.
+- [x] Implementar integração KWS acústico sherpa-onnx local sem fallback de rede antes da palavra de ativação (validação de campo PT-BR e build ainda pendentes).
 - [ ] Completar políticas de segurança AND/OR respeitando os fatores que o hardware oferece.
 - [ ] Validar CADeSIMU com arquivos reais e o aplicativo original.
 - [ ] Completar paridade Android/Windows e testes físicos.
 - [ ] Gerar APK e pacote Windows a partir do mesmo commit de release, com hashes e evidências.
 
 **Regra de status:** os itens marcados como concluídos acima são alterações registradas no repositório, não certificação de funcionamento em dispositivo. Os itens pendentes não podem ser anunciados como entregues.
+
+
+### 9.1. Atualização do segundo plano/KWS — 2026-11-08
+- [x] Implementado motor `JarvisKwsEngine` com sherpa-onnx 1.13.8, AudioRecord, PCM 16 kHz mono e inferência CPU.
+- [x] Removido o uso de `SpeechRecognizer` como detector de wake word do `JarvisService`; não há fallback de rede antes do KWS.
+- [x] Palavra-chave base e alias, suporte a palavras extras e limiar ajustado pela sensibilidade.
+- [x] Estado de diagnóstico só informa “ouvindo” depois que AudioRecord confirma gravação ativa.
+- [x] Atualizadas as explicações da interface para distinguir KWS de transcrição do comando e de escuta Groq.
+- [x] Removido o contador antigo de rejeições por ruído, que não era produzido pelo novo motor.
+- [x] Pipeline APK/CI prepara e empacota o modelo KWS e exige a classe nativa.
+- [ ] Build Android e verificação de compatibilidade binária AAR/API.
+- [ ] Teste de precisão, falsos positivos, latência, bateria e aquecimento no aparelho real.
+- [ ] Validar a retomada após tela bloqueada, app removido dos recentes, Doze, reinício e restrições HyperOS.
+- [ ] Se o modelo inglês não atingir a precisão exigida em PT-BR, treinar/selecionar modelo KWS PT-BR e trocar o modelo sem alterar o contrato da interface.
+- [ ] Criar relatório de testes com amostras de voz do usuário e ruído de ambiente (com consentimento; não enviar áudio para a nuvem).
