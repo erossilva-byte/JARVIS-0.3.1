@@ -638,14 +638,20 @@ function bloqNucleoEstado(estado) {
 }
 function bloqRotuloMetodo() {
   const cfg = segCfg();
-  if (!cfg || !cfg.modo) return 'PIN';
-  const m = cfg.modo;
-  if (m === 'bio' || m === 'bio+pin' || m === 'bio+nfc') {
-    return bloqDisp && bloqDisp.rosto ? 'reconhecimento facial' : 'biometria';
-  }
-  if (m === 'nfc' || m === 'nfc+pin') return 'tag NFC';
-  if (m === 'bio|nfc') return 'biometria ou NFC';
-  return 'PIN';
+  const m = cfg && cfg.modo ? cfg.modo : 'pin';
+  const rotulos = {
+    pin: 'PIN',
+    bio: 'biometria forte do Android',
+    nfc: 'tag NFC',
+    'bio|nfc': 'biometria ou NFC',
+    'pin|bio': 'PIN ou biometria',
+    'pin|nfc': 'PIN ou NFC',
+    'pin|bio|nfc': 'PIN, biometria ou NFC',
+    'bio+nfc': 'biometria + NFC',
+    'bio+pin': 'biometria + PIN',
+    'nfc+pin': 'NFC + PIN'
+  };
+  return rotulos[m] || 'PIN';
 }
 async function bloqConsultarAparelho(forcar) {
   if (bloqDisp && !forcar) return bloqDisp;
@@ -658,6 +664,7 @@ async function bloqConsultarAparelho(forcar) {
       biometria: !!(d && d.biometria),
       aparelho: !!(d && d.aparelho),
       rosto: !!(d && d.rosto),
+      digital: !!(d && d.digital),
       nfc: !!(d && d.nfc),
       motivo: (d && d.motivo) || ''
     };
@@ -697,17 +704,19 @@ function atualizarBloqueioUI() {
 
   const bio = $('#c-bloqueio-biometria');
   if (bio) {
-    bio.hidden = !disp.aparelho;
-    bio.textContent = disp.rosto ? 'Testar reconhecimento facial' : 'Testar biometria';
+    bio.hidden = !disp.biometria;
+    bio.textContent = 'Testar biometria forte do Android';
     bio.title = disp.motivo || '';
   }
   const alvo = $('#c-bloq-dispositivo');
   if (alvo) {
-    const d = SEGN.disponibilidade({ biometria: disp.biometria, rosto: disp.rosto, nfc: disp.nfc, motivo: disp.motivo });
+    const d = SEGN.disponibilidade({ biometria: disp.biometria, rosto: disp.rosto, digital: disp.digital, nfc: disp.nfc, motivo: disp.motivo });
     const linhas = [
       'Biometria forte: ' + (d.bio ? 'disponível' : 'indisponível'),
       'Hardware facial: ' + (d.rosto ? 'presente' : 'não informado'),
-      'NFC: ' + (d.nfc ? 'ligado' : 'ausente/desligado')
+      'Leitor digital: ' + (d.digital ? 'presente' : 'não informado'),
+      'NFC: ' + (d.nfc ? 'ligado' : 'ausente/desligado'),
+      'O Android escolhe o sensor biométrico forte; o app não consegue forçar face ou digital em todos os aparelhos.'
     ];
     if (d.avisos.length) linhas.push(d.avisos.join(' '));
     linhas.push('A biometria é executada pelo Android; o app nunca recebe nem guarda a imagem do rosto.');
@@ -770,14 +779,14 @@ async function abrirBloqueio() {
   const pin = $('#bloqueio-pin'); if (pin) { pin.value = ''; }
   const rec = $('#bloqueio-recuperacao'); if (rec) rec.hidden = true;
   const dica = $('#bloqueio-dica');
-  if (dica) dica.textContent = 'Modo ' + (bloqRotuloMetodo()) + '. Use a etapa pedida; o PIN é a recuperação, ' + trat() + '.';
+  if (dica) dica.textContent = 'Modo ' + bloqRotuloMetodo() + '. Use o fator indicado ou conclua todas as etapas. Se perder acesso, use o código de recuperação, ' + trat() + '.';
 
   await bloqConsultarAparelho(true);
   const bio = $('#bloqueio-bio');
   if (bio) {
-    const pode = cfg.bioAtivo && bloqDisp && bloqDisp.aparelho;
+    const pode = cfg.bioAtivo && bloqDisp && bloqDisp.biometria && SEGN.etapas(cfg.modo).indexOf('bio') >= 0;
     bio.hidden = !pode;
-    bio.textContent = bloqDisp && bloqDisp.rosto ? 'Reconhecimento facial' : 'Usar biometria';
+    bio.textContent = 'Usar biometria forte do Android';
   }
   const nfc = $('#bloqueio-nfc');
   if (nfc) {
@@ -787,8 +796,13 @@ async function abrirBloqueio() {
   }
   const fase = $('#bloq-fase');
   if (fase) fase.hidden = false;
+  const exigePin = SEGN.etapas(cfg.modo).indexOf('pin') >= 0;
+  const rotuloPin = pin && pin.closest ? pin.closest('label') : null;
+  const entrarPin = $('#bloqueio-entrar');
+  if (rotuloPin) rotuloPin.hidden = !exigePin;
+  if (entrarPin) entrarPin.hidden = !exigePin;
   if (cfg.modo === 'bio' && bio && !bio.hidden) setTimeout(() => desbloquearComBiometria(), 400);
-  else if (pin && SEGN.etapas(cfg.modo).indexOf('pin') >= 0) { try { pin.focus(); } catch (e) { } }
+  else if (pin && exigePin) { try { pin.focus(); } catch (e) { } }
   try { animarEntrada(tela.querySelector('.bloqueio-caixa')); } catch (e) { }
 }
 function fecharBloqueio() {
@@ -832,7 +846,7 @@ async function tentarDesbloquear() {
   if (await pinConfere(pin, esperado)) {
     if (campo) campo.value = '';
     bloqMetodoUsado = 'pin';
-    bloqMetodoBadge('PIN de recuperação');
+    bloqMetodoBadge('PIN');
     bloqMarcarProva('pin');
     return;
   }
@@ -855,10 +869,10 @@ async function tentarDesbloquear() {
 async function desbloquearComBiometria() {
   const p = plug('JarvisSeguranca');
   if (!p || typeof p.autenticar !== 'function') return;
-  bloqFase(bloqDisp && bloqDisp.rosto ? 'Reconhecendo o rosto…' : 'Aguardando biometria…');
+  bloqFase('Aguardando biometria forte do Android…');
   bloqNucleoEstado('reconhecendo');
   try {
-    const r = await p.autenticar({ titulo: 'Desbloquear o J.A.R.V.I.S.', subtitulo: 'Confirme sua identidade, ' + trat() + '.' });
+    const r = await p.autenticar({ titulo: 'Desbloquear o J.A.R.V.I.S.', subtitulo: 'Confirme sua identidade, ' + trat() + '.', permitirCredencial: false });
     if (r && r.ok) {
       bloqFase('Identidade confirmada');
       if (!bloqMarcarProva('bio')) {
@@ -1119,8 +1133,8 @@ function restaurarSeguranca() {
     const p = plug('JarvisSeguranca');
     if (!p) { bloqStatus('Biometria disponível apenas no aplicativo Android.', true); return; }
     try {
-      const r = await p.autenticar({});
-      bloqStatus(r && r.ok ? 'Biometria confirmada neste aparelho.' : 'Biometria não confirmada.', !(r && r.ok));
+      const r = await p.autenticar({ permitirCredencial: false });
+      bloqStatus(r && r.ok ? 'Biometria forte confirmada neste aparelho.' : 'Biometria não confirmada.', !(r && r.ok));
     } catch (e) { bloqStatus('Biometria não concluída: ' + ((e && e.message) || e), true); }
   };
   const cadastrar = $('#c-nfc-cadastrar'); if (cadastrar) cadastrar.onclick = () => cadastrarTagNfc();
