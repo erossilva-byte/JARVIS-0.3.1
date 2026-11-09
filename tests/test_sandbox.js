@@ -35,13 +35,13 @@ test('não depende de Node nem expõe APIs quando executado fora do app', async 
 });
 
 test('iframe sem same-origin e worker encerrável por timeout', () => {
-  assert.match(source, /setAttribute\\('sandbox', 'allow-scripts'\\)/);
-  assert.doesNotMatch(source, /allow-same-origin/);
-  assert.match(source, /worker-src blob:/);
-  assert.match(source, /connect-src \\'none\\'/);
-  assert.match(source, /worker\\.terminate\\(\\)/);
-  assert.match(source, /MAX_CODIGO = 20000/);
-  assert.match(source, /MAX_ENTRADA = 10000/);
+  assert.ok(source.includes("setAttribute('sandbox', 'allow-scripts')"));
+  assert.ok(!source.includes('allow-same-origin'));
+  assert.ok(source.includes('worker-src blob:'));
+  assert.ok(source.includes("connect-src \\'none\\'"));
+  assert.ok(source.includes('worker.terminate()'));
+  assert.ok(source.includes('MAX_CODIGO = 20000'));
+  assert.ok(source.includes('MAX_ENTRADA = 10000'));
 });
 
 test('painel e integração do núcleo estão empacotados', () => {
