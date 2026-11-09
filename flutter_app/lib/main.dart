@@ -206,7 +206,7 @@ class _CorePainter extends CustomPainter {
     final glow = Paint()..color = _cyan.withOpacity(.07 + .04 * math.sin(t * math.pi * 2))..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
     canvas.drawCircle(c, radius * .72, glow);
     for (var i = 0; i < 4; i++) {
-      final p = Paint()..style = PaintingStyle.stroke..strokeWidth = i == 0 ? 2.4 : 1..color = _cyan.withOpacity(.75 - i * .13);
+      final p = Paint()..style = PaintingStyle.stroke..strokeWidth = i == 0 ? 2.4 : 1.0..color = _cyan.withOpacity(.75 - i * .13);
       canvas.drawArc(Rect.fromCircle(center: c, radius: radius * (0.55 + i * .13)), t * math.pi * 2 * (i.isEven ? 1 : -1), math.pi * (1.35 + i * .12), false, p);
     }
     final dots = Paint()..color = _cyan;
