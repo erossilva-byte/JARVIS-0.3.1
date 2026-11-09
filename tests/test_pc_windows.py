@@ -80,8 +80,9 @@ checar('Diagnóstico do PC usa estados reais',
 checar('Diagnóstico não expõe valor de chave', 'chaves.join' in main and 'decryptString' not in main.split('diag_pc')[1])
 
 # ---------- 3.1. Controles Windows adaptados do mobile ----------
-checar('Controle multimídia usa teclas multimídia do Windows',
-      'controle_midia_pc' in main and 'VK_MEDIA' not in main and '0xB3' in main and '0xB0' in main and '0xB1' in main)
+checar('Controle multimídia usa teclas multimídia do Windows sem fingir pausa direta',
+      'controle_midia_pc' in main and '0xB3' in main and '0xB0' in main and '0xB1' in main and
+      'const TECLAS_MIDIA = { alternar:' in main and 'pausar: 0xB3' not in main)
 checar('Volume Windows suporta aumentar, diminuir e silenciar sem fingir percentual',
       'volume_pc' in main and '0xAF' in main and '0xAE' in main and '0xAD' in main and 'não é suportado no Windows' in main)
 checar('PowerShell recebe script fixo, sem comando do usuário',
