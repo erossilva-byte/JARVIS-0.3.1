@@ -588,12 +588,14 @@
           var brutoSecao = linhas.join('\n');
           var idSecao = brutoSecao.match(/<!--\s*jarvis_id:\s*([a-z0-9_-]{1,80})\s*-->/i);
           var atualizadoSecao = brutoSecao.match(/_atualizado:\s*([^\s·_]+)/i);
+          var tagsSecao = brutoSecao.match(/_atualizado:[^\n]*?·\s*tags:\s*([^·_]+)/i);
           var textoSecao = brutoSecao
             .replace(/<!--\s*jarvis_id:\s*[a-z0-9_-]{1,80}\s*-->/ig, '')
             .replace(/_atualizado:[^\n]*/g, '').trim();
           if (tituloSecao && textoSecao) secoes.push({
             titulo: tituloSecao, texto: textoSecao,
             id: idSecao ? idSecao[1] : (meta.jarvis_id || ''),
+            tags: tagsSecao ? tagsSecao[1].split(',').map(function (tag) { return tag.trim(); }).filter(Boolean) : tags,
             atualizado: atualizadoSecao ? Date.parse(atualizadoSecao[1]) : Date.parse(meta.atualizado || '')
           });
         }
@@ -603,11 +605,13 @@
           titulo: meta.title || corpo.split('\n')[0].slice(0, 80),
           texto: corpo,
           id: meta.jarvis_id || '',
+          tags: tags,
           atualizado: Date.parse(meta.atualizado || '')
         });
       }
       secoes.forEach(function (sec) {
         var tema = temaBase || temaPorPalavras(sec.titulo + ' ' + sec.texto);
+        var tagsNota = Array.isArray(sec.tags) ? sec.tags : tags;
         var listaAtual = carregar();
         var existente = sec.id
           ? listaAtual.filter(function (n) { return n.id === sec.id; })[0]
@@ -618,12 +622,12 @@
           var mesmo = existente.tema === tema &&
             normalizar(existente.titulo) === normalizar(sec.titulo) &&
             normalizar(existente.texto) === normalizar(sec.texto) &&
-            normalizar((existente.tags || []).join(' ')) === normalizar(tags.join(' '));
+            normalizar((existente.tags || []).join(' ')) === normalizar(tagsNota.join(' '));
           if (mesmo) { repetidas++; return; }
           if (sec.id && sec.id === existente.id && Number.isFinite(sec.atualizado) &&
               sec.atualizado >= existente.atualizado) {
             var atualizacao = atualizar(existente.id, {
-              tema: tema, titulo: sec.titulo, texto: sec.texto, tags: tags
+              tema: tema, titulo: sec.titulo, texto: sec.texto, tags: tagsNota
             });
             if (atualizacao.ok) atualizadas++;
             else { ignoradas++; conflitos.push({ titulo: sec.titulo, tema: tema,
@@ -636,7 +640,7 @@
         }
         var nova = criar({
           id: sec.id || undefined, tema: tema, titulo: sec.titulo,
-          texto: sec.texto, tags: tags, origem: 'painel'
+          texto: sec.texto, tags: tagsNota, origem: 'painel'
         });
         if (nova.ok && nova.duplicada) repetidas++;
         else if (nova.ok) criadas++;
