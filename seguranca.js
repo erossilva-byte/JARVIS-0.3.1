@@ -181,12 +181,14 @@
     var rosto = o.rosto === true;
     var bio = o.biometria === true;
     var nfc = o.nfc === true;
+    var digital = o.digital === true;
     var avisos = [];
     if (!bio) avisos.push(texto(o.motivo, 160) || 'Biometria forte indisponível; use PIN ou NFC.');
-    if (bio && !rosto) avisos.push('O aparelho tem biometria forte, mas não informa hardware facial: o desbloqueio usa a biometria cadastrada no Android (pode ser digital).');
+    if (bio && !rosto && digital) avisos.push('Biometria forte disponível por impressão digital. O Android decide qual sensor será usado pelo BiometricPrompt.');
+    else if (bio && !rosto) avisos.push('O aparelho tem biometria forte, mas não informa hardware facial ou digital separadamente; o Android escolhe o sensor disponível.');
     if (rosto && !bio) avisos.push('Há hardware facial, mas nenhuma biometria forte cadastrada/liberada para autenticação.');
     if (!nfc) avisos.push('NFC ausente ou desligado neste aparelho.');
-    return { bio: bio, rosto: rosto, nfc: nfc, pin: true, avisos: avisos };
+    return { bio: bio, rosto: rosto, digital: digital, nfc: nfc, pin: true, avisos: avisos };
   }
 
   /** Modo pedido é utilizável? Nunca esconde a limitação: devolve o motivo. */
