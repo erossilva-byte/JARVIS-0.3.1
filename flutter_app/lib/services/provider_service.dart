@@ -141,9 +141,9 @@ class ProviderService {
     }
     final data = jsonDecode(response.body);
     final choices = data is Map ? data['choices'] : null;
-    final content = choices is List && choices.isNotEmpty && choices.first is Map
-        ? choices.first['message']?['content']
-        : null;
+    final firstChoice = choices is List && choices.isNotEmpty ? choices.first : null;
+    final message = firstChoice is Map ? firstChoice['message'] : null;
+    final content = message is Map ? message['content'] : null;
     if (content is! String || content.trim().isEmpty) {
       throw StateError('O provedor ${provider.name} retornou uma resposta vazia.');
     }
