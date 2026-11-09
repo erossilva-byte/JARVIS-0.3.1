@@ -371,7 +371,9 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     vsync: this, duration: const Duration(seconds: 20),
   )..repeat();
   late final TextEditingController composer = TextEditingController();
+  late final TextEditingController search = TextEditingController();
   StreamSubscription<KwsCommandEvent>? voiceSubscription;
+  String query = '';
   int tab = 0;
   String clock = '';
   Timer? clockTimer;
@@ -404,6 +406,7 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     voiceSubscription?.cancel();
     motion.dispose();
     composer.dispose();
+    search.dispose();
     super.dispose();
   }
 
@@ -531,8 +534,8 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
           builder: (_) => const Padding(padding: EdgeInsets.fromLTRB(24, 12, 24, 28),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.blur_circular_rounded, color: cyan, size: 38), SizedBox(height: 12),
-              Text('Núcleo J.A.R.V.I.S.', style: TextStyle(fontSize: 19)), SizedBox(height: 8),
-              Text('Núcleo visual interativo. Use o microfone para iniciar a escuta KWS local.',
+              Text('Núcleo holográfico', style: TextStyle(fontSize: 19)), SizedBox(height: 8),
+              Text('A animação responde ao toque e ao arraste. Use o microfone para iniciar a escuta KWS local.',
                 textAlign: TextAlign.center, style: TextStyle(color: muted, height: 1.5)),
             ]))),
         child: SizedBox(width: 310, height: 310,
@@ -621,26 +624,45 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     ),
   );
 
-  Widget _buildSystems() => ListView(
-    padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
-    children: [
-      const Text('CENTRAL DE SISTEMAS', style: TextStyle(color: cyan, fontSize: 9, letterSpacing: 2, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 7),
-      const Text('Capacidades do J.A.R.V.I.S.', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w300)),
-      const SizedBox(height: 6),
-      const Text('Acesse os módulos disponíveis no projeto.', style: TextStyle(color: muted, fontSize: 12)),
-      const SizedBox(height: 16),
-      for (final module in modules)
-        Padding(padding: const EdgeInsets.only(bottom: 8),
-          child: _ModuleTile(module: module, onTap: () {
-            if (module.name == 'Provedores de IA') {
-              _openProviderSettings();
-            } else if (module.name == 'Voz e KWS') {
-              _openKwsSettings();
-            } else {
-              _openModule(module.name);
-            }
-          })),
-    ],
-  );
+  Widget _buildSystems() {
+    final visible = modules.where((module) =>
+      '${module.name} ${module.group} ${module.description}'.toLowerCase().contains(query.toLowerCase())).toList();
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+      children: [
+        const Text('CENTRAL DE SISTEMAS', style: TextStyle(color: cyan, fontSize: 9, letterSpacing: 2, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 7),
+        const Text('Capacidades do J.A.R.V.I.S.', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w300)),
+        const SizedBox(height: 6),
+        const Text('Acesse os módulos disponíveis no projeto.', style: TextStyle(color: muted, fontSize: 12)),
+        const SizedBox(height: 16),
+        TextField(
+          controller: search,
+          onChanged: (value) => setState(() => query = value),
+          decoration: InputDecoration(
+            hintText: 'Buscar sistema ou função...',
+            prefixIcon: const Icon(Icons.search_rounded, color: cyan),
+            suffixIcon: query.isEmpty ? null : IconButton(
+              onPressed: () { search.clear(); setState(() => query = ''); },
+              icon: const Icon(Icons.close),
+            ),
+            filled: true, fillColor: panel,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+          ),
+        ),
+        const SizedBox(height: 14),
+        for (final module in visible)
+          Padding(padding: const EdgeInsets.only(bottom: 8),
+            child: _ModuleTile(module: module, onTap: () {
+              if (module.name == 'Provedores de IA') {
+                _openProviderSettings();
+              } else if (module.name == 'Voz e KWS') {
+                _openKwsSettings();
+              } else {
+                _openModule(module.name);
+              }
+            })),
+      ],
+    );
+  }
 }
