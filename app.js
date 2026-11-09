@@ -10163,7 +10163,16 @@ function responderPessoaPorVoz(texto) {
     const cadastro = PESSOAS.interpretarCadastroVoz(bruto);
     if (cadastro) {
       if (!cadastro.ok) return { fala: cadastro.erro };
-      const salvo = PESSOAS.salvar(cadastro.dados);
+      // Cadastro por voz funciona como upsert: nome exato atualiza a ficha existente.
+      // Correspondência parcial nunca altera outra pessoa por engano.
+      const existente = PESSOAS.resolver(cadastro.dados.nome);
+      if (existente && existente.tipo === 'ambiguo') {
+        return { fala: 'Encontrei mais de uma pessoa chamada ' + cadastro.dados.nome +
+          '. Abra Pessoas e escolha a ficha correta antes de atualizar.' };
+      }
+      const dadosCadastro = Object.assign({}, cadastro.dados);
+      if (existente && existente.tipo === 'exato' && existente.perfil) dadosCadastro.id = existente.perfil.id;
+      const salvo = PESSOAS.salvar(dadosCadastro);
       if (!salvo.ok) return { fala: 'Não consegui salvar o perfil: ' + salvo.erro };
       registrar('identidade', 'perfil cadastrado por voz: ' + salvo.perfil.nome);
       if (typeof abrirPessoas === 'function') setTimeout(() => { abrirPessoas(); }, 600);
