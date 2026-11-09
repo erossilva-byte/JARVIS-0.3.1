@@ -87,7 +87,9 @@ class JarvisKwsBridge implements KwsGateway {
     final bounded = seconds.clamp(10, 60).toInt();
     try {
       final result = await _methods.invokeMapMethod<Object?, Object?>('test', {'seconds': bounded});
-      if (result == null) throw PlatformException(code: 'empty_result', message: 'O plugin KWS não retornou o resultado do teste.');
+      if (result == null) {
+        throw PlatformException(code: 'empty_result', message: 'O plugin KWS não retornou o resultado do teste.');
+      }
       return KwsStatus.fromMap(result);
     } on MissingPluginException {
       return const KwsStatus(available: false, listening: false, engine: '', detail: 'Teste KWS indisponível: plugin nativo ainda não integrado.');
@@ -97,7 +99,9 @@ class JarvisKwsBridge implements KwsGateway {
   Future<KwsStatus> _command(String method) async {
     try {
       final result = await _methods.invokeMapMethod<Object?, Object?>(method);
-      if (result == null) throw PlatformException(code: 'empty_result', message: 'O plugin KWS não retornou diagnóstico.');
+      if (result == null) {
+        throw PlatformException(code: 'empty_result', message: 'O plugin KWS não retornou diagnóstico.');
+      }
       return KwsStatus.fromMap(result);
     } on MissingPluginException {
       return const KwsStatus(available: false, listening: false, engine: '', detail: 'KWS ainda não conectado ao runner Flutter desta plataforma.');
