@@ -90,7 +90,6 @@ public class JarvisService extends Service {
     // Não existe fallback para SpeechRecognizer, serviço de reconhecimento Android ou rede.
     private JarvisKwsEngine kwsEngine;
     private volatile boolean sessao = false;
-    private int rejeitadasRuido = 0;
     /** Nome explícito do motor real, exposto no diagnóstico e na notificação. */
     static final String DETECTOR = "sherpa-onnx-kws-gigaspeech-en";
 
@@ -512,14 +511,9 @@ public class JarvisService extends Service {
     }
 
     /* ---------- Motor KWS acústico local ---------- */
-    static int descartesRuido() {
-        JarvisService s = instancia;
-        return s == null ? 0 : s.rejeitadasRuido;
-    }
-
     static String calibragem() {
         JarvisService s = instancia;
-        return s == null ? "" : "Sherpa-ONNX KWS local · GigaSpeech inglês · limiar por sensibilidade";
+        if (s == null) return "";\n        int sens = JarvisPrefs.sensibilidade(s);\n        float limiar = sens >= 75 ? 0.25f : (sens >= 45 ? 0.35f : 0.45f);\n        return "Sherpa-ONNX KWS local · GigaSpeech inglês · limiar " + limiar;
     }
 
     /* ---------- Notificação ---------- */
