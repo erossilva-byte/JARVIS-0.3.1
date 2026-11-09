@@ -41,7 +41,7 @@ function amostra(seed, extra) {
   console.log('OK: núcleo carrega e nome é o único campo obrigatório');
 
   const bia = I.salvar({
-    nome: 'Beatriz Lima', apelido: 'Bia', nascimento: '1990-05-10', alturaCm: '172',
+    nome: 'Beatriz Lima', apelido: 'Bia', nascimento: '1990-05-10', alturaCm: '172', pesoKg: '68,5',
     profissao: 'arquiteta', relacao: 'irmã', telefone: '+55 11 99999-0000',
     email: 'bia@example.com', endereco: 'Rua das Flores, 10', cidade: 'São Paulo',
     descricao: 'Irmã mais velha, gosta de plantas.', preferencias: 'café sem açúcar',
@@ -51,7 +51,13 @@ function amostra(seed, extra) {
   });
   assert.ok(bia.ok, bia.erro);
   assert.strictEqual(bia.perfil.campos.length, 1, 'campo sem rótulo é descartado');
-  assert.strictEqual(I.idade('1990-05-10'), 36, 'idade calculada');
+  assert.strictEqual(I.idade('1990-05-10'), 36, 'idade calculada em anos');
+  const idadeDetalhada = I.idadeDetalhada('1990-05-10');
+  assert.deepStrictEqual({ anos: idadeDetalhada.anos, meses: idadeDetalhada.meses }, { anos: 36, meses: 5 });
+  assert.ok(I.diasAteAniversario('1990-05-10') >= 0 && I.diasAteAniversario('1990-05-10') <= 365);
+  assert.strictEqual(bia.perfil.pesoKg, '68.5', 'peso decimal é normalizado');
+  assert.strictEqual(I.salvar({ nome: 'Peso inválido', pesoKg: '0' }).ok, false, 'peso fora da faixa é recusado');
+  assert.ok(/68.5 kg/.test(I.descrever(bia.perfil)));
   assert.ok(/Beatriz Lima/.test(I.descrever(bia.perfil)));
   assert.ok(/36 anos/.test(I.descrever(bia.perfil)));
   const ctx = I.contexto();
