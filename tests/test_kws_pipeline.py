@@ -16,7 +16,7 @@ checks = {
     "inferência passa por KeywordSpotter": "new KeywordSpotter(config)" in engine and "kws.decode(kwsStream)" in engine,
     "UI espera confirmação real do serviço antes de mostrar ouvindo": "diagnosticoEscuta()" in app and "estadoKws.escutando" in app,
     "UI transfere microfone ao app e cancela rearme do serviço": "servicoWake.stopWake()" in app and "rearme de segurança do serviço" in app,
-    "Novo KWS não herda erro antigo do diagnóstico": "JarvisPrefs.ultimoErro(ctx, \\"\\");" in service,
+    "Novo KWS não herda erro antigo do diagnóstico": 'JarvisPrefs.ultimoErro(ctx, "");' in service,
     "amostras são convertidas para float PCM": "pcm[i] / 32768.0f" in engine,
     "modelo roda em CPU com threads limitadas": '.setProvider("cpu")' in engine and ".setNumThreads(2)" in engine,
     "KWS não faz fallback de rede": "não usa SpeechRecognizer, rede ou serviço de nuvem" in engine,
