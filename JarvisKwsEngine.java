@@ -116,30 +116,34 @@ final class JarvisKwsEngine {
             instalarAssets(dir);
 
             String base = dir.getAbsolutePath() + File.separator;
-            OnlineTransducerModelConfig transducer = OnlineTransducerModelConfig.builder()
-                    .setEncoder(base + "encoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx")
-                    .setDecoder(base + "decoder-epoch-12-avg-2-chunk-16-left-64.onnx")
-                    .setJoiner(base + "joiner-epoch-12-avg-2-chunk-16-left-64.int8.onnx")
-                    .build();
-            OnlineModelConfig model = OnlineModelConfig.builder()
-                    .setTransducer(transducer)
-                    .setTokens(base + "tokens.txt")
-                    .setNumThreads(2)
-                    .setDebug(false)
-                    .setProvider("cpu")
-                    .setModelType("zipformer2")
-                    .build();
-            KeywordSpotterConfig config = KeywordSpotterConfig.builder()
-                    .setFeatureConfig(FeatureConfig.builder().setSampleRate(SAMPLE_RATE).setFeatureDim(80).build())
-                    .setOnlineModelConfig(model)
-                    .setKeywordsFile(base + "keywords.txt")
-                    .setKeywordsScore(1.5f)
-                    .setKeywordsThreshold(keywordThreshold)
-                    .setMaxActivePaths(4)
-                    .setNumTrailingBlanks(2)
-                    .build();
+            // O AAR Android oficial expõe a Kotlin API (data classes + AssetManager),
+            // não a Java API baseada em Builder. Configure pelos setters gerados pelo Kotlin.
+            OnlineTransducerModelConfig transducer = new OnlineTransducerModelConfig();
+            transducer.setEncoder(base + "encoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx");
+            transducer.setDecoder(base + "decoder-epoch-12-avg-2-chunk-16-left-64.onnx");
+            transducer.setJoiner(base + "joiner-epoch-12-avg-2-chunk-16-left-64.int8.onnx");
+
+            OnlineModelConfig model = new OnlineModelConfig();
+            model.setTransducer(transducer);
+            model.setTokens(base + "tokens.txt");
+            model.setNumThreads(2);
+            model.setDebug(false);
+            model.setProvider("cpu");
+            model.setModelType("zipformer2");
+
+            FeatureConfig features = new FeatureConfig();
+            features.setSampleRate(SAMPLE_RATE);
+            features.setFeatureDim(80);
+            KeywordSpotterConfig config = new KeywordSpotterConfig();
+            config.setFeatConfig(features);
+            config.setModelConfig(model);
+            config.setKeywordsFile(base + "keywords.txt");
+            config.setKeywordsScore(1.5f);
+            config.setKeywordsThreshold(keywordThreshold);
+            config.setMaxActivePaths(4);
+            config.setNumTrailingBlanks(2);
             if (!running.get()) return;
-            kws = new KeywordSpotter(config);
+            kws = new KeywordSpotter(context.getAssets(), config);
             kwsStream = kws.createStream(keywords);
             if (!running.get()) return;
 
