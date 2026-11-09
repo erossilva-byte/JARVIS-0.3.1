@@ -430,6 +430,8 @@
     if (p.apelido) partes.push('também conhecido como ' + p.apelido);
     if (p.relacao) partes.push(p.relacao);
     if (p.profissao) partes.push(p.profissao);
+    if (p.pesoKg) partes.push('peso: ' + p.pesoKg + ' kg');
+    if (p.alturaCm) partes.push('altura: ' + p.alturaCm + ' cm');
     if (p.cidade) partes.push('mora em ' + p.cidade);
     if (p.descricao) partes.push(p.descricao);
     if (p.preferencias) partes.push('preferências: ' + p.preferencias);
