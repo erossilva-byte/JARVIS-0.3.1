@@ -156,6 +156,7 @@ public class JarvisService extends Service {
 
     /** Liga o serviço, persiste o estado desejado e começa a escutar. */
     static void iniciarEscuta(Context ctx, boolean pausarMusica) {
+        JarvisPrefs.ultimoErro(ctx, "");
         JarvisPrefs.desejaOuvir(ctx, true);
         JarvisPrefs.pausarMusica(ctx, pausarMusica);
         JarvisWatchdog.agendar(ctx, 15L * 60L * 1000L);
@@ -199,6 +200,7 @@ public class JarvisService extends Service {
 
     /** Inicia uma janela de teste: cada "Jarvis" conta como acerto e não abre a tela. */
     static void iniciarTeste(Context ctx, int segundos) {
+        JarvisPrefs.ultimoErro(ctx, "");
         int dur = Math.max(10, Math.min(60, segundos));
         Intent i = new Intent(ctx, JarvisService.class)
             .setAction(ACAO_TESTE_ON)
