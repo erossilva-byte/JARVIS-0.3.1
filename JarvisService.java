@@ -25,7 +25,7 @@ import com.getcapacitor.JSObject;
  * Serviço em primeiro plano que mantém a escuta de ativação viva fora da tela.
  *
  * O detector pertence ao serviço (não à tela) e o estado desejado é persistido em
- * JarvisPrefs, junto da calibragem (sensibilidade e palavras extras). Assim, quando o
+ * JarvisPrefs, junto da sensibilidade do KWS. Assim, quando o
  * Android reinicia o serviço (START_STICKY), reinicia o aparelho ou encerra o app pelos
  * recentes, a escuta volta sozinha e calibrada do jeito que o usuário deixou.
  *
@@ -100,7 +100,11 @@ public class JarvisService extends Service {
             // Chamada/VoIP nunca divide o microfone com o detector; mídia só pausa se o usuário pediu.
             boolean ocupado = chamadaAtiva() || (pausarDuranteMusica && musicaAtiva());
             if (ocupado) {
-                if (sessao) pausarMotor();
+                if (sessao) {
+                    pausarMotor();
+                    estadoNotificacao = chamadaAtiva() ? "Escuta pausada durante chamada" : "Escuta pausada durante mídia";
+                    notificar();
+                }
             } else if (!sessao) {
                 try { iniciarMotor(); } catch (Exception e) { pararPorFalha(mensagemFalha(e)); return; }
             }
@@ -337,10 +341,10 @@ public class JarvisService extends Service {
 
     private String mensagemFalha(Exception e) {
         String detalhe = e == null || e.getMessage() == null ? "" : " Detalhe: " + e.getMessage();
-        return "o detector de ativação próprio não conseguiu ouvir. Confira a permissão de microfone e, se o aparelho não tiver o reconhecimento de português, instale o pacote de idioma (Configurações ▸ Google ▸ Voz)." + detalhe;
+        return "o detector KWS local não conseguiu iniciar. Confira a permissão de microfone, espaço livre e integridade dos arquivos sherpa-onnx incluídos no APK." + detalhe;
     }
 
-    /* ---------- Motor de escuta (detector próprio) ---------- */
+    /* ---------- Motor de escuta (KWS acústico sherpa-onnx) ---------- */
 
     private void iniciarMotor() throws Exception {
         if (!querEscuta || sessao) return;
