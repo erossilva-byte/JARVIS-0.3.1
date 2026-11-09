@@ -9352,9 +9352,53 @@ async function obsTestar() {
     obsDiag('Vínculo indisponível: ' + ((r && r.motivo) || 'sem pasta escolhida'));
   }
 }
+async function obsLerArquivosMemoria() {
+  let arquivos = [];
+  if (cofreNativo()) {
+    const r = await cofrePlugin().cofreListar();
+    arquivos = (r && r.arquivos) || [];
+  } else {
+    const r = await Plataforma.desktopComando('cofre_listar', {});
+    arquivos = (r && r.arquivos) || [];
+  }
+  arquivos = arquivos.filter((nome) => /^Memoria\//i.test(String(nome)) && /\.md$/i.test(String(nome)));
+  const textos = [];
+  let erros = 0, bytes = 0;
+  for (const nome of arquivos) {
+    if (bytes > 300 * 1024) { erros++; break; }
+    try {
+      const r = cofreNativo()
+        ? await cofrePlugin().cofreLer({ caminho: nome })
+        : await Plataforma.desktopComando('cofre_ler', { arquivo: nome });
+      if (r && typeof r.texto === 'string') { textos.push(r.texto); bytes += r.texto.length; }
+      else erros++;
+    } catch (e) { erros++; }
+  }
+  return { arquivos: arquivos, textos: textos, erros: erros, bytes: bytes };
+}
 async function obsEnviar() {
   if (!MEM) { obsStatus('A memória conectada não carregou.', true); return; }
   if (!cofreRemoto()) { obsStatus('Envio automático é do Android/PC. Use “Baixar .md”.', true); return; }
+  // Antes de escrever, incorpora as edições feitas diretamente no Obsidian.
+  // Se houver conflito ou falha de leitura, não sobrescreve nenhum arquivo externo.
+  let leitura;
+  try { leitura = await obsLerArquivosMemoria(); }
+  catch (e) { obsStatus('Não consegui conferir o cofre antes do envio; nada foi sobrescrito: ' + ((e && e.message) || e), true); return; }
+  if (leitura.erros || (leitura.arquivos.length && !leitura.textos.length)) {
+    obsStatus('Não consegui ler todos os arquivos de Memoria/. O envio foi cancelado para proteger suas edições.', true);
+    return;
+  }
+  if (leitura.textos.length) {
+    const preSync = typeof MEM.sincronizarMarkdown === 'function'
+      ? MEM.sincronizarMarkdown(leitura.textos.join('\n')) : MEM.importarMarkdown(leitura.textos.join('\n'));
+    if (!preSync.ok || (preSync.conflitos && preSync.conflitos.length)) {
+      const n = preSync.conflitos ? preSync.conflitos.length : 0;
+      obsStatus('Envio cancelado: ' + (n ? n + ' conflito(s) precisam ser resolvidos' : (preSync.erro || 'não foi possível sincronizar')) + '. Nenhum arquivo do Obsidian foi sobrescrito.', true);
+      obsDiag('Envio protegido por conflito de sincronização: ' + n + ' conflito(s).');
+      return;
+    }
+    renderMemoria(); renderObsTopicos();
+  }
   const notas = MEM.arquivosPorTopico();
   if (!notas.length) { obsStatus('A memória está vazia: nada para enviar.', true); return; }
   obsStatus('Enviando ' + notas.length + ' arquivo(s) por tópico…');
