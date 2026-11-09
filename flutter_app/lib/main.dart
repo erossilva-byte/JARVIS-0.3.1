@@ -87,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
   const SizedBox(height:16),const _Footnote('Os indicadores descrevem a interface Flutter. Não afirmam que os serviços externos já estejam conectados.'),
  ]));
  Widget catalog({Key? key}){
-  final visible=modules.where((m)=>(filter=='Todos'||m.group==filter)&&(m.name+' '+m.group+' '+m.description).toLowerCase().contains(query.toLowerCase())).toList();
+  final visible=modules.where((m)=>(filter=='Todos'||m.group==filter)&&'${m.name} ${m.group} ${m.description}'.toLowerCase().contains(query.toLowerCase())).toList();
   return ListView(key:key,padding:const EdgeInsets.fromLTRB(18,18,18,28),children:[
    const _Eyebrow('CENTRAL DE SISTEMAS'),const SizedBox(height:7),
    const Text('Capacidades do J.A.R.V.I.S.',style:TextStyle(fontSize:26,fontWeight:FontWeight.w300)),
@@ -101,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
     final g=groups[i],selected=g==filter;
     return ChoiceChip(label:Text(g),selected:selected,onSelected:(_)=>setState(()=>filter=g),labelStyle:TextStyle(fontSize:11,color:selected?cyan:muted),backgroundColor:panel,selectedColor:cyan.withValues(alpha: .12),side:BorderSide(color:selected?cyan.withValues(alpha: .45):Colors.white12),showCheckmark:false);
    })),
-   const SizedBox(height:14),Row(children:[const _Eyebrow('MÓDULOS'),const Spacer(),Text(visible.length.toString()+' encontrados',style:const TextStyle(color:muted,fontSize:10))]),
+   const SizedBox(height:14),Row(children:[const _Eyebrow('MÓDULOS'),const Spacer(),Text('${visible.length} encontrados',style:const TextStyle(color:muted,fontSize:10))]),
    const SizedBox(height:10),
    if(visible.isEmpty)const Padding(padding:EdgeInsets.all(28),child:Center(child:Text('Nenhum módulo encontrado.',style:TextStyle(color:muted)))),
    for(final m in visible)...[_ModuleTile(module:m,onTap:()=>openModule(m)),const SizedBox(height:8)],
@@ -151,7 +151,7 @@ class ModulePage extends StatelessWidget{
   const SizedBox(height:22),_Eyebrow(module.group.toUpperCase()),const SizedBox(height:7),Text(module.name,style:const TextStyle(fontSize:27,fontWeight:FontWeight.w300)),
   const SizedBox(height:9),Text(module.description,style:const TextStyle(color:muted,height:1.5)),const SizedBox(height:22),
   Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:const Color(0xFF211A10),borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFFFC66D).withValues(alpha: .22))),child:const Row(children:[
-   Icon(Icons.pending_outlined,color:Color(0xFFFFC66D)),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Icon(Icons.pending_outlined,color:Color(0xFFFFC66D)),SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     Text('Integração em auditoria',style:TextStyle(color:Color(0xFFFFC66D),fontWeight:FontWeight.w600)),SizedBox(height:4),
     Text('A presença no catálogo não comprova que o serviço esteja conectado ou operacional nesta interface.',style:TextStyle(color:muted,fontSize:11,height:1.4)),
    ])),
