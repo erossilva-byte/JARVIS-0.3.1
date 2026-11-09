@@ -127,8 +127,7 @@ public class JarvisBackgroundPlugin extends Plugin {
     private void iniciarWake(PluginCall call) {
         try {
             boolean pausar = !Boolean.FALSE.equals(call.getBoolean("pausarDuranteMusica", true));
-            // Calibragem do detector próprio: a tela envia o que o usuário acabou de
-            // ajustar, para o serviço ouvir já com a regra nova (sem reiniciar nada).
+            // Sensibilidade e palavras-chave extras são persistidas no serviço nativo.
             if (call.hasOption("sensibilidade")) {
                 JarvisPrefs.sensibilidade(getContext(), call.getInt("sensibilidade", JarvisPrefs.sensibilidade(getContext())));
             }
@@ -240,7 +239,6 @@ public class JarvisBackgroundPlugin extends Plugin {
         o.put("sensibilidade", JarvisPrefs.sensibilidade(c));
         o.put("variantes", JarvisPrefs.variantes(c));
         o.put("calibragem", JarvisService.calibragem());
-        o.put("descartesRuido", JarvisPrefs.rejeitadas(c));
         o.put("ultimoErro", JarvisPrefs.ultimoErro(c));
         o.put("ultimoEvento", JarvisPrefs.ultimoEvento(c));
         o.put("fabricante", Build.MANUFACTURER == null ? "" : Build.MANUFACTURER);
