@@ -62,6 +62,21 @@ jobs:
           PY
           grep -q 'applicationId = "com.jarvis.nova"' android/app/build.gradle.kts
           grep -q 'namespace = "com.jarvis.nova"' android/app/build.gradle.kts
+      - name: Install sherpa-onnx model tokenizer
+        if: runner.os == 'Linux'
+        run: python3 -m pip install --disable-pip-version-check sherpa-onnx==1.13.8
+      - name: Download and verify sherpa-onnx Android runtime
+        if: runner.os == 'Linux'
+        run: python3 ../baixar_sherpa.py android/app
+        working-directory: flutter_app
+      - name: Prepare local KWS model assets
+        if: runner.os == 'Linux'
+        run: python3 ../preparar_kws.py android/app
+        working-directory: flutter_app
+      - name: Register native Kotlin KWS plugin and foreground service
+        if: runner.os == 'Linux'
+        run: python3 tool/prepare_android_kws.py android/app
+        working-directory: flutter_app
       - run: flutter pub get
       - run: dart format lib test
       - run: flutter analyze
