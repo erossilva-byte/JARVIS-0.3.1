@@ -20,7 +20,7 @@ checks = {
     # ---- Palavra de ativação sem Picovoice ----
     "KWS acústico sherpa está ligado ao serviço": (
         "new JarvisKwsEngine(" in servico and "new AudioRecord(" in kws
-        and "new KeywordSpotter(config)" in kws and "kws.decode(kwsStream)" in kws
+        and "new KeywordSpotter(null, config)" in kws and "kws.decode(kwsStream)" in kws
         and "SpeechRecognizer.create" not in servico),
     "Plugin apenas delega a escuta ao serviço": "JarvisService.iniciarEscuta" in fundo and "JarvisWakeBus.registrar" in fundo,
     "Nenhum SDK de palavra de ativação de terceiro": (
