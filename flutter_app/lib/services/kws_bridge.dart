@@ -1,8 +1,16 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 
-/// Contrato tipado entre Flutter e o serviço Android sherpa-onnx.
-/// A ausência do plugin é reportada como indisponibilidade; nunca simula KWS ativo.
+/// Contrato independente da plataforma para controlar o KWS local.
+abstract interface class KwsGateway {
+  Stream<String> get wakeEvents;
+  Future<KwsStatus> status();
+  Future<KwsStatus> start();
+  Future<KwsStatus> stop();
+  Future<KwsStatus> startTest({int seconds = 20});
+}
+
+/// Estado reportado pelo serviço nativo. Disponibilidade não significa que esteja ouvindo.
 class KwsStatus {
   const KwsStatus({
     required this.available,
@@ -24,7 +32,9 @@ class KwsStatus {
       );
 }
 
-class JarvisKwsBridge {
+/// Implementação Flutter dos canais que o plugin Android deverá registrar.
+/// Se o plugin não estiver instalado, o resultado é indisponível — nunca simula KWS.
+class JarvisKwsBridge implements KwsGateway {
   JarvisKwsBridge({
     MethodChannel? methods,
     EventChannel? events,
@@ -33,13 +43,16 @@ class JarvisKwsBridge {
 
   final MethodChannel _methods;
   final EventChannel _events;
+  Stream<String>? _wakeEvents;
 
-  Stream<String> get wakeEvents => _events
+  @override
+  Stream<String> get wakeEvents => _wakeEvents ??= _events
       .receiveBroadcastStream()
       .map((event) => event?.toString() ?? '')
       .where((keyword) => keyword.isNotEmpty)
       .asBroadcastStream();
 
+  @override
   Future<KwsStatus> status() async {
     try {
       final result = await _methods.invokeMapMethod<Object?, Object?>('status');
@@ -62,8 +75,13 @@ class JarvisKwsBridge {
     }
   }
 
+  @override
   Future<KwsStatus> start() => _command('start');
+
+  @override
   Future<KwsStatus> stop() => _command('stop');
+
+  @override
   Future<KwsStatus> startTest({int seconds = 20}) async {
     final bounded = seconds.clamp(10, 60).toInt();
     try {
