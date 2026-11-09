@@ -61,6 +61,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jarvis-flutter-windows-debug
-          path: flutter_app/build/windows/x64/runner/Debug/
+          path: flutter_app/build/windows/x64/runner/Release/
           if-no-files-found: error
           retention-days: 14
