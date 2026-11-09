@@ -8035,7 +8035,7 @@ async function pedirVisaoIA(dataUrl, pergunta) {
     const t0 = Date.now();
     try {
       const corpo = {
-        model: modelo, temperature: 0.2, max_tokens: 900,
+        model: modelo, temperature: 0.2, max_tokens: 1400,
         messages: [{
           role: 'user',
           content: [
@@ -8056,9 +8056,17 @@ async function pedirVisaoIA(dataUrl, pergunta) {
       if (!obj) throw new Error('a resposta não veio em JSON');
       Hermes.registrarLatencia(id, Date.now() - t0);
       errosIA[id] = 0;
+      const brutoOcr = Array.isArray(obj.textoLegivel)
+        ? obj.textoLegivel.map((x) => String(x || '')).join('\n')
+        : String(obj.textoLegivel || '');
+      const limpezaOcr = window.VisaoContexto && typeof window.VisaoContexto.limparTextoOcr === 'function'
+        ? window.VisaoContexto.limparTextoOcr(brutoOcr)
+        : { texto: brutoOcr.trim().slice(0, 2000), descartado: [] };
       return {
         objetos: Hermes.visao.normalizar(obj.objetos),
         resumo: String(obj.resumo || '').trim().slice(0, 300),
+        textoLegivel: limpezaOcr.texto ? [limpezaOcr.texto] : [],
+        ocrDescartado: limpezaOcr.descartado || [],
         provedor: prov.nome,
         ms: Date.now() - t0
       };
@@ -8080,8 +8088,7 @@ async function analisarVisao(opcoes) {
   if (!pronta) return { fala: 'Não consegui abrir a câmera, ' + trat() + '. Autorize a câmera nas permissões do aplicativo e me chame de novo.' };
   const r = await analisarQuadro(o.texto || '');
   if (!r) return { fala: 'Aponte a câmera para o objeto, ' + trat() + ', que eu analiso e digo o que estou vendo.' };
-  registrarContextoVisual(r);
-  return { fala: r.fala, objetos: r.objetos };
+  return { fala: r.fala, objetos: r.objetos, textoLegivel: r.textoLegivel || [] };
 }
 
 /* Botões do painel de visão */
@@ -9135,7 +9142,9 @@ async function analisarDataUrl(d, q) {
     visaoProvedor = r.provedor;
     desenharBaloes(r.objetos);
     visaoStatus('Análise de ' + r.provedor + ' · ' + (r.objetos.length ? r.objetos.length + ' objeto(s)' : 'nada identificado') + '.', 'ok');
-    return { fala: fala, objetos: r.objetos, resumo: r.resumo };
+    registrarContextoVisual(r);
+    if (r.textoLegivel && r.textoLegivel.length) anexarTextoVisao('OCR · texto reconhecido', r.textoLegivel.join('\n'));
+    return { fala: fala, objetos: r.objetos, resumo: r.resumo, textoLegivel: r.textoLegivel || [] };
   } catch (e) {
     visaoStatus('Não consegui analisar: ' + ((e && e.message) || e), 'fail');
     return null;
@@ -9926,7 +9935,7 @@ async function analisarVideoEscolhido(file) {
     if (!dataUrl) { falhas.push('quadro ' + (i + 1) + ' não pôde ser extraído'); continue; }
     try {
       const r = await pedirVisaoIA(dataUrl, 'Este é um quadro de vídeo em ' + (VIS ? VIS.timestamp(plano[i]) : plano[i]) + '. Descreva em uma frase só o que está visível e leia textos importantes.');
-      quadros.push({ t: plano[i], resumo: r.resumo, objetos: r.objetos, provedor: r.provedor, ms: r.ms });
+      quadros.push({ t: plano[i], resumo: r.resumo, objetos: r.objetos, textoLegivel: r.textoLegivel || [], provedor: r.provedor, ms: r.ms });
       renderVideoLista(quadros);
       mostrarTextoVisao('Vídeo · ' + quadros.length + '/' + plano.length, VIS ? VIS.relatoVideo(quadros) : quadros.map((q) => q.resumo).join('\n'));
     } catch (e) {
@@ -9935,6 +9944,7 @@ async function analisarVideoEscolhido(file) {
   }
   visaoProgresso(100, visaoVideoCancelar ? 'Análise cancelada.' : 'Análise concluída.');
   setTimeout(visaoProgressoFechar, visaoVideoCancelar ? 1200 : 2400);
+  if (quadros.length) registrarContextoVisual({ objetos: quadros.reduce((acc, q) => acc.concat(q.objetos || []), []), textoLegivel: quadros.reduce((acc, q) => acc.concat(q.textoLegivel || []), []) });
   const resumoFalado = quadros.length
     ? 'Analisei ' + quadros.length + ' de ' + plano.length + ' quadros deste vídeo, ' + trat() + '. ' + (quadros[0].resumo || 'O primeiro quadro mostra a cena.') + (quadros.length > 1 ? ' Também descrevi os outros; toque em um horário para ouvir cada um.' : '')
     : 'Não consegui analisar os quadros deste vídeo: ' + (falhas.slice(0, 2).join(' · ') || 'nenhum quadro foi extraído');
@@ -9968,7 +9978,13 @@ async function analisarImagem(dataUrl, pergunta, opcoes) {
       (r.objetos.length ? r.objetos.length + ' objeto(s) identificado(s)' : 'nenhum objeto identificado') +
       '. Toque em um balão para interromper a fala e ouvir o detalhe.', r.objetos.length ? 'ok' : 'warn');
     registrar('visão', r.objetos.length + ' objeto(s) por ' + r.provedor + ' em ' + r.ms + ' ms');
-    return { fala, objetos: r.objetos, resumo: r.resumo, provedor: r.provedor };
+    if (r.textoLegivel && r.textoLegivel.length) {
+      anexarTextoVisao('OCR · texto reconhecido', r.textoLegivel.join('\n'));
+    } else {
+      anexarTextoVisao('OCR', 'Nenhum texto legível foi identificado nesta imagem.');
+    }
+    registrarContextoVisual(r);
+    return { fala, objetos: r.objetos, resumo: r.resumo, provedor: r.provedor, textoLegivel: r.textoLegivel || [] };
   } catch (e) {
     visaoStatus('Não consegui analisar agora: ' + ((e && e.message) || e), 'fail');
     registrar('erro', 'visão: ' + ((e && e.message) || e));
@@ -10747,6 +10763,14 @@ async function perguntarSobreVisao() {
     if (VC) {
       const ctx = contextoVisual();
       const res = VC.resolver(ctx, pergunta);
+      if (res.ok && res.intencao === 'texto' && res.textoLegivel) {
+        VC.registrarPergunta(ctx, pergunta, res.intencao);
+        const respOcr = 'O texto legível na imagem é: ' + res.textoLegivel;
+        anexarTextoVisao('OCR consultado', respOcr);
+        visaoPerguntaStatus('Respondido diretamente pelo texto reconhecido na imagem.', 'ok');
+        await falar(respOcr);
+        return;
+      }
       if (res.ok && res.objeto) {
         VC.registrarPergunta(ctx, pergunta, res.intencao);
         referente = ' [contexto visual: ' + res.objeto.nome + (res.objeto.marca ? ', marca ' + res.objeto.marca : ', marca não confirmada') + ']';
