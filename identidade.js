@@ -861,7 +861,7 @@
 
   function interpretarCadastroVoz(frase) {
     var bruto = limpar(frase, 240);
-    var comando = bruto.match(/^(?:jarvis[, ]+)?(?:cadastre|cadastra|registre|registra|adicione|adiciona|crie|cria)\s+(?:(?:meu|minha)\s+)?(?:(amigo|amiga|colega|irm[aã]o|irm[aã]|primo|prima|m[aã]e|pai|namorado|namorada)\s+)?(.+)$/i);
+    var comando = bruto.match(/^(?:jarvis[, ]+)?(?:cadastre|cadastra|registre|registra|adicione|adiciona|crie|cria)\s+(?:(?:meu|minha)\s+)?(?:(amigo|amiga|colega|irm[aã]o|irm[aã]|primo|prima|m[aã]e|pai|namorado|namorada)[,\s]+)?(.+)$/i);
     if (!comando) return null;
     var relacao = comando[1] || '';
     var nome = comando[2] || '';
