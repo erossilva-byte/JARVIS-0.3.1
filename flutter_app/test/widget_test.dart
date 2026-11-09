@@ -6,7 +6,7 @@ void main() {
     await tester.pumpWidget(const JarvisApp());
     expect(find.text('J.A.R.V.I.S. NOVA'), findsOneWidget);
     await tester.tap(find.text('Sistemas'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Capacidades do J.A.R.V.I.S.'), findsOneWidget);
     expect(find.text('Hermes Agent'), findsOneWidget);
     expect(find.text('CADeSIMU e elétrica'), findsOneWidget);
