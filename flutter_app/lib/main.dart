@@ -55,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
   super.initState();
   unawaited(jarvisKwsController.initialize());
   voiceSubscription=KwsController.commandBus.listen((event){
-   if(!mounted)return;
+   if (!mounted) { return; }
    if(event.type=='command_result'&&event.text.trim().isNotEmpty){
     Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>VoiceConversationPage(initialCommand:event.text.trim())));
    }else if(event.type=='command_error'&&event.message.isNotEmpty){
@@ -395,7 +395,7 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
   }
 
   void _updateClock() {
-    if (!mounted) return;
+    if (!mounted) { return; }
     final now = DateTime.now();
     setState(() => clock = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}');
   }
@@ -418,7 +418,7 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
 
   void _openModule(String name) {
     final matches = modules.where((item) => item.name == name);
-    if (matches.isEmpty) return;
+    if (matches.isEmpty) { return; }
     final module = matches.first;
     Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => ModulePage(module: module),
@@ -581,19 +581,19 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
         child: Row(children: [
           Expanded(child: TextField(
             controller: composer, textInputAction: TextInputAction.send,
-            onSubmitted: (value) { final text = value.trim(); if (text.isEmpty) return; composer.clear(); _openConversation(text); },
+            onSubmitted: (value) { final text = value.trim(); if (text.isEmpty) { return; } composer.clear(); _openConversation(text); },
             decoration: const InputDecoration(hintText: 'Fale com J.A.R.V.I.S....', border: InputBorder.none, isDense: true),
           )),
           IconButton(tooltip: 'Enviar mensagem', onPressed: () {
-            final text = composer.text.trim(); if (text.isEmpty) return; composer.clear(); _openConversation(text);
+            final text = composer.text.trim(); if (text.isEmpty) { return; } composer.clear(); _openConversation(text);
           }, icon: const Icon(Icons.send_rounded, color: cyan)),
           IconButton(tooltip: 'Iniciar escuta por voz', onPressed: () async {
             try {
               final status = await jarvisKwsController.start();
-              if (!mounted) return;
+              if (!mounted) { return; }
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status.listening ? 'Escuta KWS iniciada.' : status.detail)));
             } catch (error) {
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Não foi possível iniciar a escuta: $error')));
+              if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Não foi possível iniciar a escuta: $error'))); }
             }
           }, icon: const Icon(Icons.mic_rounded, color: cyan)),
         ]),
