@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'kws_controller.dart';
 import 'kws_bridge.dart';
@@ -16,7 +17,7 @@ class _KwsSettingsPageState extends State<KwsSettingsPage> {
   void initState() {
     super.initState();
     controller = KwsController()..addListener(_refresh);
-    controller.initialize();
+    unawaited(controller.initialize());
   }
 
   void _refresh() {
