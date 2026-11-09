@@ -621,7 +621,7 @@
             normalizar((existente.tags || []).join(' ')) === normalizar(tags.join(' '));
           if (mesmo) { repetidas++; return; }
           if (sec.id && sec.id === existente.id && Number.isFinite(sec.atualizado) &&
-              sec.atualizado > existente.atualizado) {
+              sec.atualizado >= existente.atualizado) {
             var atualizacao = atualizar(existente.id, {
               tema: tema, titulo: sec.titulo, texto: sec.texto, tags: tags
             });
