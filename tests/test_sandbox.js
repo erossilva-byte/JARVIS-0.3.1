@@ -7,6 +7,8 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'sandbox.js'), 'utf8')
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+const buildWorkflow = fs.readFileSync(path.join(__dirname, '..', '.github/workflows/build-apk.yml'), 'utf8');
+const releaseWorkflow = fs.readFileSync(path.join(__dirname, '..', '.github/workflows/release-apk.yml'), 'utf8');
 
 function test(nome, fn) {
   fn();
@@ -51,6 +53,8 @@ test('painel e integração do núcleo estão empacotados', () => {
   assert.ok(html.includes('<script src="sandbox.js"></script>'));
   assert.ok(app.includes("id: 'sandbox_js'"));
   assert.ok(pkg.build.files.includes('sandbox.js'));
+  assert.ok(buildWorkflow.includes('cp sandbox.js www/'));
+  assert.ok(releaseWorkflow.includes('cp sandbox.js www/'));
 });
 
 console.log('test_sandbox: isolamento e contratos aprovados');
