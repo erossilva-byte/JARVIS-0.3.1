@@ -5,9 +5,9 @@
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-11-08",
-  "status": "1.46.0 em desenvolvimento: integração OpenRouter com DeepSeek preferencial, matriz de migração Flutter/Windows e auditoria funcional por evidência. Build e validação física ainda pendentes.",
+  "status": "1.46.0 em desenvolvimento: OpenRouter/DeepSeek integrado; KWS acústico local sherpa-onnx implementado no serviço Android e incluído no pipeline do APK. O modelo KWS disponível é inglês; precisão PT-BR, CI, build Android, testes físicos, Flutter e paridade Windows ainda pendentes.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Esta é uma versão de desenvolvimento. Groq continua como provedor principal; OpenRouter é adicionado como reserva independente com DeepSeek preferencial. A chave OpenRouter é armazenada no cofre seguro do Android/Windows. A migração Flutter será incremental e não removerá o runtime atual até haver paridade testada. Nenhum recurso será declarado concluído sem teste e evidência. APK/Windows Release ainda não gerados.",
+  "notas": "Versão de desenvolvimento, não publicar como estável. Groq continua como principal e OpenRouter/DeepSeek como reserva. KWS sherpa-onnx usa AudioRecord e inferência CPU local, sem envio de áudio ou fallback de rede antes da palavra-chave; o modelo GigaSpeech é inglês e precisa de validação de sotaque PT-BR. O workflow agora baixa/tokeniza/empacota o modelo e compila APK em CI. Nenhum APK 1.46.0 foi compilado, instalado ou aprovado em aparelho físico; nenhum pacote Windows 1.46.0 foi compilado. Migração Flutter, segurança AND/OR, CADeSIMU nativo e paridade Windows continuam pendentes. Não declarar recurso concluído sem teste e evidência.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -34,8 +34,8 @@
       "arquivos": "node tests/test_pc_arquivos.js — 19/19",
       "cad": "node tests/test_pc_cad.js — 12/12",
       "contrato": "python3 tests/test_pc_windows.py",
-      "suite": "npm run test:all — verde"
+      "suite": "pendente — CI da 1.46.0 ainda não executado"
     }
   },
-  "versao": "1.45.0"
+  "versao": "1.46.0"
 }
