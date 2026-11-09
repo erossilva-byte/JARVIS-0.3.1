@@ -1,38 +1,46 @@
 # Status de implementação — sequência 1.47.0
 
-Este registro é atualizado por evidência de código e CI. Não confundir arquivo/documentação com integração concluída.
+Este registro é atualizado por evidência de código e CI. Código preparado não equivale a integração validada em aparelho.
 
 ## Alterações efetivamente registradas nesta branch
-- [x] Branch isolada `feat/functional-integration-1.47.0` criada a partir da linha Flutter 1.46.
-- [x] PR #9 aberta como draft, sem alteração direta na `main`.
-- [x] Plano técnico com seis frentes e critérios de aceite registrado em `docs/SEQUENCIA-1.47-INTEGRACAO-FUNCIONAL.md`.
-- [x] Núcleo visual Flutter ajustado: resposta tátil com escala animada, animação contínua, interação por toque/arraste e painel de contexto.
-- [x] Teste de widget para a interação do núcleo adicionado.
-- [x] Textos de configurações deixam explícito que KWS sherpa-onnx já existe no Android legado, mas a ponte Flutter ainda está pendente; deixam explícito também o estado pendente de Obsidian, memória e pareamento.
-- [x] Workflow Flutter atualizado para incluir a branch 1.47 e PRs encadeadas na branch Flutter 1.46.\n- [x] Contrato `KwsGateway` isolado da implementação de canais para permitir testes sem Android nativo.\n- [x] `KwsController` adicionado para coordenar diagnóstico, iniciar/parar/teste, eventos de wake, concorrência e erros sem afirmar escuta ativa sem confirmação do serviço.\n- [x] Testes unitários do controlador adicionados: plugin ausente, start, stop, evento de ativação e falha.
+
+- [x] Branch isolada `feat/functional-integration-1.47.0` e PR #9 em rascunho; nenhuma alteração direta na `main`.
+- [x] Núcleo visual Flutter com resposta tátil e painel contextual; testes de widget ajustados.
+- [x] Contrato Dart `KwsGateway` e controlador `KwsController` para diagnóstico, iniciar/parar/testar, estados e eventos.
+- [x] Controlador assina o fluxo de eventos antes de iniciar o microfone, evitando perder detecções muito rápidas; teste de regressão adicionado.
+- [x] `MainActivity.kt` registra MethodChannel e EventChannel `com.jarvis.nova/kws` e `com.jarvis.nova/kws/events`, solicita permissão de microfone e só reporta escuta ativa após confirmação do motor.
+- [x] `KwsForegroundService.kt` implementa serviço foreground do tipo microphone, notificação persistente, ciclo de vida do motor sherpa-onnx, janela de teste e encaminhamento do evento de wake para a Activity.
+- [x] Script `flutter_app/tool/prepare_android_kws.py` aplica patch reproduzível no runner Android gerado pelo Flutter, copia o motor Java legado, instala fontes Kotlin, registra permissões/serviço, adiciona AAR e fixa minSdk 26.
+- [x] Workflow Android baixa o AAR sherpa-onnx com SHA-256 verificado, prepara os assets do modelo KWS e aplica o patch nativo antes da compilação.
+- [x] Timeout Android ampliado para acomodar download e preparação dos artefatos locais.
 
 ## Estado real das frentes
+
 | Frente | Evidência atual | Estado |
 |---|---|---|
-| Flutter UI | Shell Flutter, provedor de IA e núcleo holográfico; tela ainda não chama todos os serviços | Parcial |
-| Kotlin + KWS | `JarvisKwsEngine` e `JarvisService` sherpa-onnx/AudioRecord existem no legado Android; contrato Dart e controlador de ciclo de vida agora estão implementados e testáveis; modelo KWS base GigaSpeech é inglês | Parcial; plugin/serviço Flutter nativo ainda ausente e PT-BR precisa validação |
-| CADeSIMU | Projetista e formato Jarvis próprio; sem round-trip demonstrado com o CADeSIMU oficial | Pendente |
+| Flutter UI | Shell Flutter, provedor de IA e núcleo holográfico; nem todos os serviços estão ligados às telas | Parcial |
+| Kotlin + KWS | Bridge Kotlin/Dart, serviço foreground e preparação reprodutível do sherpa-onnx adicionados; ainda aguardam build e validação no dispositivo. Modelo GigaSpeech é inglês | Implementação registrada; CI e aparelho pendentes |
+| CADeSIMU | Projetista e formato Jarvis próprio; sem round-trip demonstrado com CADeSIMU oficial | Pendente |
 | Paridade Windows | Electron/Node legado existe; Flutter Windows compila, sem todos os serviços migrados | Pendente |
 | IA local | Plugin MediaPipe legado existe; Gemma 3 1B IT ainda requer teste real no Poco X7; Windows sem runtime integrado | Parcial |
 | Memória semântica | Busca lexical/hash e Markdown no legado; sem embedding neural multilíngue e sem sync Flutter/Obsidian validada | Parcial |
 | QR Android–Windows | Sem protocolo/implementação comprovada na interface Flutter | Pendente |
 
-## Bloqueios técnicos que precisam de evidência
-1. O workflow Flutter gera os runners Android/Windows durante CI; os runners não estão versionados como projeto Flutter pronto. Para integrar Kotlin, será necessário versionar a plataforma Android ou garantir patch reprodutível após `flutter create`.
-2. O `JarvisService` atual tem dependências do aplicativo Android legado (watchdog, wake bus, preferências, assets sherpa, notificações e classes Capacitor). Copiar apenas `JarvisKwsEngine.java` não é suficiente e causaria build quebrado.
-3. O modelo KWS atual foi treinado em inglês. O motor é KWS local real, mas reconhecimento confiável com pronúncia PT-BR precisa avaliação acústica e, se necessário, modelo treinado/ajustado.
-4. CADeSIMU é formato proprietário: sem arquivos de amostra reais e validação no programa original, não é seguro implementar escritor que alegue compatibilidade.
-5. Windows local AI precisa runtime e distribuição de modelo específicos; não presumir que o plugin MediaPipe Android rode no Windows.
-6. A sincronização Obsidian precisa lidar com SAF no Android e caminhos/permissões no Windows, além de conflitos e deduplicação.
+## Limitações e bloqueios conhecidos
+
+1. O runner Android continua sendo gerado durante CI. A integração foi tornada reproduzível por script, mas o script precisa passar no workflow real.
+2. O serviço KWS Flutter atual não implementa ainda a política completa de persistência/rearme do serviço legado (reinício do processo, reboot, watchdog, pausa por chamadas/mídia e Doze).
+3. Ao detectar a palavra, o serviço reabre o app e emite o evento; a captura e interpretação do comando falado após o wake ainda precisam ser conectadas à conversa Flutter.
+4. O modelo KWS disponível foi treinado em inglês. A palavra “Jarvis” pode ser detectada em algumas pronúncias, mas precisão com sotaques brasileiros precisa ser medida; não há alegação de suporte PT-BR validado.
+5. CADeSIMU é formato proprietário: sem arquivos de amostra reais e validação no programa original, não é seguro implementar exportador que prometa compatibilidade.
+6. Windows local AI precisa runtime e distribuição de modelo específicos; não presumir que o plugin MediaPipe Android rode no Windows.
+7. A sincronização Obsidian precisa lidar com SAF no Android e caminhos/permissões no Windows, além de conflitos e deduplicação.
 
 ## Critérios de saída
-- [ ] Implementar plugin Flutter Android ↔ Kotlin que registre os canais, peça permissão em contexto de Activity, opere serviço foreground compatível com Android 16 e encaminhe eventos do motor sherpa-onnx; o controlador Dart criado nesta etapa ainda não substitui essa ponte nativa.
-- [ ] KWS validado em Android 16/HyperOS, inclusive tela bloqueada, Doze, app removido dos recentes, reinício, falsos positivos e pronúncia PT-BR.
+
+- [ ] Workflow Android: format/analyze/test e APK debug compilados com AAR e modelo sherpa-onnx.
+- [ ] KWS validado em Android 16/HyperOS, inclusive permissão, tela bloqueada, Doze, app removido dos recentes, reinício, falsos positivos e pronúncia PT-BR.
+- [ ] Reabrir app ao detectar wake e iniciar captura/transcrição do comando falado.
 - [ ] CADeSIMU: abrir/editar/salvar cópia e reabrir no CADeSIMU oficial.
 - [ ] Matriz Android/Windows por capacidade, com ações e testes reais.
 - [ ] Gemma offline executando no Android e modelo local offline no Windows.
@@ -41,4 +49,4 @@ Este registro é atualizado por evidência de código e CI. Não confundir arqui
 - [ ] Workflow Flutter Android/Windows verde após todas as alterações; testes em hardware real.
 - [ ] Release Android e Windows do mesmo commit, com checksums e notas.
 
-**Status da sequência:** em implementação inicial. Não publicar como versão pronta enquanto houver qualquer critério de saída desmarcado.
+**Status da sequência:** integração KWS nativa implementada em código, aguardando prova de compilação e execução. Não publicar como versão pronta enquanto houver qualquer critério de saída desmarcado.
