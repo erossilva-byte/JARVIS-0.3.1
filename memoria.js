@@ -635,7 +635,7 @@
             return;
           }
           conflitos.push({ titulo: sec.titulo, tema: tema, notaId: existente.id,
-            motivo: 'a nota local e a versão do Obsidian divergiram; a versão local foi preservada' });
+            motivo: 'divergência detectada; nada foi sobrescrito, versão local preservada' });
           return;
         }
         var nova = criar({
