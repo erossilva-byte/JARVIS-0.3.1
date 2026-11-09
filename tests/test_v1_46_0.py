@@ -20,7 +20,7 @@ checks = {
     "APK continua pendente até build real": version["build"]["resultado"] == "pendente",
     "Windows continua pendente até build real": version["pc"]["build"]["resultado"] == "pendente",
     "KWS não usa SpeechRecognizer no serviço de wake": "SpeechRecognizer.create" not in service,
-    "AudioRecord e sherpa estão conectados": "new AudioRecord(" in engine and "new KeywordSpotter(config)" in engine,
+    "AudioRecord e sherpa estão conectados": "new AudioRecord(" in engine and "new KeywordSpotter(null, config)" in engine,
     "UI informa que o modelo KWS é inglês": "treinado em inglês" in html,
     "workflow instala Python e tokenizer": "setup-python@v5" in release and "sherpa-onnx==1.13.8" in release,
     "workflow prepara modelo e exige assets": "preparar_kws.py android/app" in release and "assets/kws/keywords.txt" in release,
