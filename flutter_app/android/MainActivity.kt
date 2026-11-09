@@ -16,12 +16,15 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventChannel.StreamHandler {
     companion object {
         private var eventSink: EventChannel.EventSink? = null
+        private var pendingWakeKeyword: String? = null
         private val mainHandler = Handler(Looper.getMainLooper())
 
         @JvmStatic
         fun emitWake(keyword: String) {
             mainHandler.post {
+                pendingWakeKeyword = keyword
                 eventSink?.success(keyword)
+                if (eventSink != null) pendingWakeKeyword = null
             }
         }
     }
@@ -137,6 +140,10 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         eventSink = events
+        pendingWakeKeyword?.let { keyword ->
+            events?.success(keyword)
+            pendingWakeKeyword = null
+        }
     }
 
     override fun onCancel(arguments: Any?) {
