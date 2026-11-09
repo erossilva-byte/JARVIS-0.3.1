@@ -203,7 +203,7 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage>{
   try{
    await service.saveKey(p.id,value);
    fields[p.id]!.clear();
-   if(mounted)setState((){configured[p.id]=true;messages[p.id]='Chave armazenada no cofre seguro. Teste a conexão para validar o acesso.';});
+   if (mounted) { setState(() { configured[p.id] = true; messages[p.id] = 'Chave armazenada no cofre seguro. Teste a conexão para validar o acesso.'; }); }
   }catch(e){
    if (mounted) { setState(() => messages[p.id] = e.toString().replaceFirst('Invalid argument(s): ', '')); }
   }finally{if (mounted) { setState(() => busy.remove(p.id)); }}
@@ -219,7 +219,7 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage>{
   setState(()=>busy.add(p.id));
   try{
    await service.removeKey(p.id);
-   if(mounted)setState((){configured[p.id]=false;messages[p.id]='Chave removida do cofre seguro.';});
+   if (mounted) { setState(() { configured[p.id] = false; messages[p.id] = 'Chave removida do cofre seguro.'; }); }
   }catch(_){if (mounted) { setState(() => messages[p.id] = 'Não foi possível remover a chave do armazenamento seguro.'); }}
   finally{if (mounted) { setState(() => busy.remove(p.id)); }}
  }
