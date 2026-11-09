@@ -65,7 +65,7 @@ class JarvisKwsBridge {
   Future<KwsStatus> start() => _command('start');
   Future<KwsStatus> stop() => _command('stop');
   Future<KwsStatus> startTest({int seconds = 20}) async {
-    final bounded = seconds.clamp(10, 60);
+    final bounded = seconds.clamp(10, 60).toInt();
     try {
       final result = await _methods.invokeMapMethod<Object?, Object?>(
         'test',
