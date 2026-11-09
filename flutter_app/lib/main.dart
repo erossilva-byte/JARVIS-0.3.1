@@ -184,7 +184,7 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Configurações')),
-    body: const ListView(padding: EdgeInsets.all(20), children: [
+    body: ListView(padding: const EdgeInsets.all(20), children: const [
       Icon(Icons.lock_outline, color: _cyan, size: 36),
       SizedBox(height: 12),
       Text('Cofre de credenciais', style: TextStyle(fontSize: 22)),
