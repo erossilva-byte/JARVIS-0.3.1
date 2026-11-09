@@ -33,7 +33,7 @@ A interface Flutter vive em `flutter_app/` de propósito. O Android legado do Ca
 
 ### Implementado na camada Flutter
 - Renovação da tela inicial com hierarquia visual, identidade ciano/azul, cartões de estado e acessos rápidos.
-- Núcleo holográfico vetorial animado com anéis em rotação, órbitas de partículas, brilho radial, linhas de varredura e paralaxe por arraste/toque.
+- Núcleo holográfico com coordenadas 3D projetadas em perspectiva no Canvas, anéis orientados em planos diferentes, órbitas de partículas com profundidade, brilho radial, linhas de varredura e paralaxe por arraste/toque.
 - Transições suaves de entrada e navegação.
 - Catálogo com pesquisa textual e filtros por domínio, cartões com áreas de toque e telas de detalhe.
 - Configurações apresentam explicitamente as integrações pendentes; nenhum botão de configuração finge persistir dados.
@@ -41,7 +41,7 @@ A interface Flutter vive em `flutter_app/` de propósito. O Android legado do Ca
 - Workflow passa a publicar artefatos de debug Android e Windows para inspeção.
 
 ### Limitações ainda abertas
-- O núcleo é uma composição vetorial 2D com efeitos de profundidade/paralaxe; não é renderização 3D real.
+- O núcleo usa projeção matemática de coordenadas 3D em Canvas 2D; entrega perspectiva e profundidade visuais, mas ainda não é uma cena 3D com malhas, iluminação e câmera de um motor 3D dedicado.
 - A interface Flutter ainda não chama os serviços Electron/Android existentes. Voz, KWS sherpa-onnx, Hermes/Core, cofre, visão, CADeSIMU, memória, pairing, Windows e ESP32 permanecem sem adaptadores Flutter.
 - A página de configurações é informativa, não um painel funcional de gravação.
 - A aplicação principal e o empacotamento ainda apontam para Electron. A troca do ponto de entrada exige a migração e validação das pontes nativas, não apenas substituir a tela.
