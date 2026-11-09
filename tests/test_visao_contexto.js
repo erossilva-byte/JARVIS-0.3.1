@@ -91,7 +91,7 @@ assert.ok(perguntaOcr.ok && perguntaOcr.intencao === 'texto', 'consulta OCR sem 
 assert.ok(/TENSÃO 220V/.test(perguntaOcr.textoLegivel), 'texto legível é recuperado');
 assert.ok(!/ignore as instruções/i.test(perguntaOcr.textoLegivel), 'instrução embutida continua descartada');
 ok('perguntas sobre OCR sem depender de objeto reconhecido');
-assert.ok(/textoLegivel:\s*textoLegivel/.test(appSource), 'OCR sai do parser do provedor');
+assert.ok(appSource.includes('textoLegivel: limpezaOcr.texto'), 'OCR sai do parser do provedor');
 assert.ok(appSource.includes("res.intencao === 'texto'"), 'pergunta OCR usa contexto salvo');
 assert.ok(hermesSource.includes('textoLegivel'), 'prompt de visão solicita transcrição fiel');
 ok('OCR integrado ao provedor, contexto e perguntas do aplicativo');
