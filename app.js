@@ -4528,10 +4528,8 @@ async function ouvirUmaVez() {
   return transcrever(b, { motor: motor });
 }
 /* ---------- Palavra de ativação local "Jarvis" (Android) ---------- */
-// O detector é próprio: nenhum SDK de terceiro, nenhuma chave. Quem ouve de verdade no
-// Android é o serviço em primeiro plano (JarvisService + JarvisAtivacao); aqui, no WebView,
-// as MESMAS regras de fonética do núcleo Hermes conferem o que o reconhecimento escreveu —
-// é o caminho usado quando a transcrição chega pela tela (conversa contínua, desktop).
+// Android: JarvisService + JarvisKwsEngine (sherpa-onnx, AudioRecord e inferência local).
+// Hermes.ativacao permanece como detector fonético da escuta Groq no WebView/desktop.
 const WAKE_WORD_DISPONIVEL = true;
 const wakeLigado = () => WAKE_WORD_DISPONIVEL && ehAndroid && store.get('wake', '0') === '1';
 const conversaLigada = () => store.get('conversa', '1') === '1';
@@ -4734,10 +4732,10 @@ function configAtivacaoAtual() {
 }
 function descricaoCalibragem() {
   const c = wakeCalibragem();
-  const cfg = configAtivacaoAtual();
-  return 'sensibilidade ' + c.sensibilidade + '% · tolerância ' + cfg.tolerancia +
-    ' · parcial ' + (cfg.aceitaParcial ? 'sim' : 'não') + ' · piso de voz ' + Math.round(cfg.ruidoDb) + ' dB' +
-    (cfg.extras.length ? ' · extras: ' + cfg.extras.join(', ') : ' · sem palavras extras');
+  const limiar = c.sensibilidade >= 75 ? 0.25 : (c.sensibilidade >= 45 ? 0.35 : 0.45);
+  const extras = c.variantes.split(/[,;\\n/]+/).map((x) => x.trim()).filter(Boolean).slice(0, 10);
+  return 'sensibilidade ' + c.sensibilidade + '% · limiar KWS ' + limiar.toFixed(2) +
+    ' · palavras base: Jarvis/Javis' + (extras.length ? ' · extras: ' + extras.join(', ') : ' · sem palavras extras');
 }
 // Tira a palavra de ativação do começo da transcrição e devolve o comando que sobrou.
 function extrairComando(t) {
@@ -4837,9 +4835,8 @@ async function pararWake(desligar) {
   atualizarWakeControles();
 }
 function atualizarWake() {
-  // Dois motores possíveis: o detector próprio do Android (segundo plano, sem chave e sem
-  // enviar áudio para fora) e a escuta pela Groq (transcrição na nuvem, com o app aberto).
-  // Os dois usam as MESMAS regras de fonética do núcleo, então as variações valem nos dois.
+  // Dois motores: KWS sherpa-onnx local no Android (segundo plano) e escuta Groq
+  // no app aberto. As palavras extras do usuário são aplicadas ao KWS; Groq usa Hermes.
   if (escutaGroqLigada()) { pararWake(true).then(() => iniciarEscutaGroq()); return; }
   pararEscutaGroq(true);
   if (wakeLigado()) iniciarWake();
@@ -5109,8 +5106,7 @@ async function diagnosticoSegundoPlano(silencioso) {
   } else if (!d.escutando) {
     bgDiagRow('warn', 'Serviço em espera', 'O serviço está ativo, mas o detector está pausado (ex.: durante um comando ou chamada). Detector previsto: ' + detector + '.');
   } else {
-    bgDiagRow('ok', 'Serviço ouvindo', 'Detector ativo: ' + detector +
-      (d.descartesRuido ? ' · ' + d.descartesRuido + ' ativação(ões) descartada(s) pelo porteiro de ruído (som baixo demais para ser voz dirigida ao aparelho).' : ' · nenhuma ativação descartada por ruído.'));
+    bgDiagRow('ok', 'Serviço ouvindo', 'Detector ativo: ' + detector + ' · inferência no aparelho; nenhum áudio é enviado antes da palavra-chave.');
   }
 
   if (d.ultimoEvento) {
@@ -5193,7 +5189,7 @@ async function testarEscutaAtivacao() {
   }
   const nome = 'KWS acústico local' + (detector ? ' (' + detector + ')' : '');
   if (visto > 0) {
-    st.textContent = nome + ': ' + visto + ' ativação(ões) em 20 s. Se o número ficou próximo das vezes que você falou, está calibrado. Se aparecer detecção sem você falar, baixe a sensibilidade da ativação abaixo ou cadastre o ruído do ambiente como palavra extra não — o porteiro de ruído também descarta som baixo.';
+    st.textContent = nome + ': ' + visto + ' ativação(ões) em 20 s. Compare com quantas vezes você falou. Se houver falso disparo, diminua a sensibilidade; se não detectar, aumente-a ou teste uma variante fonética. O modelo-base é inglês, então avalie a pronúncia PT-BR no aparelho real.';
   } else {
     st.textContent = 'Nenhuma ativação detectada em 20 s com o ' + nome + '. Confira a permissão e o microfone, aproxime-se do aparelho e ajuste a sensibilidade. O modelo-base é inglês; a pronúncia brasileira de “Jarvis” pode exigir uma variante extra ou um modelo treinado em PT-BR.' + (interrompido ? ' O teste terminou antes do previsto.' : '');
   }
@@ -5275,7 +5271,7 @@ function atualizarWakeControles() {
     btn.setAttribute('aria-pressed', ligado ? 'false' : 'true');
     btn.setAttribute('aria-label', ligado ? 'Pausar ativação por voz' : 'Ativar ativação por voz');
     btn.title = ligado ? 'Pausar ativação por voz' : 'Ativar ativação por voz';
-    $('#wake-toggle-text').textContent = !ligado ? 'Escuta pausada' : (escutaGroqAtiva ? 'Ouvindo pela Groq' : (wakeAtivo ? 'Ouvindo “Jarvis” · detector próprio' : 'Ativação ligada'));
+    $('#wake-toggle-text').textContent = !ligado ? 'Escuta pausada' : (escutaGroqAtiva ? 'Ouvindo pela Groq' : (wakeAtivo ? 'Ouvindo “Jarvis” · KWS local' : 'Ativação ligada'));
   }
   const c = $('#c-wake-toggle');
   if (c) {
@@ -6970,14 +6966,13 @@ if (selPerfilVoz) selPerfilVoz.onchange = () => {
 };
 const chkVozChime = $('#c-voz-chime');
 if (chkVozChime) { chkVozChime.checked = store.get('voz_chime', '0') === '1'; chkVozChime.onchange = () => store.set('voz_chime', chkVozChime.checked ? '1' : '0'); }
-// Lista de variantes reconhecidas (só leitura, para o usuário conferir a calibragem).
+// Palavras base e extras efetivamente enviadas ao motor KWS Android.
 function gerenciarVariantesWake() {
   const alvo = $('#c-wake-variantes-lista');
   if (!alvo) return;
-  const cfg = configAtivacaoAtual();
-  const base = Hermes.ativacao.variantes.slice(0, 12).join(', ');
-  alvo.textContent = 'Formas reconhecidas: ' + base + (cfg.extras.length ? ' · ' + cfg.extras.join(', ') : '') +
-    '. Tolerância atual: ' + cfg.tolerancia + ' letra(s) trocada(s) em palavras começando com “j”.';
+  const extras = wakeCalibragem().variantes.split(/[,;\\n/]+/).map((x) => x.trim()).filter(Boolean).slice(0, 10);
+  alvo.textContent = 'Palavras base: Jarvis, Javis' + (extras.length ? ' · extras: ' + extras.join(', ') : '') +
+    '. O modelo acústico é treinado em inglês; a taxa de acerto com pronúncia PT-BR deve ser validada no teste.';
 }
 gerenciarVariantesWake();
 /* Reconhecimento de locutor: motor local (voz_motor.js), sem guardar áudio.
@@ -7828,8 +7823,8 @@ if (ehAndroid) {
     }
   }
   // A escuta permanece desligada por padrão; o usuário liga a ativação em Ajustes ▸ Voz.
-  // A ativação contínua usa o detector próprio (reconhecimento do Android + regras de
-  // fonética locais), sem chave e sem SDK de terceiro; o microfone manual funciona igual.
+  // A ativação contínua usa KWS sherpa-onnx em CPU no serviço nativo. O comando completo
+  // só é transcrito depois da palavra-chave; a ativação não envia áudio à rede.
 }
 /* ---------- Visão: câmera, reconhecimento de objetos e balões ---------- */
 // A câmera é do usuário e continua sendo dele: o quadro fica no aparelho até ele tocar em
