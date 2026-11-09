@@ -4793,6 +4793,19 @@ async function iniciarWake() {
     servicoPronto = true;
     segPlanoOk = true;
     await p.startWake(Object.assign({ pausarDuranteMusica: store.get('wake_pausa_musica', '1') === '1' }, wakeCalibragem()));
+    // startWake confirma o pedido; só exibimos "ouvindo" quando o serviço confirma
+    // que o KWS inicializou e AudioRecord entrou em gravação.
+    if (typeof p.diagnosticoEscuta === 'function') {
+      const limiteKws = Date.now() + 20000;
+      let estadoKws = null;
+      while (Date.now() < limiteKws) {
+        estadoKws = await p.diagnosticoEscuta();
+        if (estadoKws && estadoKws.escutando) break;
+        if (estadoKws && estadoKws.ultimoErro) throw new Error(estadoKws.ultimoErro);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      if (!estadoKws || !estadoKws.escutando) throw new Error('O serviço não confirmou que o KWS local iniciou em 20 segundos.');
+    }
     if (!ocupado) { wakeAtivo = true; setEstado('idle'); atualizarWakeControles(); }
     else await p.stopWake();
   } catch (e) {
