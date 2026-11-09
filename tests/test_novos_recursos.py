@@ -8,6 +8,7 @@ html = (ROOT / "index.html").read_text(encoding="utf-8")
 css = (ROOT / "style.css").read_text(encoding="utf-8")
 fundo = (ROOT / "JarvisBackgroundPlugin.java").read_text(encoding="utf-8")
 servico = (ROOT / "JarvisService.java").read_text(encoding="utf-8")
+kws = (ROOT / "JarvisKwsEngine.java").read_text(encoding="utf-8")
 util = (ROOT / "JarvisUtilPlugin.java").read_text(encoding="utf-8")
 atualiza = (ROOT / "JarvisUpdatePlugin.java").read_text(encoding="utf-8")
 main_java = (ROOT / "MainActivity.java").read_text(encoding="utf-8")
@@ -17,16 +18,19 @@ release = (ROOT / ".github/workflows/release-apk.yml").read_text(encoding="utf-8
 
 checks = {
     # ---- Palavra de ativação sem Picovoice ----
-    "Detector próprio completo no serviço": all(t in servico for t in (
-        "iniciarSessao", "agendarSessao", "JarvisAtivacao.presente")),
+    "KWS acústico sherpa está ligado ao serviço": (
+        "new JarvisKwsEngine(" in servico and "new AudioRecord(" in kws
+        and "new KeywordSpotter(config)" in kws and "kws.decode(kwsStream)" in kws
+        and "SpeechRecognizer.create" not in servico),
     "Plugin apenas delega a escuta ao serviço": "JarvisService.iniciarEscuta" in fundo and "JarvisWakeBus.registrar" in fundo,
     "Nenhum SDK de palavra de ativação de terceiro": (
         "picovoice" not in servico.lower() and "porcupine" not in servico.lower()),
     "Sem dependência openWakeWord": "OpenWakeWord" not in fundo and "OpenWakeWord" not in servico,
-    "Backoff do detector próprio (bateria)": "falhas++" in servico and "Math.min(8000" in servico,
-    "Detector usa reconhecimento no dispositivo quando existe": "createOnDeviceSpeechRecognizer" in servico,
+    "Falha fatal encerra escuta e cancela o vigia sem loop de bateria": (
+        "JarvisPrefs.desejaOuvir(this, false);" in servico and "JarvisWatchdog.cancelar(this);" in servico
+        and "Falha fatal: desliga o desejo de ouvir" in servico),
     "Interface não exige chave de terceiro para escutar": (
-        "Detector de ativação ligado" in app and "AccessKey" not in app and "wakeCalibragem" in app),
+        "Detector KWS acústico ligado" in app and "AccessKey" not in app and "wakeCalibragem" in app),
     "Evento de ativação continua conectado": "pj.addListener('wake'" in app,
     # ---- Reconhecimento do usuário pela voz ----
     "Perfil de voz verificado na ativação": (
