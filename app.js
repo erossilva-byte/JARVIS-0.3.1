@@ -4897,7 +4897,7 @@ function atualizarWake() {
   if (wakeLigado()) iniciarWake();
   else { pararWake(true).then(() => { if (!ocupado) setEstado('idle'); }); }
 }
-async function aoAcordar(texto) {
+async async function aoAcordar(texto) {
   liberarApp();                       // o comando por voz tem prioridade sobre a animação de abertura
   mostrarWakeMini('Ativação detectada · preparando o microfone…');
   if (paradaAtiva) { // o detector identifica Jarvis; o reconhecimento completo só então procura o comando de parada
