@@ -414,8 +414,9 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
   }
 
   void _openModule(String name) {
-    final module = modules.where((item) => item.name == name).firstOrNull;
-    if (module == null) return;
+    final matches = modules.where((item) => item.name == name);
+    if (matches.isEmpty) return;
+    final module = matches.first;
     Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => ModulePage(module: module),
     ));
