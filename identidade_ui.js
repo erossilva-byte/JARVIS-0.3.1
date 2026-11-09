@@ -568,7 +568,6 @@
       detalhe.anos + ' anos' + (detalhe.meses ? ' e ' + detalhe.meses + ' meses' : '') +
       (dias != null ? ' · aniversário em ' + dias + ' dia(s)' : '');
   }
-  }
   async function salvarPerfil() {
     if (!valor('nome')) { status('Informe o nome ou uma identificação para a pessoa.', 'fail'); return; }
     var dados = { id: estado.editando || undefined };
