@@ -79,3 +79,6 @@ Nenhuma nova etapa de integração, merge ou Release pode ser considerada autori
 - **Avançar para a próxima etapa de implementação:** Gate A verde no SHA atual; Gate B pode continuar como tarefa explícita da etapa, sem rotular como concluída a função ainda não testada.
 - **Marcar a etapa como concluída, retirar o rascunho, fazer merge ou publicar Release:** Gates A e B aprovados, além dos critérios específicos da funcionalidade e evidência registrada.
 - ESP32 continua fora do escopo desta sequência. Picovoice não pode ser introduzido como dependência ou alternativa obrigatória.
+
+### Ajuste adicional de CI — concorrência por branch
+O workflow Flutter agora usa o mesmo grupo de concorrência para eventos `push` e `pull_request` da mesma branch. Antes, o nome do evento fazia os grupos divergirem e permitia builds duplicados concorrentes. A alteração não cancela a execução em andamento (`cancel-in-progress: false`); o novo commit precisa ser validado integralmente.
