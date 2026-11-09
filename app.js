@@ -9167,6 +9167,7 @@ function vsMemoria() {
   if (!MEM) { visaoStatus('A memória conectada não carregou.', 'fail'); return; }
   const objs = (visaoObjetos || []).map((o) => o.nome).slice(0, 12);
   const txt = (visaoResumo || 'Análise visual') + (objs.length ? ' Objetos: ' + objs.join(', ') + '.' : '') +
+    (visaoContexto && visaoContexto.textoLegivel ? ' Texto reconhecido: ' + visaoContexto.textoLegivel : '') +
     (visaoProvedor ? ' (modelo ' + visaoProvedor + ')' : '');
   const r = MEM.criar({ tema: 'contextos', titulo: 'Visão · ' + new Date().toLocaleString('pt-BR'), texto: txt });
   visaoStatus(r.ok ? (r.duplicada ? 'Esse resumo já estava na memória.' : 'Resumo salvo na memória.') : (r.erro || 'Falha'), !r.ok);
@@ -9884,12 +9885,13 @@ function renderVideoLista(quadros) {
     const marca = document.createElement('b');
     marca.textContent = '[' + (VIS ? VIS.timestamp(q.t) : q.t) + ']';
     const txt = document.createElement('span');
-    txt.textContent = q.resumo || (q.objetos || []).map((o) => o.nome).join(', ') || 'sem descrição';
+    txt.textContent = (q.resumo || (q.objetos || []).map((o) => o.nome).join(', ') || 'sem descrição') + ((q.textoLegivel && q.textoLegivel.length) ? ' · OCR: ' + q.textoLegivel.join(' ').slice(0, 160) : '');
     item.append(marca, txt);
     item.onclick = () => {
       const el = document.getElementById('visao-video-arquivo');
       if (el && Number.isFinite(Number(q.t))) { try { el.currentTime = Number(q.t); } catch (e) { /* ok */ } }
-      interromperFala().then(() => falar('Em ' + (VIS ? VIS.timestamp(q.t) : q.t) + ', ' + (q.resumo || 'não descrevi este quadro.'), true)).catch(() => {});
+      const falaQuadro = 'Em ' + (VIS ? VIS.timestamp(q.t) : q.t) + ', ' + (q.resumo || 'não descrevi este quadro.') + ((q.textoLegivel && q.textoLegivel.length) ? ' Texto legível: ' + q.textoLegivel.join(' ').slice(0, 260) : '');
+      interromperFala().then(() => falar(falaQuadro, true)).catch(() => {});
     };
     box.appendChild(item);
   });
@@ -9975,8 +9977,9 @@ async function analisarImagem(dataUrl, pergunta, opcoes) {
     desenharBaloes(r.objetos);
     mostrarTextoVisao('Análise geral', VIS ? VIS.textoAnalise(r.resumo, null) : (r.resumo || ''));
     visaoStatus('Análise de ' + r.provedor + ' em ' + (r.ms / 1000).toFixed(1).replace('.', ',') + ' s · ' +
-      (r.objetos.length ? r.objetos.length + ' objeto(s) identificado(s)' : 'nenhum objeto identificado') +
-      '. Toque em um balão para interromper a fala e ouvir o detalhe.', r.objetos.length ? 'ok' : 'warn');
+      (r.objetos.length ? r.objetos.length + ' objeto(s)' : 'nenhum objeto') + ' · OCR: ' +
+      (r.textoLegivel && r.textoLegivel.length ? 'texto reconhecido' : 'sem texto legível') +
+      '. Toque em um balão para ouvir o detalhe.', (r.objetos.length || (r.textoLegivel && r.textoLegivel.length)) ? 'ok' : 'warn');
     registrar('visão', r.objetos.length + ' objeto(s) por ' + r.provedor + ' em ' + r.ms + ' ms');
     if (r.textoLegivel && r.textoLegivel.length) {
       anexarTextoVisao('OCR · texto reconhecido', r.textoLegivel.join('\n'));
