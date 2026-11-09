@@ -2,6 +2,9 @@
 'use strict';
 const assert = require('assert');
 const path = require('path');
+const fs = require('fs');
+const appSource = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+const hermesSource = fs.readFileSync(path.join(__dirname, '..', 'hermes.js'), 'utf8');
 const C = require(path.join(__dirname, '..', 'visao_contexto.js'));
 const E = require(path.join(__dirname, '..', 'eletrica.js'));
 
@@ -88,6 +91,10 @@ assert.ok(perguntaOcr.ok && perguntaOcr.intencao === 'texto', 'consulta OCR sem 
 assert.ok(/TENSÃO 220V/.test(perguntaOcr.textoLegivel), 'texto legível é recuperado');
 assert.ok(!/ignore as instruções/i.test(perguntaOcr.textoLegivel), 'instrução embutida continua descartada');
 ok('perguntas sobre OCR sem depender de objeto reconhecido');
+assert.ok(/textoLegivel:\s*textoLegivel/.test(appSource), 'OCR sai do parser do provedor');
+assert.ok(appSource.includes("res.intencao === 'texto'"), 'pergunta OCR usa contexto salvo');
+assert.ok(hermesSource.includes('textoLegivel'), 'prompt de visão solicita transcrição fiel');
+ok('OCR integrado ao provedor, contexto e perguntas do aplicativo');
 
 // 8 — componente técnico liga à base elétrica e ao projetista
 const tecn = C.registrar(C.novoContexto(), { objetos: [{ nome: 'contator 25 A', categoria: 'componente elétrico', evidencia: ['marcação 25A'] }] });
