@@ -46,3 +46,85 @@ jobs:
 
       - name: Executar suíte de regressão existente
         run: npm run test:all
+
+  android-build:
+    name: Compilação Android real com KWS local
+    needs: regressao
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar dependências
+        run: |
+          npm install --ignore-scripts --legacy-peer-deps
+          python3 -m pip install --upgrade pip sherpa-onnx==1.13.8
+
+      - name: Instalar Android 35
+        run: |
+          yes | sdkmanager "platforms;android-35" "build-tools;35.0.0" >/dev/null
+
+      - name: Preparar recursos web do APK
+        run: |
+          mkdir -p www
+          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js eletrica.js projetista.js pc.js cad_projeto.js visao.js visao_contexto.js seguranca.js pessoas.js utilidades.js cultura.js briefing.js jogos.js utilidades_ui.js www/
+          cp avatar.js interface.css core.css www/
+          cp identidade.js identidade_ui.js escuta.js agentes.js sistema.js plano.js interface.js www/
+          cp core.js core_ui.js aprendizado.js aprendizado_ui.js arquivos_dev.js voz_motor.js fala.js audio_pcm.js cognicao.js humor.js www/
+          mkdir -p www/vendor
+          cp vendor/three.min.js www/vendor/three.min.js
+
+      - name: Gerar projeto Android e instalar modelo KWS
+        run: |
+          npx cap add android
+          npx cap sync android
+          python3 preparar_kws.py android/app
+          python3 baixar_sherpa.py android/app
+
+      - name: Preparar código nativo e Gradle
+        run: |
+          D=android/app/src/main/java/com/jarvis/nova
+          mkdir -p "$D"
+          find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
+          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisKwsEngine.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java JarvisAcessibilidade.java JarvisAcessibilidadePlugin.java; do
+            test -s "$D/$f" || { echo "Classe nativa ausente: $f"; exit 1; }
+          done
+          python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
+          python3 patch_gradle.py android/app/build.gradle
+          python3 patch_android_version.py android/app/build.gradle VERSAO.json
+          python3 patch_visual.py android
+
+      - name: Compilar APK de validação
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          test -s app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publicar APK como artefato de CI (não é Release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-nova-1.46.0-apk-ci
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
