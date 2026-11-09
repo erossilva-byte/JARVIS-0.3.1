@@ -656,7 +656,7 @@ function bloqRotuloMetodo() {
 async function bloqConsultarAparelho(forcar) {
   if (bloqDisp && !forcar) return bloqDisp;
   const p = plug('JarvisSeguranca');
-  bloqDisp = { biometria: false, aparelho: false, rosto: false, nfc: false, motivo: 'Sem o plugin de segurança (versão Windows).' };
+  bloqDisp = { biometria: false, aparelho: false, rosto: false, digital: false, nfc: false, motivo: 'Sem o plugin de segurança (versão Windows).' };
   if (!p || typeof p.disponivel !== 'function') return bloqDisp;
   try {
     const d = await p.disponivel();
@@ -681,7 +681,7 @@ function atualizarBloqueioUI() {
   if (chk) chk.checked = ativo;
   const temPin = !!store.get('pin_hash', '');
   const cfg = segCfg();
-  const disp = bloqDisp || { biometria: false, nfc: false, rosto: false };
+  const disp = bloqDisp || { biometria: false, nfc: false, rosto: false, digital: false };
   bloqStatus(ativo
     ? 'Ativado. ' + SEGN.resumo(cfg, disp) + '. O bloqueio do sistema Android continua valendo por cima.'
     : temPin
