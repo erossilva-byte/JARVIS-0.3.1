@@ -18,7 +18,7 @@ checks = {
     "Ativação própria não tem campo de chave": (
         'c-key-picovoice' not in html
         and not re.search(r'<input[^>]*(accesskey|picovoice)', html, re.IGNORECASE)
-        and 'nenhuma AccessKey' in html),
+        and 'sherpa-onnx KWS' in html and 'não envia áudio antes da palavra-chave' in html),
     "Calibragem da ativação exposta com sensibilidade e palavras extras": (
         'id="c-wake-sensibilidade"' in html and 'id="c-wake-variantes"' in html),
 }
