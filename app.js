@@ -412,7 +412,7 @@ const cortes = new Set(); // esperas de voz que o botão Parar precisa encerrar 
 const ROTULOS = { idle: 'em espera', listening: 'ouvindo', thinking: 'pensando', speaking: 'falando', processing: 'executando' };
 function setEstado(e) {
   document.body.dataset.state = e;
-  const txt = (e === 'idle' && wakeAtivo) ? 'aguardando “Jarvis” · detector próprio' : ROTULOS[e];
+  const txt = (e === 'idle' && wakeAtivo) ? 'aguardando “Jarvis” · KWS local' : ROTULOS[e];
   const marca = $('#estado-txt'), chip = $('#chip-estado');
   if (marca) marca.textContent = txt;
   if (chip) chip.textContent = txt;
@@ -5099,7 +5099,7 @@ async function diagnosticoSegundoPlano(silencioso) {
     d.acessoNotificacoes ? 'Ativo: “o que chegou?” e respostas rápidas funcionam.' : 'Opcional. Sem isso o Jarvis não lê nem responde notificações.',
     d.acessoNotificacoes ? null : { rotulo: 'Autorizar', fn: () => bgDiagAbrirAjuste('acessoNotificacoes') });
 
-  const detector = d.detector ? 'detector próprio (' + (d.calibragem || 'calibragem padrão') + ')' : 'nenhum';
+  const detector = d.detector ? 'KWS acústico local (' + (d.calibragem || 'calibragem padrão') + ')' : 'nenhum';
   if (!d.desejada) {
     bgDiagRow('warn', 'Escuta desligada', 'A ativação por voz está desligada agora. Nada será ouvido até você ligar.');
     pendencias.push('escuta desligada');
@@ -5191,11 +5191,11 @@ async function testarEscutaAtivacao() {
     testandoEscuta = false;
     return;
   }
-  const nome = 'detector próprio' + (detector && detector !== 'proprio' ? ' (' + detector + ')' : '');
+  const nome = 'KWS acústico local' + (detector ? ' (' + detector + ')' : '');
   if (visto > 0) {
     st.textContent = nome + ': ' + visto + ' ativação(ões) em 20 s. Se o número ficou próximo das vezes que você falou, está calibrado. Se aparecer detecção sem você falar, baixe a sensibilidade da ativação abaixo ou cadastre o ruído do ambiente como palavra extra não — o porteiro de ruído também descarta som baixo.';
   } else {
-    st.textContent = 'Nenhuma ativação detectada em 20 s com o ' + nome + '. Confira o microfone no diagnóstico acima, fale mais perto do aparelho, aumente a sensibilidade da ativação e, se o aparelho não tiver o reconhecimento de português, instale o pacote de idioma (Configurações ▸ Google ▸ Voz).' + (interrompido ? ' O teste terminou antes do previsto.' : '');
+    st.textContent = 'Nenhuma ativação detectada em 20 s com o ' + nome + '. Confira a permissão e o microfone, aproxime-se do aparelho e ajuste a sensibilidade. O modelo-base é inglês; a pronúncia brasileira de “Jarvis” pode exigir uma variante extra ou um modelo treinado em PT-BR.' + (interrompido ? ' O teste terminou antes do previsto.' : '');
   }
   registrar('voz', 'teste de ativação: ' + visto + ' detecção(ões) em 20 s (' + nome + ')');
   btn.disabled = false;
@@ -5299,7 +5299,7 @@ async function toggleWakeRapido() {
   $('#c-wake').checked = ligar;
   atualizarWakeControles();
   if (ligar) {
-    msg('sis', 'Detector de ativação ligado (' + descricaoCalibragem() + '). Diga “Jarvis”, aguarde o sinal e então fale seu pedido — por exemplo “Jarvis, que horas são”. O detector é próprio: reconhecimento do Android mais regras de fonética no aparelho, sem chave e sem SDK de terceiro; no Android 12+ ele roda offline. O comando completo só começa depois da palavra de ativação.');
+    msg('sis', 'Detector KWS acústico ligado (' + descricaoCalibragem() + '). Diga “Jarvis” e, depois do sinal, fale seu pedido. No Android, a detecção roda localmente com sherpa-onnx: nenhum áudio é enviado antes da palavra-chave. O modelo-base é treinado em inglês; a pronúncia PT-BR deve ser validada pelo teste de ativação. A transcrição do comando começa somente depois do KWS.');
     try { await iniciarWake(); } catch (e) { registrar('erro', 'ativação por voz: ' + e.message); }
   } else {
     await pararWake(true);
