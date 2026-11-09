@@ -21,7 +21,7 @@
   };
 
   function modoCanonico(modo) {
-    var m = String(modo == null ? '' : modo).replace(/\\s+/g, '').toLowerCase();
+    var m = String(modo == null ? '' : modo).replace(/\s+/g, '').toLowerCase();
     var aliases = {
       'pin+bio': 'bio+pin',
       'pin+nfc': 'nfc+pin',
@@ -113,7 +113,7 @@
     if (m.alternativas && m.alternativas.length) {
       var alguma = m.alternativas.filter(function (e) { return p[e] === true; });
       if (alguma.length) return { ok: true, faltam: [], etapas: exigidas, alternativa: alguma[0] };
-      return { ok: false, faltam: ['bio ou nfc'], etapas: exigidas, alternativa: '' };
+      return { ok: false, faltam: [m.alternativas.join(' ou ')], etapas: exigidas, alternativa: '' };
     }
     var faltam = exigidas.filter(function (e) { return p[e] !== true; });
     return { ok: faltam.length === 0, faltam: faltam, etapas: exigidas };
