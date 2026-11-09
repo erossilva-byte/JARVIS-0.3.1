@@ -59,8 +59,8 @@ class ProviderService {
 
   Future<void> saveKey(String providerId, String rawKey) async {
     _provider(providerId);
-    final key = rawKey.trim().replaceFirst(RegExp(r'^Bearer\\s+', caseSensitive: false), '');
-    if (key.length < 8 || key.length > 512 || key.contains(RegExp(r'\\s'))) {
+    final key = rawKey.trim().replaceFirst(RegExp(r'^Bearer\s+', caseSensitive: false), '');
+    if (key.length < 8 || key.length > 512 || key.contains(RegExp(r'\s'))) {
       throw ArgumentError('A chave informada parece inválida. Confira o valor e tente novamente.');
     }
     await _secrets.write(providerId, key);
