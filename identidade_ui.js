@@ -109,8 +109,8 @@
     }
     var meta = document.createElement('small');
     meta.className = 'idp-meta';
-    var idade = IDENT.idadeDetalhada(p.nascimento);
-    var idadeTexto = idade ? idade.anos + ' anos' + (idade.meses ? ' e ' + idade.meses + ' meses' : '') : '';
+    var idade = IDENT.idadeDetalhada(p.nascimento, p);
+    var idadeTexto = idade ? (idade.aproximada ? 'idade aprox. ' : '') + idade.anos + ' anos' + (idade.meses ? ' e ' + idade.meses + ' meses' : '') : '';
     meta.textContent = [p.relacao, p.profissao, idadeTexto, p.pesoKg ? p.pesoKg + ' kg' : '', p.alturaCm ? p.alturaCm + ' cm' : '', p.cidade]
       .filter(Boolean).join(' · ') || 'sem dados complementares';
     corpo.appendChild(meta);
@@ -561,11 +561,13 @@
   }
   function atualizarIdade() {
     var out = $('idp-idade');
-    var detalhe = IDENT.idadeDetalhada(valor('nascimento'));
+    var perfil = estado.editando ? IDENT.obter(estado.editando) : null;
+    var detalhe = IDENT.idadeDetalhada(valor('nascimento'), perfil);
     var dias = IDENT.diasAteAniversario(valor('nascimento'));
-    if (out) out.value = !detalhe ? '' : detalhe.anos + ' anos' +
-      (detalhe.meses ? ' e ' + detalhe.meses + ' meses' : '') +
+    if (out) out.value = !detalhe ? '' : (detalhe.aproximada ? 'aprox. ' : '') +
+      detalhe.anos + ' anos' + (detalhe.meses ? ' e ' + detalhe.meses + ' meses' : '') +
       (dias != null ? ' · aniversário em ' + dias + ' dia(s)' : '');
+  }
   }
   async function salvarPerfil() {
     if (!valor('nome')) { status('Informe o nome ou uma identificação para a pessoa.', 'fail'); return; }
