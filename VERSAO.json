@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.45.0",
-  "versionCode": 10450,
+  "version": "1.46.0",
+  "versionCode": 10460,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
-  "gerado": "2026-11-03",
-  "status": "1.45.0: Central de Utilidades local (cálculo, conversões, saúde, finanças, jogos, cultura e briefing) integrada ao chat e ao painel.",
+  "gerado": "2026-11-08",
+  "status": "1.46.0 em desenvolvimento: integração OpenRouter com DeepSeek preferencial, matriz de migração Flutter/Windows e auditoria funcional por evidência. Build e validação física ainda pendentes.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Central de Utilidades nas áreas do app: calculadora com funções, equações, matrizes e estatística; conversões de unidade e temperatura; IMC, metabolismo e água; juros, parcelas e ROI; oito jogos de texto; receitas, bebidas, nutrição, treinos, piadas e sugestões; briefing que não inventa dados e monitoramento por comparação. Tudo local, sem nuvem. A abertura mantém o plasma, o flash de inicialização, o núcleo holográfico e a animação de estados. O raciocínio e a personalidade seguem no Hermes, e o app verifica as capacidades novas com testes automatizados antes de publicar. A 1.45.0 corrige a integração do painel com o fechamento geral e a altura com vírgula na saúde. A 1.45.0 amplia as séries elétricas, recusa motores fora da tabela em vez de subdimensionar, corrige iluminação e partida monofásica e aplica o HUD elétrico. A 1.45.0 recusa topologias trifásicas em motor monofásico e adiciona a ponte de conferência CADeSIMU (checklist e JSON de intercâmbio, sem fingir o formato nativo).",
+  "notas": "Esta é uma versão de desenvolvimento. Groq continua como provedor principal; OpenRouter é adicionado como reserva independente com DeepSeek preferencial. A chave OpenRouter é armazenada no cofre seguro do Android/Windows. A migração Flutter será incremental e não removerá o runtime atual até haver paridade testada. Nenhum recurso será declarado concluído sem teste e evidência. APK/Windows Release ainda não gerados.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -15,12 +15,8 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "success",
-    "apk": "jarvis-nova-1.45.0-10450.apk",
-    "bytes": 81333564,
-    "sha256": "6453e4a051fd4e388090382ffce2a798154e52b9ce1dd7acf5f3d006fca1cbc7",
-    "data": "2026-11-05",
-    "observacao": "compilado no GitHub Actions; conferido por dentro: séries até 800 A, recusa fora da tabela, correções de iluminação/monofásico e HUD; não instalado em aparelho físico"
+    "resultado": "pendente",
+    "observacao": "Nenhum APK 1.46.0 foi compilado ou instalado em aparelho físico."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",
@@ -31,13 +27,8 @@
     ],
     "documentacao": "platforms/WINDOWS.md",
     "build": {
-      "resultado": "parcial",
-      "pacote": "release/jarvis-nova-1.21.5-pc-portatil.zip",
-      "sha256": "d18f42eaee0499bf55ea95ee523654ea1d7108f2ba030d2f59884c490dd50ae1",
-      "bytes": 117539692,
-      "ambiente": "Linux · electron-builder --win dir -c.win.signAndEditExecutable=false",
-      "instalador_nsis": "não gerado: electron-builder exige Wine no Linux para o desinstalador; use .github/workflows/release-pc.yml (windows-latest) ou npm run dist:win no Windows",
-      "observacao": "pasta portátil montada a partir do build real; o executável não foi aberto em Windows nesta máquina"
+      "resultado": "pendente",
+      "observacao": "Nenhum pacote Windows 1.46.0 foi compilado ou testado."
     },
     "testes_pc": {
       "arquivos": "node tests/test_pc_arquivos.js — 19/19",
