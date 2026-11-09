@@ -186,16 +186,42 @@ class HologramPainter extends CustomPainter{
   final r=size.shortestSide*.37,spin=t*math.pi*2;
   final glow=Paint()..shader=RadialGradient(colors:[cyan.withValues(alpha: .13),const Color(0xFF368BFF).withValues(alpha: .035),Colors.transparent]).createShader(Rect.fromCircle(center:c,radius:r*1.2));
   canvas.drawCircle(c,r*1.2,glow);
-  final specs=<(double,double,double)>[(.58,1.9,.95),(.76,1.1,.68),(.94,.8,.5),(1.08,.65,.32)];
-  for(var i=0;i<specs.length;i++){
-   final (scale,width,opacity)=specs[i];
-   final rect=Rect.fromCenter(center:c,width:r*2*scale,height:r*2*scale*(i == 1 ? .78 : 1));
-   final p=Paint()..style=PaintingStyle.stroke..strokeWidth=width..color=cyan.withValues(alpha: opacity);
-   canvas.save();canvas.translate(c.dx,c.dy);canvas.rotate(spin*(i.isEven ? .14 : -.11)+i*.6);canvas.translate(-c.dx,-c.dy);
-   canvas.drawArc(rect,spin*(i.isEven?1:-1)+i,math.pi*(1.18+i*.1),false,p);canvas.restore();
+  // Anéis em coordenadas 3D projetadas em perspectiva no Canvas.
+  // A rotação em X/Y e a profundidade variam com o tempo e com o arraste.
+  const ringScale=<double>[.57,.75,.93,1.08];
+  for(var ring=0;ring<ringScale.length;ring++){
+   final path=Path();
+   final p=Paint()..style=PaintingStyle.stroke..strokeWidth=ring==0?2.0:1.0..color=cyan.withValues(alpha:.88-ring*.16)..strokeCap=StrokeCap.round;
+   final radius=r*ringScale[ring];
+   final ay=spin*(ring.isEven?.18:-.14)+pointer.dx*.8+ring*.45;
+   final ax=.62+pointer.dy*.65+ring*.17;
+   final cy=math.cos(ay),sy=math.sin(ay),cx=math.cos(ax),sx=math.sin(ax);
+   for(var step=0;step<=96;step++){
+    final a=step*math.pi*2/96;
+    final x=math.cos(a)*radius;
+    final y=math.sin(a)*radius;
+    final z=math.sin(a*2+ring)*radius*.19;
+    final x1=x*cy+z*sy;
+    final z1=-x*sy+z*cy;
+    final y1=y*cx-z1*sx;
+    final z2=y*sx+z1*cx;
+    final perspective=(r*3.8)/(r*3.8+z2);
+    final point=Offset(c.dx+x1*perspective,c.dy+y1*perspective);
+    if(step==0){path.moveTo(point.dx,point.dy);}else{path.lineTo(point.dx,point.dy);}
+   }
+   canvas.drawPath(path,p);
   }
-  final dots=Paint()..color=cyan.withValues(alpha: .9);
-  for(var i=0;i<42;i++){final a=i*math.pi*2/42+spin*.35;final orbit=r*.88*(1+.025*math.sin(i*2.7+spin*2));canvas.drawCircle(Offset(c.dx+math.cos(a)*orbit,c.dy+math.sin(a)*orbit*.83),i%4==0?2:1,dots);}
+  // Pontos orbitais também recebem profundidade e escala de perspectiva.
+  final dots=Paint()..color=cyan.withValues(alpha:.9);
+  for(var i=0;i<48;i++){
+   final a=i*math.pi*2/48+spin*.28;
+   final x=math.cos(a)*r*.88;
+   final y=math.sin(a)*r*.88;
+   final z=math.sin(a*2+spin)*r*.2;
+   final depth=(r*3.8)/(r*3.8+z);
+   final point=Offset(c.dx+x*depth,c.dy+y*.82*depth);
+   canvas.drawCircle(point,(i%4==0?2.2:1.1)*depth,dots);
+  }
   final core=Paint()..shader=RadialGradient(colors:[cyan.withValues(alpha: .24),const Color(0xFF368BFF).withValues(alpha: .09),Colors.transparent]).createShader(Rect.fromCircle(center:c,radius:r*.46));
   canvas.drawCircle(c,r*.46,core);
   final inner=Paint()..style=PaintingStyle.stroke..strokeWidth=1.2..color=cyan.withValues(alpha: .55);canvas.drawCircle(c,r*(.29+.012*math.sin(spin*2)),inner);
