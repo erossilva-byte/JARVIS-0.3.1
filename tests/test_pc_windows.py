@@ -86,7 +86,7 @@ checar('Controle multimídia usa teclas multimídia do Windows sem fingir pausa 
 checar('Volume Windows suporta aumentar, diminuir e silenciar sem fingir percentual',
       'volume_pc' in main and '0xAF' in main and '0xAE' in main and '0xAD' in main and 'não é suportado no Windows' in main)
 checar('PowerShell recebe script fixo, sem comando do usuário',
-      'spawnSync(\'powershell.exe\'' in main and 'shell: true' not in main and 'String(comando)' in main)
+      'spawnSync(\'powershell.exe\'' in main and 'shell: true' not in main and 'String(comando ||' in main and 'Number(codigo)' in main)
 checar('E-mail Windows abre rascunho mailto com campos codificados',
       'email_pc' in main and 'mailto:' in main and 'encodeURIComponent' in main)
 checar('WhatsApp desktop usa o link wa.me já validado',
