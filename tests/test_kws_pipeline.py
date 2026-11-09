@@ -13,6 +13,7 @@ checks = {
     "serviço não usa Android SpeechRecognizer": "createSpeechRecognizer(" not in service and "createOnDeviceSpeechRecognizer(" not in service,
     "serviço seleciona explicitamente sherpa KWS": 'DETECTOR = "sherpa-onnx-kws-gigaspeech-en"' in service,
     "captura PCM real por AudioRecord": "new AudioRecord(" in engine and "audio.read(" in engine,
+    "reinício não sobrepõe dois workers/microfones": "Thread anterior = worker" in engine and "anterior.isAlive()" in engine and "dois microfones simultaneamente" in engine,
     "inferência passa por KeywordSpotter com arquivos locais": "new KeywordSpotter(null, config)" in engine and "kws.decode(kwsStream)" in engine,
     "UI espera confirmação real do serviço antes de mostrar ouvindo": "diagnosticoEscuta()" in app and "estadoKws.escutando" in app,
     "UI transfere microfone ao app e cancela rearme do serviço": "servicoWake.stopWake()" in app and "rearme de segurança do serviço" in app,
