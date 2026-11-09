@@ -69,6 +69,12 @@ function amostra(seed, extra) {
   const idadeMarcelo = I.idadeDetalhada('', comandoCadastro.dados);
   assert.deepStrictEqual({ anos: idadeMarcelo.anos, meses: idadeMarcelo.meses, aproximada: idadeMarcelo.aproximada },
     { anos: 27, meses: 0, aproximada: true });
+  const relogioOriginal = t;
+  t = new Date('2026-11-30T12:00:00Z').getTime();
+  const idadeMarceloAtualizada = I.idadeDetalhada('', comandoCadastro.dados);
+  assert.deepStrictEqual({ anos: idadeMarceloAtualizada.anos, meses: idadeMarceloAtualizada.meses },
+    { anos: 27, meses: 1 }, 'idade aproximada avança mês a mês');
+  t = relogioOriginal;
   assert.ok(/idade aproximada: 27 anos/.test(I.descrever(Object.assign({ nome: 'Marcelo' }, comandoCadastro.dados))));
   assert.strictEqual(I.interpretarCadastroVoz('cadastre meu amigo, idade 27 anos').ok, false,
     'não cria perfil sem nome');
