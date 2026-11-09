@@ -397,7 +397,7 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
   void _updateClock() {
     if (!mounted) return;
     final now = DateTime.now();
-    setState(() => clock = '\${now.hour.toString().padLeft(2, '0')}:\${now.minute.toString().padLeft(2, '0')}');
+    setState(() => clock = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}');
   }
 
   @override
@@ -558,7 +558,7 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
         const Color(0xFFFFC66D), () => _openKwsSettings()),
       const SizedBox(height: 8),
       _statusCard(Icons.widgets_rounded, 'Módulos do sistema',
-        '\${modules.length} áreas identificadas no catálogo', 'SISTEMAS', cyan,
+        '${modules.length} áreas identificadas no catálogo', 'SISTEMAS', cyan,
         () => setState(() => tab = 1)),
       const SizedBox(height: 16),
       _sectionHeader('QUICK COMMANDS', 'COMANDOS RÁPIDOS'),
