@@ -7,7 +7,9 @@ RAIZ = pathlib.Path(__file__).resolve().parent.parent
 def ler(n): return (RAIZ / n).read_text(encoding='utf-8')
 app = ler('app.js'); html = ler('index.html'); sis = ler('sistema.js'); tests = ler('tests/test_sistema.js')
 meta = json.loads(ler('VERSAO.json')); pkg = json.loads(ler('package.json'))
-gradle_path = RAIZ / 'android/app/build.gradle'\ngradle = gradle_path.read_text(encoding='utf-8') if gradle_path.exists() else ''\npatch_android = ler('patch_android_version.py')
+gradle_path = RAIZ / 'android/app/build.gradle'
+gradle = gradle_path.read_text(encoding='utf-8') if gradle_path.exists() else ''
+patch_android = ler('patch_android_version.py')
 falhas = []
 def check(nome, ok):
     print(('OK: ' if ok else 'FALHA: ') + nome)
