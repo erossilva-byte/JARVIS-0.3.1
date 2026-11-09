@@ -6,6 +6,7 @@ service = (ROOT / "JarvisService.java").read_text(encoding="utf-8")
 engine = (ROOT / "JarvisKwsEngine.java").read_text(encoding="utf-8")
 prepare = (ROOT / "preparar_kws.py").read_text(encoding="utf-8")
 release = (ROOT / ".github/workflows/release-apk.yml").read_text(encoding="utf-8")
+app = (ROOT / "app.js").read_text(encoding="utf-8")
 patch = (ROOT / "patch_gradle.py").read_text(encoding="utf-8")
 
 checks = {
@@ -13,6 +14,8 @@ checks = {
     "serviço seleciona explicitamente sherpa KWS": 'DETECTOR = "sherpa-onnx-kws-gigaspeech-en"' in service,
     "captura PCM real por AudioRecord": "new AudioRecord(" in engine and "audio.read(" in engine,
     "inferência passa por KeywordSpotter": "new KeywordSpotter(config)" in engine and "kws.decode(kwsStream)" in engine,
+    "UI espera confirmação real do serviço antes de mostrar ouvindo": "diagnosticoEscuta()" in app and "estadoKws.escutando" in app,
+    "UI transfere microfone ao app e cancela rearme do serviço": "servicoWake.stopWake()" in app and "rearme de segurança do serviço" in app,
     "amostras são convertidas para float PCM": "pcm[i] / 32768.0f" in engine,
     "modelo roda em CPU com threads limitadas": '.setProvider("cpu")' in engine and ".setNumThreads(2)" in engine,
     "KWS não faz fallback de rede": "não usa SpeechRecognizer, rede ou serviço de nuvem" in engine,
