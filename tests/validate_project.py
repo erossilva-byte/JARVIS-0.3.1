@@ -73,7 +73,7 @@ if 'picovoice' in (ROOT / 'patch_gradle.py').read_text(encoding='utf-8').lower()
 service_kws = (ROOT / 'JarvisService.java').read_text(encoding='utf-8')
 kws_engine = (ROOT / 'JarvisKwsEngine.java').read_text(encoding='utf-8')
 if ('new JarvisKwsEngine(' not in service_kws or 'new AudioRecord(' not in kws_engine
-        or 'new KeywordSpotter(context.getAssets(), config)' not in kws_engine
+        or 'new KeywordSpotter(null, config)' not in kws_engine
         or 'kwsStream.acceptWaveform(' not in kws_engine or 'kws.decode(kwsStream)' not in kws_engine
         or 'disparar(keyword' not in service_kws or 'JarvisWakeBus.acordou' not in service_kws):
     issues.append('KWS acústico sherpa-onnx não conectado ao serviço de escuta ou ao evento de ativação')
