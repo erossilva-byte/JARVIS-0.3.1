@@ -113,7 +113,7 @@
         '})();',
         '<\/script>'
       ];
-      iframe.srcdoc = linhas.join('');
+      iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(linhas.join(''));
       raiz.addEventListener('message', receber);
       iframe.onload = function () {
         try {
