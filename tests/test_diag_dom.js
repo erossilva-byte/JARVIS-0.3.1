@@ -38,7 +38,7 @@ const ctx = {
     diagnosticoEscuta: async () => ({
       mic: true, notificacoes: false, bateriaLivre: false, sobreposicao: true,
       acessoNotificacoes: false, servico: true, escutando: true,
-      detector: 'proprio', calibragem: 'sensibilidade 55%', descartesRuido: 3, desejada: true,
+      detector: 'sherpa-onnx-kws-gigaspeech-en', calibragem: 'Sherpa-ONNX KWS local · GigaSpeech inglês · limiar 0.35', desejada: true,
       ultimoErro: '', ultimoEvento: Date.now() - 60000,
       fabricante: 'Xiaomi', modelo: 'Redmi', android: '14', testeAtivo: false,
       restricaoOem: 'xiaomi'
@@ -67,7 +67,7 @@ vm.runInContext(fonte, ctx);
     diagnosticoEscuta: async () => ({
       mic: true, notificacoes: true, bateriaLivre: true, sobreposicao: true,
       acessoNotificacoes: true, servico: true, escutando: true,
-      detector: 'proprio', calibragem: 'sensibilidade 40%', descartesRuido: 0, desejada: true,
+      detector: 'sherpa-onnx-kws-gigaspeech-en', calibragem: 'Sherpa-ONNX KWS local · GigaSpeech inglês · limiar 0.45', desejada: true,
       ultimoErro: '', ultimoEvento: Date.now(), fabricante: 'Samsung',
       modelo: 'SM', android: '13', testeAtivo: false, restricaoOem: 'samsung'
     })
@@ -75,7 +75,7 @@ vm.runInContext(fonte, ctx);
   vm.runInContext('plug = ' + ctx.plug.toString(), ctx);
   const r2 = await ctx.diagnosticoSegundoPlano(false);
   ok.push(['tudo certo mostra pronto', nos['bg-resumo'].textContent === 'pronto']);
-  ok.push(['fala confirma o detector próprio', /detector próprio/.test(r2.resumo)]);
+  ok.push(['fala confirma o KWS acústico local', /KWS acústico local/.test(r2.resumo)]);
   ok.push(['mostra a calibragem e os descartes por ruído', /sensibilidade 55%/.test(texto(nos['bg-diag'])) && /3 ativação\(ões\) descartada/.test(texto(nos['bg-diag']))]);
 
   let falhas = 0;
