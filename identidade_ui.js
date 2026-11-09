@@ -140,8 +140,7 @@
     var lista = IDENT.buscar(termo);
     var total = IDENT.listar().length;
     status(total
-      ? total + ' pessoa(s) cadastrada(s)' + (termo ? ' · ' + lista.length + ' no filtro' : '') + '. ' +
-        (IDENT.resumo().comVoz ? IDENT.resumo().comVoz + ' com voz pronta.' : 'Nenhuma voz pronta ainda.')
+      ? total + ' pessoa(s) cadastrada(s)' + (termo ? ' · ' + lista.length + ' no filtro' : '') + '.'
       : 'Nenhuma pessoa cadastrada. Só o nome é obrigatório para começar.', total ? 'ok' : '');
     if (!lista.length) {
       var vazio = document.createElement('p');
