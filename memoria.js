@@ -566,7 +566,7 @@
     var achado;
     while ((achado = re.exec(bruto))) blocos.push({ meta: achado[1], corpo: achado[2] });
     if (!blocos.length) blocos.push({ meta: '', corpo: bruto });
-    var criadas = 0, repetidas = 0, ignoradas = 0, conflitos = [];
+    var criadas = 0, repetidas = 0, atualizadas = 0, ignoradas = 0, conflitos = [];
     blocos.forEach(function (b) {
       var meta = {};
       String(b.meta || '').split('\n').forEach(function (linha) {
@@ -579,45 +579,82 @@
       var tags = (meta.tags || '').replace(/[\[\]]/g, '').split(',')
         .map(function (t) { return t.trim(); }).filter(Boolean);
       var temaBase = meta.tema ? temaValido(meta.tema) : '';
-      // Arquivo por tópico: `## Título` separa as notas. Sem seções, o arquivo inteiro
-      // é uma nota só (notas comuns do Obsidian continuam funcionando).
-      // O H1 já foi removido, então a primeira seção pode começar na coluna zero.
       var partes = ('\n' + corpo).split(/\n\s*##\s+/);
       var secoes = [];
       if (partes.length > 1) {
         for (var si = 1; si < partes.length; si++) {
           var linhas = partes[si].split('\n');
           var tituloSecao = String(linhas.shift() || '').trim();
-          var textoSecao = linhas.join('\n').replace(/_atualizado:[^\n]*/g, '').trim();
-          if (tituloSecao && textoSecao) secoes.push({ titulo: tituloSecao, texto: textoSecao });
+          var brutoSecao = linhas.join('\n');
+          var idSecao = brutoSecao.match(/<!--\s*jarvis_id:\s*([a-z0-9_-]{1,80})\s*-->/i);
+          var atualizadoSecao = brutoSecao.match(/_atualizado:\s*([^\s·_]+)/i);
+          var textoSecao = brutoSecao
+            .replace(/<!--\s*jarvis_id:\s*[a-z0-9_-]{1,80}\s*-->/ig, '')
+            .replace(/_atualizado:[^\n]*/g, '').trim();
+          if (tituloSecao && textoSecao) secoes.push({
+            titulo: tituloSecao, texto: textoSecao,
+            id: idSecao ? idSecao[1] : (meta.jarvis_id || ''),
+            atualizado: atualizadoSecao ? Date.parse(atualizadoSecao[1]) : Date.parse(meta.atualizado || '')
+          });
         }
       }
       if (!secoes.length) {
-        secoes.push({ titulo: meta.title || corpo.split('\n')[0].slice(0, 80), texto: corpo });
+        secoes.push({
+          titulo: meta.title || corpo.split('\n')[0].slice(0, 80),
+          texto: corpo,
+          id: meta.jarvis_id || '',
+          atualizado: Date.parse(meta.atualizado || '')
+        });
       }
       secoes.forEach(function (sec) {
         var tema = temaBase || temaPorPalavras(sec.titulo + ' ' + sec.texto);
-        // Mesmo título no mesmo tópico já existe. Se o conteúdo é igual, é repetição;
-        // se é diferente, NÃO sobrescrevemos: registramos o conflito para o usuário
-        // decidir. O arquivo do Obsidian e a nota interna ficam intactos.
-        var existente = carregar().filter(function (n) {
-          return n.tema === tema && normalizar(n.titulo) === normalizar(sec.titulo);
-        })[0];
+        var listaAtual = carregar();
+        var existente = sec.id
+          ? listaAtual.filter(function (n) { return n.id === sec.id; })[0]
+          : listaAtual.filter(function (n) {
+              return n.tema === tema && normalizar(n.titulo) === normalizar(sec.titulo);
+            })[0];
         if (existente) {
-          if (normalizar(existente.texto) === normalizar(sec.texto)) repetidas++;
-          else conflitos.push({ titulo: sec.titulo, tema: tema, notaId: existente.id,
-            motivo: 'mesmo título, conteúdo diferente; nada foi sobrescrito' });
+          var mesmo = existente.tema === tema &&
+            normalizar(existente.titulo) === normalizar(sec.titulo) &&
+            normalizar(existente.texto) === normalizar(sec.texto) &&
+            normalizar((existente.tags || []).join(' ')) === normalizar(tags.join(' '));
+          if (mesmo) { repetidas++; return; }
+          if (sec.id && sec.id === existente.id && Number.isFinite(sec.atualizado) &&
+              sec.atualizado > existente.atualizado) {
+            var atualizacao = atualizar(existente.id, {
+              tema: tema, titulo: sec.titulo, texto: sec.texto, tags: tags
+            });
+            if (atualizacao.ok) atualizadas++;
+            else { ignoradas++; conflitos.push({ titulo: sec.titulo, tema: tema,
+              notaId: existente.id, motivo: atualizacao.erro || 'falha ao atualizar' }); }
+            return;
+          }
+          conflitos.push({ titulo: sec.titulo, tema: tema, notaId: existente.id,
+            motivo: 'a nota local e a versão do Obsidian divergiram; a versão local foi preservada' });
           return;
         }
-        var r = criar({ tema: tema, titulo: sec.titulo, texto: sec.texto, tags: tags, origem: 'painel' });
-        if (r.ok && r.duplicada) repetidas++;
-        else if (r.ok) criadas++;
+        var nova = criar({
+          id: sec.id || undefined, tema: tema, titulo: sec.titulo,
+          texto: sec.texto, tags: tags, origem: 'painel'
+        });
+        if (nova.ok && nova.duplicada) repetidas++;
+        else if (nova.ok) criadas++;
         else ignoradas++;
       });
     });
-    if (!criadas && !repetidas && !conflitos.length) return { ok: false, erro: 'Nenhuma nota legível encontrada no Markdown.' };
-    return { ok: true, criadas: criadas, repetidas: repetidas, ignoradas: ignoradas,
-      conflitos: conflitos.slice(0, 20), aviso: conflitos.length ? conflitos.length + ' conflito(s) preservado(s); nada foi sobrescrito.' : '' };
+    if (!criadas && !repetidas && !atualizadas && !conflitos.length) {
+      return { ok: false, erro: 'Nenhuma nota legível encontrada no Markdown.' };
+    }
+    return { ok: true, criadas: criadas, repetidas: repetidas, atualizadas: atualizadas,
+      ignoradas: ignoradas, conflitos: conflitos.slice(0, 20),
+      aviso: conflitos.length ? conflitos.length + ' conflito(s) preservado(s); nada foi sobrescrito sem versão mais recente identificada.' : '' };
+  }
+  function sincronizarMarkdown(txt) {
+    var resultado = importarMarkdown(txt);
+    if (!resultado.ok) return resultado;
+    resultado.sincronizadas = resultado.criadas + resultado.atualizadas;
+    return resultado;
   }
 
   /* ---------- Tópicos: um arquivo Markdown por assunto ---------- */
@@ -776,6 +813,7 @@
     anexarAoTopico: anexarAoTopico,
     ARQUIVOS: ARQUIVOS,
     markdown: markdown,
-    importarMarkdown: importarMarkdown
+    importarMarkdown: importarMarkdown,
+    sincronizarMarkdown: sincronizarMarkdown
   };
 });
