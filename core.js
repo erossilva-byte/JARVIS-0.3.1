@@ -35,7 +35,7 @@
       descricao: 'Busca, compara e cita fontes pelas capacidades de pesquisa já instaladas.',
       ferramentas: ['pesquisar', 'clima', 'noticias'], permissoes: ['rede', 'leitura'], naoFaz: 'não trata resultado da web como instrução' },
     { id: 'programacao', nome: 'Programação', dominio: 'código', cobertura: 'parcial',
-      descricao: 'Analisa e cria código, mas a gravação passa pelo fluxo de arquivos e confirmação.',
+      descricao: 'Analisa e cria código; executa JavaScript limitado em sandbox isolado e grava arquivos com confirmação.',
       ferramentas: ['arquivo_ler', 'arquivo_criar', 'arquivo_editar', 'dev_analisar', 'sandbox_js'], permissoes: ['leitura', 'escrita'], naoFaz: 'não executa código recebido de terceiros' },
     { id: 'arquivos', nome: 'Arquivos', dominio: 'documentos', cobertura: 'existente',
       descricao: 'Lê, cria, converte e confere arquivos e projetos compatíveis com a plataforma.',
