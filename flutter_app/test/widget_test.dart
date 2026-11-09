@@ -5,7 +5,7 @@ import 'package:jarvis_nova/main.dart';
 void main() {
   testWidgets('exibe núcleo e navega para catálogo com os módulos', (tester) async {
     await tester.view.setPhysicalSize(const Size(430, 900));
-    await tester.view.devicePixelRatio = 1;
+    tester.view.devicePixelRatio = 1;
     await tester.pumpWidget(const JarvisApp());
 
     expect(find.text('J.A.R.V.I.S. NOVA'), findsOneWidget);
@@ -24,13 +24,13 @@ void main() {
     );
     expect(find.text('CADeSIMU e elétrica'), findsOneWidget);
 
-    await tester.view.resetPhysicalSize();
-    await tester.view.resetDevicePixelRatio();
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
   });
 
   testWidgets('busca e filtro reduzem o catálogo', (tester) async {
     await tester.view.setPhysicalSize(const Size(430, 900));
-    await tester.view.devicePixelRatio = 1;
+    tester.view.devicePixelRatio = 1;
     await tester.pumpWidget(const JarvisApp());
     await tester.tap(find.text('Sistemas'));
     await tester.pump(const Duration(milliseconds: 350));
@@ -44,13 +44,13 @@ void main() {
     await tester.pump();
     expect(find.text('Obsidian'), findsOneWidget);
 
-    await tester.view.resetPhysicalSize();
-    await tester.view.resetDevicePixelRatio();
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
   });
 
   testWidgets('configurações e detalhes deixam claras as integrações pendentes', (tester) async {
     await tester.view.setPhysicalSize(const Size(430, 900));
-    await tester.view.devicePixelRatio = 1;
+    tester.view.devicePixelRatio = 1;
     await tester.pumpWidget(const JarvisApp());
 
     await tester.tap(find.byTooltip('Configurações'));
@@ -66,7 +66,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Integração em auditoria'), findsOneWidget);
 
-    await tester.view.resetPhysicalSize();
-    await tester.view.resetDevicePixelRatio();
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
   });
 }
