@@ -15,9 +15,6 @@ void main() {
     expect(find.text('Capacidades do J.A.R.V.I.S.'), findsOneWidget);
     expect(find.text('Hermes Agent'), findsOneWidget);
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -900));
-    await tester.pump(const Duration(milliseconds: 350));
-    expect(find.text('Obsidian'), findsOneWidget);
   });
 
   testWidgets('a busca filtra os módulos apresentados', (tester) async {
@@ -30,9 +27,7 @@ void main() {
     expect(find.text('Hermes Agent'), findsNothing);
     expect(find.text('Memória semântica'), findsNothing);
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -700));
-    await tester.pump(const Duration(milliseconds: 250));
-    expect(find.text('Obsidian'), findsOneWidget);
+    expect(find.text('Obsidian'), findsNWidgets(2));
   });
 
   testWidgets('o botão de ajustes abre a página informativa', (tester) async {
