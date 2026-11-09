@@ -12,6 +12,7 @@ class FakeKwsGateway implements KwsGateway {
     detail: 'plugin ausente',
   );
   bool throwOnStart = false;
+  bool emitDuringStart = false;
 
   @override
   Stream<String> get wakeEvents => events.stream;
@@ -22,12 +23,14 @@ class FakeKwsGateway implements KwsGateway {
   @override
   Future<KwsStatus> start() async {
     if (throwOnStart) throw StateError('falha simulada');
-    return current = const KwsStatus(
+    current = const KwsStatus(
       available: true,
       listening: true,
       engine: 'sherpa-onnx',
       detail: 'serviço confirmou escuta',
     );
+    if (emitDuringStart) events.add('Jarvis');
+    return current;
   }
 
   @override
@@ -84,6 +87,13 @@ void main() {
   test('propaga palavra detectada pelo fluxo nativo', () async {
     await controller.start();
     gateway.events.add('Jarvis');
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.lastWake, 'Jarvis');
+  });
+
+  test('não perde ativação emitida imediatamente ao iniciar', () async {
+    gateway.emitDuringStart = true;
+    await controller.start();
     await Future<void>.delayed(Duration.zero);
     expect(controller.lastWake, 'Jarvis');
   });
