@@ -169,6 +169,26 @@ npm run dist:win       # instalador NSIS em dist/
   Se existirem, o diagnóstico os detecta; se não, os formatos que dependem deles são
   recusados com explicação (FCStd, RVT/RFA, DWG).
 
+### Controles móveis adaptados para Windows
+
+O núcleo compartilhado expõe também controles equivalentes a algumas ações do Android,
+adaptados ao computador:
+
+- **Mídia:** pausar/retomar, próxima, anterior e parar por teclas multimídia globais.
+- **Volume principal:** aumentar, diminuir e silenciar pelas teclas de volume do Windows.
+- **WhatsApp:** abre a conversa via `wa.me`; a pessoa revisa e envia no próprio WhatsApp.
+- **E-mail:** abre um rascunho `mailto:` no cliente padrão; o envio continua manual.
+
+Essas ações são deliberadamente honestas: mídia e volume retornam como **comando enviado,
+efeito não confirmado**, pois o Windows não fornece confirmação confiável de que o player
+ou mixer aplicou a alteração. Percentual exato e canais de volume separados não estão
+implementados. As teclas são enviadas por PowerShell com script fixo e chamadas Win32;
+nenhum texto do usuário é executado como comando.
+
+Não há equivalente físico no PC para a lanterna do celular. Câmera, microfone, brilho e
+notificações dependem do hardware, sistema e permissões do computador; não são marcados
+como concluídos sem suporte real do host.
+
 ### Diferenças em relação ao Android
 
 | Recurso | Android | Windows |
