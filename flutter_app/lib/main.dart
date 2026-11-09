@@ -1,223 +1,209 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-void main() => runApp(const JarvisApp());
+void main()=>runApp(const JarvisApp());
+const cyan=Color(0xFF55DFFF),bg=Color(0xFF050A12),panel=Color(0xFF0B1725),muted=Color(0xFF8CA5B9);
 
-const _cyan = Color(0xFF55DFFF);
-const _bg = Color(0xFF050B14);
-
-class JarvisApp extends StatelessWidget {
-  const JarvisApp({super.key});
-  @override
-  Widget build(BuildContext context) => MaterialApp(
-    debugShowCheckedModeBanner: false,
-    title: 'J.A.R.V.I.S. Nova',
-    theme: ThemeData(
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: _bg,
-      colorScheme: ColorScheme.fromSeed(seedColor: _cyan, brightness: Brightness.dark),
-      useMaterial3: true,
-      fontFamily: 'Roboto',
-    ),
-    home: const HomeScreen(),
-  );
+class JarvisApp extends StatelessWidget{
+ const JarvisApp({super.key});
+ @override Widget build(BuildContext context)=>MaterialApp(debugShowCheckedModeBanner:false,title:'J.A.R.V.I.S. Nova',theme:ThemeData(brightness:Brightness.dark,scaffoldBackgroundColor:bg,colorScheme:ColorScheme.fromSeed(seedColor:cyan,brightness:Brightness.dark),useMaterial3:true),home:const HomeScreen());
 }
-
-class JarvisModule {
-  const JarvisModule(this.name, this.group, this.icon, this.description);
-  final String name, group, description;
-  final IconData icon;
+class JarvisModule{
+ const JarvisModule(this.name,this.group,this.icon,this.description);
+ final String name,group,description;final IconData icon;
 }
-
-const modules = <JarvisModule>[
-  JarvisModule('Hermes Agent', 'Inteligência', Icons.hub, 'Orquestração e execução de agentes.'),
-  JarvisModule('Provedores de IA', 'Inteligência', Icons.psychology, 'Groq, OpenRouter/DeepSeek, Gemini, Cerebras e Mistral.'),
-  JarvisModule('Modelos locais', 'Inteligência', Icons.memory, 'Modelos locais e operação offline.'),
-  JarvisModule('Agentes especializados', 'Inteligência', Icons.smart_toy, 'Agentes por domínio e ferramentas.'),
-  JarvisModule('Memória semântica', 'Conhecimento', Icons.account_tree, 'Contexto, memória e recuperação de informações.'),
-  JarvisModule('Obsidian', 'Conhecimento', Icons.auto_stories, 'Vínculo e sincronização com cofre Obsidian.'),
-  JarvisModule('Voz e KWS', 'Interação', Icons.graphic_eq, 'Voz, palavra de ativação local e síntese.'),
-  JarvisModule('Visão e OCR', 'Interação', Icons.visibility, 'Câmera, leitura de tela, imagens e documentos.'),
-  JarvisModule('Arquivos', 'Produtividade', Icons.folder_open, 'Leitura, criação, conversão e organização.'),
-  JarvisModule('Programação e sandbox', 'Produtividade', Icons.code, 'Assistência de código e execução isolada.'),
-  JarvisModule('CADeSIMU e elétrica', 'Engenharia', Icons.electrical_services, 'Projetos, circuitos e validação elétrica.'),
-  JarvisModule('Avatar 3D', 'Interface', Icons.view_in_ar, 'Avatar e representação visual do assistente.'),
-  JarvisModule('Pessoas e contexto', 'Contexto', Icons.people_alt, 'Perfis e contexto configurável.'),
-  JarvisModule('Tarefas e rotinas', 'Produtividade', Icons.checklist, 'Tarefas persistentes, lembretes e automações.'),
-  JarvisModule('Segurança e privacidade', 'Sistema', Icons.shield, 'PIN, biometria e permissões suportadas.'),
-  JarvisModule('Android e dispositivos', 'Sistema', Icons.phone_android, 'Estado do dispositivo e recursos Android.'),
-  JarvisModule('Pareamento Windows', 'Conectividade', Icons.devices, 'Vínculo entre celular e computador.'),
-  JarvisModule('Controle do Windows', 'Conectividade', Icons.desktop_windows, 'Ações autorizadas no computador.'),
-  JarvisModule('ESP32 e Home Assistant', 'Conectividade', Icons.sensors, 'Integração com dispositivos e automação residencial.'),
-  JarvisModule('Backup e restauração', 'Sistema', Icons.backup, 'Cópia e recuperação dos dados do assistente.'),
-  JarvisModule('Atualizações', 'Sistema', Icons.system_update, 'Versões, integridade e atualização do aplicativo.'),
+const modules=<JarvisModule>[
+ JarvisModule('Hermes Agent','Inteligência',Icons.hub_rounded,'Orquestração e execução de agentes.'),
+ JarvisModule('Provedores de IA','Inteligência',Icons.psychology_rounded,'Groq, Gemini, Cerebras, Mistral e OpenRouter.'),
+ JarvisModule('Modelos locais','Inteligência',Icons.memory_rounded,'Modelos locais e operação offline.'),
+ JarvisModule('Agentes especializados','Inteligência',Icons.smart_toy_rounded,'Agentes por domínio e ferramentas.'),
+ JarvisModule('Memória semântica','Conhecimento',Icons.account_tree_rounded,'Contexto e recuperação de informações.'),
+ JarvisModule('Obsidian','Conhecimento',Icons.auto_stories_rounded,'Vínculo e sincronização com cofre Obsidian.'),
+ JarvisModule('Voz e KWS','Interação',Icons.graphic_eq_rounded,'Voz, palavra de ativação local e síntese.'),
+ JarvisModule('Visão e OCR','Interação',Icons.visibility_rounded,'Câmera, tela, imagens e documentos.'),
+ JarvisModule('Arquivos','Produtividade',Icons.folder_copy_rounded,'Leitura, criação, conversão e organização.'),
+ JarvisModule('Programação e sandbox','Produtividade',Icons.terminal_rounded,'Assistência de código e execução isolada.'),
+ JarvisModule('CADeSIMU e elétrica','Engenharia',Icons.electrical_services_rounded,'Projetos, circuitos e validação elétrica.'),
+ JarvisModule('Avatar 3D','Interface',Icons.view_in_ar_rounded,'Avatar e representação visual do assistente.'),
+ JarvisModule('Pessoas e contexto','Contexto',Icons.people_alt_rounded,'Perfis e contexto configurável.'),
+ JarvisModule('Tarefas e rotinas','Produtividade',Icons.checklist_rounded,'Tarefas persistentes e automações.'),
+ JarvisModule('Segurança e privacidade','Sistema',Icons.shield_rounded,'PIN, biometria e permissões suportadas.'),
+ JarvisModule('Android e dispositivos','Sistema',Icons.phone_android_rounded,'Estado do dispositivo e recursos Android.'),
+ JarvisModule('Pareamento Windows','Conectividade',Icons.devices_rounded,'Vínculo seguro entre celular e computador.'),
+ JarvisModule('Controle do Windows','Conectividade',Icons.desktop_windows_rounded,'Ações autorizadas no computador.'),
+ JarvisModule('ESP32 e Home Assistant','Conectividade',Icons.sensors_rounded,'Integração residencial e dispositivos.'),
+ JarvisModule('Backup e restauração','Sistema',Icons.backup_rounded,'Cópia e recuperação dos dados.'),
+ JarvisModule('Atualizações','Sistema',Icons.system_update_alt_rounded,'Versões, integridade e atualização.'),
 ];
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
+class HomeScreen extends StatefulWidget{
+ const HomeScreen({super.key});
+ @override State<HomeScreen> createState()=>_HomeScreenState();
+}
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
+ late final AnimationController motion=AnimationController(vsync:this,duration:const Duration(seconds:20))..repeat();
+ late final AnimationController intro=AnimationController(vsync:this,duration:const Duration(milliseconds:700))..forward();
+ final search=TextEditingController();
+ int tab=0;String filter='Todos',query='';Offset tilt=Offset.zero;
+ static const groups=['Todos','Inteligência','Conhecimento','Interação','Produtividade','Engenharia','Interface','Contexto','Sistema','Conectividade'];
+ @override void dispose(){motion.dispose();intro.dispose();search.dispose();super.dispose();}
+ @override Widget build(BuildContext context)=>Scaffold(
+  appBar:AppBar(backgroundColor:bg,titleSpacing:18,title:const Row(children:[
+   _Brand(),SizedBox(width:10),Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Text('J.A.R.V.I.S. NOVA',style:TextStyle(fontSize:13,letterSpacing:2,fontWeight:FontWeight.w700)),
+    Text('PERSONAL AI SYSTEM',style:TextStyle(fontSize:8,letterSpacing:2,color:muted)),
+   ]),
+  ]),actions:[IconButton(tooltip:'Configurações',onPressed:settings,icon:const Icon(Icons.tune_rounded,color:cyan)),const SizedBox(width:8)]),
+  body:SafeArea(child:AnimatedSwitcher(duration:const Duration(milliseconds:300),switchInCurve:Curves.easeOutCubic,child:tab==0?homeView(key:const ValueKey('home')):catalog(key:const ValueKey('catalog')))),
+  bottomNavigationBar:NavigationBar(height:68,backgroundColor:const Color(0xFF08121E),indicatorColor:cyan.withOpacity(.13),selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:const[
+   NavigationDestination(icon:Icon(Icons.blur_circular_rounded),selectedIcon:Icon(Icons.blur_on_rounded,color:cyan),label:'Núcleo'),
+   NavigationDestination(icon:Icon(Icons.grid_view_rounded),selectedIcon:Icon(Icons.grid_view_rounded,color:cyan),label:'Sistemas'),
+  ]),
+ );
+ Widget homeView({Key? key})=>AnimatedBuilder(animation:intro,builder:(_,child)=>Opacity(opacity:intro.value,child:Transform.translate(offset:Offset(0,14*(1-intro.value)),child:child)),child:ListView(key:key,padding:const EdgeInsets.fromLTRB(20,18,20,28),children:[
+  const _Eyebrow('SISTEMA DE INTELIGÊNCIA'),const SizedBox(height:8),
+  const Text('À sua disposição.',style:TextStyle(fontSize:30,fontWeight:FontWeight.w300)),
+  const SizedBox(height:5),const Text('Uma interface em evolução.',style:TextStyle(color:muted,fontSize:12)),
+  Center(child:AnimatedBuilder(animation:motion,builder:(_,__)=>GestureDetector(
+   onTap:coreInfo,
+   onPanUpdate:(d)=>setState(()=>tilt=Offset((tilt.dx+d.delta.dx/500).clamp(-.35,.35),(tilt.dy+d.delta.dy/500).clamp(-.35,.35))),
+   onPanEnd:(_)=>setState(()=>tilt=Offset.zero),
+   child:SizedBox(width:330,height:330,child:CustomPaint(painter:HologramPainter(motion.value,tilt),child:const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+    Icon(Icons.all_inclusive_rounded,color:cyan,size:48),SizedBox(height:8),
+    Text('J.A.R.V.I.S.',style:TextStyle(letterSpacing:3.5,fontSize:16)),SizedBox(height:5),
+    Text('NÚCLEO HOLOGRÁFICO',style:TextStyle(color:cyan,fontSize:8,letterSpacing:2)),SizedBox(height:12),
+    Icon(Icons.touch_app_rounded,size:15,color:muted),
+   ])))),
+  ))),
+  const _Heading('VISÃO GERAL','ESTADO DA INTERFACE'),const SizedBox(height:10),
+  const _Status(icon:Icons.blur_circular_rounded,title:'Núcleo visual',detail:'Animação vetorial Flutter em execução',state:'ATIVO',color:Color(0xFF64E6B1)),
+  const SizedBox(height:8),const _Status(icon:Icons.hub_rounded,title:'Serviços inteligentes',detail:'Pontes nativas ainda em migração',state:'PENDENTE',color:Color(0xFFFFC66D)),
+  const SizedBox(height:8),const _Status(icon:Icons.widgets_rounded,title:'Módulos catalogados',detail:'21 áreas identificadas; integração não presumida',state:'CATÁLOGO',color:cyan),
+  const SizedBox(height:18),const _Heading('ACESSO RÁPIDO','EXPLORAR'),const SizedBox(height:10),
+  Row(children:[
+   Expanded(child:_Quick(icon:Icons.grid_view_rounded,title:'Sistemas',subtitle:'Todos os módulos',onTap:()=>setState(()=>tab=1))),
+   const SizedBox(width:10),Expanded(child:_Quick(icon:Icons.tune_rounded,title:'Ajustes',subtitle:'Preferências',onTap:settings)),
+  ]),
+  const SizedBox(height:16),const _Footnote('Os indicadores descrevem a interface Flutter. Não afirmam que os serviços externos já estejam conectados.'),
+ ]));
+ Widget catalog({Key? key}){
+  final visible=modules.where((m)=>(filter=='Todos'||m.group==filter)&&(m.name+' '+m.group+' '+m.description).toLowerCase().contains(query.toLowerCase())).toList();
+  return ListView(key:key,padding:const EdgeInsets.fromLTRB(18,18,18,28),children:[
+   const _Eyebrow('CENTRAL DE SISTEMAS'),const SizedBox(height:7),
+   const Text('Capacidades do J.A.R.V.I.S.',style:TextStyle(fontSize:26,fontWeight:FontWeight.w300)),
+   const SizedBox(height:6),const Text('Explore os módulos identificados no projeto.',style:TextStyle(color:muted,fontSize:12)),
+   const SizedBox(height:16),TextField(controller:search,onChanged:(v)=>setState(()=>query=v),decoration:InputDecoration(
+    hintText:'Buscar sistema ou função...',prefixIcon:const Icon(Icons.search_rounded,color:cyan),
+    suffixIcon:query.isEmpty?null:IconButton(onPressed:(){search.clear();setState(()=>query='');},icon:const Icon(Icons.close)),
+    filled:true,fillColor:panel,border:OutlineInputBorder(borderRadius:BorderRadius.circular(15),borderSide:BorderSide.none),
+   )),
+   const SizedBox(height:12),SizedBox(height:38,child:ListView.separated(scrollDirection:Axis.horizontal,itemCount:groups.length,separatorBuilder:(_,__)=>const SizedBox(width:7),itemBuilder:(context,i){
+    final g=groups[i],selected=g==filter;
+    return ChoiceChip(label:Text(g),selected:selected,onSelected:(_)=>setState(()=>filter=g),labelStyle:TextStyle(fontSize:11,color:selected?cyan:muted),backgroundColor:panel,selectedColor:cyan.withOpacity(.12),side:BorderSide(color:selected?cyan.withOpacity(.45):Colors.white12),showCheckmark:false);
+   })),
+   const SizedBox(height:14),Row(children:[const _Eyebrow('MÓDULOS'),const Spacer(),Text(visible.length.toString()+' encontrados',style:const TextStyle(color:muted,fontSize:10))]),
+   const SizedBox(height:10),
+   if(visible.isEmpty)const Padding(padding:EdgeInsets.all(28),child:Center(child:Text('Nenhum módulo encontrado.',style:TextStyle(color:muted)))),
+   for(final m in visible)...[_ModuleTile(module:m,onTap:()=>openModule(m)),const SizedBox(height:8)],
+   const _Footnote('Cada módulo será marcado como funcional somente após conexão com o serviço real e testes correspondentes.'),
+  ]);
+ }
+ void coreInfo()=>showModalBottomSheet<void>(context:context,backgroundColor:panel,showDragHandle:true,builder:(_)=>const Padding(padding:EdgeInsets.fromLTRB(24,8,24,28),child:Column(mainAxisSize:MainAxisSize.min,children:[
+  Icon(Icons.blur_circular_rounded,color:cyan,size:36),SizedBox(height:12),Text('Núcleo holográfico',style:TextStyle(fontSize:19)),
+  SizedBox(height:8),Text('A animação responde ao toque e ao arraste. Captura de voz e execução de comandos dependem dos serviços nativos, ainda não conectados nesta tela.',textAlign:TextAlign.center,style:TextStyle(color:muted,height:1.5)),
+ ])));
+ void openModule(JarvisModule m)=>Navigator.push(context,PageRouteBuilder<void>(transitionDuration:const Duration(milliseconds:280),pageBuilder:(_,a,__)=>FadeTransition(opacity:a,child:ModulePage(module:m))));
+ void settings()=>Navigator.push(context,PageRouteBuilder<void>(transitionDuration:const Duration(milliseconds:260),pageBuilder:(_,a,__)=>FadeTransition(opacity:a,child:const SettingsPage())));
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse = AnimationController(vsync: this, duration: const Duration(seconds: 9))..repeat();
-  int _tab = 0;
-  @override
-  void dispose() { _pulse.dispose(); super.dispose(); }
+class _Brand extends StatelessWidget{const _Brand();@override Widget build(BuildContext c)=>Container(width:31,height:31,decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:cyan.withOpacity(.7)),boxShadow:[BoxShadow(color:cyan.withOpacity(.18),blurRadius:13)]),child:const Icon(Icons.all_inclusive_rounded,color:cyan,size:19));}
+class _Eyebrow extends StatelessWidget{const _Eyebrow(this.text);final String text;@override Widget build(BuildContext c)=>Text(text,style:const TextStyle(color:cyan,letterSpacing:2,fontSize:9,fontWeight:FontWeight.w700));}
+class _Heading extends StatelessWidget{const _Heading(this.title,this.trailing);final String title,trailing;@override Widget build(BuildContext c)=>Row(children:[Text(title,style:const TextStyle(fontSize:10,letterSpacing:1.6,fontWeight:FontWeight.w700)),const Spacer(),Text(trailing,style:const TextStyle(fontSize:8,letterSpacing:1.2,color:muted))]);}
+class _Status extends StatelessWidget{
+ const _Status({required this.icon,required this.title,required this.detail,required this.state,required this.color});
+ final IconData icon;final String title,detail,state;final Color color;
+ @override Widget build(BuildContext c)=>Container(padding:const EdgeInsets.all(13),decoration:BoxDecoration(color:panel,borderRadius:BorderRadius.circular(15),border:Border.all(color:Colors.white.withOpacity(.055))),child:Row(children:[
+  Container(width:37,height:37,decoration:BoxDecoration(color:color.withOpacity(.1),borderRadius:BorderRadius.circular(11)),child:Icon(icon,color:color,size:19)),
+  const SizedBox(width:11),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600)),const SizedBox(height:3),Text(detail,style:const TextStyle(fontSize:10,color:muted))])),
+  const SizedBox(width:7),Text(state,style:TextStyle(color:color,fontSize:8,letterSpacing:.8,fontWeight:FontWeight.w700)),
+ ]));
+}
+class _Quick extends StatelessWidget{
+ const _Quick({required this.icon,required this.title,required this.subtitle,required this.onTap});
+ final IconData icon;final String title,subtitle;final VoidCallback onTap;
+ @override Widget build(BuildContext c)=>Material(color:panel,borderRadius:BorderRadius.circular(15),child:InkWell(borderRadius:BorderRadius.circular(15),onTap:onTap,child:Padding(padding:const EdgeInsets.all(14),child:Row(children:[
+  Icon(icon,color:cyan,size:22),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600)),const SizedBox(height:3),Text(subtitle,style:const TextStyle(color:muted,fontSize:9))])),
+  const Icon(Icons.chevron_right_rounded,color:muted,size:18),
+ ]))));
+}
+class _ModuleTile extends StatelessWidget{
+ const _ModuleTile({required this.module,required this.onTap});final JarvisModule module;final VoidCallback onTap;
+ @override Widget build(BuildContext c)=>Material(color:panel,borderRadius:BorderRadius.circular(14),child:InkWell(borderRadius:BorderRadius.circular(14),onTap:onTap,child:Padding(padding:const EdgeInsets.symmetric(horizontal:13,vertical:12),child:Row(children:[
+  Container(width:39,height:39,decoration:BoxDecoration(color:cyan.withOpacity(.09),borderRadius:BorderRadius.circular(12)),child:Icon(module.icon,color:cyan,size:20)),
+  const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(module.name,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600)),const SizedBox(height:3),Text(module.description,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,color:muted))])),
+  const SizedBox(width:8),const Icon(Icons.arrow_forward_ios_rounded,size:12,color:muted),
+ ]))));
+}
+class ModulePage extends StatelessWidget{
+ const ModulePage({super.key,required this.module});final JarvisModule module;
+ @override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:Text(module.name,style:const TextStyle(fontSize:15))),body:ListView(padding:const EdgeInsets.all(22),children:[
+  Container(height:145,decoration:BoxDecoration(borderRadius:BorderRadius.circular(22),gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[cyan.withOpacity(.15),const Color(0xFF368BFF).withOpacity(.06),panel]),border:Border.all(color:cyan.withOpacity(.18))),child:Icon(module.icon,color:cyan,size:58)),
+  const SizedBox(height:22),_Eyebrow(module.group.toUpperCase()),const SizedBox(height:7),Text(module.name,style:const TextStyle(fontSize:27,fontWeight:FontWeight.w300)),
+  const SizedBox(height:9),Text(module.description,style:const TextStyle(color:muted,height:1.5)),const SizedBox(height:22),
+  Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:const Color(0xFF211A10),borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFFFC66D).withOpacity(.22))),child:const Row(children:[
+   Icon(Icons.pending_outlined,color:Color(0xFFFFC66D)),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Text('Integração em auditoria',style:TextStyle(color:Color(0xFFFFC66D),fontWeight:FontWeight.w600)),SizedBox(height:4),
+    Text('A presença no catálogo não comprova que o serviço esteja conectado ou operacional nesta interface.',style:TextStyle(color:muted,fontSize:11,height:1.4)),
+   ])),
+  ])),
+ ]));
+}
+class SettingsPage extends StatelessWidget{
+ const SettingsPage({super.key});
+ @override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Configurações',style:TextStyle(fontSize:15))),body:ListView(padding:const EdgeInsets.all(20),children:[
+  const _Eyebrow('PREFERÊNCIAS DO SISTEMA'),const SizedBox(height:8),const Text('Central de ajustes',style:TextStyle(fontSize:27,fontWeight:FontWeight.w300)),
+  const SizedBox(height:7),const Text('A tela nativa está sendo preparada. Nenhum controle simula gravação de configuração.',style:TextStyle(color:muted,fontSize:11,height:1.5)),
+  const SizedBox(height:18),
+  const _Setting(icon:Icons.key_rounded,title:'Credenciais e provedores',detail:'Ponte segura com Android Keystore e armazenamento protegido no Windows pendente.'),
+  const _Setting(icon:Icons.graphic_eq_rounded,title:'Voz e palavra de ativação',detail:'Integração KWS local ainda precisa ser ligada. Picovoice não será utilizado.'),
+  const _Setting(icon:Icons.memory_rounded,title:'Memória e Obsidian',detail:'Seleção do cofre, sincronização e memória semântica pendentes.'),
+  const _Setting(icon:Icons.shield_outlined,title:'Privacidade e permissões',detail:'Permissões conforme as APIs e o sistema operacional.'),
+  const _Setting(icon:Icons.devices_rounded,title:'Dispositivos conectados',detail:'Pareamento Android–Windows, ESP32 e Home Assistant pendentes.'),
+ ]));
+}
+class _Setting extends StatelessWidget{
+ const _Setting({required this.icon,required this.title,required this.detail});final IconData icon;final String title,detail;
+ @override Widget build(BuildContext c)=>Container(margin:const EdgeInsets.only(bottom:9),padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:panel,borderRadius:BorderRadius.circular(14)),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+  Icon(icon,color:cyan,size:21),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600)),const SizedBox(height:5),Text(detail,style:const TextStyle(color:muted,fontSize:10,height:1.45))])),
+ ]));
+}
+class _Footnote extends StatelessWidget{const _Footnote(this.text);final String text;@override Widget build(BuildContext c)=>Text(text,style:const TextStyle(color:Color(0xFF63798B),fontSize:9,height:1.5));}
 
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Row(children: [Icon(Icons.circle, color: _cyan, size: 10), SizedBox(width: 10), Text('J.A.R.V.I.S. NOVA', style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w600))]),
-      actions: [IconButton(tooltip: 'Configurações', onPressed: () => _openSettings(), icon: const Icon(Icons.tune))],
-    ),
-    body: SafeArea(child: AnimatedSwitcher(
-      duration: const Duration(milliseconds: 360),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      child: _tab == 0 ? _dashboard(key: const ValueKey('home')) : _modulesView(key: const ValueKey('modules')),
-    )),
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: _tab,
-      onDestinationSelected: (v) => setState(() => _tab = v),
-      destinations: const [
-        NavigationDestination(icon: Icon(Icons.blur_circular), label: 'Núcleo'),
-        NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'Sistemas'),
-      ],
-    ),
-  );
-
-  Widget _dashboard({Key? key}) => ListView(
-    key: key, padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-    children: [
-      const Text('SISTEMA DE INTELIGÊNCIA', style: TextStyle(color: _cyan, letterSpacing: 2, fontSize: 11)),
-      const SizedBox(height: 8),
-      const Text('À sua disposição.', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w300)),
-      const SizedBox(height: 8),
-      const Text('Interface nativa em evolução · núcleo visual', style: TextStyle(color: Colors.white54)),
-      const SizedBox(height: 10),
-      Center(child: GestureDetector(
-        onTap: () => _showCoreAction(),
-        child: AnimatedBuilder(animation: _pulse, builder: (context, _) => SizedBox(
-          width: 290, height: 290,
-          child: CustomPaint(painter: _CorePainter(_pulse.value), child: const Center(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.all_inclusive, color: _cyan, size: 46),
-              SizedBox(height: 8),
-              Text('J.A.R.V.I.S.', style: TextStyle(letterSpacing: 3, color: Colors.white, fontSize: 16)),
-              SizedBox(height: 4),
-              Text('TOQUE PARA INTERAGIR', style: TextStyle(letterSpacing: 1.4, color: _cyan, fontSize: 9)),
-            ]),
-          )),
-        )),
-      )),
-      const SizedBox(height: 10),
-      _statusTile(Icons.circle, 'Núcleo visual', 'Renderização Flutter ativa', const Color(0xFF65DFA8)),
-      _statusTile(Icons.link, 'Serviços existentes', 'Integração em migração; estado não presumido', Colors.orangeAccent),
-      _statusTile(Icons.grid_view, 'Catálogo de recursos', '${modules.length} módulos identificados', _cyan),
-      const SizedBox(height: 14),
-      FilledButton.icon(onPressed: () => setState(() => _tab = 1), icon: const Icon(Icons.apps), label: const Text('Explorar todas as funcionalidades')),
-    ],
-  );
-
-  Widget _modulesView({Key? key}) {
-    final groups = modules.map((m) => m.group).toSet();
-    return ListView(key: key, padding: const EdgeInsets.all(16), children: [
-      const Text('CENTRAL DE SISTEMAS', style: TextStyle(color: _cyan, letterSpacing: 2, fontSize: 11)),
-      const SizedBox(height: 8),
-      const Text('Capacidades do J.A.R.V.I.S.', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w300)),
-      const SizedBox(height: 6),
-      const Text('Catálogo inicial. Cada integração será marcada como funcional somente após testes reais.', style: TextStyle(color: Colors.white60)),
-      const SizedBox(height: 16),
-      for (final group in groups) ...[
-        Padding(padding: const EdgeInsets.only(top: 12, bottom: 8), child: Text(group.toUpperCase(), style: const TextStyle(color: _cyan, letterSpacing: 1.6, fontSize: 11))),
-        for (final m in modules.where((x) => x.group == group))
-          Card(color: const Color(0xFF0C1927), child: ListTile(
-            leading: Icon(m.icon, color: _cyan),
-            title: Text(m.name),
-            subtitle: Text(m.description, maxLines: 2, overflow: TextOverflow.ellipsis),
-            trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ModulePage(module: m))),
-          )),
-      ],
-    ]);
+class HologramPainter extends CustomPainter{
+ HologramPainter(this.t,this.pointer);final double t;final Offset pointer;
+ @override void paint(Canvas canvas,Size size){
+  final c=Offset(size.width/2+pointer.dx*22,size.height/2+pointer.dy*18);
+  final r=size.shortestSide*.37,spin=t*math.pi*2;
+  final glow=Paint()..shader=RadialGradient(colors:[cyan.withOpacity(.13),const Color(0xFF368BFF).withOpacity(.035),Colors.transparent]).createShader(Rect.fromCircle(center:c,radius:r*1.2));
+  canvas.drawCircle(c,r*1.2,glow);
+  final specs=<(double,double,double)>[(.58,1.9,.95),(.76,1.1,.68),(.94,.8,.5),(1.08,.65,.32)];
+  for(var i=0;i<specs.length;i++){
+   final (scale,width,opacity)=specs[i];
+   final rect=Rect.fromCenter(center:c,width:r*2*scale,height:r*2*scale*(i==1?.78:1));
+   final p=Paint()..style=PaintingStyle.stroke..strokeWidth=width..color=cyan.withOpacity(opacity);
+   canvas.save();canvas.translate(c.dx,c.dy);canvas.rotate(spin*(i.isEven ? .14 : -.11)+i*.6);canvas.translate(-c.dx,-c.dy);
+   canvas.drawArc(rect,spin*(i.isEven?1:-1)+i,math.pi*(1.18+i*.1),false,p);canvas.restore();
   }
-
-  Widget _statusTile(IconData icon, String title, String subtitle, Color color) => Card(
-    color: const Color(0xFF0B1724),
-    child: ListTile(leading: Icon(icon, color: color), title: Text(title), subtitle: Text(subtitle)),
-  );
-
-  void _showCoreAction() => showModalBottomSheet<void>(context: context, backgroundColor: const Color(0xFF0B1724), builder: (_) => const Padding(
-    padding: EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.touch_app, color: _cyan, size: 32), SizedBox(height: 12),
-      Text('Núcleo visual interativo', style: TextStyle(fontSize: 18)),
-      SizedBox(height: 8), Text('O toque já aciona a resposta visual. A captura de voz será conectada ao serviço KWS nativo na etapa de integração.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white60)),
-      SizedBox(height: 12),
-    ]),
-  ));
-
-  void _openSettings() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage()));
-}
-
-class ModulePage extends StatelessWidget {
-  const ModulePage({super.key, required this.module});
-  final JarvisModule module;
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(module.name)),
-    body: Padding(padding: const EdgeInsets.all(24), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Icon(module.icon, color: _cyan, size: 42), const SizedBox(height: 18),
-      Text(module.group.toUpperCase(), style: const TextStyle(color: _cyan, letterSpacing: 2)),
-      const SizedBox(height: 8), Text(module.name, style: const TextStyle(fontSize: 26)),
-      const SizedBox(height: 12), Text(module.description, style: const TextStyle(color: Colors.white70)),
-      const SizedBox(height: 20),
-      Chip(avatar: const Icon(Icons.pending_outlined, size: 16), label: const Text('Integração em auditoria')),
-      const SizedBox(height: 8),
-      const Text('Este módulo aparece no catálogo, mas não é apresentado como funcional até a ponte com o serviço real e seus testes serem concluídos.', style: TextStyle(color: Colors.white54)),
-    ])),
-  );
-}
-
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Configurações')),
-    body: ListView(padding: const EdgeInsets.all(20), children: const [
-      Icon(Icons.lock_outline, color: _cyan, size: 36),
-      SizedBox(height: 12),
-      Text('Cofre de credenciais', style: TextStyle(fontSize: 22)),
-      SizedBox(height: 8),
-      Text('A tela nativa de chaves de API será ligada ao cofre seguro Android/Windows. Não armazene chaves em texto puro nem em SharedPreferences.', style: TextStyle(color: Colors.white70)),
-      SizedBox(height: 16),
-      Chip(avatar: Icon(Icons.pending_outlined, size: 16), label: Text('Ponte nativa pendente de integração')),
-    ]),
-  );
-}
-
-class _CorePainter extends CustomPainter {
-  _CorePainter(this.t);
-  final double t;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = Offset(size.width / 2, size.height / 2);
-    final radius = size.shortestSide * .43;
-    final glow = Paint()..color = _cyan.withValues(alpha: .07 + .04 * math.sin(t * math.pi * 2))..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
-    canvas.drawCircle(c, radius * .72, glow);
-    for (var i = 0; i < 4; i++) {
-      final p = Paint()..style = PaintingStyle.stroke..strokeWidth = (i == 0 ? 2.4 : 1.0)..color = _cyan.withValues(alpha: .75 - i * .13);
-      canvas.drawArc(Rect.fromCircle(center: c, radius: radius * (0.55 + i * .13)), t * math.pi * 2 * (i.isEven ? 1 : -1), math.pi * (1.35 + i * .12), false, p);
-    }
-    final dots = Paint()..color = _cyan;
-    for (var i = 0; i < 36; i++) {
-      final a = i * math.pi * 2 / 36 + t * math.pi * 2;
-      final r = radius * (.78 + .035 * math.sin(i * 2.1));
-      canvas.drawCircle(Offset(c.dx + math.cos(a) * r, c.dy + math.sin(a) * r), i % 3 == 0 ? 2 : 1, dots);
-    }
-    final core = Paint()..shader = RadialGradient(colors: [_cyan.withValues(alpha: .35), _cyan.withValues(alpha: .03), Colors.transparent]).createShader(Rect.fromCircle(center: c, radius: radius * .48));
-    canvas.drawCircle(c, radius * .48, core);
-  }
-  @override
-  bool shouldRepaint(covariant _CorePainter oldDelegate) => oldDelegate.t != t;
+  final dots=Paint()..color=cyan.withOpacity(.9);
+  for(var i=0;i<42;i++){final a=i*math.pi*2/42+spin*.35;final orbit=r*.88*(1+.025*math.sin(i*2.7+spin*2));canvas.drawCircle(Offset(c.dx+math.cos(a)*orbit,c.dy+math.sin(a)*orbit*.83),i%4==0?2:1,dots);}
+  final core=Paint()..shader=RadialGradient(colors:[cyan.withOpacity(.24),const Color(0xFF368BFF).withOpacity(.09),Colors.transparent]).createShader(Rect.fromCircle(center:c,radius:r*.46));
+  canvas.drawCircle(c,r*.46,core);
+  final inner=Paint()..style=PaintingStyle.stroke..strokeWidth=1.2..color=cyan.withOpacity(.55);canvas.drawCircle(c,r*(.29+.012*math.sin(spin*2)),inner);
+  final scan=Paint()..color=cyan.withOpacity(.12)..strokeWidth=1;
+  for(var i=-4;i<=4;i++){final y=c.dy+i*13+math.sin(spin+i)*2;canvas.drawLine(Offset(c.dx-r*.3,y),Offset(c.dx+r*.3,y),scan);}
+  final marks=Paint()..color=cyan.withOpacity(.3)..strokeWidth=.8;
+  canvas.drawLine(Offset(c.dx-r*1.12,c.dy),Offset(c.dx-r*.98,c.dy),marks);canvas.drawLine(Offset(c.dx+r*.98,c.dy),Offset(c.dx+r*1.12,c.dy),marks);
+  canvas.drawLine(Offset(c.dx,c.dy-r*1.12),Offset(c.dx,c.dy-r*.98),marks);canvas.drawLine(Offset(c.dx,c.dy+r*.98),Offset(c.dx,c.dy+r*1.12),marks);
+ }
+ @override bool shouldRepaint(covariant HologramPainter old)=>old.t!=t||old.pointer!=pointer;
 }
