@@ -32,6 +32,28 @@ if (SISTEMA) {
   // O núcleo guarda o checkpoint; a ação real continua passando pelo executarSeguro.
   try {
     SISTEMA.registrarFerramenta({
+      id: 'sandbox_js', nome: 'Sandbox JavaScript isolado', dominio: 'desenvolvimento',
+      nivel: 'execucao', risco: 1,
+      descricao: 'Executa JavaScript em Worker e iframe isolados, sem rede, arquivos, Node.js ou acesso ao aparelho.',
+      argumentos: {
+        codigo: { tipo: 'texto', obrigatorio: true, max: 20000 },
+        entrada: { tipo: 'texto', max: 10000, padrao: '' },
+        timeoutMs: { tipo: 'inteiro', min: 500, max: 10000, padrao: 3000 }
+      },
+      executar: async (a) => {
+        if (!window.JarvisSandbox || typeof window.JarvisSandbox.executar !== 'function') {
+          throw new Error('Sandbox isolado não carregou nesta versão.');
+        }
+        const r = await window.JarvisSandbox.executar(a.codigo, a.entrada, a.timeoutMs);
+        if (!r.ok) throw new Error(r.erro || 'O código falhou no sandbox.');
+        return { ok: true, verificado: true,
+          fala: 'Código executado no sandbox isolado em ' + r.ms + ' ms.',
+          info: String(r.saida || 'undefined').slice(0, 12000), logs: r.logs || [] };
+      }
+    });
+  } catch (e) { registrar('erro', 'sandbox: ' + ((e && e.message) || e)); }
+  try {
+    SISTEMA.registrarFerramenta({
       id: 'plano_etapa', nome: 'Etapa de plano', dominio: 'planejamento', nivel: 'execucao', risco: 3, semConfirmacaoPropria: true,
       descricao: 'Executa uma ação já validada de um plano, com confirmação e recibo; uso interno do supervisor.',
       argumentos: { acao: { tipo: 'texto', obrigatorio: true, max: 40 }, args: { tipo: 'objeto', padrao: {} } },
