@@ -1,0 +1,15 @@
+name: jarvis_nova
+description: Interface nativa Flutter do J.A.R.V.I.S. Nova.
+publish_to: none
+version: 1.46.0+14600
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+flutter:
+  uses-material-design: true
