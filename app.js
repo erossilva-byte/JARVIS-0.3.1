@@ -6205,7 +6205,10 @@ function mostrarWakeMini(texto) {
   window.__jarvisWakeMiniTimer = setTimeout(() => { el.hidden = true; }, 10000);
 }
 
-function abrirConfig() {
+async function abrirConfig() {
+  // Aguarda a leitura do cofre antes de preencher os campos; evita abrir ajustes
+  // com estado transitório vazio e sobrescrever visualmente chaves já salvas.
+  await chavesProntas;
   mostrarChaves();
   mudarCategoriaConfig('ia');
   renderRotinasSalvas();
@@ -6281,6 +6284,9 @@ function abrirConfig() {
   abrirPainel('#painel-config');
 }
 async function salvarConfig() {
+  // A leitura do cofre e a gravação não podem competir: sem esta barreira,
+  // salvar logo após abrir o painel pode ocorrer antes de CHAVES ser hidratado.
+  await chavesProntas;
   const pausaMusicaAnterior = store.get('wake_pausa_musica', '1');
   for (const [n, sel] of Object.entries(CAMPOS_CHAVE)) {
     const v = $(sel).value.trim();
