@@ -9403,12 +9403,14 @@ async function obsReceber() {
       } catch (e) { /* arquivo inacessível: segue */ }
     }
     if (!textos.length) { obsStatus('Não consegui ler nenhum arquivo do cofre.', true); return; }
-    const imp = MEM.importarMarkdown(textos.join('\n'));
+    const imp = typeof MEM.sincronizarMarkdown === 'function'
+      ? MEM.sincronizarMarkdown(textos.join('\n')) : MEM.importarMarkdown(textos.join('\n'));
     if (!imp.ok) { obsStatus(imp.erro, true); return; }
     const conflitos = imp.conflitos ? imp.conflitos.length : 0;
-    obsStatus('Lidos ' + lidos + ' arquivo(s): ' + imp.criadas + ' nova(s), ' + imp.repetidas +
-      ' já existente(s), ' + imp.ignoradas + ' ignorada(s)' +
-      (conflitos ? ' · ' + conflitos + ' conflito(s) preservado(s), nada foi sobrescrito' : '') + '.',
+    obsStatus('Lidos ' + lidos + ' arquivo(s): ' + imp.criadas + ' nova(s), ' +
+      (imp.atualizadas || 0) + ' atualizada(s), ' + imp.repetidas + ' sem alteração, ' +
+      imp.ignoradas + ' ignorada(s)' +
+      (conflitos ? ' · ' + conflitos + ' conflito(s) preservado(s), a versão local mais recente foi mantida' : '') + '.',
       false);
     obsDiag('Importação do cofre: ' + lidos + ' arquivo(s) · ' + conflitos + ' conflito(s) · ' + new Date().toLocaleString('pt-BR'));
     renderMemoria(); renderObsTopicos();
