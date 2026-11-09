@@ -172,7 +172,7 @@ class ModulePage extends StatelessWidget {
       const SizedBox(height: 8), Text(module.name, style: const TextStyle(fontSize: 26)),
       const SizedBox(height: 12), Text(module.description, style: const TextStyle(color: Colors.white70)),
       const SizedBox(height: 20),
-      const Chip(avatar: Icon(Icons.pending_outlined, size: 16), label: Text('Integração em auditoria')),
+      Chip(avatar: const Icon(Icons.pending_outlined, size: 16), label: const Text('Integração em auditoria')),
       const SizedBox(height: 8),
       const Text('Este módulo aparece no catálogo, mas não é apresentado como funcional até a ponte com o serviço real e seus testes serem concluídos.', style: TextStyle(color: Colors.white54)),
     ])),
@@ -203,10 +203,10 @@ class _CorePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = Offset(size.width / 2, size.height / 2);
     final radius = size.shortestSide * .43;
-    final glow = Paint()..color = _cyan.withOpacity(.07 + .04 * math.sin(t * math.pi * 2))..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
+    final glow = Paint()..color = _cyan.withValues(alpha: .07 + .04 * math.sin(t * math.pi * 2))..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
     canvas.drawCircle(c, radius * .72, glow);
     for (var i = 0; i < 4; i++) {
-      final p = Paint()..style = PaintingStyle.stroke..strokeWidth = (i == 0 ? 2.4 : 1.0)..color = _cyan.withOpacity(.75 - i * .13);
+      final p = Paint()..style = PaintingStyle.stroke..strokeWidth = (i == 0 ? 2.4 : 1.0)..color = _cyan.withValues(alpha: .75 - i * .13);
       canvas.drawArc(Rect.fromCircle(center: c, radius: radius * (0.55 + i * .13)), t * math.pi * 2 * (i.isEven ? 1 : -1), math.pi * (1.35 + i * .12), false, p);
     }
     final dots = Paint()..color = _cyan;
@@ -215,7 +215,7 @@ class _CorePainter extends CustomPainter {
       final r = radius * (.78 + .035 * math.sin(i * 2.1));
       canvas.drawCircle(Offset(c.dx + math.cos(a) * r, c.dy + math.sin(a) * r), i % 3 == 0 ? 2 : 1, dots);
     }
-    final core = Paint()..shader = RadialGradient(colors: [_cyan.withOpacity(.35), _cyan.withOpacity(.03), Colors.transparent]).createShader(Rect.fromCircle(center: c, radius: radius * .48));
+    final core = Paint()..shader = RadialGradient(colors: [_cyan.withValues(alpha: .35), _cyan.withValues(alpha: .03), Colors.transparent]).createShader(Rect.fromCircle(center: c, radius: radius * .48));
     canvas.drawCircle(c, radius * .48, core);
   }
   @override
