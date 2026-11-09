@@ -14,6 +14,9 @@ const Core = require('../core.js');
 
     assert.strictEqual(core.listarAgentes().length, 12);
     assert.strictEqual(core.selecionar('corrija este código Python').agente.id, 'programacao');
+    const agenteSandbox = core.selecionar('execute este código no sandbox');
+    assert.strictEqual(agenteSandbox.agente.id, 'programacao');
+    assert.ok(agenteSandbox.agente.ferramentas.includes('sandbox_js'));
     assert.strictEqual(core.selecionar('qual o clima?').agente.id, 'pesquisa');
     assert.strictEqual(core.selecionar('bom dia').agente.id, 'principal');
 
