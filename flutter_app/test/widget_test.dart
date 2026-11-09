@@ -30,7 +30,7 @@ void main() {
     expect(find.text('Obsidian'), findsNWidgets(2));
   });
 
-  testWidgets('o botão de ajustes abre a página informativa', (tester) async {
+  testWidgets('o botão de ajustes abre a central com provedores reais', (tester) async {
     await tester.pumpWidget(const JarvisApp());
 
     await tester.tap(find.byKey(const ValueKey('settings-button')));
@@ -38,7 +38,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Central de ajustes'), findsOneWidget);
-    expect(find.textContaining('Picovoice não será utilizado.'), findsOneWidget);
-    expect(find.textContaining('Nenhum controle simula gravação'), findsOneWidget);
+    expect(find.text('Provedores de IA'), findsOneWidget);
+    expect(find.textContaining('sherpa-onnx'), findsOneWidget);
+    expect(find.textContaining('ainda não estão integrados'), findsOneWidget);
   });
 }
