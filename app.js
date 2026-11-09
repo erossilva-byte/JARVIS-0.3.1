@@ -280,6 +280,9 @@ function restaurarHistoricoUI() {
 // IAs de chat compatíveis com o formato OpenAI. A ordem é a prioridade; as sem chave são ignoradas.
 const PROVEDORES = [
   { id: 'groq', nome: 'Groq', url: GROQ },
+  // OpenRouter é compatível com a API OpenAI; DeepSeek fica como modelo preferido.
+  // A chave é independente e armazenada no mesmo cofre seguro dos demais provedores.
+  { id: 'openrouter', nome: 'OpenRouter · DeepSeek', url: 'https://openrouter.ai/api/v1', modelos: ['deepseek/deepseek-chat'], visao: false },
   { id: 'cerebras', nome: 'Cerebras', url: 'https://api.cerebras.ai/v1', modelos: ['gpt-oss-120b', 'zai-glm-4.7'] },
   { id: 'mistral', nome: 'Mistral', url: 'https://api.mistral.ai/v1', modelos: ['mistral-small-latest'] },
   { id: 'gemini', nome: 'Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai', modelos: ['gemini-2.5-flash', 'gemini-flash-latest'] }
@@ -309,7 +312,7 @@ const semAcento = (s) => { s = String(s || ''); let o = ''; for (let i = 0; i < 
 const norm = (s) => semAcento(s).toLowerCase().replace(/[^a-z0-9: ]+/g, ' ').replace(/\s+/g, ' ').trim();
 
 /* ---------- Chaves da API (cifradas no Android) ---------- */
-const CHAVES = { groq: '', cerebras: '', mistral: '', gemini: '' };
+const CHAVES = { groq: '', openrouter: '', cerebras: '', mistral: '', gemini: '' };
 const nomeLS = (n) => (n === 'groq' ? 'key' : 'key_' + n);
 const SEG = () => plug('JarvisUtil');
 const LOCAL_AI = () => plug('JarvisLocalAI');
@@ -5233,7 +5236,7 @@ async function carregarVozes() {
   const statusVoz = $('#c-voz-status');
   if (statusVoz) statusVoz.textContent = ordenadas.some((v) => vozPareceMasculina(v)) ? 'Há uma voz com nome compatível com a preferência masculina. A identificação é heurística; teste a voz para confirmar.' : 'Não encontrei uma voz masculina identificável pelo nome instalado. O JARVIS usará a melhor voz pt-BR disponível; instale outra voz nas configurações de texto para fala do Android se desejar.';
 }
-const CAMPOS_CHAVE = { groq: '#c-key', cerebras: '#c-key-cerebras', mistral: '#c-key-mistral', gemini: '#c-key-gemini' };
+const CAMPOS_CHAVE = { groq: '#c-key', openrouter: '#c-key-openrouter', cerebras: '#c-key-cerebras', mistral: '#c-key-mistral', gemini: '#c-key-gemini' };
 function mostrarChaves() {
   for (const [n, sel] of Object.entries(CAMPOS_CHAVE)) {
     const c = $(sel);
@@ -5883,7 +5886,7 @@ async function executarDiagnostico() {
       catch (e) { diagLinha('warn', 'Permissão de microfone', 'O navegador não expõe o estado; toque em “Testar microfone” para solicitar e confirmar.'); }
     } else diagLinha('warn', 'Permissão de microfone', 'Consulta de permissão não suportada; use o teste de áudio para confirmar.');
     diagLinha(CHAVES.groq ? 'ok' : 'warn', 'Chave Groq', CHAVES.groq ? 'Configurada (a presença não garante que esteja válida ou com cota).' : 'Não configurada; pesquisa browser_search e IA principal ficam indisponíveis até cadastrar a chave.');
-    for (const n of ['cerebras','mistral','gemini']) diagLinha(CHAVES[n] ? 'ok' : 'warn', 'Chave ' + n[0].toUpperCase() + n.slice(1), CHAVES[n] ? 'Configurada; validade e cota não foram verificadas.' : 'Não configurada; é opcional como provedor de reserva.');
+    for (const n of ['openrouter','cerebras','mistral','gemini']) diagLinha(CHAVES[n] ? 'ok' : 'warn', 'Chave ' + n[0].toUpperCase() + n.slice(1), CHAVES[n] ? 'Configurada; validade e cota não foram verificadas.' : 'Não configurada; é opcional como provedor de reserva.');
     // Roteador de motores: quem responde a cada tipo de tarefa e o que já foi medido no aparelho.
     const latIA = Hermes.metricas().latencias || {};
     const listaMotores = PROVEDORES.map((p) => p.nome + (CHAVES[p.id]
@@ -7930,7 +7933,7 @@ function capturarQuadro() {
 /** Envia UM quadro ao provedor que enxerga, na ordem que o roteador do núcleo definiu. */
 async function pedirVisaoIA(dataUrl, pergunta) {
   if (store.get('offline', '0') === '1') throw new Error('O modo offline está ativo e a leitura de imagem precisa de internet.');
-  const ids = provedoresComChave().map((p) => p.id);
+  const ids = provedoresComChave().filter((p) => p.visao !== false).map((p) => p.id);
   const plano = Hermes.planejarIA({
     tarefa: 'visao', visao: true, provedores: ids,
     latencias: Hermes.metricas().latencias, erros: errosIA
