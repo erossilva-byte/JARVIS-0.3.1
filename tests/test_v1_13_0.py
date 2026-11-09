@@ -75,22 +75,22 @@ checagens = {
     "Trava do v e do j inicial protegem palavras comuns": (
         "t.indexOf('v') < 0" in ativacao_java and "t.charAt(0) != 'j'" in ativacao_java
         and "indexOf('v') < 0" in hermes and "/^j/.test(t)" in hermes),
-    "Serviço confere parcial, todas as hipóteses e ruído": (
-        "conferirEmLote" in servico and "onPartialResults" in servico
-        and "picoDb" in servico and "cfg.ruidoDb" in servico
-        and "JarvisPrefs.rejeitadas(this," in servico),
+    "Serviço executa KWS acústico local por PCM": (
+        "new JarvisKwsEngine(" in servico and "AudioRecord" in ler("JarvisKwsEngine.java")
+        and "new KeywordSpotter(config)" in ler("JarvisKwsEngine.java")
+        and "SpeechRecognizer.create" not in servico),
     "Serviço lê a calibragem salva a cada sessão": (
         "JarvisPrefs.sensibilidade(this)" in servico and "JarvisPrefs.variantes(this)" in servico
-        and "iniciarSessao" in servico and "agendarSessao" in servico),
+        and "new JarvisKwsEngine(" in servico),
     "Nenhum resto do motor antigo": (
         "motorPedido" not in servico and "JarvisPrefs.motor" not in servico
         and "wake_motor" not in app and "CHAVE_PICOVOICE" not in app),
     "Calibragem trafega da tela para o serviço": (
         "wakeCalibragem" in app and "sensibilidade: " in app
         and 'getInt("sensibilidade"' in plugin and 'getString("variantes"' in plugin),
-    "Detector próprio aparece no diagnóstico": (
-        "descartesRuido" in plugin and "calibragem" in plugin
-        and "porteiro de ruído" in app),
+    "KWS local aparece no diagnóstico sem contador fictício": (
+        "JarvisService.DETECTOR" in plugin and "calibragem" in plugin
+        and "KWS acústico local" in app and "descartesRuido" not in plugin),
 
     # 3. Roteador de motores de IA
     "Núcleo tem o roteador com nota por tarefa": (
