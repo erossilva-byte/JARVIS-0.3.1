@@ -33,7 +33,13 @@ const PESSOAS = {
       ? { ok: true, dados: { nome: 'Marcelo', relacao: 'amigo', idadeBase: '27', pesoKg: '72.5', alturaCm: '178' }, idadeAproximada: true }
       : null;
   },
-  salvar(dados) { salvos.push(dados); return { ok: true, perfil: dados }; },
+  salvar(dados) {
+    salvos.push(dados);
+    const atual = dados.id ? perfis.find((p) => p.id === dados.id) : null;
+    const perfil = atual ? Object.assign(atual, dados) : Object.assign({ id: 'novo-' + salvos.length }, dados);
+    if (!atual) perfis.push(perfil);
+    return { ok: true, perfil };
+  },
   idadeDetalhada() { return { anos: 27, meses: 0, aproximada: true }; }
 };
 function normalizar(txt) {
@@ -72,4 +78,19 @@ assert.strictEqual(salvos.length, 1, 'salva uma ficha');
 assert.strictEqual(salvos[0].pesoKg, '72.5');
 assert.strictEqual(salvos[0].alturaCm, '178');
 
-console.log('test_pessoas_voz: 5 grupos de verificação passaram');
+// Repetir o cadastro com o mesmo nome exato atualiza a ficha, sem duplicar.
+perfis.push({ id: 'marcelo-1', nome: 'Marcelo', relacao: 'amigo', pesoKg: '70' });
+const atualizado = fn('cadastre meu amigo Marcelo, idade 28 anos, peso 74 kg e altura 1,80 m');
+assert.ok(atualizado && /Cadastrei Marcelo/.test(atualizado.fala));
+assert.strictEqual(salvos[1].id, 'marcelo-1', 'usa o ID do perfil existente');
+assert.strictEqual(perfis.filter((p) => p.nome === 'Marcelo').length, 1, 'não duplica pessoa');
+assert.strictEqual(perfis.find((p) => p.id === 'marcelo-1').pesoKg, '74');
+
+// Nome ambíguo não deve gravar nem escolher um perfil automaticamente.
+perfis.push({ id: 'marcelo-2', nome: 'Marcelo', relacao: 'colega' });
+const antesAmbiguidade = salvos.length;
+const ambiguo = fn('cadastre Marcelo, idade 29 anos');
+assert.ok(ambiguo && /mais de uma pessoa/i.test(ambiguo.fala));
+assert.strictEqual(salvos.length, antesAmbiguidade, 'não altera quando há homônimos');
+
+console.log('test_pessoas_voz: consulta, cadastro, atualização e ambiguidade passaram');
