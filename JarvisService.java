@@ -12,19 +12,14 @@ import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.media.AudioManager;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
 
 import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
 
-import java.util.ArrayList;
 
 /**
  * Serviço em primeiro plano que mantém a escuta de ativação viva fora da tela.
@@ -34,9 +29,9 @@ import java.util.ArrayList;
  * Android reinicia o serviço (START_STICKY), reinicia o aparelho ou encerra o app pelos
  * recentes, a escuta volta sozinha e calibrada do jeito que o usuário deixou.
  *
- * A detecção é 100% local: o reconhecimento do Android transcreve e as regras de
- * JarvisAtivacao decidem. Não há chave de terceiro, não há SDK de palavra de ativação e
- * nenhum áudio sai do aparelho.
+ * A detecção usa sherpa-onnx + AudioRecord em CPU, sem SpeechRecognizer, sem fallback
+ * de rede e sem transmitir áudio. O modelo KWS disponível é treinado em inglês; o uso
+ * com sotaques brasileiros exige validação de campo antes de prometer precisão.
  */
 public class JarvisService extends Service {
 
@@ -91,23 +86,13 @@ public class JarvisService extends Service {
         }
     };
 
-    // Detector de ativação próprio: sessões do reconhecimento do Android conferidas no
-    // próprio aparelho pelas regras de JarvisAtivacao (variantes fonéticas + limiar).
-    private SpeechRecognizer rec;
-    private Runnable proximo;
-    private Runnable timeout;
-    private boolean sessao = false;
-    private int falhas = 0;
-    private int errosIdioma = 0;
-    private String parcial = "";
-    private boolean preferirRede = false; // true quando o aparelho não tem o idioma offline
-    private JarvisAtivacao.Config cfg = JarvisAtivacao.config(55, "");
-    // Porteiro de ruído: pico de nível da sessão. Transcrição que só aparece com o som
-    // baixo (televisão ao fundo, conversa de outra sala) não acorda o assistente.
-    private float picoDb = -120f;
+    // KWS acústico sherpa-onnx: a inferência e a captura PCM acontecem no processo do serviço.
+    // Não existe fallback para SpeechRecognizer, serviço de reconhecimento Android ou rede.
+    private JarvisKwsEngine kwsEngine;
+    private volatile boolean sessao = false;
     private int rejeitadasRuido = 0;
-    /** Nome do detector, exposto no diagnóstico e na notificação. */
-    static final String DETECTOR = "proprio";
+    /** Nome explícito do motor real, exposto no diagnóstico e na notificação. */
+    static final String DETECTOR = "sherpa-onnx-kws-gigaspeech-en";
 
     private final Runnable monitorMidia = new Runnable() {
         @Override public void run() {
@@ -115,8 +100,8 @@ public class JarvisService extends Service {
             // Chamada/VoIP nunca divide o microfone com o detector; mídia só pausa se o usuário pediu.
             boolean ocupado = chamadaAtiva() || (pausarDuranteMusica && musicaAtiva());
             if (ocupado) {
-                if (sessao || proximo != null) pausarMotor();
-            } else if (!sessao && proximo == null) {
+                if (sessao) pausarMotor();
+            } else if (!sessao) {
                 try { iniciarMotor(); } catch (Exception e) { pararPorFalha(mensagemFalha(e)); return; }
             }
             main.postDelayed(this, 1000);
@@ -358,26 +343,62 @@ public class JarvisService extends Service {
     /* ---------- Motor de escuta (detector próprio) ---------- */
 
     private void iniciarMotor() throws Exception {
-        if (!querEscuta) return;
+        if (!querEscuta || sessao) return;
         if (chamadaAtiva() || (pausarDuranteMusica && musicaAtiva())) return;
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            throw new IllegalStateException("o reconhecimento de voz do Android não está disponível neste aparelho.");
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            throw new SecurityException("Permissão de microfone não concedida.");
         }
-        // A calibragem é relida no começo de cada sessão: mexer na sensibilidade na tela
-        // passa a valer sem reiniciar o serviço.
-        cfg = JarvisAtivacao.config(JarvisPrefs.sensibilidade(this), JarvisPrefs.variantes(this));
+        // A sensibilidade da tela altera o limiar acústico do KWS: alta = mais permissivo;
+        // baixa = mais conservador para reduzir ativações acidentais.
+        int sensibilidade = JarvisPrefs.sensibilidade(this);
         detectorAtual = DETECTOR;
+        sessao = true;
         escutando = true;
         estadoNotificacao = testeAtivoInterno()
-            ? "Teste · diga “Jarvis” (" + testeDeteccoes + ")"
-            : "Ouvindo “Jarvis” · detector próprio";
+                ? "Teste KWS local · diga “Jarvis” (" + testeDeteccoes + ")"
+                : "KWS acústico local ouvindo “Jarvis”";
         notificar();
-        if (!sessao && proximo == null) agendarSessao(0);
+
+        if (kwsEngine != null) {
+            kwsEngine.stop();
+            kwsEngine = null;
+        }
+        kwsEngine = new JarvisKwsEngine(this, new JarvisKwsEngine.Listener() {
+            @Override public void onDetected(String keyword) {
+                main.post(() -> {
+                    if (!querEscuta) return;
+                    sessao = false;
+                    escutando = false;
+                    disparar(keyword == null || keyword.trim().isEmpty() ? "Jarvis" : keyword);
+                });
+            }
+
+            @Override public void onError(String message) {
+                main.post(() -> {
+                    if (!querEscuta) return;
+                    sessao = false;
+                    escutando = false;
+                    pararPorFalha(message);
+                });
+            }
+
+            @Override public void onState(String state) {
+                main.post(() -> {
+                    if (!querEscuta) return;
+                    estadoNotificacao = state;
+                    notificar();
+                });
+            }
+        }, sensibilidade);
+        kwsEngine.start();
     }
 
     private void pausarMotor() {
-        encerrarSessao(true);
+        sessao = false;
         escutando = false;
+        JarvisKwsEngine atual = kwsEngine;
+        if (atual != null) atual.stop();
     }
 
     private void encerrarEscuta() {
@@ -486,227 +507,15 @@ public class JarvisService extends Service {
         }
     }
 
-    /* ---------- Detector de ativação próprio ----------
-     * O transcritor do Android não conhece "Jarvis": com voz brasileira ele escreve "já vi",
-     * "javis", "jarvi", "charvis" e variações. Aqui cada sessão devolve até cinco hipóteses,
-     * todas são conferidas pelas regras de JarvisAtivacao e o resultado PARCIAL já vale: o
-     * assistente é chamado antes de a frase terminar — é isso que faz a ativação parecer
-     * instantânea em vez de esperar o silêncio. Duas travas evitam sustos: o porteiro de
-     * ruído (som baixo demais para ser voz dirigida ao aparelho) e o mínimo de caracteres
-     * aceito em resultado parcial.
-     */
-
-    /** Quantas ativações o porteiro de ruído descartou (aparece no diagnóstico). */
+    /* ---------- Motor KWS acústico local ---------- */
     static int descartesRuido() {
         JarvisService s = instancia;
         return s == null ? 0 : s.rejeitadasRuido;
     }
 
-    /** Calibragem em uso, em uma linha legível, para o diagnóstico e o registro. */
     static String calibragem() {
         JarvisService s = instancia;
-        return s == null ? "" : s.cfg.descricao();
-    }
-
-    private void agendarSessao(long atrasoMs) {
-        if (proximo != null) main.removeCallbacks(proximo);
-        proximo = () -> {
-            proximo = null;
-            iniciarSessao();
-        };
-        main.postDelayed(proximo, Math.max(0, atrasoMs));
-    }
-
-    private boolean temReconhecimentoLocal() {
-        return Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(this);
-    }
-
-    private ArrayList<String> hipoteses(Bundle results) {
-        ArrayList<String> lista = results == null ? null
-            : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-        return lista == null ? new ArrayList<>() : lista;
-    }
-
-    private void iniciarSessao() {
-        if (!querEscuta || sessao) return;
-        if (chamadaAtiva() || (pausarDuranteMusica && musicaAtiva())) return;
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            pararPorFalha("o reconhecimento de voz do Android não está disponível neste aparelho");
-            return;
-        }
-        final boolean noDispositivo = temReconhecimentoLocal() && !preferirRede;
-        try {
-            rec = noDispositivo
-                ? SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
-                : SpeechRecognizer.createSpeechRecognizer(this);
-        } catch (Exception e) {
-            // Muitos aparelhos oferecem o reconhecedor local mas sem o pacote de português.
-            if (noDispositivo) {
-                preferirRede = true;
-                agendarSessao(200);
-                return;
-            }
-            pararPorFalha(e.getMessage());
-            return;
-        }
-        sessao = true;
-        parcial = "";
-        picoDb = -120f;
-        final boolean usouLocal = noDispositivo;
-        final SpeechRecognizer r = rec;
-        r.setRecognitionListener(new RecognitionListener() {
-            @Override public void onReadyForSpeech(Bundle params) { }
-            @Override public void onBeginningOfSpeech() { }
-            /** Nível do áudio: alimenta o porteiro de ruído da ativação. */
-            @Override public void onRmsChanged(float rmsdB) { if (rmsdB > picoDb) picoDb = rmsdB; }
-            @Override public void onBufferReceived(byte[] buffer) { }
-            @Override public void onEndOfSpeech() { }
-            @Override public void onEvent(int eventType, Bundle params) { }
-
-            @Override public void onPartialResults(Bundle results) {
-                conferirEmLote(results, false);
-            }
-
-            @Override public void onResults(Bundle results) {
-                if (conferirEmLote(results, true)) return;
-                if (conferirAtivacao(parcial, true)) return;
-                encerrarSessao(false);
-                if (querEscuta) {
-                    falhas = 0;
-                    agendarSessao(400);
-                }
-            }
-
-            @Override public void onError(int error) {
-                if (conferirAtivacao(parcial, true)) return;
-                boolean tinhaFala = parcial != null && !parcial.trim().isEmpty();
-                encerrarSessao(false);
-                if (!querEscuta) return;
-                switch (error) {
-                    case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                        pararPorFalha("permissão de microfone negada pelo usuário");
-                        return;
-                    case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-                        agendarSessao(1500);
-                        return;
-                    case 12: // ERROR_LANGUAGE_NOT_SUPPORTED
-                    case 13: // ERROR_LANGUAGE_UNAVAILABLE (pacote offline ausente)
-                    case 14: // ERROR_CANNOT_CHECK_SUPPORT
-                        errosIdioma++;
-                        if (usouLocal && errosIdioma < 3) {
-                            preferirRede = true;
-                            agendarSessao(300);
-                            return;
-                        }
-                        pararPorFalha("o Android não tem o reconhecimento de português instalado. Baixe o pacote de idioma (Configurações ▸ Google ▸ Voz) ou cadastre palavras extras do seu jeito de falar em Ajustes ▸ Voz");
-                        return;
-                    case SpeechRecognizer.ERROR_NETWORK:
-                    case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
-                        if (preferirRede && temReconhecimentoLocal()) preferirRede = false;
-                        falhas++;
-                        if (falhas >= 6) {
-                            pararPorFalha("sem conexão e o reconhecimento local não respondeu. O detector próprio precisa de rede quando o aparelho não tem o idioma offline");
-                            return;
-                        }
-                        agendarSessao(Math.min(8000, 600L * falhas));
-                        return;
-                    case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-                    case SpeechRecognizer.ERROR_NO_MATCH:
-                        falhas = 0;
-                        // Reinício curto: quanto menos tempo entre sessões, menor a chance de
-                        // o usuário falar exatamente no intervalo em que ninguém está ouvindo.
-                        agendarSessao(tinhaFala ? 350 : 700);
-                        return;
-                    default:
-                        falhas++;
-                        if (falhas >= 10) {
-                            pararPorFalha("o reconhecimento do Android falhou repetidamente (último código " + error + ")");
-                            return;
-                        }
-                        agendarSessao(Math.min(4000, 300L * falhas));
-                }
-            }
-        });
-        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "pt-BR")
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "pt-BR")
-            .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-            // Sessões longas, com mais silêncio tolerado: o microfone abre menos vezes e a
-            // palavra dita no meio de uma frase tem mais chance de ser transcrita.
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 5000L)
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1600L)
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
-            .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
-        if (usouLocal) intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
-        timeout = () -> {
-            if (!sessao) return;
-            if (conferirAtivacao(parcial, true)) return;
-            encerrarSessao(false);
-            if (querEscuta) agendarSessao(400);
-        };
-        main.postDelayed(timeout, 15000);
-        try {
-            r.startListening(intent);
-        } catch (Exception e) {
-            encerrarSessao(false);
-            pararPorFalha(e.getMessage());
-        }
-    }
-
-    /** Confere todas as hipóteses devolvidas pelo Android, não só a primeira. */
-    private boolean conferirEmLote(Bundle results, boolean definitivo) {
-        if (!querEscuta) return true;
-        ArrayList<String> lista = hipoteses(results);
-        if (lista.isEmpty()) return conferirAtivacao(null, definitivo);
-        String primeiro = lista.get(0) == null ? "" : lista.get(0).trim();
-        if (primeiro.length() > parcial.length()) parcial = primeiro;
-        if (!definitivo && primeiro.length() < cfg.minimoParcial) return false;
-        for (String hip : lista) {
-            if (conferirAtivacao(hip, definitivo)) return true;
-        }
-        return false;
-    }
-
-    /** true quando a palavra foi encontrada (ou quando a ativação já foi encerrada). */
-    private boolean conferirAtivacao(String texto, boolean definitivo) {
-        if (!querEscuta) return true;
-        if (texto == null || texto.trim().isEmpty()) return false;
-        parcial = texto;
-        if (!definitivo && !cfg.aceitaParcial) return false;
-        if (!JarvisAtivacao.presente(texto, cfg)) return false;
-        if (!definitivo && texto.trim().length() < cfg.minimoParcial) return false;
-        // Um parcial com apenas "Jarvis" não deve consumir a ativação: o comando
-        // pode estar no próximo resultado. O definitivo pode acordar só com o nome.
-        if (!definitivo && !JarvisAtivacao.temComando(texto, cfg)) return false;
-        if (picoDb < cfg.ruidoDb) {
-            // Porteiro de ruído: a transcrição veio, mas o microfone mal registrou som —
-            // típico de televisão, conversa ao fundo ou ruído que o reconhecimento tentou
-            // interpretar. Não acorda; conta o descarte para a calibragem ficar visível.
-            rejeitadasRuido++;
-            JarvisPrefs.rejeitadas(this, JarvisPrefs.rejeitadas(this) + 1);
-            encerrarSessao(false);
-            if (querEscuta) agendarSessao(250);
-            return true;
-        }
-        String limpo = texto.trim();
-        querEscuta = false;
-        encerrarSessao(true);
-        disparar(limpo);
-        return true;
-    }
-
-    private void encerrarSessao(boolean limparParcial) {
-        if (timeout != null) { main.removeCallbacks(timeout); timeout = null; }
-        if (proximo != null) { main.removeCallbacks(proximo); proximo = null; }
-        sessao = false;
-        SpeechRecognizer r = rec;
-        rec = null;
-        if (r != null) {
-            try { r.cancel(); r.destroy(); } catch (Exception ignored) { }
-        }
-        if (limparParcial) parcial = "";
+        return s == null ? "" : "Sherpa-ONNX KWS local · GigaSpeech inglês · limiar por sensibilidade";
     }
 
     /* ---------- Notificação ---------- */
