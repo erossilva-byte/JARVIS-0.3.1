@@ -96,7 +96,7 @@
         '"    self.fetch=undefined; self.XMLHttpRequest=undefined; self.WebSocket=undefined; self.EventSource=undefined; self.importScripts=undefined; self.Worker=undefined; self.SharedWorker=undefined; self.indexedDB=undefined; self.caches=undefined; self.close=undefined; self.postMessage=function(){throw new Error(\\"postMessage externo bloqueado\\");}; self.console=safeConsole;",',
         '"    try { if(self.navigator && self.navigator.sendBeacon) Object.defineProperty(self.navigator,\\"sendBeacon\\",{value:undefined}); } catch(ignore) {}",',
         '"    var AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;",',
-        '"    var run=new AsyncFunction(\\"input\\",\\"console\\",\\"\\\\\\"use strict\\\\\\";\\\\n\\"+String(e.data.code||\\"\\"));",',
+        '"    var run=new AsyncFunction(\"input\",\"console\",String(e.data.code||\"\"));",',
         '"    var value=await run(e.data.input,safeConsole);",',
         '"    var output=value===undefined ? \\"undefined\\" : (typeof value===\\"string\\" ? value : JSON.stringify(value,null,2));",',
         '"    if(output===undefined) output=String(value);",',
