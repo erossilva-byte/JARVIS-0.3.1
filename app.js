@@ -1593,8 +1593,20 @@ const ACOES = {
   responder_notificacao: { risco: 2, disp: ['android'], ajuda: 'args {"texto":"resposta"}. Responde à notificação ativa mais recente que disponibilize uma ação de resposta rápida; sempre pede confirmação.',
     prep: (a) => String(a.texto || '').trim() ? { args: { texto: String(a.texto).trim().slice(0, 1000) }, desc: 'Responder à última notificação compatível com a mensagem: ' + String(a.texto).trim().slice(0, 180) } : { erro: 'Informe o texto da resposta.' },
     run: async (a) => { const r = await nativo('responderUltimaNotificacao', { texto: String(a.texto || '').slice(0, 1000) }); return { info: r && r.info ? r.info : 'A resposta foi encaminhada pela ação rápida do aplicativo.' }; } },
-  status_dispositivo: { risco: 0, disp: ['android'], ajuda: 'sem args. Consulta bateria, temperatura reportada pela bateria, armazenamento, RAM e conexão.',
+  status_dispositivo: { risco: 0, disp: T, ajuda: 'sem args. No Android consulta bateria, temperatura, armazenamento, RAM e conexão; no Windows consulta CPU, RAM, disco, sistema e tempo ligado.',
     run: async () => {
+      if (plataforma === 'desktop') {
+        const r = await nativo('status_pc', {});
+        const ramTotal = Math.max(0, Number(r.ramTotal) || 0);
+        const ramLivre = Math.max(0, Math.min(ramTotal, Number(r.ramLivre) || 0));
+        const discoTotal = Math.max(0, Number(r.discoTotal) || 0);
+        const discoLivre = Math.max(0, Math.min(discoTotal, Number(r.discoLivre) || 0));
+        const gb = (n) => (n / 1073741824).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+        const cpu = Number.isFinite(Number(r.cpu)) ? Math.max(0, Math.min(100, Math.round(Number(r.cpu)))) : null;
+        const ramUso = ramTotal ? Math.round((ramTotal - ramLivre) / ramTotal * 100) : null;
+        const discoUso = discoTotal ? Math.round((discoTotal - discoLivre) / discoTotal * 100) : null;
+        return { info: `Computador: ${r.aparelho || 'sistema desconhecido'}; CPU: ${cpu == null ? 'indisponível' : cpu + '%'}; RAM: ${ramUso == null ? 'indisponível' : ramUso + '% usada (' + gb(ramTotal - ramLivre) + ' de ' + gb(ramTotal) + ' GB)'}; disco: ${discoUso == null ? 'indisponível' : discoUso + '% usado (' + gb(discoTotal - discoLivre) + ' de ' + gb(discoTotal) + ' GB)'}; ligado há: ${r.uptime || 'indisponível'}.` };
+      }
       const r = await nativo('statusDispositivo', {});
       const bateria = Number(r.bateria);
       const temp = Number(r.temperaturaC);
