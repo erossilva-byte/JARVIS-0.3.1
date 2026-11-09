@@ -104,9 +104,7 @@ final class JarvisPrefs {
      * ruído (som baixo demais para ser voz dirigida ao aparelho). É o número que mostra se
      * a calibragem está apertada ou frouxa demais.
      */
-    static int rejeitadas(Context c) {
-        return sp(c).getInt("rejeitadas", 0);
-    }
+
 
     static void rejeitadas(Context c, int v) {
         sp(c).edit().putInt("rejeitadas", Math.max(0, v)).apply();
