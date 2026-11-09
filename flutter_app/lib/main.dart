@@ -14,7 +14,7 @@ const cyan=Color(0xFF55DFFF),bg=Color(0xFF050A12),panel=Color(0xFF0B1725),muted=
 
 class JarvisApp extends StatelessWidget{
  const JarvisApp({super.key});
- @override Widget build(BuildContext context)=>MaterialApp(debugShowCheckedModeBanner:false,title:'J.A.R.V.I.S. Nova',theme:ThemeData(brightness:Brightness.dark,scaffoldBackgroundColor:bg,colorScheme:ColorScheme.fromSeed(seedColor:cyan,brightness:Brightness.dark),useMaterial3:true),home:const HomeScreen());
+ @override Widget build(BuildContext context)=>MaterialApp(debugShowCheckedModeBanner:false,title:'J.A.R.V.I.S. Nova',theme:ThemeData(brightness:Brightness.dark,scaffoldBackgroundColor:bg,colorScheme:ColorScheme.fromSeed(seedColor:cyan,brightness:Brightness.dark),useMaterial3:true),home:const LegacyHomeScreen());
 }
 class JarvisModule{
  const JarvisModule(this.name,this.group,this.icon,this.description);
@@ -355,4 +355,291 @@ class HologramPainter extends CustomPainter{
   canvas.drawLine(Offset(c.dx,c.dy-r*1.12),Offset(c.dx,c.dy-r*.98),marks);canvas.drawLine(Offset(c.dx,c.dy+r*.98),Offset(c.dx,c.dy+r*1.12),marks);
  }
  @override bool shouldRepaint(covariant HologramPainter old)=>old.t!=t||old.pointer!=pointer;
+}
+
+
+// Interface clássica restaurada: HUD central, barra superior, painel lateral,
+// monitor do sistema, comandos rápidos e conversa.
+class LegacyHomeScreen extends StatefulWidget {
+  const LegacyHomeScreen({super.key});
+  @override
+  State<LegacyHomeScreen> createState() => _LegacyHomeScreenState();
+}
+class _LegacyHomeScreenState extends State<LegacyHomeScreen>
+    with TickerProviderStateMixin {
+  late final AnimationController motion = AnimationController(
+    vsync: this, duration: const Duration(seconds: 20),
+  )..repeat();
+  late final TextEditingController composer = TextEditingController();
+  StreamSubscription<KwsCommandEvent>? voiceSubscription;
+  int tab = 0;
+  String clock = '';
+  Timer? clockTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateClock();
+    clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateClock());
+    unawaited(jarvisKwsController.initialize());
+    voiceSubscription = KwsController.commandBus.listen((event) {
+      if (!mounted) return;
+      if (event.type == 'command_result' && event.text.trim().isNotEmpty) {
+        _openConversation(event.text.trim());
+      } else if (event.type == 'command_error' && event.message.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(event.message)));
+      }
+    });
+  }
+
+  void _updateClock() {
+    if (!mounted) return;
+    final now = DateTime.now();
+    setState(() => clock = '\${now.hour.toString().padLeft(2, '0')}:\${now.minute.toString().padLeft(2, '0')}');
+  }
+
+  @override
+  void dispose() {
+    clockTimer?.cancel();
+    voiceSubscription?.cancel();
+    motion.dispose();
+    composer.dispose();
+    super.dispose();
+  }
+
+  void _openConversation(String command) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => VoiceConversationPage(initialCommand: command),
+    ));
+  }
+
+  void _openModule(String name) {
+    final module = modules.where((item) => item.name == name).firstOrNull;
+    if (module == null) return;
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => ModulePage(module: module),
+    ));
+  }
+
+  void _openSettings() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => SettingsPage(controller: jarvisKwsController),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: bg, titleSpacing: 16,
+        title: const Row(children: [
+          _Brand(), SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('J.A.R.V.I.S. NOVA', style: TextStyle(fontSize: 13, letterSpacing: 2, fontWeight: FontWeight.w700)),
+            Text('PERSONAL AI SYSTEM', style: TextStyle(fontSize: 8, letterSpacing: 2, color: muted)),
+          ]),
+        ]),
+        actions: [
+          IconButton(tooltip: 'Voz e palavra de ativação',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => KwsSettingsPage(controller: jarvisKwsController))),
+            icon: const Icon(Icons.graphic_eq_rounded, color: cyan)),
+          IconButton(key: const ValueKey('settings-button'), tooltip: 'Configurações',
+            onPressed: _openSettings, icon: const Icon(Icons.tune_rounded, color: cyan)),
+          const SizedBox(width: 6),
+        ],
+      ),
+      drawer: _buildDrawer(),
+      body: SafeArea(child: tab == 0 ? _buildCommandCenter() : _buildSystems()),
+      bottomNavigationBar: NavigationBar(
+        height: 66, backgroundColor: const Color(0xFF08121E),
+        indicatorColor: cyan.withValues(alpha: .13), selectedIndex: tab,
+        onDestinationSelected: (value) => setState(() => tab = value),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.blur_circular_rounded), selectedIcon: Icon(Icons.blur_on_rounded, color: cyan), label: 'Comando'),
+          NavigationDestination(icon: Icon(Icons.grid_view_rounded), selectedIcon: Icon(Icons.grid_view_rounded, color: cyan), label: 'Sistemas'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer() => Drawer(
+    backgroundColor: const Color(0xFF080F1B),
+    child: SafeArea(child: Column(children: [
+      const Padding(padding: EdgeInsets.fromLTRB(18, 24, 18, 18),
+        child: Row(children: [
+          _Brand(), SizedBox(width: 12),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('COMMAND CENTER', style: TextStyle(color: cyan, fontSize: 10, letterSpacing: 2)),
+            Text('J.A.R.V.I.S. Nova', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+          ]),
+        ])),
+      const Divider(color: Colors.white12),
+      Expanded(child: ListView(children: [
+        _drawerItem(Icons.blur_circular_rounded, 'Comando', () { Navigator.pop(context); setState(() => tab = 0); }),
+        _drawerItem(Icons.psychology_rounded, 'IA Core', () { Navigator.pop(context); _openProviderSettings(); }),
+        _drawerItem(Icons.graphic_eq_rounded, 'Voz', () { Navigator.pop(context); _openKwsSettings(); }),
+        _drawerItem(Icons.visibility_rounded, 'Visão', () { Navigator.pop(context); _openModule('Visão e OCR'); }),
+        _drawerItem(Icons.checklist_rounded, 'Tarefas', () { Navigator.pop(context); _openModule('Tarefas e rotinas'); }),
+        _drawerItem(Icons.people_alt_rounded, 'Pessoas', () { Navigator.pop(context); _openModule('Pessoas e contexto'); }),
+        _drawerItem(Icons.terminal_rounded, 'Dev. Arquivos', () { Navigator.pop(context); _openModule('Programação e sandbox'); }),
+        _drawerItem(Icons.bolt_rounded, 'Rotinas', () { Navigator.pop(context); _openModule('Tarefas e rotinas'); }),
+        _drawerItem(Icons.phone_android_rounded, 'Celular', () { Navigator.pop(context); _openModule('Android e dispositivos'); }),
+        _drawerItem(Icons.account_tree_rounded, 'Memória', () { Navigator.pop(context); _openModule('Memória semântica'); }),
+        _drawerItem(Icons.folder_copy_rounded, 'Arquivos', () { Navigator.pop(context); _openModule('Arquivos'); }),
+        _drawerItem(Icons.electrical_services_rounded, 'CADeSIMU', () { Navigator.pop(context); _openModule('CADeSIMU e elétrica'); }),
+        _drawerItem(Icons.desktop_windows_rounded, 'Computador', () { Navigator.pop(context); _openModule('Controle do Windows'); }),
+        _drawerItem(Icons.tune_rounded, 'Configurações', () { Navigator.pop(context); _openSettings(); }),
+      ])),
+      const Divider(color: Colors.white12),
+      const Padding(padding: EdgeInsets.all(16), child: Row(children: [
+        Icon(Icons.circle, size: 8, color: Color(0xFF64E6B1)), SizedBox(width: 9),
+        Text('SYSTEM STATUS', style: TextStyle(fontSize: 9, color: muted, letterSpacing: 1.5)),
+        Spacer(), Text('ONLINE', style: TextStyle(fontSize: 9, color: Color(0xFF64E6B1))),
+      ])),
+    ])),
+  );
+
+  Widget _drawerItem(IconData icon, String title, VoidCallback onTap) => ListTile(
+    dense: true, leading: Icon(icon, color: cyan, size: 20),
+    title: Text(title, style: const TextStyle(fontSize: 13)),
+    trailing: const Icon(Icons.chevron_right_rounded, color: muted, size: 18),
+    onTap: onTap,
+  );
+
+  void _openProviderSettings() => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ProviderSettingsPage()));
+  void _openKwsSettings() => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => KwsSettingsPage(controller: jarvisKwsController)));
+
+  Widget _buildCommandCenter() => ListView(
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+    children: [
+      Row(children: [
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('CENTRAL DE COMANDO', style: TextStyle(color: cyan, fontSize: 9, letterSpacing: 2, fontWeight: FontWeight.w700)),
+          SizedBox(height: 5), Text('À sua disposição.', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w300)),
+        ])),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(clock, style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w300)),
+          Text(DateTime.now().toString().substring(0, 10), style: const TextStyle(fontSize: 9, color: muted)),
+        ]),
+      ]),
+      const SizedBox(height: 8),
+      const Text('Inteligência em movimento. Sempre ao seu comando.', style: TextStyle(color: muted, fontSize: 11)),
+      Center(child: AnimatedBuilder(animation: motion, builder: (_, __) => GestureDetector(
+        onTap: () => showModalBottomSheet<void>(context: context, backgroundColor: panel, showDragHandle: true,
+          builder: (_) => const Padding(padding: EdgeInsets.fromLTRB(24, 12, 24, 28),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.blur_circular_rounded, color: cyan, size: 38), SizedBox(height: 12),
+              Text('Núcleo J.A.R.V.I.S.', style: TextStyle(fontSize: 19)), SizedBox(height: 8),
+              Text('Núcleo visual interativo. Use o microfone para iniciar a escuta KWS local.',
+                textAlign: TextAlign.center, style: TextStyle(color: muted, height: 1.5)),
+            ]))),
+        child: SizedBox(width: 310, height: 310,
+          child: CustomPaint(painter: HologramPainter(motion.value, Offset.zero),
+            child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.all_inclusive_rounded, color: cyan, size: 48), SizedBox(height: 8),
+              Text('J.A.R.V.I.S.', style: TextStyle(letterSpacing: 3.5, fontSize: 16)), SizedBox(height: 5),
+              Text('NÚCLEO HOLOGRÁFICO', style: TextStyle(color: cyan, fontSize: 8, letterSpacing: 2)),
+            ]))),
+        ),
+      ))),
+      const SizedBox(height: 4),
+      _sectionHeader('SYSTEM MONITOR', 'ESTADO DO SISTEMA'),
+      const SizedBox(height: 9),
+      _statusCard(Icons.hub_rounded, 'Núcleo de IA', 'Provedores configuráveis · Groq prioritário',
+        'CONFIGURAR', cyan, () => _openProviderSettings()),
+      const SizedBox(height: 8),
+      _statusCard(Icons.graphic_eq_rounded, 'Voz e palavra de ativação',
+        'KWS local sherpa-onnx · diagnóstico nativo', 'VERIFICAR',
+        const Color(0xFFFFC66D), () => _openKwsSettings()),
+      const SizedBox(height: 8),
+      _statusCard(Icons.widgets_rounded, 'Módulos do sistema',
+        '\${modules.length} áreas identificadas no catálogo', 'SISTEMAS', cyan,
+        () => setState(() => tab = 1)),
+      const SizedBox(height: 16),
+      _sectionHeader('QUICK COMMANDS', 'COMANDOS RÁPIDOS'),
+      const SizedBox(height: 9),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final command in ['Bom dia', 'Que horas são?', 'Como está o tempo?', 'Conte uma piada'])
+          ActionChip(
+            avatar: const Icon(Icons.bolt_rounded, size: 15, color: cyan),
+            label: Text(command, style: const TextStyle(fontSize: 11)),
+            onPressed: () => _openConversation(command),
+            backgroundColor: panel, side: const BorderSide(color: Colors.white12),
+          ),
+      ]),
+      const SizedBox(height: 16),
+      _sectionHeader('CONVERSA', 'CHAT'),
+      const SizedBox(height: 9),
+      Container(
+        padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+        decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(28), border: Border.all(color: Colors.white12)),
+        child: Row(children: [
+          Expanded(child: TextField(
+            controller: composer, textInputAction: TextInputAction.send,
+            onSubmitted: (value) { final text = value.trim(); if (text.isEmpty) return; composer.clear(); _openConversation(text); },
+            decoration: const InputDecoration(hintText: 'Fale com J.A.R.V.I.S....', border: InputBorder.none, isDense: true),
+          )),
+          IconButton(tooltip: 'Enviar mensagem', onPressed: () {
+            final text = composer.text.trim(); if (text.isEmpty) return; composer.clear(); _openConversation(text);
+          }, icon: const Icon(Icons.send_rounded, color: cyan)),
+          IconButton(tooltip: 'Iniciar escuta por voz', onPressed: () async {
+            try {
+              final status = await jarvisKwsController.start();
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status.listening ? 'Escuta KWS iniciada.' : status.detail)));
+            } catch (error) {
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Não foi possível iniciar a escuta: $error')));
+            }
+          }, icon: const Icon(Icons.mic_rounded, color: cyan)),
+        ]),
+      ),
+      const SizedBox(height: 14),
+      const Text('Ações de dispositivo e módulos sem integração comprovada não são exibidos como ativos.',
+        style: TextStyle(color: Color(0xFF63798B), fontSize: 9, height: 1.5)),
+    ],
+  );
+
+  Widget _sectionHeader(String title, String trailing) => Row(children: [
+    Text(title, style: const TextStyle(fontSize: 9, letterSpacing: 1.6, fontWeight: FontWeight.w700)),
+    const Spacer(), Text(trailing, style: const TextStyle(fontSize: 8, letterSpacing: 1.1, color: muted)),
+  ]);
+
+  Widget _statusCard(IconData icon, String title, String detail, String state,
+    Color color, VoidCallback onTap) => Material(
+    color: panel, borderRadius: BorderRadius.circular(13),
+    child: InkWell(borderRadius: BorderRadius.circular(13), onTap: onTap,
+      child: Padding(padding: const EdgeInsets.all(12), child: Row(children: [
+        Icon(icon, color: cyan, size: 21), const SizedBox(width: 11),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 3), Text(detail, style: const TextStyle(fontSize: 10, color: muted)),
+        ])),
+        Text(state, style: TextStyle(fontSize: 8, letterSpacing: .8, color: color, fontWeight: FontWeight.w700)),
+      ])),
+    ),
+  );
+
+  Widget _buildSystems() => ListView(
+    padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+    children: [
+      const Text('CENTRAL DE SISTEMAS', style: TextStyle(color: cyan, fontSize: 9, letterSpacing: 2, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 7),
+      const Text('Capacidades do J.A.R.V.I.S.', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w300)),
+      const SizedBox(height: 6),
+      const Text('Acesse os módulos disponíveis no projeto.', style: TextStyle(color: muted, fontSize: 12)),
+      const SizedBox(height: 16),
+      for (final module in modules)
+        Padding(padding: const EdgeInsets.only(bottom: 8),
+          child: _ModuleTile(module: module, onTap: () {
+            if (module.name == 'Provedores de IA') {
+              _openProviderSettings();
+            } else if (module.name == 'Voz e KWS') {
+              _openKwsSettings();
+            } else {
+              _openModule(module.name);
+            }
+          })),
+    ],
+  );
 }
