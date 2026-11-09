@@ -63,7 +63,7 @@ checagens = {
         "guardarChave" not in prefs and "lerChave" not in prefs and "temChave" not in prefs
         and "AndroidKeyStore" not in prefs),
     "Nomes de chave do desktop sem picovoice": (
-        "groq|cerebras|mistral|gemini" in ler("platforms/desktop/main.js") and "picovoice" not in ler("platforms/desktop/main.js")),
+        "groq|openrouter|cerebras|mistral|gemini" in ler("platforms/desktop/main.js") and "picovoice" not in ler("platforms/desktop/main.js")),
 
     # 2. Detector próprio, nos dois lados, com as mesmas regras
     "JarvisAtivacao.java existe e tem as três regras": (
