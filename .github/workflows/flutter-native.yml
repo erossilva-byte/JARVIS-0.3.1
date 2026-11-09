@@ -27,11 +27,43 @@ jobs:
           cache: true
       - name: Generate native platform runners without touching legacy Android project
         run: flutter create --project-name jarvis_nova --platforms=android,windows .
+      - name: Set the production Android application identity
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          gradle = Path("android/app/build.gradle.kts")
+          content = gradle.read_text()
+          old_id = "com.example.jarvis_nova"
+          new_id = "com.jarvis.nova"
+          if old_id not in content:
+              raise SystemExit(f"Identificador Android padrão não encontrado em {gradle}")
+          gradle.write_text(content.replace(old_id, new_id))
+
+          activity = Path("android/app/src/main/kotlin/com/example/jarvis_nova/MainActivity.kt")
+          source = activity.read_text()
+          source = source.replace("package com.example.jarvis_nova", "package com.jarvis.nova")
+          target = Path("android/app/src/main/kotlin/com/jarvis/nova/MainActivity.kt")
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text(source)
+          activity.unlink()
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          manifest.write_text(manifest.read_text().replace('android:label="jarvis_nova"', 'android:label="J.A.R.V.I.S. Nova"'))
+          PY
+          grep -q 'applicationId = "com.jarvis.nova"' android/app/build.gradle.kts
+          grep -q 'namespace = "com.jarvis.nova"' android/app/build.gradle.kts
       - run: flutter pub get
       - run: dart format lib test
       - run: flutter analyze
       - run: flutter test
       - run: flutter build apk --debug
+      - name: Verify APK identity and output
+        shell: bash
+        run: |
+          test -s build/app/outputs/flutter-apk/app-debug.apk
+          echo "APK Flutter gerado: $(du -h build/app/outputs/flutter-apk/app-debug.apk | cut -f1)"
       - name: Publish debug APK artifact
         uses: actions/upload-artifact@v4
         with:
