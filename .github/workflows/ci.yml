@@ -80,7 +80,7 @@ jobs:
       - name: Instalar dependências
         run: |
           npm install --ignore-scripts --legacy-peer-deps
-          python3 -m pip install --upgrade pip sherpa-onnx==1.13.8
+          python3 -m pip install --upgrade pip 'click>=8.1.7,<9.0' sherpa-onnx==1.13.8
 
       - name: Instalar Android 35
         run: |
