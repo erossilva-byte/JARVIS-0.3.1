@@ -1511,7 +1511,7 @@ const ACOES = {
   controle_midia: { risco: 0, disp: T, ajuda: 'args {"comando":"pausar|continuar|proxima|anterior|alternar|parar"}. Controla o app que está tocando (Spotify, YouTube Music e outros) pela sessão de mídia do Android; sem acesso às notificações, envia teclas de mídia.',
     run: async (a) => {
       const c = String(a.comando || 'pausar');
-      if (plataforma === 'desktop') { const r = await nativo('controle_midia_pc', { comando: c }); return { info: r.info || 'Comando enviado ao controle multimídia do Windows.', incerto: true }; }
+      if (plataforma === 'desktop') { if (!['alternar', 'proxima', 'anterior', 'parar'].includes(c)) throw new Error('No Windows, pausa e retomada diretas ainda não são suportadas; use alternar reprodução.'); const r = await nativo('controle_midia_pc', { comando: c }); return { info: r.info || 'Comando enviado ao controle multimídia do Windows.', incerto: true }; }
       // Player do próprio app: se é ele que está tocando, obedece direto (não depende
       // do acesso às notificações nem da sessão de outro aplicativo).
       const M = plug('JarvisMusica');
