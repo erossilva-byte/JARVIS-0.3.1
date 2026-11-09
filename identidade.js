@@ -858,6 +858,60 @@
     return gravarCru(CHAVE, '[]');
   }
 
+  function interpretarCadastroVoz(frase) {
+    var bruto = limpar(frase, 240);
+    var comando = bruto.match(/^(?:jarvis[, ]+)?(?:cadastre|cadastra|registre|registra|adicione|adiciona|crie|cria)\\s+(?:(?:meu|minha)\\s+)?(?:(amigo|amiga|colega|irm[aã]o|irm[aã]|primo|prima|m[aã]e|pai|namorado|namorada)\\s+)?(.+)$/i);
+    if (!comando) return null;
+    var relacao = comando[1] || '';
+    var nome = comando[2] || '';
+    var idadeMatch = bruto.match(/\\bidade\\s*(?:de|é|e)?\\s*(\\d{1,3})(?:\\s*anos?)?/i) ||
+      bruto.match(/\\b(\\d{1,3})\\s*anos?\\b/i);
+    var pesoMatch = bruto.match(/\\bpeso\\s*(?:de|é|e)?\\s*(\\d{1,3}(?:[,.]\\d{1,2})?)\\s*(?:kg)?\\b/i) ||
+      bruto.match(/\\b(\\d{1,3}(?:[,.]\\d{1,2})?)\\s*kg\\b/i);
+    var alturaMatch = bruto.match(/\\baltura\\s*(?:de|é|e)?\\s*(\\d{1,3}(?:[,.]\\d{1,2})?)\\s*(cm|m)\\b/i) ||
+      bruto.match(/\\b(\\d{1,3}(?:[,.]\\d{1,2})?)\\s*(cm|m)\\b/i);
+    var nascimentoMatch = bruto.match(/\\b(?:nascimento|nascido em|nascida em)\\s*(?:em\\s*)?(\\d{4}-\\d{2}-\\d{2}|\\d{1,2}[/.]\\d{1,2}[/.]\\d{4})/i);
+    nome = nome
+      .replace(/[,;]?\\s*(?:idade\\s*(?:de|é|e)?\\s*)?\\d{1,3}\\s*anos?\\b/ig, '')
+      .replace(/[,;]?\\s*idade\\s*(?:de|é|e)?\\s*\\d{1,3}\\b/ig, '')
+      .replace(/[,;]?\\s*(?:peso\\s*(?:de|é|e)?\\s*)?\\d{1,3}(?:[,.]\\d{1,2})?\\s*kg\\b/ig, '')
+      .replace(/[,;]?\\s*(?:altura\\s*(?:de|é|e)?\\s*)?\\d{1,3}(?:[,.]\\d{1,2})?\\s*(?:cm|m)\\b/ig, '')
+      .replace(/[,;]?\\s*(?:nascimento|nascido em|nascida em)\\s*(?:em\\s*)?(?:\\d{4}-\\d{2}-\\d{2}|\\d{1,2}[/.]\\d{1,2}[/.]\\d{4})/ig, '')
+      .replace(/\\s+(?:e|com)\\s*$/i, '')
+      .replace(/^[,;\\s]+|[,;\\s]+$/g, '')
+      .replace(/\\s{2,}/g, ' ').trim();
+    if (!nome) return { ok: false, erro: 'Não consegui identificar o nome. Diga, por exemplo: “cadastre meu amigo Marcelo, idade 27 anos, peso 72 kg e altura 1,78 m”.' };
+    var dados = { nome: nome };
+    if (relacao) dados.relacao = relacao.toLowerCase();
+    if (idadeMatch) {
+      var idadeInformada = Number(idadeMatch[1]);
+      if (!Number.isInteger(idadeInformada) || idadeInformada < 0 || idadeInformada >= 130) {
+        return { ok: false, erro: 'A idade informada deve ficar entre 0 e 129 anos.' };
+      }
+      dados.idadeBase = String(idadeInformada);
+      if (nascimentoMatch) {
+        var data = nascimentoMatch[1];
+        dados.nascimento = /^\\d{4}-/.test(data)
+          ? data
+          : data.split(/[/.]/).reverse().join('-');
+      } else {
+        var hoje = new Date(relogio());
+        dados.idadeEm = [hoje.getFullYear(), String(hoje.getMonth() + 1).padStart(2, '0'),
+          String(hoje.getDate()).padStart(2, '0')].join('-');
+      }
+    } else if (nascimentoMatch) {
+      var dataNascimento = nascimentoMatch[1];
+      dados.nascimento = /^\\d{4}-/.test(dataNascimento)
+        ? dataNascimento : dataNascimento.split(/[/.]/).reverse().join('-');
+    }
+    if (pesoMatch) dados.pesoKg = pesoMatch[1].replace(',', '.');
+    if (alturaMatch) {
+      var altura = Number(alturaMatch[1].replace(',', '.'));
+      dados.alturaCm = String(alturaMatch[2].toLowerCase() === 'm' ? Math.round(altura * 100) : Math.round(altura));
+    }
+    return { ok: true, dados: dados, idadeAproximada: !!(idadeMatch && !nascimentoMatch) };
+  }
+
   function configurar(opcoes) {
     var o = opcoes || {};
     if (o.store) deposito = o.store;
@@ -878,6 +932,7 @@
     PADRAO: PADRAO, LIMITES: LIMITES, ESTADOS: ESTADOS,
     configurar: configurar, iniciar: iniciar, config: config, salvarConfig: salvarConfig,
     listar: listar, obter: obter, salvar: salvar, remover: remover, buscar: buscar,
+    interpretarCadastroVoz: interpretarCadastroVoz,
     resolver: resolver, descrever: descrever, contexto: contexto, resumo: resumo,
     idade: idade, idadeDetalhada: idadeDetalhada, diasAteAniversario: diasAteAniversario,
     dataValida: dataValida, consentir: consentir,
