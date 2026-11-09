@@ -82,6 +82,23 @@ function lerChaveDesktop({ nome }) {
 }
 
 // Só estas ações existem. O renderer NUNCA envia comandos de shell.
+function teclaMultimidiaWindows(codigo) {
+  if (plat !== 'win32') throw new Error('Controle multimídia por tecla está disponível nesta versão apenas no Windows.');
+  const script = [
+    "$src = 'using System; using System.Runtime.InteropServices; public static class JarvisNovaMediaKey { [DllImport(\"user32.dll\")] public static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra); public static void Tap(byte key) { keybd_event(key, 0, 0, UIntPtr.Zero); keybd_event(key, 0, 2, UIntPtr.Zero); } }'",
+    'Add-Type -TypeDefinition $src',
+    '[JarvisNovaMediaKey]::Tap(' + Number(codigo) + ')'
+  ].join('; ');
+  const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script], {
+    encoding: 'utf8', timeout: 5000, windowsHide: true
+  });
+  if (r.error || r.status !== 0) {
+    const detalhe = r.error ? r.error.message : String(r.stderr || r.stdout || 'PowerShell retornou erro').trim();
+    throw new Error('O Windows não aceitou a tecla multimídia: ' + detalhe.slice(0, 240));
+  }
+}
+const TECLAS_MIDIA = { pausar: 0xB3, continuar: 0xB3, alternar: 0xB3, proxima: 0xB0, anterior: 0xB1, parar: 0xB2 };
+const TECLAS_VOLUME = { aumentar: 0xAF, diminuir: 0xAE, silenciar: 0xAD };
 const acoes = {
   abrir_app: async ({ app: chaveApp }) => {
     const entrada = APPS[chaveApp];
@@ -98,6 +115,36 @@ const acoes = {
     if (!numeroOk(numero)) throw new Error('Número inválido');
     const t = String(texto || '').slice(0, 1000);
     return shell.openExternal(`https://wa.me/${numero.replace('+', '')}?text=${encodeURIComponent(t)}`);
+  },
+  controle_midia_pc: async ({ comando }) => {
+    const c = String(comando || 'pausar').toLowerCase();
+    const tecla = TECLAS_MIDIA[c];
+    if (!tecla) throw new Error('Comando de mídia inválido.');
+    teclaMultimidiaWindows(tecla);
+    return { ok: true, incerto: true, metodo: 'tecla multimídia do Windows', comando: c,
+      info: 'Comando enviado ao controle multimídia do Windows; a resposta do player não pode ser confirmada.' };
+  },
+  volume_pc: async ({ direcao, tipo, percentual }) => {
+    if (percentual != null) throw new Error('Definir percentual exato ainda não é suportado no Windows; use aumentar, diminuir ou silenciar.');
+    if (tipo && tipo !== 'musica') throw new Error('Nesta versão, o controle por tecla altera o volume principal do Windows, não canais separados.');
+    const d = String(direcao || 'aumentar').toLowerCase();
+    const tecla = TECLAS_VOLUME[d];
+    if (!tecla) throw new Error('Direção de volume inválida.');
+    teclaMultimidiaWindows(tecla);
+    return { ok: true, incerto: true, metodo: 'tecla de volume do Windows', direcao: d,
+      info: 'Comando enviado ao volume principal do Windows; o nível exato não foi lido.' };
+  },
+  email_pc: async ({ para, assunto, texto }) => {
+    const destinatario = String(para || '').trim().slice(0, 200);
+    if (destinatario && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(destinatario)) {
+      throw new Error('Informe um endereço de e-mail válido para abrir o rascunho.');
+    }
+    const params = [];
+    if (assunto) params.push('subject=' + encodeURIComponent(String(assunto).slice(0, 200)));
+    if (texto) params.push('body=' + encodeURIComponent(String(texto).slice(0, 4000)));
+    const uri = 'mailto:' + encodeURIComponent(destinatario) + (params.length ? '?' + params.join('&') : '');
+    await shell.openExternal(uri);
+    return { ok: true, incerto: true, info: 'Abri o aplicativo de e-mail padrão com o rascunho. Revise e envie manualmente.' };
   },
   bloquear_tela: async () => {
     if (plat === 'win32') rodar('rundll32.exe', ['user32.dll,LockWorkStation']);
