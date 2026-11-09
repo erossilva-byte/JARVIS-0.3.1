@@ -34,6 +34,11 @@ gradle = replace_once(
     'dependencies {\n    implementation(files("libs/sherpa-onnx-1.13.8.aar"))\n    implementation("androidx.core:core:1.15.0")',
     "dependências sherpa-onnx"
 )
+if "minSdk = 26" not in gradle:
+    if "minSdk = flutter.minSdkVersion" in gradle:
+        gradle = gradle.replace("minSdk = flutter.minSdkVersion", "minSdk = 26", 1)
+    elif "minSdkVersion 26" not in gradle:
+        raise SystemExit("Não reconheci a configuração minSdk do runner Flutter; não vou alterar o build às cegas.")
 GRADLE.write_text(gradle, encoding="utf-8")
 
 manifest = MANIFEST.read_text(encoding="utf-8")
