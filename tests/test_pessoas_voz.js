@@ -15,6 +15,7 @@ const perfis = [
   { nome: 'Ana Paula', apelido: '', relacao: 'colega', preferencias: '' },
   { nome: 'Carlos', apelido: 'Cadu', relacao: 'amigo', preferencias: '' }
 ];
+const salvos = [];
 const PESSOAS = {
   resolver(termo) {
     const n = normalizar(termo);
@@ -26,7 +27,14 @@ const PESSOAS = {
     if (parciais.length > 1) return { tipo: 'ambiguo', candidatos: parciais };
     return { tipo: 'nenhum', candidatos: [] };
   },
-  descrever(p) { return p.nome + (p.relacao ? ' — ' + p.relacao : ''); }
+  descrever(p) { return p.nome + (p.relacao ? ' — ' + p.relacao : ''); },
+  interpretarCadastroVoz(frase) {
+    return /cadastre meu amigo marcelo/i.test(frase)
+      ? { ok: true, dados: { nome: 'Marcelo', relacao: 'amigo', idadeBase: '27', pesoKg: '72.5', alturaCm: '178' }, idadeAproximada: true }
+      : null;
+  },
+  salvar(dados) { salvos.push(dados); return { ok: true, perfil: dados }; },
+  idadeDetalhada() { return { anos: 27, meses: 0, aproximada: true }; }
 };
 function normalizar(txt) {
   return String(txt == null ? '' : txt).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -58,5 +66,10 @@ assert.strictEqual(fn('o que você sabe sobre física quântica'), null);
 assert.strictEqual(fn('abre o Spotify'), null);
 assert.strictEqual(fn(''), null);
 assert.strictEqual(fn('quem é'), null);
+const criado = fn('cadastre meu amigo Marcelo, idade 27 anos, peso 72,5 kg e altura 1,78 m');
+assert.ok(criado && /Cadastrei Marcelo/.test(criado.fala), 'cadastro por voz confirma a pessoa');
+assert.strictEqual(salvos.length, 1, 'salva uma ficha');
+assert.strictEqual(salvos[0].pesoKg, '72.5');
+assert.strictEqual(salvos[0].alturaCm, '178');
 
 console.log('test_pessoas_voz: 5 grupos de verificação passaram');
