@@ -1221,6 +1221,17 @@
     <button id="dev-corrigir" type="button" class="secundario">Aplicar correção (mantém o original)</button>
     <div id="dev-relatorio" class="dev-relatorio" aria-live="polite"></div>
   </section>
+  <section class="grupo" aria-label="Sandbox de código isolado">
+    <h3>Sandbox JavaScript isolado</h3>
+    <p class="dica">Executa JavaScript em um Worker dentro de um iframe isolado. Sem acesso a arquivos, rede, Node.js, armazenamento ou funções do aparelho. Limite padrão: 3 segundos.</p>
+    <label>Código JavaScript<textarea id="sandbox-codigo" rows="8" maxlength="20000" spellcheck="false" autocapitalize="off" autocomplete="off">const dobro = input.valor * 2;
+console.log('Resultado calculado:', dobro);
+return dobro;</textarea></label>
+    <label>Entrada JSON<textarea id="sandbox-entrada" rows="2" maxlength="10000" spellcheck="false">{"valor": 21}</textarea></label>
+    <button id="sandbox-executar" type="button" class="primario">Executar no sandbox</button>
+    <p id="sandbox-status" class="dica" role="status" aria-live="polite">Aguardando código.</p>
+    <pre id="sandbox-saida" class="dev-relatorio" aria-live="polite"></pre>
+  </section>
   <section class="grupo">
     <h3>Criar arquivo real</h3>
     <div class="dev-linha">
@@ -1480,6 +1491,7 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="aprendizado.js"></script>
 <script src="eletrica.js"></script>
 <script src="projetista.js"></script>
+<script src="sandbox.js"></script>
 <script src="app.js"></script>
 <script src="utilidades_ui.js"></script>
 <script src="core_ui.js"></script>
