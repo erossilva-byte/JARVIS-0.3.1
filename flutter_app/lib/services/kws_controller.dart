@@ -30,6 +30,18 @@ class KwsController extends ChangeNotifier {
   String? get error => _error;
   bool get busy => _busy;
 
+  /// Conecta o fluxo de wake antes do diagnóstico para receber ativações já pendentes.
+  Future<KwsStatus> initialize() async {
+    if (_disposed) return _status;
+    try {
+      await _listenForWakeEvents();
+    } catch (e) {
+      _fail(e);
+      return _status;
+    }
+    return refresh();
+  }
+
   Future<KwsStatus> refresh() async {
     if (_disposed) return _status;
     try {
