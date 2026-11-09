@@ -39,6 +39,8 @@ test('não depende de Node nem expõe APIs quando executado fora do app', async 
 test('iframe sem same-origin e worker encerrável por timeout', () => {
   assert.ok(source.includes("setAttribute('sandbox', 'allow-scripts')"));
   assert.ok(!source.includes('allow-same-origin'));
+  assert.ok(source.includes("iframe.src = 'data:text/html;charset=utf-8,'"));
+  assert.ok(html.includes("frame-src 'self' data:"));
   assert.ok(source.includes('worker-src blob:'));
   assert.ok(source.includes("connect-src \\'none\\'"));
   assert.ok(source.includes('worker.terminate()'));
