@@ -855,8 +855,9 @@
       </div>
       <div class="idp-dupla">
         <label>Altura (cm)<input id="pessoa-alturaCm" type="number" min="30" max="250" maxlength="3" inputmode="numeric" placeholder="Ex.: 172"></label>
-        <label>Profissão<input id="pessoa-profissao" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: arquiteta"></label>
+        <label>Peso (kg)<input id="pessoa-pesoKg" type="number" min="1" max="500" step="0.1" inputmode="decimal" placeholder="Ex.: 68,5"></label>
       </div>
+      <label>Profissão<input id="pessoa-profissao" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: arquiteta"></label>
       <label>Relação com você<input id="pessoa-relacao" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: irmã, colega de trabalho"></label>
       <label>Telefone<input id="pessoa-telefone" type="tel" maxlength="24" autocomplete="off" placeholder="opcional"></label>
       <label>E-mail<input id="pessoa-email" type="email" maxlength="90" autocomplete="off" placeholder="opcional"></label>
@@ -881,20 +882,8 @@
     </fieldset>
 
     <fieldset class="idp-bloco"><legend>Consentimento e privacidade</legend>
-      <p class="dica">Nada de voz ou imagem é usado para identificação sem autorização. A autorização pode ser revogada a qualquer momento e apaga a biometria correspondente.</p>
-      <label class="linha"><input id="idp-consent-voz" type="checkbox"><span>A pessoa autoriza o cadastro da voz<small>Finalidade: comparar a voz dela com este perfil neste aparelho. O áudio não é armazenado; só um vetor de características.</small></span></label>
+      <p class="dica">O cadastro de pessoas guarda apenas as informações que você fornecer. A referência visual é opcional, fica neste aparelho e não é prova de identidade.</p>
       <label class="linha"><input id="idp-consent-rosto" type="checkbox"><span>A pessoa autoriza a referência visual<small>Opcional. Usa um hash da foto para semelhança de imagem — não é reconhecimento facial biométrico nem prova de identidade.</small></span></label>
-    </fieldset>
-
-    <fieldset class="idp-bloco"><legend>Perfil de voz</legend>
-      <p id="idp-voz-status" class="dica" role="status" aria-live="polite">Salve o perfil antes de cadastrar a voz.</p>
-      <p id="idp-voz-frase" class="dica">Frase 1 de 3: “Jarvis, esta é a minha voz e eu autorizo o cadastro neste aparelho.”</p>
-      <div class="botoes">
-        <button id="idp-voz-gravar" type="button" class="primario">Cadastrar voz</button>
-        <button id="idp-voz-testar" type="button" class="secundario">Testar reconhecimento</button>
-        <button id="idp-voz-apagar" type="button" class="secundario perigo">Apagar amostras</button>
-      </div>
-      <div id="idp-voz-amostras" class="idp-amostras"></div>
     </fieldset>
 
     <fieldset class="idp-bloco"><legend>Referência visual (opcional)</legend>
