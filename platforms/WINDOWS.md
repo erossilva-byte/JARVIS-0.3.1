@@ -174,7 +174,7 @@ npm run dist:win       # instalador NSIS em dist/
 O núcleo compartilhado expõe também controles equivalentes a algumas ações do Android,
 adaptados ao computador:
 
-- **Mídia:** pausar/retomar, próxima, anterior e parar por teclas multimídia globais.
+- **Mídia:** alternar reprodução, próxima, anterior e parar por teclas multimídia globais. Pausa e retomada diretas ainda não são suportadas porque a tecla global alterna o estado e poderia fazer o oposto do pedido.
 - **Volume principal:** aumentar, diminuir e silenciar pelas teclas de volume do Windows.
 - **WhatsApp:** abre a conversa via `wa.me`; a pessoa revisa e envia no próprio WhatsApp.
 - **E-mail:** abre um rascunho `mailto:` no cliente padrão; o envio continua manual.
