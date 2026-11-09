@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -116,7 +117,7 @@ class ProviderService {
     } on FormatException {
       return const ProviderCheck(ok: false, message: 'O provedor retornou uma resposta inválida.');
     } catch (error) {
-      if (error.toString().contains('TimeoutException')) {
+      if (error is TimeoutException) {
         return const ProviderCheck(ok: false, message: 'O teste excedeu 18 segundos e foi interrompido.');
       }
       return const ProviderCheck(ok: false, message: 'Falha inesperada ao testar o provedor.');
