@@ -189,7 +189,7 @@ class HologramPainter extends CustomPainter{
   final specs=<(double,double,double)>[(.58,1.9,.95),(.76,1.1,.68),(.94,.8,.5),(1.08,.65,.32)];
   for(var i=0;i<specs.length;i++){
    final (scale,width,opacity)=specs[i];
-   final rect=Rect.fromCenter(center:c,width:r*2*scale,height:r*2*scale*(i==1?.78:1));
+   final rect=Rect.fromCenter(center:c,width:r*2*scale,height:r*2*scale*(i == 1 ? .78 : 1));
    final p=Paint()..style=PaintingStyle.stroke..strokeWidth=width..color=cyan.withOpacity(opacity);
    canvas.save();canvas.translate(c.dx,c.dy);canvas.rotate(spin*(i.isEven ? .14 : -.11)+i*.6);canvas.translate(-c.dx,-c.dy);
    canvas.drawArc(rect,spin*(i.isEven?1:-1)+i,math.pi*(1.18+i*.1),false,p);canvas.restore();
