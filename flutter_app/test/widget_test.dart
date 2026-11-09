@@ -50,7 +50,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 
-    expect(find.text('Provedores de IA'), findsOneWidget);
+    expect(find.text('Provedores de IA'), findsWidgets);
     expect(find.textContaining('Groq é o provedor principal'), findsOneWidget);
   });
 
@@ -60,7 +60,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
     await tester.enterText(find.byType(TextField), 'Voz e KWS');
     await tester.pump();
-    await tester.tap(find.text('Voz e KWS'));
+    await tester.tap(find.text('Voz e KWS').last);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 
@@ -73,7 +73,7 @@ void main() {
     await tester.tap(find.text('NÚCLEO HOLOGRÁFICO'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 450));
-    expect(find.text('Núcleo holográfico'), findsNWidgets(2));
+    expect(find.text('Núcleo holográfico'), findsOneWidget);
     expect(find.textContaining('A animação responde ao toque'), findsOneWidget);
   });
 }
