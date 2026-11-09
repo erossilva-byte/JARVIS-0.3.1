@@ -9948,8 +9948,9 @@ async function analisarVideoEscolhido(file) {
   visaoProgresso(100, visaoVideoCancelar ? 'Análise cancelada.' : 'Análise concluída.');
   setTimeout(visaoProgressoFechar, visaoVideoCancelar ? 1200 : 2400);
   if (quadros.length) registrarContextoVisual({ objetos: quadros.reduce((acc, q) => acc.concat(q.objetos || []), []), textoLegivel: quadros.reduce((acc, q) => acc.concat(q.textoLegivel || []), []) });
+  const textoOcrVideo = quadros.reduce((acc, q) => acc.concat(q.textoLegivel || []), []).slice(0, 3).join(' · ');
   const resumoFalado = quadros.length
-    ? 'Analisei ' + quadros.length + ' de ' + plano.length + ' quadros deste vídeo, ' + trat() + '. ' + (quadros[0].resumo || 'O primeiro quadro mostra a cena.') + (quadros.length > 1 ? ' Também descrevi os outros; toque em um horário para ouvir cada um.' : '')
+    ? 'Analisei ' + quadros.length + ' de ' + plano.length + ' quadros deste vídeo, ' + trat() + '. ' + (quadros[0].resumo || 'O primeiro quadro mostra a cena.') + (quadros.length > 1 ? ' Também descrevi os outros; toque em um horário para ouvir cada um.' : '') + (textoOcrVideo ? ' Texto legível: ' + textoOcrVideo.slice(0, 500) : '')
     : 'Não consegui analisar os quadros deste vídeo: ' + (falhas.slice(0, 2).join(' · ') || 'nenhum quadro foi extraído');
   visaoStatus((visaoVideoCancelar ? 'Análise cancelada: ' : 'Análise concluída: ') + quadros.length + ' de ' + plano.length + ' quadros' + (falhas.length ? ' · ' + falhas.length + ' falha(s)' : '') + '. Toque em um horário para ouvir e rever.', falhas.length ? 'warn' : 'ok');
   registrar('visão', 'vídeo: ' + quadros.length + '/' + plano.length + ' quadros analisados');
@@ -10741,6 +10742,7 @@ function registrarContextoVisual(r) {
     const reg = VC.registrar(contextoVisual(), { objetos: r.objetos, textoLegivel: r.textoLegivel || [] });
     const o = reg.objetoAtual;
     if (o) visaoPerguntaStatus('Sessão visual: ' + o.nome + (o.marca ? ' (' + o.marca + ')' : ' — marca não confirmada') + '. Posso responder "ele", "quanto custa" ou "esse componente serve no projeto?".');
+    else if (reg.contexto && reg.contexto.textoLegivel) visaoPerguntaStatus('Texto OCR disponível nesta sessão. Pergunte "o que está escrito?" para consultar a transcrição.');
   } catch (e) { /* contexto é opcional */ }
 }
 
