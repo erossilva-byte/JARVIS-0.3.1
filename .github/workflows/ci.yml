@@ -1,0 +1,48 @@
+name: J.A.R.V.I.S. Nova — CI de desenvolvimento
+on:
+  pull_request:
+    branches: [main, integration/jarvis-nova-1.46-reconcile]
+  push:
+    branches:
+      - feat/**
+      - fix/**
+      - integration/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jarvis-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regressao:
+    name: Regressão estática e funcional automatizada
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependências
+        run: npm install --ignore-scripts --legacy-peer-deps
+
+      - name: Validar pacote e configuração OpenRouter
+        run: |
+          node --check app.js
+          node tests/test_openrouter.js
+
+      - name: Executar suíte de regressão existente
+        run: npm run test:all
