@@ -60,7 +60,7 @@ for marca in ['id="idp-voz-gravar"', 'id="idp-voz-testar"', 'id="idp-voz-apagar"
               'id="idp-voz-amostras"', 'id="idp-voz-frase"', 'id="idp-consent-voz"']:
     checar('cadastro pessoal não exige nem apresenta ' + marca, marca not in painel)
 checar('peso no formulário e no núcleo', 'id="pessoa-pesoKg"' in painel and
-      re.search(r'pesoKg:\\s*\\d+', core) is not None)
+      re.search(r'pesoKg:\s*\d+', core) is not None)
 checar('peso validado em kg', 'Peso deve ficar entre 1 kg e 500 kg.' in core)
 checar('idade dinâmica em anos e meses', 'function idadeDetalhada' in core and
       'function diasAteAniversario' in core and 'idadeDetalhada' in ui)
