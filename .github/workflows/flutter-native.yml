@@ -9,6 +9,7 @@ on:
     branches:
       - work/1.46.0-auditoria-funcoes-apk
       - feat/functional-integration-1.47.0
+      - feat/flutter-dart-migration-1.46.0
       - main
   workflow_dispatch:
 
