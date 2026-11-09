@@ -192,8 +192,8 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage>{
  @override void initState(){super.initState();for(final p in aiProviders){fields[p.id]=TextEditingController();} _load();}
  Future<void> _load() async{
   for(final p in aiProviders){
-   try{final value=await service.isConfigured(p.id);if(mounted)setState(()=>configured[p.id]=value);}
-   catch(_){if(mounted)setState(()=>messages[p.id]='Armazenamento seguro indisponível nesta plataforma.');}
+   try{final value=await service.isConfigured(p.id);if (mounted) { setState(() => configured[p.id] = value); }}
+   catch(_){if (mounted) { setState(() => messages[p.id] = 'Armazenamento seguro indisponível nesta plataforma.'); }}
   }
  }
  Future<void> _save(AiProvider p) async{
@@ -205,23 +205,23 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage>{
    fields[p.id]!.clear();
    if(mounted)setState((){configured[p.id]=true;messages[p.id]='Chave armazenada no cofre seguro. Teste a conexão para validar o acesso.';});
   }catch(e){
-   if(mounted)setState(()=>messages[p.id]=e.toString().replaceFirst('Invalid argument(s): ',''));
-  }finally{if(mounted)setState(()=>busy.remove(p.id));}
+   if (mounted) { setState(() => messages[p.id] = e.toString().replaceFirst('Invalid argument(s): ', '')); }
+  }finally{if (mounted) { setState(() => busy.remove(p.id)); }}
  }
  Future<void> _test(AiProvider p) async{
   setState((){busy.add(p.id);messages[p.id]='Testando conexão…';});
   try{
    final result=await service.testConnection(p.id);
-   if(mounted)setState(()=>messages[p.id]=result.ok?'Conexão confirmada. Modelo: ${result.model}':result.message);
-  }finally{if(mounted)setState(()=>busy.remove(p.id));}
+   if (mounted) { setState(() => messages[p.id] = result.ok ? 'Conexão confirmada. Modelo: ${result.model}' : result.message); }
+  }finally{if (mounted) { setState(() => busy.remove(p.id)); }}
  }
  Future<void> _remove(AiProvider p) async{
   setState(()=>busy.add(p.id));
   try{
    await service.removeKey(p.id);
    if(mounted)setState((){configured[p.id]=false;messages[p.id]='Chave removida do cofre seguro.';});
-  }catch(_){if(mounted)setState(()=>messages[p.id]='Não foi possível remover a chave do armazenamento seguro.');}
-  finally{if(mounted)setState(()=>busy.remove(p.id));}
+  }catch(_){if (mounted) { setState(() => messages[p.id] = 'Não foi possível remover a chave do armazenamento seguro.'); }}
+  finally{if (mounted) { setState(() => busy.remove(p.id)); }}
  }
  @override void dispose(){for(final field in fields.values){field.dispose();}service.close();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(
