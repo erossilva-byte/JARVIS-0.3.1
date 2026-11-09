@@ -29,7 +29,7 @@ assert.equal(MEM.listar().length, 2, 'cofre com duas notas');
 const voltou = MEM.importarMarkdown(MEM.markdown());
 assert.equal(voltou.criadas, 0, 'exportar e reimportar o próprio pacote não cria nada');
 
-const snapshot = MEM.arquivosMarkdown()[0].texto;
+const snapshot = MEM.arquivosMarkdown().find((arquivo) => arquivo.nome.startsWith('gostos/')).texto;
 const snapshotEditado = snapshot
   .replace(/atualizado: .+/, 'atualizado: 2099-01-01T00:00:00.000Z')
   .replace('prefiro café sem açúcar', 'prefiro café coado');
@@ -39,7 +39,7 @@ assert.equal(sync.atualizadas, 1, 'atualiza a nota pelo ID estável');
 assert.equal(MEM.listar('gostos')[0].texto, 'prefiro café coado', 'conteúdo editado volta ao Jarvis');
 assert.equal(MEM.sincronizarMarkdown(snapshotEditado).repetidas, 1, 'reimportar edição sincronizada não duplica');
 
-const exportAntesConflito = MEM.arquivosMarkdown()[0].texto.replace(/atualizado: .+/, 'atualizado: 2000-01-01T00:00:00.000Z');
+const exportAntesConflito = MEM.arquivosMarkdown().find((arquivo) => arquivo.nome.startsWith('gostos/')).texto.replace(/atualizado: .+/, 'atualizado: 2000-01-01T00:00:00.000Z');
 MEM.atualizar(a.nota.id, { texto: 'prefiro café expresso' });
 const conflito = MEM.sincronizarMarkdown(exportAntesConflito.replace('prefiro café coado', 'prefiro café passado'));
 assert.equal(conflito.ok, true, 'conflito é reportado');
