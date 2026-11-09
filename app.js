@@ -10066,9 +10066,31 @@ function responderPessoaPorVoz(texto) {
     if (!alvo) return null;
     return { fala: 'Posso abrir o perfil de ' + alvo + ' para você conferir e confirmar a mudança. Dados de pessoas eu não altero por conta própria.' };
   }
-  if (/^(?:adicione|adicionar|crie|criar) (?:uma )?(?:nova )?pessoa/.test(n)) {
+  if (/^(?:adicione|adicionar|crie|criar|cadastre|cadastra|registre|registra) (?:uma )?(?:nova )?pessoa$/.test(n)) {
     setTimeout(() => { abrirPessoas(); }, 600);
-    return { fala: 'Abrindo o cadastro, ' + trat() + '. Só o nome é obrigatório; o resto fica por sua conta.' };
+    return { fala: 'Abrindo a ficha de pessoas, ' + trat() + '. Você pode informar nascimento, peso e altura; voz não é necessária.' };
+  }
+  if (IDENT && typeof IDENT.interpretarCadastroVoz === 'function') {
+    const cadastro = IDENT.interpretarCadastroVoz(bruto);
+    if (cadastro) {
+      if (!cadastro.ok) return { fala: cadastro.erro };
+      const salvo = IDENT.salvar(cadastro.dados);
+      if (!salvo.ok) return { fala: 'Não consegui salvar o perfil: ' + salvo.erro };
+      registrar('identidade', 'perfil cadastrado por voz: ' + salvo.perfil.nome);
+      setTimeout(() => { abrirPessoas(); }, 600);
+      const detalhe = IDENT.idadeDetalhada(salvo.perfil.nascimento, salvo.perfil);
+      const idadeTexto = detalhe ? (detalhe.aproximada ? 'idade aproximada de ' : '') +
+        detalhe.anos + ' anos' + (detalhe.meses ? ' e ' + detalhe.meses + ' meses' : '') : '';
+      return {
+        fala: 'Cadastrei ' + salvo.perfil.nome + (salvo.perfil.relacao ? ', seu/sua ' + salvo.perfil.relacao : '') +
+          (idadeTexto ? ', ' + idadeTexto : '') +
+          (salvo.perfil.pesoKg ? ', peso ' + salvo.perfil.pesoKg + ' quilos' : '') +
+          (salvo.perfil.alturaCm ? ', altura ' + salvo.perfil.alturaCm + ' centímetros' : '') +
+          '. A ficha já está disponível em Pessoas.' +
+          (cadastro.idadeAproximada ? ' Como você informou apenas a idade, ela será atualizada mês a mês a partir desta data; o aniversário exato só pode ser calculado com a data de nascimento.' : ''),
+        perfil: salvo.perfil
+      };
+    }
   }
   const m = n.match(/^(?:quem (?:e|eh)|o que (?:voce|vc) sabe sobre|o que sabe sobre|me fale sobre|fale sobre|me diga sobre|informacoes sobre|qual (?:e )?o perfil de)\s+(.{2,60})$/);
   if (!m) return null;
