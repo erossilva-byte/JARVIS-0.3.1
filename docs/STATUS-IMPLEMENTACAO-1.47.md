@@ -21,7 +21,7 @@ Este registro é atualizado por evidência de código e CI. Código preparado n�
 | Frente | Evidência atual | Estado |
 |---|---|---|
 | Flutter UI | Shell Flutter, provedor de IA e núcleo holográfico; nem todos os serviços estão ligados às telas | Parcial |
-| Kotlin + KWS | Bridge Kotlin/Dart, serviço foreground e preparação reprodutível do sherpa-onnx adicionados; ainda aguardam build e validação no dispositivo. Modelo GigaSpeech é inglês | Implementação registrada; CI e aparelho pendentes |
+| Kotlin + KWS | Bridge Kotlin/Dart, serviço foreground e preparação reprodutível do sherpa-onnx adicionados; CI Android passou no SHA `94f82a6ac326f587b832ea83c6e436b2d64d49b4`. Modelo GigaSpeech é inglês | CI aprovado; validação física e precisão PT-BR pendentes |
 | CADeSIMU | Projetista e formato Jarvis próprio; sem round-trip demonstrado com CADeSIMU oficial | Pendente |
 | Paridade Windows | Electron/Node legado existe; Flutter Windows compila, sem todos os serviços migrados | Pendente |
 | IA local | Plugin MediaPipe legado existe; Gemma 3 1B IT ainda requer teste real no Poco X7; Windows sem runtime integrado | Parcial |
@@ -30,31 +30,31 @@ Este registro é atualizado por evidência de código e CI. Código preparado n�
 
 ## Limitações e bloqueios conhecidos
 
-1. O runner Android continua sendo gerado durante CI. A preparação do KWS e o download do AAR passaram; a execução mais recente falhou ao aplicar as dependências Gradle porque o template Flutter não continha o bloco `dependencies`. O script foi corrigido para tratar ambos os formatos, mas ainda precisa passar no workflow seguinte.
-2. O serviço KWS Flutter atual não implementa ainda a política completa de persistência/rearme do serviço legado (reinício do processo, reboot, watchdog, pausa por chamadas/mídia e Doze).
+1. O runner Android continua sendo gerado durante CI. A preparação do KWS, o AAR e o modelo passaram no workflow `42718424474`; o script de preparação Gradle está validado em build limpo.
+2. O serviço KWS Flutter ainda não implementa toda a política de persistência/rearme necessária (reinício do processo, reboot, watchdog, pausa por chamadas/mídia e Doze).
 3. O reconhecimento do comando usa o SpeechRecognizer on-device do Android (API 31+) e depende de pacote offline pt-BR instalado no aparelho. A disponibilidade real precisa ser testada; se indisponível, o sistema apresenta erro e não usa reconhecimento online como fallback.
 4. A conversa Flutter envia a transcrição ao primeiro provedor configurado, priorizando Groq. A execução de ações locais/dispositivo ainda não está ligada ao chat e não deve ser presumida.
-5. O serviço KWS ainda não implementa toda a política de persistência/rearme do legado (reinício do processo, reboot, watchdog, pausa por chamadas/mídia e Doze).
-6. O modelo KWS disponível foi treinado em inglês. A palavra “Jarvis” pode ser detectada em algumas pronúncias, mas precisão com sotaques brasileiros precisa ser medida; não há alegação de suporte PT-BR validado.
-7. CADeSIMU é formato proprietário: sem arquivos de amostra reais e validação no programa original, não é seguro implementar exportador que prometa compatibilidade.
-8. Windows local AI precisa runtime e distribuição de modelo específicos; não presumir que o plugin MediaPipe Android rode no Windows.
-9. A sincronização Obsidian precisa lidar com SAF no Android e caminhos/permissões no Windows, além de conflitos e deduplicação.
+5. O modelo KWS disponível foi treinado em inglês. A palavra “Jarvis” pode ser detectada em algumas pronúncias, mas precisão com sotaques brasileiros precisa ser medida; não há alegação de suporte PT-BR validado.
+6. CADeSIMU é formato proprietário: sem arquivos de amostra reais e validação no programa original, não é seguro implementar exportador que prometa compatibilidade.
+7. Windows local AI precisa runtime e distribuição de modelo específicos; não presumir que o plugin MediaPipe Android rode no Windows.
+8. A sincronização Obsidian precisa lidar com SAF no Android e caminhos/permissões no Windows, além de conflitos e deduplicação.
 
 ## Critérios de saída
 
-- [ ] Workflow Android: format/analyze/test e APK debug compilados com AAR e modelo sherpa-onnx.
+- [x] Workflow Android: format/analyze/test e APK debug compilados com AAR e modelo sherpa-onnx (run `42718424474`, SHA `94f82a6`).
 - [ ] KWS validado em Android 16/HyperOS, inclusive permissão, tela bloqueada, Doze, app removido dos recentes, reinício, falsos positivos e pronúncia PT-BR.
 - [ ] Validar no Poco X7 a captura/transcrição on-device pt-BR após wake, incluindo ausência de pacote offline, timeouts e repetição.
 - [ ] Conectar a conversa a ações locais com confirmação para operações sensíveis.
 - [ ] CADeSIMU: abrir/editar/salvar cópia e reabrir no CADeSIMU oficial.
 - [ ] Matriz Android/Windows por capacidade, com ações e testes reais.
+- [x] Gate A de CI Android + Windows aprovado no run `42718424474`; artefatos Android e Windows publicados para o mesmo SHA `94f82a6ac326f587b832ea83c6e436b2d64d49b4`.
 - [ ] Gemma offline executando no Android e modelo local offline no Windows.
 - [ ] Busca semântica multilíngue por paráfrases e Obsidian bidirecional sem perda/duplicação.
 - [ ] QR com confirmação bilateral, desafio único, criptografia, escopos e revogação.
 - [ ] Workflow Flutter Android/Windows verde após todas as alterações; testes em hardware real.
 - [ ] Release Android e Windows do mesmo commit, com checksums e notas.
 
-**Status da sequência:** integração KWS nativa implementada em código, aguardando prova de compilação e execução. Não publicar como versão pronta enquanto houver qualquer critério de saída desmarcado.
+**Status da sequência:** integração KWS nativa compilada; Gate A (CI Android + Windows) aprovado no SHA `94f82a6ac326f587b832ea83c6e436b2d64d49b4`. Gate B (aparelho real) e as integrações funcionais restantes continuam pendentes. Não publicar como versão pronta enquanto houver qualquer critério de saída desmarcado.
 
 
 ## Gate obrigatório para avançar de etapa
@@ -62,10 +62,10 @@ Este registro é atualizado por evidência de código e CI. Código preparado n�
 Nenhuma nova etapa de integração, merge ou Release pode ser considerada autorizada sem cumprir os gates abaixo. Falha, cancelamento, execução pendente ou ausência de evidência contam como **bloqueio**, não como aprovação.
 
 ### Gate A — CI reproduzível (obrigatório em cada commit candidato)
-- [ ] Android: geração limpa do runner, preparação do sherpa-onnx/AAR/modelo, `dart format`, `flutter analyze`, `flutter test`, APK debug compilado e artefato publicado.
-- [ ] Windows: geração limpa do runner, `flutter analyze`, `flutter test`, build Windows e artefato publicado.
-- [ ] Job agregado `advance-gate (Android + Windows)` concluído com sucesso; ele falha se qualquer plataforma falhar ou não concluir com sucesso.
-- [ ] Conferir que os dois artefatos pertencem ao mesmo SHA do commit avaliado; não reutilizar artefatos antigos.
+- [x] Android: geração limpa do runner, preparação do sherpa-onnx/AAR/modelo, `dart format`, `flutter analyze`, `flutter test`, APK debug compilado e artefato publicado (run `42718424474`).
+- [x] Windows: geração limpa do runner, `flutter analyze`, `flutter test`, build Windows e artefato publicado (run `42718424474`).
+- [x] Job agregado `advance-gate (Android + Windows)` concluído com sucesso (run `42718424474`).
+- [x] Conferido: os dois artefatos pertencem ao SHA `94f82a6ac326f587b832ea83c6e436b2d64d49b4`.
 - [ ] Corrigir a causa raiz de toda falha e repetir o workflow no novo commit. Não contornar removendo testes, etapas ou validações.
 
 ### Gate B — validação funcional antes de declarar a etapa pronta
