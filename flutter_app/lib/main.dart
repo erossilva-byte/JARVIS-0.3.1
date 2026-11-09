@@ -385,7 +385,7 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateClock());
     unawaited(jarvisKwsController.initialize());
     voiceSubscription = KwsController.commandBus.listen((event) {
-      if (!mounted) return;
+      if (!mounted) { return; }
       if (event.type == 'command_result' && event.text.trim().isNotEmpty) {
         _openConversation(event.text.trim());
       } else if (event.type == 'command_error' && event.message.isNotEmpty) {
