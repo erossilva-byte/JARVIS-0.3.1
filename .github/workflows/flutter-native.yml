@@ -32,6 +32,13 @@ jobs:
       - run: flutter analyze
       - run: flutter test
       - run: flutter build apk --debug
+      - name: Publish debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-flutter-android-debug
+          path: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
 
   flutter-windows:
     runs-on: windows-latest
@@ -50,3 +57,10 @@ jobs:
       - run: flutter analyze
       - run: flutter test
       - run: flutter build windows
+      - name: Publish Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-flutter-windows-debug
+          path: flutter_app/build/windows/x64/runner/Debug/
+          if-no-files-found: error
+          retention-days: 14
