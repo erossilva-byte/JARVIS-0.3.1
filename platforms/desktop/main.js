@@ -97,7 +97,7 @@ function teclaMultimidiaWindows(codigo) {
     throw new Error('O Windows não aceitou a tecla multimídia: ' + detalhe.slice(0, 240));
   }
 }
-const TECLAS_MIDIA = { pausar: 0xB3, continuar: 0xB3, alternar: 0xB3, proxima: 0xB0, anterior: 0xB1, parar: 0xB2 };
+const TECLAS_MIDIA = { alternar: 0xB3, proxima: 0xB0, anterior: 0xB1, parar: 0xB2 };
 const TECLAS_VOLUME = { aumentar: 0xAF, diminuir: 0xAE, silenciar: 0xAD };
 const acoes = {
   abrir_app: async ({ app: chaveApp }) => {
@@ -142,7 +142,7 @@ const acoes = {
     const params = [];
     if (assunto) params.push('subject=' + encodeURIComponent(String(assunto).slice(0, 200)));
     if (texto) params.push('body=' + encodeURIComponent(String(texto).slice(0, 4000)));
-    const uri = 'mailto:' + encodeURIComponent(destinatario) + (params.length ? '?' + params.join('&') : '');
+    const uri = 'mailto:' + destinatario + (params.length ? '?' + params.join('&') : '');
     await shell.openExternal(uri);
     return { ok: true, incerto: true, info: 'Abri o aplicativo de e-mail padrão com o rascunho. Revise e envie manualmente.' };
   },
