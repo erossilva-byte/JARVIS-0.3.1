@@ -66,7 +66,7 @@ function exigirCofreDesktop() {
 }
 function guardarChaveDesktop({ nome, valor }) {
   exigirCofreDesktop();
-  if (!/^(groq|cerebras|mistral|gemini)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
+  if (!/^(groq|openrouter|cerebras|mistral|gemini)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
   const dados = lerCofreDesktop();
   if (!valor) delete dados[nome];
   else dados[nome] = safeStorage.encryptString(String(valor)).toString('base64');
@@ -75,7 +75,7 @@ function guardarChaveDesktop({ nome, valor }) {
 }
 function lerChaveDesktop({ nome }) {
   exigirCofreDesktop();
-  if (!/^(groq|cerebras|mistral|gemini)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
+  if (!/^(groq|openrouter|cerebras|mistral|gemini)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
   const cifrado = lerCofreDesktop()[nome];
   if (!cifrado) return '';
   return safeStorage.decryptString(Buffer.from(String(cifrado), 'base64'));
@@ -539,7 +539,7 @@ const acoesPC2 = {
       disco ? Math.round(disco.livre / 1073741824 * 10) / 10 + ' de ' + Math.round(disco.total / 1073741824 * 10) / 10 + ' GB livres na pasta do usuário' : 'o sistema não expôs o espaço livre',
       disco && disco.livre <= 2 * 1073741824 ? 'modelos .task grandes podem não caber' : '', '');
     let chaves = [];
-    try { chaves = Object.keys(lerCofreDesktop()).filter((k) => /^(groq|cerebras|mistral|gemini)$/.test(k)); } catch (_) { chaves = []; }
+    try { chaves = Object.keys(lerCofreDesktop()).filter((k) => /^(groq|openrouter|cerebras|mistral|gemini)$/.test(k)); } catch (_) { chaves = []; }
     item('IA', 'Provedores com chave no cofre do SO', chaves.length ? 'ok' : 'nao_configurado',
       chaves.length ? chaves.join(', ') : 'nenhuma chave salva neste computador', '', 'Ajustes ▸ IA Core');
     item('IA', 'Modelo local (.task)', chaves.length || cofreAutorizado ? 'nao_verificado' : 'nao_configurado',
