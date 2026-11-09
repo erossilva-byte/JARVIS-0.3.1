@@ -26,7 +26,7 @@ if "SpeechRecognizer.createSpeechRecognizer(" in servico or "SpeechRecognizer.cr
     issues.append("Serviço de ativação ainda chama SpeechRecognizer")
 if "new AudioRecord(" not in engine or "audio.read(" not in engine:
     issues.append("KWS não captura áudio PCM contínuo por AudioRecord")
-if "new KeywordSpotter(config)" not in engine or "kws.decode(kwsStream)" not in engine:
+if "new KeywordSpotter(null, config)" not in engine or "kws.decode(kwsStream)" not in engine:
     issues.append("KWS não executa inferência sherpa-onnx")
 if "pcm[i] / 32768.0f" not in engine:
     issues.append("PCM 16-bit não é convertido para float corretamente")
