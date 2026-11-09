@@ -860,26 +860,26 @@
 
   function interpretarCadastroVoz(frase) {
     var bruto = limpar(frase, 240);
-    var comando = bruto.match(/^(?:jarvis[, ]+)?(?:cadastre|cadastra|registre|registra|adicione|adiciona|crie|cria)\\s+(?:(?:meu|minha)\\s+)?(?:(amigo|amiga|colega|irm[aã]o|irm[aã]|primo|prima|m[aã]e|pai|namorado|namorada)\\s+)?(.+)$/i);
+    var comando = bruto.match(/^(?:jarvis[, ]+)?(?:cadastre|cadastra|registre|registra|adicione|adiciona|crie|cria)\s+(?:(?:meu|minha)\s+)?(?:(amigo|amiga|colega|irm[aã]o|irm[aã]|primo|prima|m[aã]e|pai|namorado|namorada)\s+)?(.+)$/i);
     if (!comando) return null;
     var relacao = comando[1] || '';
     var nome = comando[2] || '';
-    var idadeMatch = bruto.match(/\\bidade\\s*(?:de|é|e)?\\s*(\\d{1,3})(?:\\s*anos?)?/i) ||
-      bruto.match(/\\b(\\d{1,3})\\s*anos?\\b/i);
-    var pesoMatch = bruto.match(/\\bpeso\\s*(?:de|é|e)?\\s*(\\d{1,3}(?:[,.]\\d{1,2})?)\\s*(?:kg)?\\b/i) ||
-      bruto.match(/\\b(\\d{1,3}(?:[,.]\\d{1,2})?)\\s*kg\\b/i);
-    var alturaMatch = bruto.match(/\\baltura\\s*(?:de|é|e)?\\s*(\\d{1,3}(?:[,.]\\d{1,2})?)\\s*(cm|m)\\b/i) ||
-      bruto.match(/\\b(\\d{1,3}(?:[,.]\\d{1,2})?)\\s*(cm|m)\\b/i);
-    var nascimentoMatch = bruto.match(/\\b(?:nascimento|nascido em|nascida em)\\s*(?:em\\s*)?(\\d{4}-\\d{2}-\\d{2}|\\d{1,2}[/.]\\d{1,2}[/.]\\d{4})/i);
+    var idadeMatch = bruto.match(/\bidade\s*(?:de|é|e)?\s*(\d{1,3})(?:\s*anos?)?/i) ||
+      bruto.match(/\b(\d{1,3})\s*anos?\b/i);
+    var pesoMatch = bruto.match(/\bpeso\s*(?:de|é|e)?\s*(\d{1,3}(?:[,.]\d{1,2})?)\s*(?:kg)?\b/i) ||
+      bruto.match(/\b(\d{1,3}(?:[,.]\d{1,2})?)\s*kg\b/i);
+    var alturaMatch = bruto.match(/\baltura\s*(?:de|é|e)?\s*(\d{1,3}(?:[,.]\d{1,2})?)\s*(cm|m)\b/i) ||
+      bruto.match(/\b(\d{1,3}(?:[,.]\d{1,2})?)\s*(cm|m)\b/i);
+    var nascimentoMatch = bruto.match(/\b(?:nascimento|nascido em|nascida em)\s*(?:em\s*)?(\d{4}-\d{2}-\d{2}|\d{1,2}[/.]\d{1,2}[/.]\d{4})/i);
     nome = nome
-      .replace(/[,;]?\\s*(?:idade\\s*(?:de|é|e)?\\s*)?\\d{1,3}\\s*anos?\\b/ig, '')
-      .replace(/[,;]?\\s*idade\\s*(?:de|é|e)?\\s*\\d{1,3}\\b/ig, '')
-      .replace(/[,;]?\\s*(?:peso\\s*(?:de|é|e)?\\s*)?\\d{1,3}(?:[,.]\\d{1,2})?\\s*kg\\b/ig, '')
-      .replace(/[,;]?\\s*(?:altura\\s*(?:de|é|e)?\\s*)?\\d{1,3}(?:[,.]\\d{1,2})?\\s*(?:cm|m)\\b/ig, '')
-      .replace(/[,;]?\\s*(?:nascimento|nascido em|nascida em)\\s*(?:em\\s*)?(?:\\d{4}-\\d{2}-\\d{2}|\\d{1,2}[/.]\\d{1,2}[/.]\\d{4})/ig, '')
-      .replace(/\\s+(?:e|com)\\s*$/i, '')
-      .replace(/^[,;\\s]+|[,;\\s]+$/g, '')
-      .replace(/\\s{2,}/g, ' ').trim();
+      .replace(/[,;]?\s*(?:idade\s*(?:de|é|e)?\s*)?\d{1,3}\s*anos?\b/ig, '')
+      .replace(/[,;]?\s*idade\s*(?:de|é|e)?\s*\d{1,3}\b/ig, '')
+      .replace(/[,;]?\s*(?:peso\s*(?:de|é|e)?\s*)?\d{1,3}(?:[,.]\d{1,2})?\s*kg\b/ig, '')
+      .replace(/[,;]?\s*(?:altura\s*(?:de|é|e)?\s*)?\d{1,3}(?:[,.]\d{1,2})?\s*(?:cm|m)\b/ig, '')
+      .replace(/[,;]?\s*(?:nascimento|nascido em|nascida em)\s*(?:em\s*)?(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/.]\d{1,2}[/.]\d{4})/ig, '')
+      .replace(/\s+(?:e|com)\s*$/i, '')
+      .replace(/^[,;\s]+|[,;\s]+$/g, '')
+      .replace(/\s{2,}/g, ' ').trim();
     if (!nome) return { ok: false, erro: 'Não consegui identificar o nome. Diga, por exemplo: “cadastre meu amigo Marcelo, idade 27 anos, peso 72 kg e altura 1,78 m”.' };
     var dados = { nome: nome };
     if (relacao) dados.relacao = relacao.toLowerCase();
@@ -891,7 +891,7 @@
       dados.idadeBase = String(idadeInformada);
       if (nascimentoMatch) {
         var data = nascimentoMatch[1];
-        dados.nascimento = /^\\d{4}-/.test(data)
+        dados.nascimento = /^\d{4}-/.test(data)
           ? data
           : data.split(/[/.]/).reverse().join('-');
       } else {
@@ -901,7 +901,7 @@
       }
     } else if (nascimentoMatch) {
       var dataNascimento = nascimentoMatch[1];
-      dados.nascimento = /^\\d{4}-/.test(dataNascimento)
+      dados.nascimento = /^\d{4}-/.test(dataNascimento)
         ? dataNascimento : dataNascimento.split(/[/.]/).reverse().join('-');
     }
     if (pesoMatch) dados.pesoKg = pesoMatch[1].replace(',', '.');
