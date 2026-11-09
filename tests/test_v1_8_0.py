@@ -20,7 +20,7 @@ checagens = {
     "Detector de ativação é KWS acústico local": (
         "new JarvisKwsEngine(" in servico
         and "new AudioRecord(" in (raiz / "JarvisKwsEngine.java").read_text(encoding="utf-8")
-        and "new KeywordSpotter(config)" in (raiz / "JarvisKwsEngine.java").read_text(encoding="utf-8")
+        and "new KeywordSpotter(null, config)" in (raiz / "JarvisKwsEngine.java").read_text(encoding="utf-8")
         and "SpeechRecognizer.create" not in servico),
     "Aceita as formas que o transcritor realmente devolve": all(
         forma in ativacao for forma in ("javis", "jarvy", "charves", "jarvis")),
