@@ -13,6 +13,11 @@ on:
 permissions:
   contents: read
 
+# Push e pull_request do mesmo commit compartilham um único runner.
+concurrency:
+  group: flutter-native-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   flutter-android:
     runs-on: ubuntu-latest
