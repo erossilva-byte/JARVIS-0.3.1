@@ -51,6 +51,11 @@ jobs:
       - name: Instalar tokenizer oficial do sherpa-onnx
         run: python3 -m pip install --upgrade pip sherpa-onnx==1.13.8
 
+      - name: Configurar Android SDK sem pacote legado tools
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
       - name: Garantir Android SDK 35
         run: |
           SDKM="$(command -v sdkmanager || true)"
