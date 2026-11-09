@@ -501,9 +501,12 @@
       <label>Modo de desbloqueio
         <select id="c-bloq-modo">
           <option value="pin">Somente PIN</option>
-          <option value="bio">Biometria do aparelho</option>
+          <option value="bio">Biometria forte do Android</option>
           <option value="nfc">Tag NFC</option>
           <option value="bio|nfc">Biometria ou NFC</option>
+          <option value="pin|bio">PIN ou biometria</option>
+          <option value="pin|nfc">PIN ou NFC</option>
+          <option value="pin|bio|nfc">PIN, biometria ou NFC</option>
           <option value="bio+nfc">Biometria + NFC (duas etapas)</option>
           <option value="bio+pin">Biometria + PIN</option>
           <option value="nfc+pin">NFC + PIN</option>
@@ -512,9 +515,10 @@
       <label>Bloquear após inatividade (segundos)<input id="c-bloq-timeout" type="number" min="15" max="3600" step="15" value="120" inputmode="numeric"></label>
       <label>Tentativas antes do limite<input id="c-bloq-max" type="number" min="3" max="10" step="1" value="5" inputmode="numeric"></label>
     </div>
-    <label class="linha"><input id="c-bloq-bio" type="checkbox" checked><span>Permitir biometria/reconhecimento facial<small>Usa o BiometricPrompt com biometria forte do Android. Uma foto ou vídeo não passa: a prova é feita pelo sensor e pelo sistema, nunca pela câmera comum do app. Nenhuma imagem do rosto é guardada.</small></span></label>
+    <label class="linha"><input id="c-bloq-bio" type="checkbox" checked><span>Permitir biometria forte do Android<small>O BiometricPrompt usa um sensor forte cadastrado no sistema. O Android escolhe entre face ou digital conforme o aparelho; o app não consegue forçar um sensor específico em todos os modelos. Foto ou vídeo não passam e nenhuma imagem biométrica é guardada.</small></span></label>
     <label class="linha"><input id="c-bloq-nfc" type="checkbox" checked><span>Permitir desbloqueio por tag NFC<small>Somente tags cadastradas aqui liberam o app. O UID é guardado apenas como hash; tags de UID simples podem ser clonadas, por isso NFC é conveniência e pode ser combinado com biometria.</small></span></label>
     <p id="c-bloq-dispositivo" class="dica" role="status" aria-live="polite">Consultando os recursos deste aparelho…</p>
+    <p class="dica">Modos com “+” exigem todos os fatores. Modos com “ou” aceitam qualquer fator disponível. A biometria é sempre validada pelo Android; NFC por UID simples é clonável e não equivale a autenticação criptográfica.</p>
     <div class="botoes"><button id="c-bloqueio-recuperacao" type="button" class="secundario">Gerar código de recuperação</button><button id="c-bloqueio-biometria" type="button" class="secundario" hidden>Testar biometria</button></div>
     <output id="c-bloqueio-codigo" class="codigo-recuperacao" hidden></output>
 
