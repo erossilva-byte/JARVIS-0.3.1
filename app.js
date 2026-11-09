@@ -4857,6 +4857,12 @@ async function aoAcordar(texto) {
     return;
   }
   wakeAtivo = false; // o lado nativo já parou de ouvir
+  // Confirma que a interface assumiu o microfone: cancela o rearme de segurança do serviço
+  // enquanto o comando é processado/falado, evitando KWS simultâneo com a gravação do turno.
+  try {
+    const servicoWake = plug('JarvisBackground');
+    if (servicoWake && typeof servicoWake.stopWake === 'function') await servicoWake.stopWake();
+  } catch (e) { registrar('erro', 'pausa do KWS após ativação: ' + (e && e.message ? e.message : e)); }
   atualizarWakeControles();
   if (ocupado) return;
   aquecer(); // abre a conexão com a IA enquanto o microfone é preparado
