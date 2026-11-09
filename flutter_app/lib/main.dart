@@ -44,10 +44,11 @@ class HomeScreen extends StatefulWidget{
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
  late final AnimationController motion=AnimationController(vsync:this,duration:const Duration(seconds:20))..repeat();
  late final AnimationController intro=AnimationController(vsync:this,duration:const Duration(milliseconds:700))..forward();
+ late final AnimationController touch=AnimationController(vsync:this,duration:const Duration(milliseconds:420));
  final search=TextEditingController();
  int tab=0;String filter='Todos',query='';Offset tilt=Offset.zero;
  static const groups=['Todos','Inteligência','Conhecimento','Interação','Produtividade','Engenharia','Interface','Contexto','Sistema','Conectividade'];
- @override void dispose(){motion.dispose();intro.dispose();search.dispose();super.dispose();}
+ @override void dispose(){motion.dispose();intro.dispose();touch.dispose();search.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(backgroundColor:bg,titleSpacing:18,title:const Row(children:[
    _Brand(),SizedBox(width:10),Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -64,20 +65,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
  Widget homeView({Key? key})=>AnimatedBuilder(animation:intro,builder:(_,child)=>Opacity(opacity:intro.value,child:Transform.translate(offset:Offset(0,14*(1-intro.value)),child:child)),child:ListView(key:key,padding:const EdgeInsets.fromLTRB(20,18,20,28),children:[
   const _Eyebrow('SISTEMA DE INTELIGÊNCIA'),const SizedBox(height:8),
   const Text('À sua disposição.',style:TextStyle(fontSize:30,fontWeight:FontWeight.w300)),
-  const SizedBox(height:5),const Text('Uma interface em evolução.',style:TextStyle(color:muted,fontSize:12)),
-  Center(child:AnimatedBuilder(animation:motion,builder:(_,__)=>GestureDetector(
+  const SizedBox(height:5),const Text('Inteligência em movimento. Sempre ao seu comando.',style:TextStyle(color:muted,fontSize:12)),
+  Center(child:AnimatedBuilder(animation:Listenable.merge([motion,touch]),builder:(_,__)=>GestureDetector(
+   behavior:HitTestBehavior.opaque,
    onTap:coreInfo,
+   onTapDown:(_)=>touch.forward(from:0),
+   onTapUp:(_)=>touch.reverse(),
+   onTapCancel:()=>touch.reverse(),
    onPanUpdate:(d)=>tilt=Offset((tilt.dx+d.delta.dx/500).clamp(-.35,.35),(tilt.dy+d.delta.dy/500).clamp(-.35,.35)),
    onPanEnd:(_)=>tilt=Offset.zero,
-   child:SizedBox(width:330,height:330,child:CustomPaint(painter:HologramPainter(motion.value,tilt),child:const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   child:Transform.scale(scale:1+touch.value*.022,child:SizedBox(width:330,height:330,child:CustomPaint(painter:HologramPainter(motion.value+touch.value*.035,tilt),child:const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
     Icon(Icons.all_inclusive_rounded,color:cyan,size:48),SizedBox(height:8),
     Text('J.A.R.V.I.S.',style:TextStyle(letterSpacing:3.5,fontSize:16)),SizedBox(height:5),
     Text('NÚCLEO HOLOGRÁFICO',style:TextStyle(color:cyan,fontSize:8,letterSpacing:2)),SizedBox(height:12),
     Icon(Icons.touch_app_rounded,size:15,color:muted),
-   ])))),
+   ]))))),
   ))),
   const _Heading('VISÃO GERAL','ESTADO DA INTERFACE'),const SizedBox(height:10),
-  const _Status(icon:Icons.blur_circular_rounded,title:'Núcleo visual',detail:'Animação vetorial Flutter em execução',state:'ATIVO',color:Color(0xFF64E6B1)),
+  const _Status(icon:Icons.blur_circular_rounded,title:'Núcleo holográfico',detail:'Renderização 3D simulada, órbitas e resposta tátil',state:'ATIVO',color:Color(0xFF64E6B1)),
   const SizedBox(height:8),const _Status(icon:Icons.hub_rounded,title:'Serviços inteligentes',detail:'Pontes nativas ainda em migração',state:'PENDENTE',color:Color(0xFFFFC66D)),
   const SizedBox(height:8),const _Status(icon:Icons.widgets_rounded,title:'Módulos catalogados',detail:'21 áreas identificadas; integração não presumida',state:'CATÁLOGO',color:cyan),
   const SizedBox(height:18),const _Heading('ACESSO RÁPIDO','EXPLORAR'),const SizedBox(height:10),
@@ -172,10 +177,10 @@ class SettingsPage extends StatelessWidget{
    onTap:()=>Navigator.of(c).push(MaterialPageRoute<void>(builder:(_)=>const ProviderSettingsPage())),
   )),
   const SizedBox(height:9),
-  const _Setting(icon:Icons.graphic_eq_rounded,title:'Voz e palavra de ativação',detail:'O motor KWS sherpa-onnx existe no aplicativo Android legado. Ainda não está conectado à interface Flutter. Picovoice não será utilizado.'),
-  const _Setting(icon:Icons.memory_rounded,title:'Memória e Obsidian',detail:'A memória semântica e o vínculo Obsidian do aplicativo legado ainda precisam de adaptadores Flutter testados.'),
+  const _Setting(icon:Icons.graphic_eq_rounded,title:'Voz e palavra de ativação',detail:'A detecção deve usar exclusivamente KWS acústico local sherpa-onnx. O motor existe no Android legado; a ponte Kotlin ↔ Flutter e a validação no aparelho ainda são necessárias. Picovoice não será utilizado.'),
+  const _Setting(icon:Icons.memory_rounded,title:'Memória semântica e Obsidian',detail:'A migração precisa preservar notas e IDs, integrar busca vetorial multilíngue e sincronização bidirecional sem duplicações.'),
   const _Setting(icon:Icons.shield_outlined,title:'Privacidade e permissões',detail:'As permissões serão solicitadas somente quando uma função real precisar delas.'),
-  const _Setting(icon:Icons.devices_rounded,title:'Dispositivos conectados',detail:'Pareamento Android–Windows, ESP32 e Home Assistant ainda não estão integrados à interface Flutter.'),
+  const _Setting(icon:Icons.devices_rounded,title:'Dispositivos conectados',detail:'O pareamento QR Android–Windows precisa de autenticação mútua, criptografia, expiração, escopos e revogação. ESP32 fica fora desta sequência.'),
  ]));
 }
 
