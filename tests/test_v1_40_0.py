@@ -38,6 +38,9 @@ check('patch Gradle aplica a versão e build gerado acompanha quando existe',
       and "meta.get('versionCode')" in patch_android
       and (not gradle or (('versionCode %s' % meta.get('versionCode')) in gradle
       and ('versionName \"%s\"' % meta.get('version')) in gradle)))
+check('app e HTML mostram a versão corrente',
+      ("const VERSAO_APP = '%s';" % meta.get('version')) in app
+      and ('v%s' % meta.get('version')) in html)
       ("const VERSAO_APP = '%s';" % meta.get('version')) in app
       and ('v%s' % meta.get('version')) in html)
 
