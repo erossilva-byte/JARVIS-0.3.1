@@ -54,8 +54,8 @@ final class JarvisPrefs {
     }
 
     /**
-     * Sensibilidade do detector próprio (0 a 100, padrão 55). Mais alto aceita a palavra
-     * dita mais torta, aceita resultado parcial (responde antes) e tolera mais ruído.
+     * Sensibilidade KWS (0 a 100, padrão 55). Mais alto reduz o limiar de detecção;
+     * isso facilita a ativação, mas pode aumentar falsos positivos.
      */
     static int sensibilidade(Context c) {
         int v = sp(c).getInt("sensibilidade", 55);
@@ -97,19 +97,6 @@ final class JarvisPrefs {
 
     static void ultimoEvento(Context c, long quando) {
         sp(c).edit().putLong("evento", quando).apply();
-    }
-
-    /**
-     * Quantas vezes uma transcrição parecida com a palavra foi descartada pelo porteiro de
-     * ruído (som baixo demais para ser voz dirigida ao aparelho). É o número que mostra se
-     * a calibragem está apertada ou frouxa demais.
-     */
-    static int rejeitadas(Context c) {
-        return sp(c).getInt("rejeitadas", 0);
-    }
-
-    static void rejeitadas(Context c, int v) {
-        sp(c).edit().putInt("rejeitadas", Math.max(0, v)).apply();
     }
 
     /**

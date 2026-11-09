@@ -654,6 +654,8 @@
         const de = unidade(m[2]), para = unidade(m[3]);
         if (de && para) return { ferramenta: 'converter', args: { valor: numero(m[1], NaN), de, para } };
       }
+      m = /^(?:execute|executar|rode|rodar|teste|testar)\s+(?:este|esse|o)?\s*(?:c[oó]digo|script|javascript)?\s*(?:no|em)\s+sandbox\s*[:\-]?\s*([\s\S]+)$/i.exec(original);
+      if (m && String(m[1] || '').trim()) return { ferramenta: 'sandbox_js', args: { codigo: String(m[1]).trim() } };
       m = /^(?:gere|gerar|crie|criar)\s+(?:uma\s+)?senha(?:\s+(?:de|com)\s+(\d{1,3})\s*(?:caracteres|letras)?)?$/i.exec(original);
       if (m) return { ferramenta: 'senha', args: { tamanho: m[1] ? Number(m[1]) : 20 } };
       m = /^(?:que dia|qual data)\s+(?:sera|é|e)\s+(?:daqui a|em)\s+(\d{1,4})\s+dias?$/i.exec(original);

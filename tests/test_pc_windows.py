@@ -79,6 +79,22 @@ checar('Diagnóstico do PC usa estados reais',
       all(x in main for x in ["'ok'", "'aviso'", "'nao_configurado'", "'nao_verificado'"]))
 checar('Diagnóstico não expõe valor de chave', 'chaves.join' in main and 'decryptString' not in main.split('diag_pc')[1])
 
+# ---------- 3.1. Controles Windows adaptados do mobile ----------
+checar('Controle multimídia usa teclas multimídia do Windows sem fingir pausa direta',
+      'controle_midia_pc' in main and '0xB3' in main and '0xB0' in main and '0xB1' in main and
+      'const TECLAS_MIDIA = { alternar:' in main and 'pausar: 0xB3' not in main)
+checar('Volume Windows suporta aumentar, diminuir e silenciar sem fingir percentual',
+      'volume_pc' in main and '0xAF' in main and '0xAE' in main and '0xAD' in main and 'não é suportado no Windows' in main)
+checar('PowerShell recebe script fixo, sem comando do usuário',
+      'spawnSync(\'powershell.exe\'' in main and 'shell: true' not in main and 'String(comando ||' in main and 'Number(codigo)' in main)
+checar('E-mail Windows abre rascunho mailto com campos codificados',
+      'email_pc' in main and 'mailto:' in main and 'encodeURIComponent' in main)
+checar('WhatsApp desktop usa o link wa.me já validado',
+      'whatsapp: async ({ numero, texto })' in main and 'numeroOk(numero)' in main)
+for acao in ['controle_midia', 'volume', 'email', 'abrir_conversa_whatsapp']:
+    bloco = app[app.index(acao + ': {'):app.index(acao + ': {') + 2800]
+    checar('Ação mobile adaptada para desktop: ' + acao, "disp: T" in bloco)
+
 # ---------- 4. Interface ----------
 checar('Painel e botão existem no HTML',
       'id="painel-pc"' in html and 'data-lat="pc"' in html and 'src="pc.js"' in html)

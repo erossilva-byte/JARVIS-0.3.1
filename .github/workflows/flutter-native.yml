@@ -1,0 +1,103 @@
+name: Flutter native UI validation
+
+on:
+  push:
+    branches:
+      - feat/flutter-dart-migration-1.46.0
+  pull_request:
+    branches:
+      - work/1.46.0-auditoria-funcoes-apk
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Push e pull_request do mesmo commit compartilham um único runner.
+concurrency:
+  group: flutter-native-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  flutter-android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate native platform runners without touching legacy Android project
+        run: flutter create --project-name jarvis_nova --platforms=android,windows .
+      - name: Set the production Android application identity
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          gradle = Path("android/app/build.gradle.kts")
+          content = gradle.read_text()
+          old_id = "com.example.jarvis_nova"
+          new_id = "com.jarvis.nova"
+          if old_id not in content:
+              raise SystemExit(f"Identificador Android padrão não encontrado em {gradle}")
+          gradle.write_text(content.replace(old_id, new_id))
+
+          activity = Path("android/app/src/main/kotlin/com/example/jarvis_nova/MainActivity.kt")
+          source = activity.read_text()
+          source = source.replace("package com.example.jarvis_nova", "package com.jarvis.nova")
+          target = Path("android/app/src/main/kotlin/com/jarvis/nova/MainActivity.kt")
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text(source)
+          activity.unlink()
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          manifest.write_text(manifest.read_text().replace('android:label="jarvis_nova"', 'android:label="J.A.R.V.I.S. Nova"'))
+          PY
+          grep -q 'applicationId = "com.jarvis.nova"' android/app/build.gradle.kts
+          grep -q 'namespace = "com.jarvis.nova"' android/app/build.gradle.kts
+      - run: flutter pub get
+      - run: dart format lib test
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build apk --debug
+      - name: Verify APK identity and output
+        shell: bash
+        run: |
+          test -s build/app/outputs/flutter-apk/app-debug.apk
+          echo "APK Flutter gerado: $(du -h build/app/outputs/flutter-apk/app-debug.apk | cut -f1)"
+      - name: Publish debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-flutter-android-debug
+          path: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  flutter-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate native platform runners without touching legacy desktop project
+        run: flutter create --project-name jarvis_nova --platforms=android,windows .
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build windows
+      - name: Publish Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-flutter-windows-debug
+          path: flutter_app/build/windows/x64/runner/Release/
+          if-no-files-found: error
+          retention-days: 14

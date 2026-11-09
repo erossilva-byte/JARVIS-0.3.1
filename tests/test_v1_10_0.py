@@ -56,8 +56,10 @@ checagens = {
         and "com opinião própria" in prompt),
 
     # 3. Palavra de ativação intacta (a personalidade não mexe nela)
-    "Detector de ativação é o próprio (reconhecimento + fonética local)": (
-        "JarvisAtivacao.presente" in (raiz / "JarvisService.java").read_text(encoding="utf-8")
+    "Detector de ativação é KWS acústico local; Hermes continua no modo Groq": (
+        "new JarvisKwsEngine(" in (raiz / "JarvisService.java").read_text(encoding="utf-8")
+        and "new AudioRecord(" in (raiz / "JarvisKwsEngine.java").read_text(encoding="utf-8")
+        and "new KeywordSpotter(null, config)" in (raiz / "JarvisKwsEngine.java").read_text(encoding="utf-8")
         and "Hermes.ativacao.casaToken" in app
         and "startWake(" in app),
 

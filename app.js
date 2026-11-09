@@ -32,6 +32,28 @@ if (SISTEMA) {
   // O núcleo guarda o checkpoint; a ação real continua passando pelo executarSeguro.
   try {
     SISTEMA.registrarFerramenta({
+      id: 'sandbox_js', nome: 'Sandbox JavaScript isolado', dominio: 'desenvolvimento',
+      nivel: 'execucao', risco: 1,
+      descricao: 'Executa JavaScript em Worker e iframe isolados, sem rede, arquivos, Node.js ou acesso ao aparelho.',
+      argumentos: {
+        codigo: { tipo: 'texto', obrigatorio: true, max: 20000 },
+        entrada: { tipo: 'texto', max: 10000, padrao: '' },
+        timeoutMs: { tipo: 'inteiro', min: 500, max: 10000, padrao: 3000 }
+      },
+      executar: async (a) => {
+        if (!window.JarvisSandbox || typeof window.JarvisSandbox.executar !== 'function') {
+          throw new Error('Sandbox isolado não carregou nesta versão.');
+        }
+        const r = await window.JarvisSandbox.executar(a.codigo, a.entrada, a.timeoutMs);
+        if (!r.ok) throw new Error(r.erro || 'O código falhou no sandbox.');
+        return { ok: true, verificado: true,
+          fala: 'Código executado no sandbox isolado em ' + r.ms + ' ms.',
+          info: String(r.saida || 'undefined').slice(0, 12000), logs: r.logs || [] };
+      }
+    });
+  } catch (e) { registrar('erro', 'sandbox: ' + ((e && e.message) || e)); }
+  try {
+    SISTEMA.registrarFerramenta({
       id: 'plano_etapa', nome: 'Etapa de plano', dominio: 'planejamento', nivel: 'execucao', risco: 3, semConfirmacaoPropria: true,
       descricao: 'Executa uma ação já validada de um plano, com confirmação e recibo; uso interno do supervisor.',
       argumentos: { acao: { tipo: 'texto', obrigatorio: true, max: 40 }, args: { tipo: 'objeto', padrao: {} } },
@@ -189,7 +211,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.45.0';
+const VERSAO_APP = '1.46.0';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -280,6 +302,9 @@ function restaurarHistoricoUI() {
 // IAs de chat compatíveis com o formato OpenAI. A ordem é a prioridade; as sem chave são ignoradas.
 const PROVEDORES = [
   { id: 'groq', nome: 'Groq', url: GROQ },
+  // OpenRouter é compatível com a API OpenAI; DeepSeek fica como modelo preferido.
+  // A chave é independente e armazenada no mesmo cofre seguro dos demais provedores.
+  { id: 'openrouter', nome: 'OpenRouter · DeepSeek', url: 'https://openrouter.ai/api/v1', modelos: ['deepseek/deepseek-chat'], visao: false },
   { id: 'cerebras', nome: 'Cerebras', url: 'https://api.cerebras.ai/v1', modelos: ['gpt-oss-120b', 'zai-glm-4.7'] },
   { id: 'mistral', nome: 'Mistral', url: 'https://api.mistral.ai/v1', modelos: ['mistral-small-latest'] },
   { id: 'gemini', nome: 'Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai', modelos: ['gemini-2.5-flash', 'gemini-flash-latest'] }
@@ -309,7 +334,7 @@ const semAcento = (s) => { s = String(s || ''); let o = ''; for (let i = 0; i < 
 const norm = (s) => semAcento(s).toLowerCase().replace(/[^a-z0-9: ]+/g, ' ').replace(/\s+/g, ' ').trim();
 
 /* ---------- Chaves da API (cifradas no Android) ---------- */
-const CHAVES = { groq: '', cerebras: '', mistral: '', gemini: '' };
+const CHAVES = { groq: '', openrouter: '', cerebras: '', mistral: '', gemini: '' };
 const nomeLS = (n) => (n === 'groq' ? 'key' : 'key_' + n);
 const SEG = () => plug('JarvisUtil');
 const LOCAL_AI = () => plug('JarvisLocalAI');
@@ -409,7 +434,7 @@ const cortes = new Set(); // esperas de voz que o botão Parar precisa encerrar 
 const ROTULOS = { idle: 'em espera', listening: 'ouvindo', thinking: 'pensando', speaking: 'falando', processing: 'executando' };
 function setEstado(e) {
   document.body.dataset.state = e;
-  const txt = (e === 'idle' && wakeAtivo) ? 'aguardando “Jarvis” · detector próprio' : ROTULOS[e];
+  const txt = (e === 'idle' && wakeAtivo) ? 'aguardando “Jarvis” · KWS local' : ROTULOS[e];
   const marca = $('#estado-txt'), chip = $('#chip-estado');
   if (marca) marca.textContent = txt;
   if (chip) chip.textContent = txt;
@@ -635,19 +660,25 @@ function bloqNucleoEstado(estado) {
 }
 function bloqRotuloMetodo() {
   const cfg = segCfg();
-  if (!cfg || !cfg.modo) return 'PIN';
-  const m = cfg.modo;
-  if (m === 'bio' || m === 'bio+pin' || m === 'bio+nfc') {
-    return bloqDisp && bloqDisp.rosto ? 'reconhecimento facial' : 'biometria';
-  }
-  if (m === 'nfc' || m === 'nfc+pin') return 'tag NFC';
-  if (m === 'bio|nfc') return 'biometria ou NFC';
-  return 'PIN';
+  const m = cfg && cfg.modo ? cfg.modo : 'pin';
+  const rotulos = {
+    pin: 'PIN',
+    bio: 'biometria forte do Android',
+    nfc: 'tag NFC',
+    'bio|nfc': 'biometria ou NFC',
+    'pin|bio': 'PIN ou biometria',
+    'pin|nfc': 'PIN ou NFC',
+    'pin|bio|nfc': 'PIN, biometria ou NFC',
+    'bio+nfc': 'biometria + NFC',
+    'bio+pin': 'biometria + PIN',
+    'nfc+pin': 'NFC + PIN'
+  };
+  return rotulos[m] || 'PIN';
 }
 async function bloqConsultarAparelho(forcar) {
   if (bloqDisp && !forcar) return bloqDisp;
   const p = plug('JarvisSeguranca');
-  bloqDisp = { biometria: false, aparelho: false, rosto: false, nfc: false, motivo: 'Sem o plugin de segurança (versão Windows).' };
+  bloqDisp = { biometria: false, aparelho: false, rosto: false, digital: false, nfc: false, motivo: 'Sem o plugin de segurança (versão Windows).' };
   if (!p || typeof p.disponivel !== 'function') return bloqDisp;
   try {
     const d = await p.disponivel();
@@ -655,6 +686,7 @@ async function bloqConsultarAparelho(forcar) {
       biometria: !!(d && d.biometria),
       aparelho: !!(d && d.aparelho),
       rosto: !!(d && d.rosto),
+      digital: !!(d && d.digital),
       nfc: !!(d && d.nfc),
       motivo: (d && d.motivo) || ''
     };
@@ -664,6 +696,16 @@ async function bloqConsultarAparelho(forcar) {
   return bloqDisp;
 }
 
+function bloqDisponibilidadeModo(cfg) {
+  const d = bloqDisp || {};
+  const c = cfg || segCfg();
+  return {
+    bio: !!d.biometria && !!c.bioAtivo,
+    nfc: !!d.nfc && !!c.nfcAtivo,
+    pin: true
+  };
+}
+
 function atualizarBloqueioUI() {
   if (!SEGN) return;
   const chk = $('#c-bloqueio');
@@ -671,7 +713,7 @@ function atualizarBloqueioUI() {
   if (chk) chk.checked = ativo;
   const temPin = !!store.get('pin_hash', '');
   const cfg = segCfg();
-  const disp = bloqDisp || { biometria: false, nfc: false, rosto: false };
+  const disp = bloqDisp || { biometria: false, nfc: false, rosto: false, digital: false };
   bloqStatus(ativo
     ? 'Ativado. ' + SEGN.resumo(cfg, disp) + '. O bloqueio do sistema Android continua valendo por cima.'
     : temPin
@@ -682,7 +724,7 @@ function atualizarBloqueioUI() {
   if (sel) {
     sel.value = cfg.modo;
     Array.prototype.forEach.call(sel.options, (o) => {
-      const ex = SEGN.modoViavel(o.value, disp);
+      const ex = SEGN.modoViavel(o.value, bloqDisponibilidadeModo(cfg));
       o.disabled = !ex.ok;
       o.title = ex.ok ? '' : ex.motivo;
     });
@@ -694,17 +736,19 @@ function atualizarBloqueioUI() {
 
   const bio = $('#c-bloqueio-biometria');
   if (bio) {
-    bio.hidden = !disp.aparelho;
-    bio.textContent = disp.rosto ? 'Testar reconhecimento facial' : 'Testar biometria';
+    bio.hidden = !disp.biometria;
+    bio.textContent = 'Testar biometria forte do Android';
     bio.title = disp.motivo || '';
   }
   const alvo = $('#c-bloq-dispositivo');
   if (alvo) {
-    const d = SEGN.disponibilidade({ biometria: disp.biometria, rosto: disp.rosto, nfc: disp.nfc, motivo: disp.motivo });
+    const d = SEGN.disponibilidade({ biometria: disp.biometria, rosto: disp.rosto, digital: disp.digital, nfc: disp.nfc, motivo: disp.motivo });
     const linhas = [
       'Biometria forte: ' + (d.bio ? 'disponível' : 'indisponível'),
       'Hardware facial: ' + (d.rosto ? 'presente' : 'não informado'),
-      'NFC: ' + (d.nfc ? 'ligado' : 'ausente/desligado')
+      'Leitor digital: ' + (d.digital ? 'presente' : 'não informado'),
+      'NFC: ' + (d.nfc ? 'ligado' : 'ausente/desligado'),
+      'O Android escolhe o sensor biométrico forte; o app não consegue forçar face ou digital em todos os aparelhos.'
     ];
     if (d.avisos.length) linhas.push(d.avisos.join(' '));
     linhas.push('A biometria é executada pelo Android; o app nunca recebe nem guarda a imagem do rosto.');
@@ -767,14 +811,14 @@ async function abrirBloqueio() {
   const pin = $('#bloqueio-pin'); if (pin) { pin.value = ''; }
   const rec = $('#bloqueio-recuperacao'); if (rec) rec.hidden = true;
   const dica = $('#bloqueio-dica');
-  if (dica) dica.textContent = 'Modo ' + (bloqRotuloMetodo()) + '. Use a etapa pedida; o PIN é a recuperação, ' + trat() + '.';
+  if (dica) dica.textContent = 'Modo ' + bloqRotuloMetodo() + '. Use o fator indicado ou conclua todas as etapas. Se perder acesso, use o código de recuperação, ' + trat() + '.';
 
   await bloqConsultarAparelho(true);
   const bio = $('#bloqueio-bio');
   if (bio) {
-    const pode = cfg.bioAtivo && bloqDisp && bloqDisp.aparelho;
+    const pode = cfg.bioAtivo && bloqDisp && bloqDisp.biometria && SEGN.etapas(cfg.modo).indexOf('bio') >= 0;
     bio.hidden = !pode;
-    bio.textContent = bloqDisp && bloqDisp.rosto ? 'Reconhecimento facial' : 'Usar biometria';
+    bio.textContent = 'Usar biometria forte do Android';
   }
   const nfc = $('#bloqueio-nfc');
   if (nfc) {
@@ -784,8 +828,13 @@ async function abrirBloqueio() {
   }
   const fase = $('#bloq-fase');
   if (fase) fase.hidden = false;
+  const exigePin = SEGN.etapas(cfg.modo).indexOf('pin') >= 0;
+  const rotuloPin = pin && pin.closest ? pin.closest('label') : null;
+  const entrarPin = $('#bloqueio-entrar');
+  if (rotuloPin) rotuloPin.hidden = !exigePin;
+  if (entrarPin) entrarPin.hidden = !exigePin;
   if (cfg.modo === 'bio' && bio && !bio.hidden) setTimeout(() => desbloquearComBiometria(), 400);
-  else if (pin && SEGN.etapas(cfg.modo).indexOf('pin') >= 0) { try { pin.focus(); } catch (e) { } }
+  else if (pin && exigePin) { try { pin.focus(); } catch (e) { } }
   try { animarEntrada(tela.querySelector('.bloqueio-caixa')); } catch (e) { }
 }
 function fecharBloqueio() {
@@ -829,7 +878,7 @@ async function tentarDesbloquear() {
   if (await pinConfere(pin, esperado)) {
     if (campo) campo.value = '';
     bloqMetodoUsado = 'pin';
-    bloqMetodoBadge('PIN de recuperação');
+    bloqMetodoBadge('PIN');
     bloqMarcarProva('pin');
     return;
   }
@@ -852,10 +901,10 @@ async function tentarDesbloquear() {
 async function desbloquearComBiometria() {
   const p = plug('JarvisSeguranca');
   if (!p || typeof p.autenticar !== 'function') return;
-  bloqFase(bloqDisp && bloqDisp.rosto ? 'Reconhecendo o rosto…' : 'Aguardando biometria…');
+  bloqFase('Aguardando biometria forte do Android…');
   bloqNucleoEstado('reconhecendo');
   try {
-    const r = await p.autenticar({ titulo: 'Desbloquear o J.A.R.V.I.S.', subtitulo: 'Confirme sua identidade, ' + trat() + '.' });
+    const r = await p.autenticar({ titulo: 'Desbloquear o J.A.R.V.I.S.', subtitulo: 'Confirme sua identidade, ' + trat() + '.', permitirCredencial: false });
     if (r && r.ok) {
       bloqFase('Identidade confirmada');
       if (!bloqMarcarProva('bio')) {
@@ -1116,8 +1165,8 @@ function restaurarSeguranca() {
     const p = plug('JarvisSeguranca');
     if (!p) { bloqStatus('Biometria disponível apenas no aplicativo Android.', true); return; }
     try {
-      const r = await p.autenticar({});
-      bloqStatus(r && r.ok ? 'Biometria confirmada neste aparelho.' : 'Biometria não confirmada.', !(r && r.ok));
+      const r = await p.autenticar({ permitirCredencial: false });
+      bloqStatus(r && r.ok ? 'Biometria forte confirmada neste aparelho.' : 'Biometria não confirmada.', !(r && r.ok));
     } catch (e) { bloqStatus('Biometria não concluída: ' + ((e && e.message) || e), true); }
   };
   const cadastrar = $('#c-nfc-cadastrar'); if (cadastrar) cadastrar.onclick = () => cadastrarTagNfc();
@@ -1130,18 +1179,24 @@ function restaurarSeguranca() {
   const restaurar = $('#c-bloq-restaurar'); if (restaurar) restaurar.onclick = () => restaurarSeguranca();
   const modo = $('#c-bloq-modo');
   if (modo) modo.addEventListener('change', () => {
-    const cfg = segCfg(); cfg.modo = modo.value; segSalvar(cfg);
+    const cfg = segCfg(); cfg.modo = modo.value;
+    const ex = SEGN.modoViavel(cfg.modo, bloqDisponibilidadeModo(cfg));
+    if (!ex.ok) {
+      cfg.modo = 'pin';
+      bloqStatus('Modo indisponível: ' + ex.motivo + ' O modo foi mantido em PIN.', true);
+    }
+    segSalvar(cfg);
     atualizarBloqueioUI();
-    registrar('segurança', 'modo de desbloqueio: ' + modo.value);
+    registrar('segurança', 'modo de desbloqueio: ' + cfg.modo);
   });
   const limite = $('#c-bloq-timeout');
   if (limite) limite.addEventListener('change', () => { const cfg = segCfg(); cfg.timeoutSeg = Number(limite.value); segSalvar(cfg); atualizarBloqueioUI(); });
   const max = $('#c-bloq-max');
   if (max) max.addEventListener('change', () => { const cfg = segCfg(); cfg.maxTentativas = Number(max.value); segSalvar(cfg); atualizarBloqueioUI(); });
   const nfcChk = $('#c-bloq-nfc');
-  if (nfcChk) nfcChk.addEventListener('change', () => { const cfg = segCfg(); cfg.nfcAtivo = nfcChk.checked; segSalvar(cfg); atualizarBloqueioUI(); });
+  if (nfcChk) nfcChk.addEventListener('change', () => { const cfg = segCfg(); cfg.nfcAtivo = nfcChk.checked; const ex = SEGN.modoViavel(cfg.modo, bloqDisponibilidadeModo(cfg)); if (!ex.ok) { cfg.modo = 'pin'; bloqStatus('O modo anterior exigia NFC; foi alterado para PIN para evitar bloqueio do acesso.', true); } segSalvar(cfg); atualizarBloqueioUI(); });
   const bioChk = $('#c-bloq-bio');
-  if (bioChk) bioChk.addEventListener('change', () => { const cfg = segCfg(); cfg.bioAtivo = bioChk.checked; segSalvar(cfg); atualizarBloqueioUI(); });
+  if (bioChk) bioChk.addEventListener('change', () => { const cfg = segCfg(); cfg.bioAtivo = bioChk.checked; const ex = SEGN.modoViavel(cfg.modo, bloqDisponibilidadeModo(cfg)); if (!ex.ok) { cfg.modo = 'pin'; bloqStatus('O modo anterior exigia biometria; foi alterado para PIN para evitar bloqueio do acesso.', true); } segSalvar(cfg); atualizarBloqueioUI(); });
   const chk = $('#c-bloqueio');
   if (chk) chk.addEventListener('change', () => {
     const querBloqueio = chk.checked;
@@ -1152,7 +1207,7 @@ function restaurarSeguranca() {
       return;
     }
     const cfg = segCfg();
-    const ex = SEGN.modoViavel(cfg.modo, bloqDisp || { bio: false, nfc: false });
+    const ex = SEGN.modoViavel(cfg.modo, bloqDisponibilidadeModo(cfg));
     if (querBloqueio && !ex.ok && cfg.modo !== 'pin') {
       bloqStatus('Modo ' + SEGN.rotulo(cfg.modo) + ' indisponível: ' + ex.motivo + ' O bloqueio foi ativado em PIN até você escolher outro modo.', true);
       cfg.modo = 'pin'; segSalvar(cfg);
@@ -1413,9 +1468,9 @@ const ACOES = {
       if (r && r.chamando) return { info: 'Chamando ' + (a.contato || a.numero) + ' agora, ' + trat() + '.' };
       return { info: (r && r.aviso) || 'Abri o discador com o número pronto. Toque em chamar para completar a ligação.' };
     } },
-  abrir_conversa_whatsapp: { risco: 1, disp: ['android'], ajuda: 'args {"contato":"<nome cadastrado>"}. Abre a conversa no WhatsApp; chamadas, áudio e envio são concluídos pelo usuário no app.',
+  abrir_conversa_whatsapp: { risco: 1, disp: T, ajuda: 'args {"contato":"<nome cadastrado>"}. Abre a conversa no WhatsApp; chamadas, áudio e envio são concluídos pelo usuário no app.',
     prep: (a) => { const r = resolverNumero(a.contato); return r ? { args: { numero: r.numero, contato: r.nome }, desc: `Abrir a conversa do WhatsApp com ${r.nome}.` } : { erro: 'Não encontrei esse contato. Cadastre o nome e o número em Ajustes.' }; },
-    run: async (a) => { const numero = String(a.numero || '').replace(/\D/g, ''); if (!numero) throw new Error('Número do contato inválido.'); await nativo('abrir_url', { url: `https://wa.me/${numero}` }); return { info: 'Abri a conversa do WhatsApp. Para enviar áudio ou iniciar chamada de voz/vídeo, use os controles do próprio WhatsApp.' }; } },
+    run: async (a) => { const numero = String(a.numero || '').replace(/\D/g, ''); if (!numero) throw new Error('Número do contato inválido.'); if (plataforma === 'desktop') await nativo('whatsapp', { numero, texto: '' }); else await nativo('abrir_url', { url: `https://wa.me/${numero}` }); return { info: 'Abri a conversa do WhatsApp. Para enviar áudio ou iniciar chamada de voz/vídeo, use os controles do próprio WhatsApp.' }; } },
   mensagem: { risco: 2, disp: T, ajuda: 'args {"contato":"<nome cadastrado>","texto":"..."}. Abre o WhatsApp com a mensagem pronta; o usuário toca em enviar.',
     prep: (a) => {
       const r = resolverNumero(a.contato);
@@ -1453,9 +1508,10 @@ const ACOES = {
     run: async () => { await nativo('irInicio', {}); return { info: 'Voltando à tela inicial. O Android não permite forçar o encerramento de qualquer aplicativo.' }; } },
   retornar_app: { risco: 0, disp: ['android'], ajuda: 'args {"app":"nome da lista de apps"}. Reabre ou traz o app para primeiro plano.',
     run: async (a) => { const k = acharApp(String(a.app || '')); if (!k) return { info: 'Não reconheci esse aplicativo na lista disponível.' }; await nativo('abrirAplicativo', { app: k }); return { info: 'Solicitei a abertura de ' + k.replace(/_/g, ' ') + '.' }; } },
-  controle_midia: { risco: 0, disp: ['android'], ajuda: 'args {"comando":"pausar|continuar|proxima|anterior|alternar|parar"}. Controla o app que está tocando (Spotify, YouTube Music e outros) pela sessão de mídia do Android; sem acesso às notificações, envia teclas de mídia.',
+  controle_midia: { risco: 0, disp: T, ajuda: 'args {"comando":"pausar|continuar|proxima|anterior|alternar|parar"}. Controla o app que está tocando (Spotify, YouTube Music e outros) pela sessão de mídia do Android; sem acesso às notificações, envia teclas de mídia.',
     run: async (a) => {
       const c = String(a.comando || 'pausar');
+      if (plataforma === 'desktop') { if (!['alternar', 'proxima', 'anterior', 'parar'].includes(c)) throw new Error('No Windows, pausa e retomada diretas ainda não são suportadas; use alternar reprodução.'); const r = await nativo('controle_midia_pc', { comando: c }); return { info: r.info || 'Comando enviado ao controle multimídia do Windows.', incerto: true }; }
       // Player do próprio app: se é ele que está tocando, obedece direto (não depende
       // do acesso às notificações nem da sessão de outro aplicativo).
       const M = plug('JarvisMusica');
@@ -1507,8 +1563,9 @@ const ACOES = {
       if (busca) return { info: 'Abri o ' + onde + ' na busca por “' + busca + '”. Toque no resultado para começar a ouvir; o Spotify não deixa eu iniciar a faixa sozinho.' };
       return { info: 'Abri o ' + onde + (tipo === 'curtidas' ? ' nas suas músicas curtidas.' : '.') };
     } },
-  volume: { risco: 0, disp: ['android'], ajuda: 'args {"direcao":"aumentar|diminuir|silenciar"} OU {"percentual":0-100}, com "tipo" opcional: musica|chamada|notificacao|alarme|toque|sistema (padrão musica). Ajusta o volume em um passo.',
+  volume: { risco: 0, disp: T, ajuda: 'args {"direcao":"aumentar|diminuir|silenciar"} OU {"percentual":0-100}, com "tipo" opcional: musica|chamada|notificacao|alarme|toque|sistema (padrão musica). Ajusta o volume em um passo.',
     run: async (a) => {
+      if (plataforma === 'desktop') { const r = await nativo('volume_pc', { direcao: a && a.direcao, tipo: a && a.tipo, percentual: a && a.percentual }); return { info: r.info || 'Comando enviado ao volume principal do Windows.', incerto: true }; }
       const r = await nativo('ajustarVolume', { direcao: (a && a.direcao) || (a && a.percentual != null ? 'definir' : 'aumentar'), tipo: a && a.tipo, percentual: a && a.percentual });
       const t = (a && a.tipo) || 'musica';
       if (r && typeof r.nivel === 'number') return { info: `Volume de ${t} em ${Math.round(r.nivel * 100 / Math.max(1, r.maximo))} por cento.` };
@@ -1524,7 +1581,7 @@ const ACOES = {
     run: async (a) => { const r = await nativo('ajustarBrilho', a || {}); return { info: (r && r.info) || 'Brilho ajustado.' }; } },
   painel: { risco: 0, disp: ['android'], ajuda: 'args {"alvo":"notificacoes|rapido|configuracoes"}. Tenta abrir o painel de notificações ou configurações rápidas; se o Android bloquear o atalho, abre as Configurações.',
     run: async (a) => { const r = await nativo('abrirPainel', { alvo: (a && a.alvo) || 'rapido' }); return { info: (r && r.info) || 'Painel aberto.' }; } },
-  email: { risco: 2, disp: ['android'], ajuda: 'args {"para":"endereco@email.com ou nome","assunto":"...","texto":"..."}. Prepara um e-mail no app de e-mail do aparelho; o usuário revisa e envia.',
+  email: { risco: 2, disp: T, ajuda: 'args {"para":"endereco@email.com ou nome","assunto":"...","texto":"..."}. Prepara um e-mail no app de e-mail do aparelho; o usuário revisa e envia.',
     prep: (a) => {
       const para = String((a && a.para) || '').trim().slice(0, 200);
       const assunto = String((a && a.assunto) || '').trim().slice(0, 200);
@@ -1533,7 +1590,7 @@ const ACOES = {
       return { args: { para: emailValido ? para : '', rascunhoPara: para, assunto, texto },
         desc: emailValido ? `Enviar e-mail para ${para} — “${(texto || assunto).slice(0, 120)}”` : `Abrir o app de e-mail para escrever para “${para}”.` };
     },
-    run: async (a) => { const r = await nativo('enviarEmail', a || {}); return { info: (r && r.info) || 'Abri o app de e-mail com a mensagem pronta.' }; } },
+    run: async (a) => { const r = plataforma === 'desktop' ? await nativo('email_pc', a || {}) : await nativo('enviarEmail', a || {}); return { info: (r && r.info) || 'Abri o app de e-mail com a mensagem pronta.', incerto: plataforma === 'desktop' }; } },
   fechar_app: { risco: 1, disp: ['android'], ajuda: 'args {"app":"<chave da lista>"}. O Android não permite encerrar apps à força: abro os detalhes do aplicativo para você usar “Forçar parada”, ou volto à tela inicial.',
     run: async (a) => {
       const k = acharApp(String((a && a.app) || ''));
@@ -1560,8 +1617,20 @@ const ACOES = {
   responder_notificacao: { risco: 2, disp: ['android'], ajuda: 'args {"texto":"resposta"}. Responde à notificação ativa mais recente que disponibilize uma ação de resposta rápida; sempre pede confirmação.',
     prep: (a) => String(a.texto || '').trim() ? { args: { texto: String(a.texto).trim().slice(0, 1000) }, desc: 'Responder à última notificação compatível com a mensagem: ' + String(a.texto).trim().slice(0, 180) } : { erro: 'Informe o texto da resposta.' },
     run: async (a) => { const r = await nativo('responderUltimaNotificacao', { texto: String(a.texto || '').slice(0, 1000) }); return { info: r && r.info ? r.info : 'A resposta foi encaminhada pela ação rápida do aplicativo.' }; } },
-  status_dispositivo: { risco: 0, disp: ['android'], ajuda: 'sem args. Consulta bateria, temperatura reportada pela bateria, armazenamento, RAM e conexão.',
+  status_dispositivo: { risco: 0, disp: T, ajuda: 'sem args. No Android consulta bateria, temperatura, armazenamento, RAM e conexão; no Windows consulta CPU, RAM, disco, sistema e tempo ligado.',
     run: async () => {
+      if (plataforma === 'desktop') {
+        const r = await nativo('status_pc', {});
+        const ramTotal = Math.max(0, Number(r.ramTotal) || 0);
+        const ramLivre = Math.max(0, Math.min(ramTotal, Number(r.ramLivre) || 0));
+        const discoTotal = Math.max(0, Number(r.discoTotal) || 0);
+        const discoLivre = Math.max(0, Math.min(discoTotal, Number(r.discoLivre) || 0));
+        const gb = (n) => (n / 1073741824).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+        const cpu = Number.isFinite(Number(r.cpu)) ? Math.max(0, Math.min(100, Math.round(Number(r.cpu)))) : null;
+        const ramUso = ramTotal ? Math.round((ramTotal - ramLivre) / ramTotal * 100) : null;
+        const discoUso = discoTotal ? Math.round((discoTotal - discoLivre) / discoTotal * 100) : null;
+        return { info: `Computador: ${r.aparelho || 'sistema desconhecido'}; CPU: ${cpu == null ? 'indisponível' : cpu + '%'}; RAM: ${ramUso == null ? 'indisponível' : ramUso + '% usada (' + gb(ramTotal - ramLivre) + ' de ' + gb(ramTotal) + ' GB)'}; disco: ${discoUso == null ? 'indisponível' : discoUso + '% usado (' + gb(discoTotal - discoLivre) + ' de ' + gb(discoTotal) + ' GB)'}; ligado há: ${r.uptime || 'indisponível'}.` };
+      }
       const r = await nativo('statusDispositivo', {});
       const bateria = Number(r.bateria);
       const temp = Number(r.temperaturaC);
@@ -4525,10 +4594,8 @@ async function ouvirUmaVez() {
   return transcrever(b, { motor: motor });
 }
 /* ---------- Palavra de ativação local "Jarvis" (Android) ---------- */
-// O detector é próprio: nenhum SDK de terceiro, nenhuma chave. Quem ouve de verdade no
-// Android é o serviço em primeiro plano (JarvisService + JarvisAtivacao); aqui, no WebView,
-// as MESMAS regras de fonética do núcleo Hermes conferem o que o reconhecimento escreveu —
-// é o caminho usado quando a transcrição chega pela tela (conversa contínua, desktop).
+// Android: JarvisService + JarvisKwsEngine (sherpa-onnx, AudioRecord e inferência local).
+// Hermes.ativacao permanece como detector fonético da escuta Groq no WebView/desktop.
 const WAKE_WORD_DISPONIVEL = true;
 const wakeLigado = () => WAKE_WORD_DISPONIVEL && ehAndroid && store.get('wake', '0') === '1';
 const conversaLigada = () => store.get('conversa', '1') === '1';
@@ -4731,10 +4798,10 @@ function configAtivacaoAtual() {
 }
 function descricaoCalibragem() {
   const c = wakeCalibragem();
-  const cfg = configAtivacaoAtual();
-  return 'sensibilidade ' + c.sensibilidade + '% · tolerância ' + cfg.tolerancia +
-    ' · parcial ' + (cfg.aceitaParcial ? 'sim' : 'não') + ' · piso de voz ' + Math.round(cfg.ruidoDb) + ' dB' +
-    (cfg.extras.length ? ' · extras: ' + cfg.extras.join(', ') : ' · sem palavras extras');
+  const limiar = c.sensibilidade >= 75 ? 0.25 : (c.sensibilidade >= 45 ? 0.35 : 0.45);
+  const extras = c.variantes.split(/[,;\/\n]+/).map((x) => x.trim()).filter(Boolean).slice(0, 10);
+  return 'sensibilidade ' + c.sensibilidade + '% · limiar KWS ' + limiar.toFixed(2) +
+    ' · palavras base: Jarvis/Javis' + (extras.length ? ' · extras: ' + extras.join(', ') : ' · sem palavras extras');
 }
 // Tira a palavra de ativação do começo da transcrição e devolve o comando que sobrou.
 function extrairComando(t) {
@@ -4792,6 +4859,19 @@ async function iniciarWake() {
     servicoPronto = true;
     segPlanoOk = true;
     await p.startWake(Object.assign({ pausarDuranteMusica: store.get('wake_pausa_musica', '1') === '1' }, wakeCalibragem()));
+    // startWake confirma o pedido; só exibimos "ouvindo" quando o serviço confirma
+    // que o KWS inicializou e AudioRecord entrou em gravação.
+    if (typeof p.diagnosticoEscuta === 'function') {
+      const limiteKws = Date.now() + 20000;
+      let estadoKws = null;
+      while (Date.now() < limiteKws) {
+        estadoKws = await p.diagnosticoEscuta();
+        if (estadoKws && estadoKws.escutando) break;
+        if (estadoKws && estadoKws.ultimoErro) throw new Error(estadoKws.ultimoErro);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      if (!estadoKws || !estadoKws.escutando) throw new Error('O serviço não confirmou que o KWS local iniciou em 20 segundos.');
+    }
     if (!ocupado) { wakeAtivo = true; setEstado('idle'); atualizarWakeControles(); }
     else await p.stopWake();
   } catch (e) {
@@ -4834,9 +4914,8 @@ async function pararWake(desligar) {
   atualizarWakeControles();
 }
 function atualizarWake() {
-  // Dois motores possíveis: o detector próprio do Android (segundo plano, sem chave e sem
-  // enviar áudio para fora) e a escuta pela Groq (transcrição na nuvem, com o app aberto).
-  // Os dois usam as MESMAS regras de fonética do núcleo, então as variações valem nos dois.
+  // Dois motores: KWS sherpa-onnx local no Android (segundo plano) e escuta Groq
+  // no app aberto. As palavras extras do usuário são aplicadas ao KWS; Groq usa Hermes.
   if (escutaGroqLigada()) { pararWake(true).then(() => iniciarEscutaGroq()); return; }
   pararEscutaGroq(true);
   if (wakeLigado()) iniciarWake();
@@ -4857,6 +4936,12 @@ async function aoAcordar(texto) {
     return;
   }
   wakeAtivo = false; // o lado nativo já parou de ouvir
+  // Confirma que a interface assumiu o microfone: cancela o rearme de segurança do serviço
+  // enquanto o comando é processado/falado, evitando KWS simultâneo com a gravação do turno.
+  try {
+    const servicoWake = plug('JarvisBackground');
+    if (servicoWake && typeof servicoWake.stopWake === 'function') await servicoWake.stopWake();
+  } catch (e) { registrar('erro', 'pausa do KWS após ativação: ' + (e && e.message ? e.message : e)); }
   atualizarWakeControles();
   if (ocupado) return;
   aquecer(); // abre a conexão com a IA enquanto o microfone é preparado
@@ -5096,7 +5181,7 @@ async function diagnosticoSegundoPlano(silencioso) {
     d.acessoNotificacoes ? 'Ativo: “o que chegou?” e respostas rápidas funcionam.' : 'Opcional. Sem isso o Jarvis não lê nem responde notificações.',
     d.acessoNotificacoes ? null : { rotulo: 'Autorizar', fn: () => bgDiagAbrirAjuste('acessoNotificacoes') });
 
-  const detector = d.detector ? 'detector próprio (' + (d.calibragem || 'calibragem padrão') + ')' : 'nenhum';
+  const detector = d.detector ? 'KWS acústico local (' + (d.calibragem || 'calibragem padrão') + ')' : 'nenhum';
   if (!d.desejada) {
     bgDiagRow('warn', 'Escuta desligada', 'A ativação por voz está desligada agora. Nada será ouvido até você ligar.');
     pendencias.push('escuta desligada');
@@ -5106,8 +5191,7 @@ async function diagnosticoSegundoPlano(silencioso) {
   } else if (!d.escutando) {
     bgDiagRow('warn', 'Serviço em espera', 'O serviço está ativo, mas o detector está pausado (ex.: durante um comando ou chamada). Detector previsto: ' + detector + '.');
   } else {
-    bgDiagRow('ok', 'Serviço ouvindo', 'Detector ativo: ' + detector +
-      (d.descartesRuido ? ' · ' + d.descartesRuido + ' ativação(ões) descartada(s) pelo porteiro de ruído (som baixo demais para ser voz dirigida ao aparelho).' : ' · nenhuma ativação descartada por ruído.'));
+    bgDiagRow('ok', 'Serviço ouvindo', 'Detector ativo: ' + detector + ' · inferência no aparelho; nenhum áudio é enviado antes da palavra-chave.');
   }
 
   if (d.ultimoEvento) {
@@ -5188,11 +5272,11 @@ async function testarEscutaAtivacao() {
     testandoEscuta = false;
     return;
   }
-  const nome = 'detector próprio' + (detector && detector !== 'proprio' ? ' (' + detector + ')' : '');
+  const nome = 'KWS acústico local' + (detector ? ' (' + detector + ')' : '');
   if (visto > 0) {
-    st.textContent = nome + ': ' + visto + ' ativação(ões) em 20 s. Se o número ficou próximo das vezes que você falou, está calibrado. Se aparecer detecção sem você falar, baixe a sensibilidade da ativação abaixo ou cadastre o ruído do ambiente como palavra extra não — o porteiro de ruído também descarta som baixo.';
+    st.textContent = nome + ': ' + visto + ' ativação(ões) em 20 s. Compare com quantas vezes você falou. Se houver falso disparo, diminua a sensibilidade; se não detectar, aumente-a ou teste uma variante fonética. O modelo-base é inglês, então avalie a pronúncia PT-BR no aparelho real.';
   } else {
-    st.textContent = 'Nenhuma ativação detectada em 20 s com o ' + nome + '. Confira o microfone no diagnóstico acima, fale mais perto do aparelho, aumente a sensibilidade da ativação e, se o aparelho não tiver o reconhecimento de português, instale o pacote de idioma (Configurações ▸ Google ▸ Voz).' + (interrompido ? ' O teste terminou antes do previsto.' : '');
+    st.textContent = 'Nenhuma ativação detectada em 20 s com o ' + nome + '. Confira a permissão e o microfone, aproxime-se do aparelho e ajuste a sensibilidade. O modelo-base é inglês; a pronúncia brasileira de “Jarvis” pode exigir uma variante extra ou um modelo treinado em PT-BR.' + (interrompido ? ' O teste terminou antes do previsto.' : '');
   }
   registrar('voz', 'teste de ativação: ' + visto + ' detecção(ões) em 20 s (' + nome + ')');
   btn.disabled = false;
@@ -5233,7 +5317,7 @@ async function carregarVozes() {
   const statusVoz = $('#c-voz-status');
   if (statusVoz) statusVoz.textContent = ordenadas.some((v) => vozPareceMasculina(v)) ? 'Há uma voz com nome compatível com a preferência masculina. A identificação é heurística; teste a voz para confirmar.' : 'Não encontrei uma voz masculina identificável pelo nome instalado. O JARVIS usará a melhor voz pt-BR disponível; instale outra voz nas configurações de texto para fala do Android se desejar.';
 }
-const CAMPOS_CHAVE = { groq: '#c-key', cerebras: '#c-key-cerebras', mistral: '#c-key-mistral', gemini: '#c-key-gemini' };
+const CAMPOS_CHAVE = { groq: '#c-key', openrouter: '#c-key-openrouter', cerebras: '#c-key-cerebras', mistral: '#c-key-mistral', gemini: '#c-key-gemini' };
 function mostrarChaves() {
   for (const [n, sel] of Object.entries(CAMPOS_CHAVE)) {
     const c = $(sel);
@@ -5272,7 +5356,7 @@ function atualizarWakeControles() {
     btn.setAttribute('aria-pressed', ligado ? 'false' : 'true');
     btn.setAttribute('aria-label', ligado ? 'Pausar ativação por voz' : 'Ativar ativação por voz');
     btn.title = ligado ? 'Pausar ativação por voz' : 'Ativar ativação por voz';
-    $('#wake-toggle-text').textContent = !ligado ? 'Escuta pausada' : (escutaGroqAtiva ? 'Ouvindo pela Groq' : (wakeAtivo ? 'Ouvindo “Jarvis” · detector próprio' : 'Ativação ligada'));
+    $('#wake-toggle-text').textContent = !ligado ? 'Escuta pausada' : (escutaGroqAtiva ? 'Ouvindo pela Groq' : (wakeAtivo ? 'Ouvindo “Jarvis” · KWS local' : 'Ativação ligada'));
   }
   const c = $('#c-wake-toggle');
   if (c) {
@@ -5296,7 +5380,7 @@ async function toggleWakeRapido() {
   $('#c-wake').checked = ligar;
   atualizarWakeControles();
   if (ligar) {
-    msg('sis', 'Detector de ativação ligado (' + descricaoCalibragem() + '). Diga “Jarvis”, aguarde o sinal e então fale seu pedido — por exemplo “Jarvis, que horas são”. O detector é próprio: reconhecimento do Android mais regras de fonética no aparelho, sem chave e sem SDK de terceiro; no Android 12+ ele roda offline. O comando completo só começa depois da palavra de ativação.');
+    msg('sis', 'Detector KWS acústico ligado (' + descricaoCalibragem() + '). Diga “Jarvis” e, depois do sinal, fale seu pedido. No Android, a detecção roda localmente com sherpa-onnx: nenhum áudio é enviado antes da palavra-chave. O modelo-base é treinado em inglês; a pronúncia PT-BR deve ser validada pelo teste de ativação. A transcrição do comando começa somente depois do KWS.');
     try { await iniciarWake(); } catch (e) { registrar('erro', 'ativação por voz: ' + e.message); }
   } else {
     await pararWake(true);
@@ -5883,7 +5967,7 @@ async function executarDiagnostico() {
       catch (e) { diagLinha('warn', 'Permissão de microfone', 'O navegador não expõe o estado; toque em “Testar microfone” para solicitar e confirmar.'); }
     } else diagLinha('warn', 'Permissão de microfone', 'Consulta de permissão não suportada; use o teste de áudio para confirmar.');
     diagLinha(CHAVES.groq ? 'ok' : 'warn', 'Chave Groq', CHAVES.groq ? 'Configurada (a presença não garante que esteja válida ou com cota).' : 'Não configurada; pesquisa browser_search e IA principal ficam indisponíveis até cadastrar a chave.');
-    for (const n of ['cerebras','mistral','gemini']) diagLinha(CHAVES[n] ? 'ok' : 'warn', 'Chave ' + n[0].toUpperCase() + n.slice(1), CHAVES[n] ? 'Configurada; validade e cota não foram verificadas.' : 'Não configurada; é opcional como provedor de reserva.');
+    for (const n of ['openrouter','cerebras','mistral','gemini']) diagLinha(CHAVES[n] ? 'ok' : 'warn', 'Chave ' + n[0].toUpperCase() + n.slice(1), CHAVES[n] ? 'Configurada; validade e cota não foram verificadas.' : 'Não configurada; é opcional como provedor de reserva.');
     // Roteador de motores: quem responde a cada tipo de tarefa e o que já foi medido no aparelho.
     const latIA = Hermes.metricas().latencias || {};
     const listaMotores = PROVEDORES.map((p) => p.nome + (CHAVES[p.id]
@@ -6157,7 +6241,10 @@ function mostrarWakeMini(texto) {
   window.__jarvisWakeMiniTimer = setTimeout(() => { el.hidden = true; }, 10000);
 }
 
-function abrirConfig() {
+async function abrirConfig() {
+  // Aguarda a leitura do cofre antes de preencher os campos; evita abrir ajustes
+  // com estado transitório vazio e sobrescrever visualmente chaves já salvas.
+  await chavesProntas;
   mostrarChaves();
   mudarCategoriaConfig('ia');
   renderRotinasSalvas();
@@ -6233,6 +6320,9 @@ function abrirConfig() {
   abrirPainel('#painel-config');
 }
 async function salvarConfig() {
+  // A leitura do cofre e a gravação não podem competir: sem esta barreira,
+  // salvar logo após abrir o painel pode ocorrer antes de CHAVES ser hidratado.
+  await chavesProntas;
   const pausaMusicaAnterior = store.get('wake_pausa_musica', '1');
   for (const [n, sel] of Object.entries(CAMPOS_CHAVE)) {
     const v = $(sel).value.trim();
@@ -6967,14 +7057,13 @@ if (selPerfilVoz) selPerfilVoz.onchange = () => {
 };
 const chkVozChime = $('#c-voz-chime');
 if (chkVozChime) { chkVozChime.checked = store.get('voz_chime', '0') === '1'; chkVozChime.onchange = () => store.set('voz_chime', chkVozChime.checked ? '1' : '0'); }
-// Lista de variantes reconhecidas (só leitura, para o usuário conferir a calibragem).
+// Palavras base e extras efetivamente enviadas ao motor KWS Android.
 function gerenciarVariantesWake() {
   const alvo = $('#c-wake-variantes-lista');
   if (!alvo) return;
-  const cfg = configAtivacaoAtual();
-  const base = Hermes.ativacao.variantes.slice(0, 12).join(', ');
-  alvo.textContent = 'Formas reconhecidas: ' + base + (cfg.extras.length ? ' · ' + cfg.extras.join(', ') : '') +
-    '. Tolerância atual: ' + cfg.tolerancia + ' letra(s) trocada(s) em palavras começando com “j”.';
+  const extras = wakeCalibragem().variantes.split(/[,;\/\n]+/).map((x) => x.trim()).filter(Boolean).slice(0, 10);
+  alvo.textContent = 'Palavras base: Jarvis, Javis' + (extras.length ? ' · extras: ' + extras.join(', ') : '') +
+    '. O modelo acústico é treinado em inglês; a taxa de acerto com pronúncia PT-BR deve ser validada no teste.';
 }
 gerenciarVariantesWake();
 /* Reconhecimento de locutor: motor local (voz_motor.js), sem guardar áudio.
@@ -7825,8 +7914,8 @@ if (ehAndroid) {
     }
   }
   // A escuta permanece desligada por padrão; o usuário liga a ativação em Ajustes ▸ Voz.
-  // A ativação contínua usa o detector próprio (reconhecimento do Android + regras de
-  // fonética locais), sem chave e sem SDK de terceiro; o microfone manual funciona igual.
+  // A ativação contínua usa KWS sherpa-onnx em CPU no serviço nativo. O comando completo
+  // só é transcrito depois da palavra-chave; a ativação não envia áudio à rede.
 }
 /* ---------- Visão: câmera, reconhecimento de objetos e balões ---------- */
 // A câmera é do usuário e continua sendo dele: o quadro fica no aparelho até ele tocar em
@@ -7930,7 +8019,7 @@ function capturarQuadro() {
 /** Envia UM quadro ao provedor que enxerga, na ordem que o roteador do núcleo definiu. */
 async function pedirVisaoIA(dataUrl, pergunta) {
   if (store.get('offline', '0') === '1') throw new Error('O modo offline está ativo e a leitura de imagem precisa de internet.');
-  const ids = provedoresComChave().map((p) => p.id);
+  const ids = provedoresComChave().filter((p) => p.visao !== false).map((p) => p.id);
   const plano = Hermes.planejarIA({
     tarefa: 'visao', visao: true, provedores: ids,
     latencias: Hermes.metricas().latencias, erros: errosIA
@@ -7948,7 +8037,7 @@ async function pedirVisaoIA(dataUrl, pergunta) {
     const t0 = Date.now();
     try {
       const corpo = {
-        model: modelo, temperature: 0.2, max_tokens: 900,
+        model: modelo, temperature: 0.2, max_tokens: 1400,
         messages: [{
           role: 'user',
           content: [
@@ -7969,9 +8058,17 @@ async function pedirVisaoIA(dataUrl, pergunta) {
       if (!obj) throw new Error('a resposta não veio em JSON');
       Hermes.registrarLatencia(id, Date.now() - t0);
       errosIA[id] = 0;
+      const brutoOcr = Array.isArray(obj.textoLegivel)
+        ? obj.textoLegivel.map((x) => String(x || '')).join('\n')
+        : String(obj.textoLegivel || '');
+      const limpezaOcr = window.VisaoContexto && typeof window.VisaoContexto.limparTextoOcr === 'function'
+        ? window.VisaoContexto.limparTextoOcr(brutoOcr)
+        : { texto: brutoOcr.trim().slice(0, 2000), descartado: [] };
       return {
         objetos: Hermes.visao.normalizar(obj.objetos),
         resumo: String(obj.resumo || '').trim().slice(0, 300),
+        textoLegivel: limpezaOcr.texto ? [limpezaOcr.texto] : [],
+        ocrDescartado: limpezaOcr.descartado || [],
         provedor: prov.nome,
         ms: Date.now() - t0
       };
@@ -7993,8 +8090,7 @@ async function analisarVisao(opcoes) {
   if (!pronta) return { fala: 'Não consegui abrir a câmera, ' + trat() + '. Autorize a câmera nas permissões do aplicativo e me chame de novo.' };
   const r = await analisarQuadro(o.texto || '');
   if (!r) return { fala: 'Aponte a câmera para o objeto, ' + trat() + ', que eu analiso e digo o que estou vendo.' };
-  registrarContextoVisual(r);
-  return { fala: r.fala, objetos: r.objetos };
+  return { fala: r.fala, objetos: r.objetos, textoLegivel: r.textoLegivel || [] };
 }
 
 /* Botões do painel de visão */
@@ -9047,8 +9143,11 @@ async function analisarDataUrl(d, q) {
     visaoResumo = r.resumo;
     visaoProvedor = r.provedor;
     desenharBaloes(r.objetos);
-    visaoStatus('Análise de ' + r.provedor + ' · ' + (r.objetos.length ? r.objetos.length + ' objeto(s)' : 'nada identificado') + '.', 'ok');
-    return { fala: fala, objetos: r.objetos, resumo: r.resumo };
+    visaoStatus('Análise de ' + r.provedor + ' · ' + (r.objetos.length ? r.objetos.length + ' objeto(s)' : 'nada identificado') +
+      ' · OCR: ' + (r.textoLegivel && r.textoLegivel.length ? 'texto reconhecido' : 'sem texto legível') + '.', 'ok');
+    registrarContextoVisual(r);
+    if (r.textoLegivel && r.textoLegivel.length) anexarTextoVisao('OCR · texto reconhecido', r.textoLegivel.join('\n'));
+    return { fala: fala, objetos: r.objetos, resumo: r.resumo, textoLegivel: r.textoLegivel || [] };
   } catch (e) {
     visaoStatus('Não consegui analisar: ' + ((e && e.message) || e), 'fail');
     return null;
@@ -9064,13 +9163,14 @@ async function vsTela() {
     if (img) { img.src = r.imagem; img.hidden = false; }
     if (VIS_VIDEO()) VIS_VIDEO().hidden = true;
     const a = await analisarDataUrl(r.imagem, 'Analise esta captura de tela do computador.');
-    if (a) await falar(a.fala);
+    if (a) await falar(a.fala + ((a.textoLegivel && a.textoLegivel.length) ? ' Texto legível: ' + a.textoLegivel.join(' ').slice(0, 500) : ''));
   } catch (e) { visaoStatus('Falha na captura: ' + ((e && e.message) || e), 'fail'); }
 }
 function vsMemoria() {
   if (!MEM) { visaoStatus('A memória conectada não carregou.', 'fail'); return; }
   const objs = (visaoObjetos || []).map((o) => o.nome).slice(0, 12);
   const txt = (visaoResumo || 'Análise visual') + (objs.length ? ' Objetos: ' + objs.join(', ') + '.' : '') +
+    (visaoContexto && visaoContexto.textoLegivel ? ' Texto reconhecido: ' + visaoContexto.textoLegivel : '') +
     (visaoProvedor ? ' (modelo ' + visaoProvedor + ')' : '');
   const r = MEM.criar({ tema: 'contextos', titulo: 'Visão · ' + new Date().toLocaleString('pt-BR'), texto: txt });
   visaoStatus(r.ok ? (r.duplicada ? 'Esse resumo já estava na memória.' : 'Resumo salvo na memória.') : (r.erro || 'Falha'), !r.ok);
@@ -9287,9 +9387,53 @@ async function obsTestar() {
     obsDiag('Vínculo indisponível: ' + ((r && r.motivo) || 'sem pasta escolhida'));
   }
 }
+async function obsLerArquivosMemoria() {
+  let arquivos = [];
+  if (cofreNativo()) {
+    const r = await cofrePlugin().cofreListar();
+    arquivos = (r && r.arquivos) || [];
+  } else {
+    const r = await Plataforma.desktopComando('cofre_listar', {});
+    arquivos = (r && r.arquivos) || [];
+  }
+  arquivos = arquivos.filter((nome) => /^Memoria\//i.test(String(nome)) && /\.md$/i.test(String(nome)));
+  const textos = [];
+  let erros = 0, bytes = 0;
+  for (const nome of arquivos) {
+    if (bytes > 300 * 1024) { erros++; break; }
+    try {
+      const r = cofreNativo()
+        ? await cofrePlugin().cofreLer({ caminho: nome })
+        : await Plataforma.desktopComando('cofre_ler', { arquivo: nome });
+      if (r && typeof r.texto === 'string') { textos.push(r.texto); bytes += r.texto.length; }
+      else erros++;
+    } catch (e) { erros++; }
+  }
+  return { arquivos: arquivos, textos: textos, erros: erros, bytes: bytes };
+}
 async function obsEnviar() {
   if (!MEM) { obsStatus('A memória conectada não carregou.', true); return; }
   if (!cofreRemoto()) { obsStatus('Envio automático é do Android/PC. Use “Baixar .md”.', true); return; }
+  // Antes de escrever, incorpora as edições feitas diretamente no Obsidian.
+  // Se houver conflito ou falha de leitura, não sobrescreve nenhum arquivo externo.
+  let leitura;
+  try { leitura = await obsLerArquivosMemoria(); }
+  catch (e) { obsStatus('Não consegui conferir o cofre antes do envio; nada foi sobrescrito: ' + ((e && e.message) || e), true); return; }
+  if (leitura.erros || (leitura.arquivos.length && !leitura.textos.length)) {
+    obsStatus('Não consegui ler todos os arquivos de Memoria/. O envio foi cancelado para proteger suas edições.', true);
+    return;
+  }
+  if (leitura.textos.length) {
+    const preSync = typeof MEM.sincronizarMarkdown === 'function'
+      ? MEM.sincronizarMarkdown(leitura.textos.join('\n')) : MEM.importarMarkdown(leitura.textos.join('\n'));
+    if (!preSync.ok || (preSync.conflitos && preSync.conflitos.length)) {
+      const n = preSync.conflitos ? preSync.conflitos.length : 0;
+      obsStatus('Envio cancelado: ' + (n ? n + ' conflito(s) precisam ser resolvidos' : (preSync.erro || 'não foi possível sincronizar')) + '. Nenhum arquivo do Obsidian foi sobrescrito.', true);
+      obsDiag('Envio protegido por conflito de sincronização: ' + n + ' conflito(s).');
+      return;
+    }
+    renderMemoria(); renderObsTopicos();
+  }
   const notas = MEM.arquivosPorTopico();
   if (!notas.length) { obsStatus('A memória está vazia: nada para enviar.', true); return; }
   obsStatus('Enviando ' + notas.length + ' arquivo(s) por tópico…');
@@ -9338,12 +9482,14 @@ async function obsReceber() {
       } catch (e) { /* arquivo inacessível: segue */ }
     }
     if (!textos.length) { obsStatus('Não consegui ler nenhum arquivo do cofre.', true); return; }
-    const imp = MEM.importarMarkdown(textos.join('\n'));
+    const imp = typeof MEM.sincronizarMarkdown === 'function'
+      ? MEM.sincronizarMarkdown(textos.join('\n')) : MEM.importarMarkdown(textos.join('\n'));
     if (!imp.ok) { obsStatus(imp.erro, true); return; }
     const conflitos = imp.conflitos ? imp.conflitos.length : 0;
-    obsStatus('Lidos ' + lidos + ' arquivo(s): ' + imp.criadas + ' nova(s), ' + imp.repetidas +
-      ' já existente(s), ' + imp.ignoradas + ' ignorada(s)' +
-      (conflitos ? ' · ' + conflitos + ' conflito(s) preservado(s), nada foi sobrescrito' : '') + '.',
+    obsStatus('Lidos ' + lidos + ' arquivo(s): ' + imp.criadas + ' nova(s), ' +
+      (imp.atualizadas || 0) + ' atualizada(s), ' + imp.repetidas + ' sem alteração, ' +
+      imp.ignoradas + ' ignorada(s)' +
+      (conflitos ? ' · ' + conflitos + ' conflito(s) preservado(s), a versão local mais recente foi mantida' : '') + '.',
       false);
     obsDiag('Importação do cofre: ' + lidos + ' arquivo(s) · ' + conflitos + ' conflito(s) · ' + new Date().toLocaleString('pt-BR'));
     renderMemoria(); renderObsTopicos();
@@ -9742,12 +9888,13 @@ function renderVideoLista(quadros) {
     const marca = document.createElement('b');
     marca.textContent = '[' + (VIS ? VIS.timestamp(q.t) : q.t) + ']';
     const txt = document.createElement('span');
-    txt.textContent = q.resumo || (q.objetos || []).map((o) => o.nome).join(', ') || 'sem descrição';
+    txt.textContent = (q.resumo || (q.objetos || []).map((o) => o.nome).join(', ') || 'sem descrição') + ((q.textoLegivel && q.textoLegivel.length) ? ' · OCR: ' + q.textoLegivel.join(' ').slice(0, 160) : '');
     item.append(marca, txt);
     item.onclick = () => {
       const el = document.getElementById('visao-video-arquivo');
       if (el && Number.isFinite(Number(q.t))) { try { el.currentTime = Number(q.t); } catch (e) { /* ok */ } }
-      interromperFala().then(() => falar('Em ' + (VIS ? VIS.timestamp(q.t) : q.t) + ', ' + (q.resumo || 'não descrevi este quadro.'), true)).catch(() => {});
+      const falaQuadro = 'Em ' + (VIS ? VIS.timestamp(q.t) : q.t) + ', ' + (q.resumo || 'não descrevi este quadro.') + ((q.textoLegivel && q.textoLegivel.length) ? ' Texto legível: ' + q.textoLegivel.join(' ').slice(0, 260) : '');
+      interromperFala().then(() => falar(falaQuadro, true)).catch(() => {});
     };
     box.appendChild(item);
   });
@@ -9793,7 +9940,7 @@ async function analisarVideoEscolhido(file) {
     if (!dataUrl) { falhas.push('quadro ' + (i + 1) + ' não pôde ser extraído'); continue; }
     try {
       const r = await pedirVisaoIA(dataUrl, 'Este é um quadro de vídeo em ' + (VIS ? VIS.timestamp(plano[i]) : plano[i]) + '. Descreva em uma frase só o que está visível e leia textos importantes.');
-      quadros.push({ t: plano[i], resumo: r.resumo, objetos: r.objetos, provedor: r.provedor, ms: r.ms });
+      quadros.push({ t: plano[i], resumo: r.resumo, objetos: r.objetos, textoLegivel: r.textoLegivel || [], provedor: r.provedor, ms: r.ms });
       renderVideoLista(quadros);
       mostrarTextoVisao('Vídeo · ' + quadros.length + '/' + plano.length, VIS ? VIS.relatoVideo(quadros) : quadros.map((q) => q.resumo).join('\n'));
     } catch (e) {
@@ -9802,8 +9949,10 @@ async function analisarVideoEscolhido(file) {
   }
   visaoProgresso(100, visaoVideoCancelar ? 'Análise cancelada.' : 'Análise concluída.');
   setTimeout(visaoProgressoFechar, visaoVideoCancelar ? 1200 : 2400);
+  if (quadros.length) registrarContextoVisual({ objetos: quadros.reduce((acc, q) => acc.concat(q.objetos || []), []), textoLegivel: quadros.reduce((acc, q) => acc.concat(q.textoLegivel || []), []) });
+  const textoOcrVideo = quadros.reduce((acc, q) => acc.concat(q.textoLegivel || []), []).slice(0, 3).join(' · ');
   const resumoFalado = quadros.length
-    ? 'Analisei ' + quadros.length + ' de ' + plano.length + ' quadros deste vídeo, ' + trat() + '. ' + (quadros[0].resumo || 'O primeiro quadro mostra a cena.') + (quadros.length > 1 ? ' Também descrevi os outros; toque em um horário para ouvir cada um.' : '')
+    ? 'Analisei ' + quadros.length + ' de ' + plano.length + ' quadros deste vídeo, ' + trat() + '. ' + (quadros[0].resumo || 'O primeiro quadro mostra a cena.') + (quadros.length > 1 ? ' Também descrevi os outros; toque em um horário para ouvir cada um.' : '') + (textoOcrVideo ? ' Texto legível: ' + textoOcrVideo.slice(0, 500) : '')
     : 'Não consegui analisar os quadros deste vídeo: ' + (falhas.slice(0, 2).join(' · ') || 'nenhum quadro foi extraído');
   visaoStatus((visaoVideoCancelar ? 'Análise cancelada: ' : 'Análise concluída: ') + quadros.length + ' de ' + plano.length + ' quadros' + (falhas.length ? ' · ' + falhas.length + ' falha(s)' : '') + '. Toque em um horário para ouvir e rever.', falhas.length ? 'warn' : 'ok');
   registrar('visão', 'vídeo: ' + quadros.length + '/' + plano.length + ' quadros analisados');
@@ -9832,10 +9981,17 @@ async function analisarImagem(dataUrl, pergunta, opcoes) {
     desenharBaloes(r.objetos);
     mostrarTextoVisao('Análise geral', VIS ? VIS.textoAnalise(r.resumo, null) : (r.resumo || ''));
     visaoStatus('Análise de ' + r.provedor + ' em ' + (r.ms / 1000).toFixed(1).replace('.', ',') + ' s · ' +
-      (r.objetos.length ? r.objetos.length + ' objeto(s) identificado(s)' : 'nenhum objeto identificado') +
-      '. Toque em um balão para interromper a fala e ouvir o detalhe.', r.objetos.length ? 'ok' : 'warn');
+      (r.objetos.length ? r.objetos.length + ' objeto(s)' : 'nenhum objeto') + ' · OCR: ' +
+      (r.textoLegivel && r.textoLegivel.length ? 'texto reconhecido' : 'sem texto legível') +
+      '. Toque em um balão para ouvir o detalhe.', (r.objetos.length || (r.textoLegivel && r.textoLegivel.length)) ? 'ok' : 'warn');
     registrar('visão', r.objetos.length + ' objeto(s) por ' + r.provedor + ' em ' + r.ms + ' ms');
-    return { fala, objetos: r.objetos, resumo: r.resumo, provedor: r.provedor };
+    if (r.textoLegivel && r.textoLegivel.length) {
+      anexarTextoVisao('OCR · texto reconhecido', r.textoLegivel.join('\n'));
+    } else {
+      anexarTextoVisao('OCR', 'Nenhum texto legível foi identificado nesta imagem.');
+    }
+    registrarContextoVisual(r);
+    return { fala, objetos: r.objetos, resumo: r.resumo, provedor: r.provedor, textoLegivel: r.textoLegivel || [] };
   } catch (e) {
     visaoStatus('Não consegui analisar agora: ' + ((e && e.message) || e), 'fail');
     registrar('erro', 'visão: ' + ((e && e.message) || e));
@@ -10001,9 +10157,40 @@ function responderPessoaPorVoz(texto) {
     if (!alvo) return null;
     return { fala: 'Posso abrir o perfil de ' + alvo + ' para você conferir e confirmar a mudança. Dados de pessoas eu não altero por conta própria.' };
   }
-  if (/^(?:adicione|adicionar|crie|criar) (?:uma )?(?:nova )?pessoa/.test(n)) {
+  if (/^(?:adicione|adicionar|crie|criar|cadastre|cadastra|registre|registra) (?:uma )?(?:nova )?pessoa$/.test(n)) {
     setTimeout(() => { abrirPessoas(); }, 600);
-    return { fala: 'Abrindo o cadastro, ' + trat() + '. Só o nome é obrigatório; o resto fica por sua conta.' };
+    return { fala: 'Abrindo a ficha de pessoas, ' + trat() + '. Você pode informar nascimento, peso e altura; voz não é necessária.' };
+  }
+  if (PESSOAS && typeof PESSOAS.interpretarCadastroVoz === 'function') {
+    const cadastro = PESSOAS.interpretarCadastroVoz(bruto);
+    if (cadastro) {
+      if (!cadastro.ok) return { fala: cadastro.erro };
+      // Cadastro por voz funciona como upsert: nome exato atualiza a ficha existente.
+      // Correspondência parcial nunca altera outra pessoa por engano.
+      const existente = PESSOAS.resolver(cadastro.dados.nome);
+      if (existente && existente.tipo === 'ambiguo') {
+        return { fala: 'Encontrei mais de uma pessoa chamada ' + cadastro.dados.nome +
+          '. Abra Pessoas e escolha a ficha correta antes de atualizar.' };
+      }
+      const dadosCadastro = Object.assign({}, cadastro.dados);
+      if (existente && existente.tipo === 'exato' && existente.perfil) dadosCadastro.id = existente.perfil.id;
+      const salvo = PESSOAS.salvar(dadosCadastro);
+      if (!salvo.ok) return { fala: 'Não consegui salvar o perfil: ' + salvo.erro };
+      registrar('identidade', 'perfil cadastrado por voz: ' + salvo.perfil.nome);
+      if (typeof abrirPessoas === 'function') setTimeout(() => { abrirPessoas(); }, 600);
+      const detalhe = PESSOAS.idadeDetalhada(salvo.perfil.nascimento, salvo.perfil);
+      const idadeTexto = detalhe ? (detalhe.aproximada ? 'idade aproximada de ' : '') +
+        detalhe.anos + ' anos' + (detalhe.meses ? ' e ' + detalhe.meses + ' meses' : '') : '';
+      return {
+        fala: 'Cadastrei ' + salvo.perfil.nome + (salvo.perfil.relacao ? ', seu/sua ' + salvo.perfil.relacao : '') +
+          (idadeTexto ? ', ' + idadeTexto : '') +
+          (salvo.perfil.pesoKg ? ', peso ' + salvo.perfil.pesoKg + ' quilos' : '') +
+          (salvo.perfil.alturaCm ? ', altura ' + salvo.perfil.alturaCm + ' centímetros' : '') +
+          '. A ficha já está disponível em Pessoas.' +
+          (cadastro.idadeAproximada ? ' Como você informou apenas a idade, ela será atualizada mês a mês a partir desta data; o aniversário exato só pode ser calculado com a data de nascimento.' : ''),
+        perfil: salvo.perfil
+      };
+    }
   }
   const m = n.match(/^(?:quem (?:e|eh)|o que (?:voce|vc) sabe sobre|o que sabe sobre|me fale sobre|fale sobre|me diga sobre|informacoes sobre|qual (?:e )?o perfil de)\s+(.{2,60})$/);
   if (!m) return null;
@@ -10566,6 +10753,7 @@ function registrarContextoVisual(r) {
     const reg = VC.registrar(contextoVisual(), { objetos: r.objetos, textoLegivel: r.textoLegivel || [] });
     const o = reg.objetoAtual;
     if (o) visaoPerguntaStatus('Sessão visual: ' + o.nome + (o.marca ? ' (' + o.marca + ')' : ' — marca não confirmada') + '. Posso responder "ele", "quanto custa" ou "esse componente serve no projeto?".');
+    else if (reg.contexto && reg.contexto.textoLegivel) visaoPerguntaStatus('Texto OCR disponível nesta sessão. Pergunte "o que está escrito?" para consultar a transcrição.');
   } catch (e) { /* contexto é opcional */ }
 }
 
@@ -10592,6 +10780,14 @@ async function perguntarSobreVisao() {
     if (VC) {
       const ctx = contextoVisual();
       const res = VC.resolver(ctx, pergunta);
+      if (res.ok && res.intencao === 'texto' && res.textoLegivel) {
+        VC.registrarPergunta(ctx, pergunta, res.intencao);
+        const respOcr = 'O texto legível na imagem é: ' + res.textoLegivel;
+        anexarTextoVisao('OCR consultado', respOcr);
+        visaoPerguntaStatus('Respondido diretamente pelo texto reconhecido na imagem.', 'ok');
+        await falar(respOcr);
+        return;
+      }
       if (res.ok && res.objeto) {
         VC.registrarPergunta(ctx, pergunta, res.intencao);
         referente = ' [contexto visual: ' + res.objeto.nome + (res.objeto.marca ? ', marca ' + res.objeto.marca : ', marca não confirmada') + ']';
@@ -10616,7 +10812,7 @@ async function perguntarSobreVisao() {
     anexarTextoVisao('pergunta', 'Pergunta: ' + pergunta + '\n' + (r.fala || r.resumo || ''));
     visaoPerguntaStatus(onde + ' · ' + (visaoProvedor || 'provedor') + '.', 'ok');
     registrar('visão', 'pergunta sobre imagem: ' + pergunta.slice(0, 80));
-    await falar(r.fala);
+    await falar(r.fala + ((r.textoLegivel && r.textoLegivel.length) ? ' Texto legível: ' + r.textoLegivel.join(' ').slice(0, 700) : ''));
   } catch (e) {
     visaoPerguntaStatus('Não consegui perguntar: ' + ((e && e.message) || e), true);
   } finally {

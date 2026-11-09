@@ -1,4 +1,13 @@
-# J.A.R.V.I.S. Nova 1.45.0
+# J.A.R.V.I.S. Nova 1.46.0
+
+## 1.46.0 — desenvolvimento (não é release estável)
+
+- Groq permanece como provedor principal; OpenRouter foi adicionado como reserva com DeepSeek inicial e chave independente no cofre seguro Android/Windows.
+- Android: ativação por KWS acústico sherpa-onnx, AudioRecord e inferência local em CPU. O ciclo de wake não usa SpeechRecognizer nem rede antes da palavra-chave; a transcrição do comando só começa depois do gatilho.
+- A sensibilidade ajusta o limiar KWS e a tela aceita palavras-chave extras. O modelo disponível é GigaSpeech em inglês; a precisão com pronúncia PT-BR ainda precisa de teste em aparelho real.
+- Segurança: adicionados PIN ou biometria, PIN ou NFC e PIN/biometria/NFC em modo alternativo; modos com “+” exigem todos os fatores. BiometricPrompt usa biometria forte e o Android escolhe o sensor. NFC por UID simples é clonável.
+- Pipelines de CI/Build/Release agora preparam o modelo KWS, copiam a classe nativa e incluem testes de regressão e compilação Android.
+- **Ainda pendente:** CI verde, APK compilado/instalado, teste KWS PT-BR e Android 16/HyperOS, Flutter/Dart, KWS equivalente no Windows, paridade completa Windows e CADeSIMU nativo validado. Não anunciar esses itens como concluídos.
 
 ## 1.45.0 — Bloqueio com biometria, NFC e central própria
 

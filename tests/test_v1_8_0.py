@@ -16,19 +16,19 @@ versao = json.loads((raiz / "VERSAO.json").read_text(encoding="utf-8"))
 pacote = json.loads((raiz / "package.json").read_text(encoding="utf-8"))
 
 checagens = {
-    # Na 1.13.0 as regras saíram do serviço e viraram uma classe própria (JarvisAtivacao),
-    # chamada a cada hipótese devolvida pelo reconhecimento do Android.
-    "Detector confere todas as hipóteses do Android": (
-        "conferirEmLote(results, false)" in servico
-        and "JarvisAtivacao.presente(texto, cfg)" in servico
-        and "EXTRA_MAX_RESULTS, 5" in servico),
+    # O detector de ativação agora é KWS acústico contínuo; ASR só entra depois do gatilho.
+    "Detector de ativação é KWS acústico local": (
+        "new JarvisKwsEngine(" in servico
+        and "new AudioRecord(" in (raiz / "JarvisKwsEngine.java").read_text(encoding="utf-8")
+        and "new KeywordSpotter(null, config)" in (raiz / "JarvisKwsEngine.java").read_text(encoding="utf-8")
+        and "SpeechRecognizer.create" not in servico),
     "Aceita as formas que o transcritor realmente devolve": all(
         forma in ativacao for forma in ("javis", "jarvy", "charves", "jarvis")),
-    "Sessões mais longas reduzem abertura/fechamento do microfone": all(
-        extra in servico for extra in (
-            "EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS",
-            "EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS",
-            "EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS")),
+    "KWS mantém uma sessão PCM contínua e fecha o microfone ao pausar": (
+        "new AudioRecord(" in (raiz / "JarvisKwsEngine.java").read_text(encoding="utf-8")
+        and "audio.read(" in (raiz / "JarvisKwsEngine.java").read_text(encoding="utf-8")
+        and "audio.stop()" in (raiz / "JarvisKwsEngine.java").read_text(encoding="utf-8")
+        and "audio.release()" in (raiz / "JarvisKwsEngine.java").read_text(encoding="utf-8")),
     "Falha fatal desliga o vigia em vez de religar a cada 15 min": (
         "JarvisPrefs.desejaOuvir(this, false);" in servico
         and "JarvisWatchdog.cancelar(this);" in servico

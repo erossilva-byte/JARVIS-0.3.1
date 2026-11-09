@@ -45,13 +45,13 @@
   };
 
   var CAMPOS = {
-    nome: 60, apelido: 40, nascimento: 10, alturaCm: 3, profissao: 60,
+    nome: 60, apelido: 40, nascimento: 10, alturaCm: 3, pesoKg: 6, idadeBase: 3, idadeEm: 10, profissao: 60,
     relacao: 60, telefone: 24, email: 90, endereco: 120, cidade: 60,
     descricao: 500, preferencias: 500, interesses: 500, observacoes: 900,
     contexto: 500
   };
   var ROTULO = {
-    nome: 'Nome', apelido: 'Apelido', nascimento: 'Nascimento', alturaCm: 'Altura',
+    nome: 'Nome', apelido: 'Apelido', nascimento: 'Nascimento', alturaCm: 'Altura', pesoKg: 'Peso', idadeBase: 'Idade informada',
     profissao: 'Profissão', relacao: 'Relação', telefone: 'Telefone', email: 'E-mail',
     endereco: 'Endereço', cidade: 'Cidade', descricao: 'Descrição',
     preferencias: 'Preferências', interesses: 'Interesses',
@@ -260,14 +260,49 @@
     return d.getUTCFullYear() === Number(m[1]) && d.getUTCMonth() === Number(m[2]) - 1 &&
       d.getUTCDate() === Number(m[3]) && d.getTime() <= relogio();
   }
-  function idade(nascimento) {
+  function idadeDetalhada(nascimento, perfil) {
+    var h = new Date(relogio());
+    if (nascimento && dataValida(nascimento)) {
+      var n = String(nascimento).split('-').map(Number);
+      var anos = h.getFullYear() - n[0];
+      var meses = h.getMonth() + 1 - n[1];
+      if (h.getDate() < n[2]) meses--;
+      if (meses < 0) { anos--; meses += 12; }
+      if (anos < 0 || anos >= 130) return null;
+      return { anos: anos, meses: meses, totalMeses: anos * 12 + meses, aproximada: false };
+    }
+    var base = perfil || {};
+    if (base.idadeBase === '' || base.idadeBase == null || !dataValida(base.idadeEm)) return null;
+    var idadeBase = Number(base.idadeBase);
+    if (!Number.isInteger(idadeBase) || idadeBase < 0 || idadeBase >= 130) return null;
+    var origem = String(base.idadeEm).split('-').map(Number);
+    var mesesPassados = (h.getFullYear() - origem[0]) * 12 + h.getMonth() + 1 - origem[1];
+    if (h.getDate() < origem[2]) mesesPassados--;
+    mesesPassados = Math.max(0, mesesPassados);
+    var total = idadeBase * 12 + mesesPassados;
+    if (total >= 130 * 12) return null;
+    return { anos: Math.floor(total / 12), meses: total % 12, totalMeses: total, aproximada: true };
+  }
+  function idade(nascimento, perfil) {
+    var detalhe = idadeDetalhada(nascimento, perfil);
+    return detalhe ? detalhe.anos : null;
+  }
+  function diasAteAniversario(nascimento) {
     if (!dataValida(nascimento)) return null;
     var n = String(nascimento).split('-').map(Number);
-    var h = new Date(relogio());
-    var anos = h.getFullYear() - n[0];
-    var md = (h.getMonth() + 1) - n[1];
-    if (md < 0 || (md === 0 && h.getDate() < n[2])) anos--;
-    return anos >= 0 && anos < 130 ? anos : null;
+    var hoje = new Date(relogio());
+    var ano = hoje.getFullYear();
+    var mes = n[1] - 1;
+    var dia = n[2];
+    function dataAniversario(y) {
+      var d = dia;
+      if (mes === 1 && d === 29 && !((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0)) d = 28;
+      return new Date(y, mes, d);
+    }
+    var inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    var proximo = dataAniversario(ano);
+    if (proximo < inicioHoje) proximo = dataAniversario(ano + 1);
+    return Math.ceil((proximo.getTime() - inicioHoje.getTime()) / 86400000);
   }
   function camposPersonalizados(lista) {
     if (!Array.isArray(lista)) return [];
@@ -290,9 +325,13 @@
     Object.keys(CAMPOS).forEach(function (campo) {
       if (d[campo] === undefined && atual) return;
       var valor = campo === 'alturaCm'
-        ? (String(d[campo] == null ? '' : d[campo]).replace(/[^0-9]/g, '').slice(0, 3))
-        : limpar(d[campo], CAMPOS[campo]);
-      if (campo === 'nascimento' && valor && !dataValida(valor)) valor = '';
+        ? String(d[campo] == null ? '' : d[campo]).replace(/[^0-9]/g, '').slice(0, 3)
+        : campo === 'pesoKg'
+          ? String(d[campo] == null ? '' : d[campo]).replace(',', '.').replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1').slice(0, 6)
+          : campo === 'idadeBase'
+            ? String(d[campo] == null ? '' : d[campo]).replace(/[^0-9]/g, '').slice(0, 3)
+            : limpar(d[campo], CAMPOS[campo]);
+      if ((campo === 'nascimento' || campo === 'idadeEm') && valor && !dataValida(valor)) valor = '';
       antes[campo] = p[campo] || '';
       p[campo] = valor;
     });
@@ -307,6 +346,7 @@
         if (String(antes[campo]) !== String(depois)) registrar(p, campo, antes[campo], depois);
       });
     }
+    if (p.nascimento) { p.idadeBase = ''; p.idadeEm = ''; }
     p.atualizado = relogio();
     return p;
   }
@@ -326,6 +366,15 @@
     if (p.alturaCm) {
       var a = Number(p.alturaCm);
       if (!(a >= 30 && a <= 250)) return 'Altura deve ficar entre 30 cm e 250 cm.';
+    }
+    if (p.pesoKg) {
+      var peso = Number(p.pesoKg);
+      if (!(peso >= 1 && peso <= 500)) return 'Peso deve ficar entre 1 kg e 500 kg.';
+    }
+    if (p.idadeBase !== '' && p.idadeBase != null) {
+      var idadeBase = Number(p.idadeBase);
+      if (!Number.isInteger(idadeBase) || idadeBase < 0 || idadeBase >= 130) return 'Idade informada deve ficar entre 0 e 129 anos.';
+      if (!dataValida(p.idadeEm)) return 'A data de referência da idade informada é inválida.';
     }
     if (p.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(p.email)) return 'E-mail inválido.';
     return '';
@@ -396,11 +445,14 @@
   function descrever(p) {
     if (!p) return '';
     var partes = [];
-    var anos = idade(p.nascimento);
-    if (anos != null) partes.push(anos + ' anos');
+    var detalheIdade = idadeDetalhada(p.nascimento, p);
+    if (detalheIdade) partes.push((detalheIdade.aproximada ? 'idade aproximada: ' : '') +
+      detalheIdade.anos + ' anos' + (detalheIdade.meses ? ' e ' + detalheIdade.meses + ' meses' : ''));
     if (p.apelido) partes.push('também conhecido como ' + p.apelido);
     if (p.relacao) partes.push(p.relacao);
     if (p.profissao) partes.push(p.profissao);
+    if (p.pesoKg) partes.push('peso: ' + p.pesoKg + ' kg');
+    if (p.alturaCm) partes.push('altura: ' + p.alturaCm + ' cm');
     if (p.cidade) partes.push('mora em ' + p.cidade);
     if (p.descricao) partes.push(p.descricao);
     if (p.preferencias) partes.push('preferências: ' + p.preferencias);
@@ -418,6 +470,11 @@
       if (p.apelido) bits.push('(' + p.apelido + ')');
       if (p.relacao) bits.push(p.relacao);
       if (p.profissao) bits.push(p.profissao);
+      var idadePessoa = idadeDetalhada(p.nascimento, p);
+      if (idadePessoa) bits.push((idadePessoa.aproximada ? 'idade aprox. ' : '') +
+        idadePessoa.anos + ' anos' + (idadePessoa.meses ? ' e ' + idadePessoa.meses + ' meses' : ''));
+      if (p.pesoKg) bits.push(p.pesoKg + ' kg');
+      if (p.alturaCm) bits.push(p.alturaCm + ' cm');
       if (p.cidade) bits.push(p.cidade);
       if (p.preferencias) bits.push('prefere ' + p.preferencias);
       var linha = '- ' + p.nome + (bits.length ? ' · ' + bits.join(' · ') : '');
@@ -802,6 +859,53 @@
     return gravarCru(CHAVE, '[]');
   }
 
+  function interpretarCadastroVoz(frase) {
+    var bruto = limpar(frase, 240);
+    var comando = bruto.match(/^(?:jarvis[, ]+)?(?:cadastre|cadastra|registre|registra|adicione|adiciona|crie|cria)\s+(?:(?:meu|minha)\s+)?(?:(amigo|amiga|colega|irm[aã]o|irm[aã]|primo|prima|m[aã]e|pai|namorado|namorada)[,\s]+)?(.+)$/i);
+    if (!comando) return null;
+    var relacao = comando[1] || '';
+    var nome = comando[2] || '';
+    var idadeMatch = bruto.match(/\bidade\s*(?:de|é|e)?\s*(\d{1,3})(?:\s*anos?)?/i) ||
+      bruto.match(/\b(\d{1,3})\s*anos?\b/i);
+    var pesoMatch = bruto.match(/\bpeso\s*(?:de|é|e)?\s*(\d{1,3}(?:[,.]\d{1,2})?)\s*(?:kg)?\b/i) ||
+      bruto.match(/\b(\d{1,3}(?:[,.]\d{1,2})?)\s*kg\b/i);
+    var alturaMatch = bruto.match(/\baltura\s*(?:de|é|e)?\s*(\d{1,3}(?:[,.]\d{1,2})?)\s*(cm|m)\b/i) ||
+      bruto.match(/\b(\d{1,3}(?:[,.]\d{1,2})?)\s*(cm|m)\b/i);
+    var nascimentoMatch = bruto.match(/\b(?:nascimento|nascido em|nascida em)\s*(?:em\s*)?(\d{4}-\d{2}-\d{2}|\d{1,2}[/.]\d{1,2}[/.]\d{4})/i);
+    nome = nome
+      .replace(/[,;]?\s*(?:idade\s*(?:de|é|e)?\s*)?\d{1,3}\s*anos?\b/ig, '')
+      .replace(/[,;]?\s*idade\s*(?:de|é|e)?\s*\d{1,3}\b/ig, '')
+      .replace(/[,;]?\s*(?:peso\s*(?:de|é|e)?\s*)?\d{1,3}(?:[,.]\d{1,2})?\s*kg\b/ig, '')
+      .replace(/[,;]?\s*(?:altura\s*(?:de|é|e)?\s*)?\d{1,3}(?:[,.]\d{1,2})?\s*(?:cm|m)\b/ig, '')
+      .replace(/[,;]?\s*(?:nascimento|nascido em|nascida em)\s*(?:em\s*)?(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/.]\d{1,2}[/.]\d{4})/ig, '')
+      .replace(/\s+(?:e|com)\s*$/i, '')
+      .replace(/^[,;\s]+|[,;\s]+$/g, '')
+      .replace(/\s{2,}/g, ' ').trim();
+    if (!nome) return { ok: false, erro: 'Não consegui identificar o nome. Diga, por exemplo: “cadastre meu amigo Marcelo, idade 27 anos, peso 72 kg e altura 1,78 m”.' };
+    var dados = { nome: nome };
+    if (relacao) dados.relacao = relacao.toLowerCase();
+    if (nascimentoMatch) {
+      var dataNascimento = nascimentoMatch[1];
+      dados.nascimento = /^\d{4}-/.test(dataNascimento)
+        ? dataNascimento : dataNascimento.split(/[/.]/).reverse().join('-');
+    } else if (idadeMatch) {
+      var idadeInformada = Number(idadeMatch[1]);
+      if (!Number.isInteger(idadeInformada) || idadeInformada < 0 || idadeInformada >= 130) {
+        return { ok: false, erro: 'A idade informada deve ficar entre 0 e 129 anos.' };
+      }
+      dados.idadeBase = String(idadeInformada);
+      var hoje = new Date(relogio());
+      dados.idadeEm = [hoje.getFullYear(), String(hoje.getMonth() + 1).padStart(2, '0'),
+        String(hoje.getDate()).padStart(2, '0')].join('-');
+    }
+    if (pesoMatch) dados.pesoKg = pesoMatch[1].replace(',', '.');
+    if (alturaMatch) {
+      var altura = Number(alturaMatch[1].replace(',', '.'));
+      dados.alturaCm = String(alturaMatch[2].toLowerCase() === 'm' ? Math.round(altura * 100) : Math.round(altura));
+    }
+    return { ok: true, dados: dados, idadeAproximada: !!(idadeMatch && !nascimentoMatch) };
+  }
+
   function configurar(opcoes) {
     var o = opcoes || {};
     if (o.store) deposito = o.store;
@@ -822,8 +926,10 @@
     PADRAO: PADRAO, LIMITES: LIMITES, ESTADOS: ESTADOS,
     configurar: configurar, iniciar: iniciar, config: config, salvarConfig: salvarConfig,
     listar: listar, obter: obter, salvar: salvar, remover: remover, buscar: buscar,
+    interpretarCadastroVoz: interpretarCadastroVoz,
     resolver: resolver, descrever: descrever, contexto: contexto, resumo: resumo,
-    idade: idade, dataValida: dataValida, consentir: consentir,
+    idade: idade, idadeDetalhada: idadeDetalhada, diasAteAniversario: diasAteAniversario,
+    dataValida: dataValida, consentir: consentir,
     revogarConsentimento: revogarConsentimento,
     definirFoto: definirFoto, removerFoto: removerFoto,
     definirRosto: definirRosto, removerRosto: removerRosto,

@@ -55,21 +55,19 @@ checar('prévia e recorte', 'id="idp-foto-preview"' in painel and 'id="idp-foto-
 checar('remover e substituir', 'id="idp-foto-remover"' in painel and 'definirFoto' in core and 'removerFoto' in core)
 checar('foto limitada e persistida', 'FOTO_MAX_BYTES' in core and 'data:image' in core and "CHAVE = 'jv_identidade'" in core)
 
-# ---------- 4. Voz e consentimento ----------
+# ---------- 4. Ficha pessoal independente de biometria de voz ----------
 for marca in ['id="idp-voz-gravar"', 'id="idp-voz-testar"', 'id="idp-voz-apagar"',
               'id="idp-voz-amostras"', 'id="idp-voz-frase"', 'id="idp-consent-voz"']:
-    checar('voz: ' + marca, marca in painel)
-checar('consentimento antes de gravar', 'autoriza' in painel.lower() and "consentir(" in core and
-      "'A pessoa precisa autorizar" in core)
-checar('três frases guiadas', 'FRASES' in ui and ui.count('Jarvis') >= 2)
-checar('recusa áudio insuficiente', 'avaliarQualidade' in core and 'falaSeg' in core and 'snrDb' in core)
-checar('vetor, nunca áudio', 'analise.v' in core and ('o áudio nunca é guardado' in ui.lower() or 'nunca armazenado' in core.lower()))
-checar('motor de locutor reaproveitado', 'VozMotor' in core and 'voz_motor.js' in html)
-checar('identificação com três estados', all(x in core for x in ['IDENTIFICADO', 'NAO_IDENTIFICADO', 'INCONCLUSIVO']))
-checar('limiar e margem', 'limiar' in core and 'margem' in core and 'perfisVoz' in core)
-checar('atualizar amostras', 'removerVoz' in core and 'LIMITE_AMOSTRAS' in core)
-checar('nunca associa desconhecido', 'nunca associa' in core.lower() or 'não force' in core.lower() or
-      'sem-perfil' in core)
+    checar('cadastro pessoal não exige nem apresenta ' + marca, marca not in painel)
+checar('peso no formulário e no núcleo', 'id="pessoa-pesoKg"' in painel and
+      re.search(r'pesoKg:\s*\d+', core) is not None)
+checar('peso validado em kg', 'Peso deve ficar entre 1 kg e 500 kg.' in core)
+checar('idade dinâmica em anos e meses', 'function idadeDetalhada' in core and
+      'function diasAteAniversario' in core and 'idadeDetalhada' in ui)
+checar('descrição contextual inclui medidas', "'peso: ' + p.pesoKg + ' kg'" in core and
+      "'altura: ' + p.alturaCm + ' cm'" in core)
+checar('biometria de voz não bloqueia salvar pessoa', 'function salvarPerfil' in ui and
+      'IDENT.salvar(dados)' in ui)
 
 # ---------- 5. Referência visual opcional ----------
 checar('referência visual opcional', 'id="idp-consent-rosto"' in painel and 'id="idp-rosto-criar"' in painel)

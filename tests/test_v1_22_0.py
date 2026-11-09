@@ -74,7 +74,7 @@ checar('áudio não é declarado como analisado', 'O áudio não é analisado' i
 for marca in ['data-lat="pessoas"', 'id="painel-pessoas"', 'id="pessoa-nome"', 'id="pessoa-apelido"',
               'id="pessoa-relacao"', 'id="pessoa-descricao"', 'id="pessoa-preferencias"',
               'id="pessoa-observacoes"', 'id="pessoa-telefone"', 'id="pessoa-lista"',
-              'id="pessoa-busca"', 'id="idp-exportar"', 'id="idp-consent-voz"']:
+              'id="pessoa-busca"', 'id="idp-exportar"', 'id="idp-consent-rosto"']:
     checar('pessoas: ' + marca, marca in html)
 checar('painel entra na navegação', "'#painel-pessoas'" in app and "alvo === 'pessoas'" in app)
 checar('persistência com chave própria', "CHAVE = 'jv_pessoas'" in (RAIZ / 'pessoas.js').read_text(encoding='utf-8'))
@@ -86,8 +86,9 @@ checar('perfis entram no prompt quando autorizado',
       'pessoasCtx' in app and "store.get('pessoas_contexto', '1')" in app and
       'Perfis de pessoas cadastrados' in app)
 checar('desligar remove os perfis do contexto', "store.set('pessoas_contexto'" in app)
-checar('biometria com consentimento explícito', 'idp-consent-voz' in html and 'idp-consent-rosto' in html and
-      'autoriza' in html.split('id="painel-pessoas"')[1].split('</aside>')[0].lower())
+checar('referência visual opcional com consentimento explícito e voz não obrigatória',
+      'idp-consent-rosto' in html and 'idp-consent-voz' not in html and
+      'idp-voz-gravar' not in html and 'autoriza' in html.split('id="painel-pessoas"')[1].split('</aside>')[0].lower())
 
 # ---------- 7. Diagnóstico e testes ----------
 checar('módulos novos no diagnóstico', 'Visão 2.0 (balões sem sobreposição' in app and

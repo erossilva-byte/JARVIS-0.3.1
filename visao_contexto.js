@@ -27,7 +27,7 @@
   }
 
   function novoContexto() {
-    return { versao: VERSAO, objetos: [], atual: -1, perguntas: [], comparacoes: [], analises: 0, salvo: false };
+    return { versao: VERSAO, objetos: [], atual: -1, perguntas: [], comparacoes: [], analises: 0, salvo: false, textoLegivel: '', ocrDescartado: [] };
   }
 
   /** Texto vindo de OCR/imagem: é dado, não comando. Remove tentativas de instrução. */
@@ -69,9 +69,11 @@
     var a = analise || {};
     var lista = Array.isArray(a.objetos) ? a.objetos.slice(0, LIMITE_OBJETOS) : [];
     c.objetos = lista.map(function (o, i) { return objetoBasico(o, i); });
+    var ocr = limparTextoOcr(Array.isArray(a.textoLegivel) ? a.textoLegivel.join('\n') : (a.textoLegivel || ''));
+    c.textoLegivel = ocr.texto;
+    c.ocrDescartado = ocr.descartado;
     var evid = [];
     c.objetos.forEach(function (o) { evid = evid.concat(o.evidencia); });
-    evid = evid.concat(Array.isArray(a.textoLegivel) ? a.textoLegivel : []);
     var temEvidencia = evid.join(' ').trim().length >= 3;
     c.objetos.forEach(function (o) {
       if (!temEvidencia) { o.marca = ''; o.modelo = ''; o.confianca = CONFIANCA.ESTIMADO; }
@@ -98,6 +100,7 @@
 
   var PRONOMES = /^(ele|ela|isso|esse|essa|este|esta|dele|dela|nele|nela|o produto|o aparelho|o equipamento|a pe[cç]a|o item|o objeto)\b/;
   var INTENCOES = [
+    { id: 'texto', rx: /\b(o que (?:est[aá] )?escrito|o que diz|leia|texto leg[ií]vel|transcreva|transcrever|ler a etiqueta|ler a placa|escrito na|c[oó]digo da etiqueta)\b/ },
     { id: 'marca', rx: /\b(marca|fabricante|quem fabrica)\b/ },
     { id: 'modelo', rx: /\b(modelo|vers[aã]o|linha)\b/ },
     { id: 'material', rx: /\b(material|feito de|fabricado com|composi[cç][aã]o)\b/ },
@@ -128,10 +131,13 @@
     var ip = intencaoPergunta(texto);
     if (!ip.ok) return { ok: false, erro: ip.erro };
     var obj = atual(c);
-    if (!obj) return { ok: false, erro: 'Ainda não há objeto analisado nesta sessão: mostre uma imagem primeiro.', intencao: ip.intencao };
+    if (!obj && ip.intencao === 'texto' && c.textoLegivel) {
+      return { ok: true, objeto: null, intencao: 'texto', textoLegivel: c.textoLegivel, rotulo: 'usando o texto reconhecido na imagem atual' };
+    }
+    if (!obj) return { ok: false, erro: 'Ainda não há objeto ou texto analisado nesta sessão: mostre uma imagem primeiro.', intencao: ip.intencao };
     if (!ip.usaContexto && ip.intencao === 'geral') return { ok: true, objeto: null, intencao: 'geral', independente: true };
     return {
-      ok: true, objeto: obj, intencao: ip.intencao,
+      ok: true, objeto: obj, intencao: ip.intencao, textoLegivel: c.textoLegivel || '',
       rotulo: 'usando o objeto atual: ' + obj.nome + (obj.marca ? ' (' + obj.marca + ')' : ''),
       precisaRepetir: !obj.marca && !obj.modelo && c.objetos.length > 1 && ip.intencao === 'identificar'
     };
@@ -239,10 +245,10 @@
 
   function descreverContexto(ctx) {
     var c = ctx || novoContexto();
-    if (!c.objetos.length) return 'Sessão visual sem objetos analisados.';
+    if (!c.objetos.length && !c.textoLegivel) return 'Sessão visual sem objetos ou texto reconhecido.';
     var o = atual(c);
     return c.objetos.length + ' objeto(s) nesta análise; atual: ' + (o ? o.nome + (o.marca ? ' (' + o.marca + ')' : '') : 'nenhum') +
-      '; perguntas: ' + c.perguntas.length + '; análises: ' + c.analises + '.';
+      (c.textoLegivel ? '; texto OCR disponível' : '') + '; perguntas: ' + c.perguntas.length + '; análises: ' + c.analises + '.';
   }
 
   /** Privacidade: nada é salvo sem pedido explícito do usuário. */

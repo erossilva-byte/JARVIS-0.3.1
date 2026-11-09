@@ -11,7 +11,9 @@ hermes = (RAIZ / 'hermes.js').read_text(encoding='utf-8')
 package = json.loads((RAIZ / 'package.json').read_text(encoding='utf-8'))
 meta = json.loads((RAIZ / 'VERSAO.json').read_text(encoding='utf-8'))
 lock = json.loads((RAIZ / 'package-lock.json').read_text(encoding='utf-8'))
-gradle = (RAIZ / 'android/app/build.gradle').read_text(encoding='utf-8')
+gradle_path = RAIZ / 'android/app/build.gradle'
+gradle = gradle_path.read_text(encoding='utf-8') if gradle_path.exists() else ''
+patch_android = (RAIZ / 'patch_android_version.py').read_text(encoding='utf-8')
 html = (RAIZ / 'index.html').read_text(encoding='utf-8')
 suite = (RAIZ / 'tests/test_sistema.js').read_text(encoding='utf-8')
 falhas = []
@@ -26,7 +28,7 @@ def check(nome, ok):
 check('versão 1.38.1 ou posterior', [int(x) for x in meta.get('version', '0').split('.')] >= [1, 38, 1] and meta.get('versionCode', 0) >= 10381)
 check('package e lock acompanham a versão', package.get('version') == meta.get('version') and lock.get('version') == meta.get('version')
       and lock.get('packages', {}).get('', {}).get('version') == meta.get('version'))
-check('Gradle acompanha a versão', ('versionCode %s' % meta.get('versionCode')) in gradle and ('versionName "%s"' % meta.get('version')) in gradle)
+check('patch Gradle aplica a versão e build gerado acompanha quando existe', 'versionCode' in patch_android and 'versionName' in patch_android and "meta.get('versionCode')" in patch_android and (not gradle or (('versionCode %s' % meta.get('versionCode')) in gradle and ('versionName \"%s\"' % meta.get('version')) in gradle)))
 check('app e interface mostram a versão', ("const VERSAO_APP = '%s';" % meta.get('version')) in app and ('v%s' % meta.get('version')) in html and 'v1.38.0' not in html)
 build = meta.get('build', {})
 # Um build ainda não gerado pode ficar pendente; um success sem artefato real continua proibido.

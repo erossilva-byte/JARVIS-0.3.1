@@ -68,9 +68,15 @@ if 'groq/compound-mini' in app: issues.append('Modelo legado groq/compound-mini 
 if 'browser_search' not in app: issues.append('Pesquisa browser_search não aparece no código')
 if 'data-config-tab="celular"' not in html: issues.append('Aba de estado do celular ausente')
 if 'https://console.groq.com/keys' not in html or 'https://aistudio.google.com/apikey' not in html: issues.append('Links oficiais para chaves de IA ausentes')
-if 'Detector próprio' not in html or 'c-wake-sensibilidade' not in html or 'Hermes.ativacao.casaToken' not in app: issues.append('Detector de ativação próprio ausente na interface ou no aplicativo')
+if 'sherpa-onnx KWS' not in html or 'c-wake-sensibilidade' not in html or 'Hermes.ativacao.presente' not in app: issues.append('KWS local ou escuta alternativa Hermes ausente na interface/aplicativo')
 if 'picovoice' in (ROOT / 'patch_gradle.py').read_text(encoding='utf-8').lower(): issues.append('SDK de palavra de ativação de terceiro ainda configurado no patch Gradle')
-if 'JarvisAtivacao.presente' not in (ROOT / 'JarvisService.java').read_text(encoding='utf-8') or 'JarvisAtivacao' not in (ROOT / 'JarvisAtivacao.java').read_text(encoding='utf-8'): issues.append('Detector de ativação próprio não conectado ao serviço de escuta')
+service_kws = (ROOT / 'JarvisService.java').read_text(encoding='utf-8')
+kws_engine = (ROOT / 'JarvisKwsEngine.java').read_text(encoding='utf-8')
+if ('new JarvisKwsEngine(' not in service_kws or 'new AudioRecord(' not in kws_engine
+        or 'new KeywordSpotter(null, config)' not in kws_engine
+        or 'kwsStream.acceptWaveform(' not in kws_engine or 'kws.decode(kwsStream)' not in kws_engine
+        or 'disparar(keyword' not in service_kws or 'JarvisWakeBus.acordou' not in service_kws):
+    issues.append('KWS acústico sherpa-onnx não conectado ao serviço de escuta ou ao evento de ativação')
 if 'prefers-reduced-motion' not in (ROOT / 'style.css').read_text(encoding='utf-8'): issues.append('Falta respeito a prefers-reduced-motion')
 for token in [
     'function chaveContato', 'WAKE_WORD_DISPONIVEL = true', 'const PERSONALIDADE = {', 'Fonte retornada pela pesquisa', 'não validado de forma independente',
@@ -88,8 +94,8 @@ if 'minSdkVersion 26' not in (ROOT / 'patch_gradle.py').read_text(encoding='utf-
 if 'https://jitpack.io' in (ROOT / 'patch_gradle.py').read_text(encoding='utf-8'): issues.append('JitPack desnecessário continua no patch Gradle')
 if 'OpenWakeWord' in (ROOT / 'JarvisBackgroundPlugin.java').read_text(encoding='utf-8'): issues.append('Plugin nativo ainda depende da classe openWakeWord não resolvida')
 if 'picovoice' in (ROOT / 'JarvisService.java').read_text(encoding='utf-8').lower(): issues.append('Serviço ainda referencia o SDK de palavra de ativação removido')
-if 'iniciarSessao' not in (ROOT / 'JarvisService.java').read_text(encoding='utf-8') or 'JarvisWakeBus.acordou' not in (ROOT / 'JarvisService.java').read_text(encoding='utf-8'): issues.append('Serviço não entrega o evento de ativação para a interface')
-if 'patch_gradle.py android/app/build.gradle' not in workflow: issues.append('Workflow não adiciona a dependência do detector local')
+if 'iniciarMotor' not in (ROOT / 'JarvisService.java').read_text(encoding='utf-8') or 'JarvisWakeBus.acordou' not in (ROOT / 'JarvisService.java').read_text(encoding='utf-8'): issues.append('Serviço não entrega o evento KWS para a interface')
+if 'patch_gradle.py android/app/build.gradle' not in workflow or 'preparar_kws.py android/app' not in workflow: issues.append('Workflow não adiciona AAR e modelo KWS local ao APK')
 if 'listarContatos' not in (ROOT / 'JarvisUtilPlugin.java').read_text(encoding='utf-8'): issues.append('Método nativo listarContatos ausente')
 if 'c-importar-contatos' not in (ROOT / 'index.html').read_text(encoding='utf-8') or 'c-importar-contatos' not in (ROOT / 'app.js').read_text(encoding='utf-8'): issues.append('Interface de importação de contatos ausente')
 if 'JarvisBootReceiver.java' not in workflow or 'JarvisAlarmScheduler.java' not in workflow or 'JarvisNotificationListener.java' not in workflow or not re.search(r'JARVIS-Nova-\d+\.\d+\.\d+-APK', workflow): issues.append('Workflow não inclui os recursos nativos/artefato atual')

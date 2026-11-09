@@ -13,7 +13,9 @@ ui = (RAIZ / 'interface.js').read_text(encoding='utf-8')
 pkg = json.loads((RAIZ / 'package.json').read_text(encoding='utf-8'))
 lock = json.loads((RAIZ / 'package-lock.json').read_text(encoding='utf-8'))
 meta = json.loads((RAIZ / 'VERSAO.json').read_text(encoding='utf-8'))
-gradle = (RAIZ / 'android/app/build.gradle').read_text(encoding='utf-8')
+gradle_path = RAIZ / 'android/app/build.gradle'
+gradle = gradle_path.read_text(encoding='utf-8') if gradle_path.exists() else ''
+patch_android = (RAIZ / 'patch_android_version.py').read_text(encoding='utf-8')
 suite = pkg.get('scripts', {}).get('test:all', '')
 falhas = []
 
@@ -31,9 +33,11 @@ check('package e lock acompanham a versão',
       pkg.get('version') == meta.get('version')
       and lock.get('version') == meta.get('version')
       and lock.get('packages', {}).get('', {}).get('version') == meta.get('version'))
-check('Gradle acompanha a versão',
-      ('versionCode %s' % meta.get('versionCode')) in gradle
-      and ('versionName "%s"' % meta.get('version')) in gradle)
+check('patch Gradle aplica a versão e build gerado acompanha quando existe',
+      'versionCode' in patch_android and 'versionName' in patch_android
+      and "meta.get('versionCode')" in patch_android
+      and (not gradle or (('versionCode %s' % meta.get('versionCode')) in gradle
+      and ('versionName \"%s\"' % meta.get('version')) in gradle)))
 check('app e HTML mostram a versão corrente',
       ("const VERSAO_APP = '%s';" % meta.get('version')) in app
       and ('v%s' % meta.get('version')) in html)

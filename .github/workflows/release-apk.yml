@@ -1,6 +1,8 @@
 name: Publicar release do J.A.R.V.I.S. Nova
 # Versão publicada: 1.45.0 — confira VERSAO.json antes de criar a tag.
 # Notas publicadas: o passo "Publicar release com o APK" gera o texto a partir de VERSAO.json.
+# A linha 1.46.0 adiciona KWS acústico sherpa-onnx no próprio processo, sem SpeechRecognizer ou fallback de rede.
+# O modelo KWS GigaSpeech é inglês: a palavra Jarvis é configurada como hotword e requer teste de sotaque PT-BR.
 # Novidades da 1.45.0: tela de bloqueio com biometria forte do Android, leitura NFC real,
 # modos combinados (biometria/NFC/PIN), central completa em Ajustes ▸ Segurança, histórico sem
 # segredos e PIN em PBKDF2 com migração do hash antigo. NFC é conveniência: UID pode ser clonado.
@@ -40,6 +42,20 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Configurar Python para preparar o KWS
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Instalar tokenizer oficial do sherpa-onnx
+        run: python3 -m pip install --upgrade pip 'click>=8.1.7,<9.0' 'sentencepiece>=0.2,<0.3' 'pypinyin>=0.50,<1.0' sherpa-onnx==1.13.8
+
+      - name: Configurar Android SDK sem pacote legado tools
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
       - name: Garantir Android SDK 35
         run: |
           SDKM="$(command -v sdkmanager || true)"
@@ -72,6 +88,7 @@ jobs:
           cp core.js core_ui.js www/
           cp aprendizado.js aprendizado_ui.js www/
           cp arquivos_dev.js www/
+          cp sandbox.js www/
           cp voz_motor.js fala.js audio_pcm.js www/
           cp cognicao.js www/
           cp humor.js www/
@@ -87,6 +104,9 @@ jobs:
         run: |
           npx cap add android
           npx cap sync android
+          python3 preparar_kws.py android/app
+          test -s android/app/src/main/assets/kws/keywords.txt
+          test -s android/app/src/main/assets/kws/encoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx
 
       - name: Guardar o runtime de voz neural em cache
         uses: actions/cache@v4
@@ -103,7 +123,7 @@ jobs:
           mkdir -p "$D"
           find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
           # Lista alinhada com o workflow de build: toda classe nativa da raiz é obrigatória.
-          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java JarvisAcessibilidade.java JarvisAcessibilidadePlugin.java; do
+          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisKwsEngine.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java JarvisAcessibilidade.java JarvisAcessibilidadePlugin.java; do
             test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
           done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml

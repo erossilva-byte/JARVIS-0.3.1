@@ -10,10 +10,10 @@ app = (raiz / 'app.js').read_text(encoding='utf-8')
 html = (raiz / 'index.html').read_text(encoding='utf-8')
 css = (raiz / 'style.css').read_text(encoding='utf-8')
 nucleo = (raiz / 'seguranca.js').read_text(encoding='utf-8')
-java = (raiz / 'android/app/src/main/java/com/jarvis/nova/JarvisSeguranca.java').read_text(encoding='utf-8')
-manifesto = (raiz / 'android/app/src/main/AndroidManifest.xml').read_text(encoding='utf-8')
+java = (raiz / 'JarvisSeguranca.java').read_text(encoding='utf-8')
+manifesto = (raiz / 'patch_manifest.py').read_text(encoding='utf-8')
 patch_manifest = (raiz / 'patch_manifest.py').read_text(encoding='utf-8')
-main = (raiz / 'android/app/src/main/java/com/jarvis/nova/MainActivity.java').read_text(encoding='utf-8')
+main = (raiz / 'MainActivity.java').read_text(encoding='utf-8')
 release = (raiz / '.github/workflows/release-apk.yml').read_text(encoding='utf-8')
 build = (raiz / '.github/workflows/build-apk.yml').read_text(encoding='utf-8')
 pacote = (raiz / 'package.json').read_text(encoding='utf-8')
@@ -32,12 +32,14 @@ checagens = {
     'Credencial do aparelho como recuperação': 'DEVICE_CREDENTIAL' in java,
     'Hardware facial consultado': 'FEATURE_FACE' in java and 'FEATURE_FINGERPRINT' in java,
     'Falha biométrica não resolve como sucesso': 'onAuthenticationFailed' in java and 'compareAndSet(false, true)' in java,
+    'Biometria do bloqueio não aceita credencial do aparelho como atalho': 'permitirCredencial: false' in app,
+    'Interface não promete escolher face ou digital': 'O Android escolhe o sensor biométrico forte' in app and 'não consegue forçar um sensor específico' in html,
     'PIN com PBKDF2 e sal': "PBKDF2" in app and "store.get('pin_salt'" in app and '120000' in app,
     'Nunca grava o PIN em texto puro': "store.set('pin_hash', pin)" not in app,
     'Hash antigo migra sem trancar': 'hashPinLegado' in app and 'store.set(\'pin_hash\', forte)' in app,
     'UID guardado como hash': 'hashUid' in app and 'uidHash' in nucleo and 'SEGN.mascararUid' in app,
     'Tag desconhecida não libera': "Tag desconhecida" in nucleo and "acharTag" in app,
-    'Modos combinados no núcleo': "'bio+nfc'" in nucleo and "'bio|nfc'" in nucleo and "'nfc+pin'" in nucleo,
+    'Modos combinados no núcleo': all(x in nucleo for x in ("'bio+nfc'", "'bio|nfc'", "'nfc+pin'", "'bio+pin'", "'pin|bio'", "'pin|nfc'", "'pin|bio|nfc'")) and all(x in html for x in ('value="pin|bio"', 'value="pin|nfc"')),
     'Central: modo, tempo e tentativas': all(i in html for i in ('id="c-bloq-modo"', 'id="c-bloq-timeout"', 'id="c-bloq-max"')),
     'Central: tags e histórico': all(i in html for i in ('id="c-nfc-cadastrar"', 'id="c-nfc-lista"', 'id="c-bloq-historico"', 'id="c-bloq-restaurar"')),
     'Tela: método, fase e NFC': all(i in html for i in ('id="bloq-metodo"', 'id="bloq-fase"', 'id="bloqueio-nfc"')),

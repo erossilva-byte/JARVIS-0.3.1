@@ -7,13 +7,16 @@ RAIZ = pathlib.Path(__file__).resolve().parent.parent
 def ler(n): return (RAIZ / n).read_text(encoding='utf-8')
 app = ler('app.js'); html = ler('index.html'); sis = ler('sistema.js'); tests = ler('tests/test_sistema.js')
 meta = json.loads(ler('VERSAO.json')); pkg = json.loads(ler('package.json'))
+gradle_path = RAIZ / 'android/app/build.gradle'
+gradle = gradle_path.read_text(encoding='utf-8') if gradle_path.exists() else ''
+patch_android = ler('patch_android_version.py')
 falhas = []
 def check(nome, ok):
     print(('OK: ' if ok else 'FALHA: ') + nome)
     if not ok: falhas.append(nome)
 
 check('versão 1.37.0 ou posterior e versionCode >= 10370', tuple(map(int, meta.get('version','0').split('.')[:2])) >= (1,37) and meta.get('versionCode',0) >= 10370)
-check('app, pacote e Gradle acompanham', ("const VERSAO_APP = '%s';" % meta.get('version')) in app and pkg.get('version') == meta.get('version') and ('versionCode %s' % meta.get('versionCode')) in ler('android/app/build.gradle'))
+check('app, pacote e patch Gradle acompanham', ("const VERSAO_APP = '%s';" % meta.get('version')) in app and pkg.get('version') == meta.get('version') and ('versionCode' in patch_android and "meta.get('versionCode')" in patch_android) and (not gradle or ('versionCode %s' % meta.get('versionCode')) in gradle))
 check('pausa manual exposta pelo núcleo', 'function pausarTarefa' in sis and 'pausarTarefa,' in sis)
 check('retomada não reexecuta etapa incerta', 'autorizado sem repetir' in sis and 'não é reexecutá-la' in sis)
 check('pausa só entre etapas', 'pausasSolicitadas' in sis and 'entreEtapas' in sis)

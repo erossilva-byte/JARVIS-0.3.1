@@ -57,7 +57,7 @@
   function valor(id) { var el = campo(id); return el ? String(el.value || '').trim() : ''; }
   function preencher(id, v) { var el = campo(id); if (el) el.value = v == null ? '' : v; }
 
-  var CAMPOS_FORM = ['nome', 'apelido', 'nascimento', 'alturaCm', 'profissao', 'relacao',
+  var CAMPOS_FORM = ['nome', 'apelido', 'nascimento', 'alturaCm', 'pesoKg', 'profissao', 'relacao',
     'telefone', 'email', 'endereco', 'cidade', 'descricao', 'preferencias', 'interesses',
     'observacoes', 'contexto'];
 
@@ -109,15 +109,13 @@
     }
     var meta = document.createElement('small');
     meta.className = 'idp-meta';
-    var anos = IDENT.idade(p.nascimento);
-    meta.textContent = [p.relacao, p.profissao, anos != null ? anos + ' anos' : '', p.cidade]
+    var idade = IDENT.idadeDetalhada(p.nascimento, p);
+    var idadeTexto = idade ? (idade.aproximada ? 'idade aprox. ' : '') + idade.anos + ' anos' + (idade.meses ? ' e ' + idade.meses + ' meses' : '') : '';
+    var diasAniversario = IDENT.diasAteAniversario(p.nascimento);
+    var aniversarioTexto = diasAniversario == null ? '' : 'aniversário em ' + diasAniversario + ' dia(s)';
+    meta.textContent = [p.relacao, p.profissao, idadeTexto, aniversarioTexto, p.pesoKg ? p.pesoKg + ' kg' : '', p.alturaCm ? p.alturaCm + ' cm' : '', p.cidade]
       .filter(Boolean).join(' · ') || 'sem dados complementares';
     corpo.appendChild(meta);
-    var selo = seloVoz(p);
-    var badge = document.createElement('span');
-    badge.className = 'idp-selo ' + selo.tipo;
-    badge.textContent = selo.texto;
-    corpo.appendChild(badge);
 
     var acoes = document.createElement('div');
     acoes.className = 'idp-acoes';
@@ -144,8 +142,7 @@
     var lista = IDENT.buscar(termo);
     var total = IDENT.listar().length;
     status(total
-      ? total + ' pessoa(s) cadastrada(s)' + (termo ? ' · ' + lista.length + ' no filtro' : '') + '. ' +
-        (IDENT.resumo().comVoz ? IDENT.resumo().comVoz + ' com voz pronta.' : 'Nenhuma voz pronta ainda.')
+      ? total + ' pessoa(s) cadastrada(s)' + (termo ? ' · ' + lista.length + ' no filtro' : '') + '.'
       : 'Nenhuma pessoa cadastrada. Só o nome é obrigatório para começar.', total ? 'ok' : '');
     if (!lista.length) {
       var vazio = document.createElement('p');
@@ -566,8 +563,12 @@
   }
   function atualizarIdade() {
     var out = $('idp-idade');
-    var anos = IDENT.idade(valor('nascimento'));
-    if (out) out.value = anos == null ? '' : anos + ' anos';
+    var perfil = estado.editando ? IDENT.obter(estado.editando) : null;
+    var detalhe = IDENT.idadeDetalhada(valor('nascimento'), perfil);
+    var dias = IDENT.diasAteAniversario(valor('nascimento'));
+    if (out) out.value = !detalhe ? '' : (detalhe.aproximada ? 'aprox. ' : '') +
+      detalhe.anos + ' anos' + (detalhe.meses ? ' e ' + detalhe.meses + ' meses' : '') +
+      (dias != null ? ' · aniversário em ' + dias + ' dia(s)' : '');
   }
   async function salvarPerfil() {
     if (!valor('nome')) { status('Informe o nome ou uma identificação para a pessoa.', 'fail'); return; }
@@ -608,7 +609,7 @@
     registrar('identidade', 'perfil salvo: ' + final.nome);
     renderLista();
     abrirEditor(id);
-    status('Perfil de ' + final.nome + ' salvo. Agora você pode cadastrar a voz.', 'ok');
+    status('Perfil de ' + final.nome + ' salvo com sucesso.', 'ok');
   }
   async function excluir(p) {
     if (!p) return;
@@ -755,6 +756,11 @@
     if (!IDENT) return;
     ligarRecorte();
     if ($('pessoa-busca')) $('pessoa-busca').addEventListener('input', renderLista);
+    if ($('pessoa-nascimento')) $('pessoa-nascimento').addEventListener('input', atualizarIdade);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) { renderLista(); atualizarIdade(); }
+    });
+    window.addEventListener('focus', function () { renderLista(); atualizarIdade(); });
     if ($('idp-novo')) $('idp-novo').onclick = function () { abrirEditor(null); };
     if ($('pessoa-salvar')) $('pessoa-salvar').onclick = function () { salvarPerfil(); };
     if ($('idp-cancelar')) $('idp-cancelar').onclick = fecharEditor;

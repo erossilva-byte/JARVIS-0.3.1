@@ -8,14 +8,32 @@
   'use strict';
 
   var MODOS = {
-    pin: { etapas: ['pin'], rotulo: 'PIN' },
-    bio: { etapas: ['bio'], rotulo: 'Biometria do aparelho' },
+    pin: { etapas: ['pin'], rotulo: 'Somente PIN' },
+    bio: { etapas: ['bio'], rotulo: 'Biometria forte do Android' },
     nfc: { etapas: ['nfc'], rotulo: 'Tag NFC' },
-    'bio|nfc': { etapas: ['bio'], alternativas: ['bio', 'nfc'], rotulo: 'Biometria ou NFC' },
+    'bio|nfc': { etapas: ['bio', 'nfc'], alternativas: ['bio', 'nfc'], rotulo: 'Biometria ou NFC' },
+    'pin|bio': { etapas: ['pin', 'bio'], alternativas: ['pin', 'bio'], rotulo: 'PIN ou biometria' },
+    'pin|nfc': { etapas: ['pin', 'nfc'], alternativas: ['pin', 'nfc'], rotulo: 'PIN ou NFC' },
+    'pin|bio|nfc': { etapas: ['pin', 'bio', 'nfc'], alternativas: ['pin', 'bio', 'nfc'], rotulo: 'PIN, biometria ou NFC' },
     'bio+nfc': { etapas: ['bio', 'nfc'], rotulo: 'Biometria + NFC (duas etapas)' },
     'bio+pin': { etapas: ['bio', 'pin'], rotulo: 'Biometria + PIN' },
     'nfc+pin': { etapas: ['nfc', 'pin'], rotulo: 'NFC + PIN' }
   };
+
+  function modoCanonico(modo) {
+    var m = String(modo == null ? '' : modo).replace(/\s+/g, '').toLowerCase();
+    var aliases = {
+      'pin+bio': 'bio+pin',
+      'pin+nfc': 'nfc+pin',
+      'bio|pin': 'pin|bio',
+      'nfc|pin': 'pin|nfc',
+      'bio|pin|nfc': 'pin|bio|nfc',
+      'bio|nfc|pin': 'pin|bio|nfc',
+      'nfc|bio|pin': 'pin|bio|nfc',
+      'nfc|pin|bio': 'pin|bio|nfc'
+    };
+    return aliases[m] || m;
+  }
 
   var PADRAO = {
     modo: 'pin',
@@ -62,7 +80,7 @@
   function normalizar(bruto) {
     var o = bruto && typeof bruto === 'object' ? bruto : {};
     var cfg = {
-      modo: MODOS[o.modo] ? o.modo : PADRAO.modo,
+      modo: MODOS[modoCanonico(o.modo)] ? modoCanonico(o.modo) : PADRAO.modo,
       timeoutSeg: inteiro(o.timeoutSeg, 15, 3600, PADRAO.timeoutSeg),
       maxTentativas: inteiro(o.maxTentativas, 3, 10, PADRAO.maxTentativas),
       esperaMaxSeg: inteiro(o.esperaMaxSeg, 5, 300, PADRAO.esperaMaxSeg),
@@ -81,21 +99,21 @@
   }
 
   function etapas(modo) {
-    var m = MODOS[modo] || MODOS.pin;
+    var m = MODOS[modoCanonico(modo)] || MODOS.pin;
     return m.etapas.slice();
   }
 
-  function rotulo(modo) { return (MODOS[modo] || MODOS.pin).rotulo; }
+  function rotulo(modo) { return (MODOS[modoCanonico(modo)] || MODOS.pin).rotulo; }
 
   /** Uma prova satisfaz o modo quando cobre todas as etapas exigidas. */
   function avaliarProvas(modo, provas) {
     var p = provas || {};
-    var m = MODOS[modo] || MODOS.pin;
+    var m = MODOS[modoCanonico(modo)] || MODOS.pin;
     var exigidas = m.etapas.slice();
     if (m.alternativas && m.alternativas.length) {
       var alguma = m.alternativas.filter(function (e) { return p[e] === true; });
       if (alguma.length) return { ok: true, faltam: [], etapas: exigidas, alternativa: alguma[0] };
-      return { ok: false, faltam: ['bio ou nfc'], etapas: exigidas, alternativa: '' };
+      return { ok: false, faltam: [m.alternativas.join(' ou ')], etapas: exigidas, alternativa: '' };
     }
     var faltam = exigidas.filter(function (e) { return p[e] !== true; });
     return { ok: faltam.length === 0, faltam: faltam, etapas: exigidas };
@@ -163,20 +181,35 @@
     var rosto = o.rosto === true;
     var bio = o.biometria === true;
     var nfc = o.nfc === true;
+    var digital = o.digital === true;
     var avisos = [];
     if (!bio) avisos.push(texto(o.motivo, 160) || 'Biometria forte indisponível; use PIN ou NFC.');
-    if (bio && !rosto) avisos.push('O aparelho tem biometria forte, mas não informa hardware facial: o desbloqueio usa a biometria cadastrada no Android (pode ser digital).');
+    if (bio && !rosto && digital) avisos.push('Biometria forte disponível por impressão digital. O Android decide qual sensor será usado pelo BiometricPrompt.');
+    else if (bio && !rosto) avisos.push('O aparelho tem biometria forte, mas não informa hardware facial ou digital separadamente; o Android escolhe o sensor disponível.');
     if (rosto && !bio) avisos.push('Há hardware facial, mas nenhuma biometria forte cadastrada/liberada para autenticação.');
     if (!nfc) avisos.push('NFC ausente ou desligado neste aparelho.');
-    return { bio: bio, rosto: rosto, nfc: nfc, pin: true, avisos: avisos };
+    return { bio: bio, rosto: rosto, digital: digital, nfc: nfc, pin: true, avisos: avisos };
   }
 
   /** Modo pedido é utilizável? Nunca esconde a limitação: devolve o motivo. */
   function modoViavel(modo, disp) {
     var d = disp || {};
-    var m = MODOS[modo] ? modo : 'pin';
-    var precisaBio = etapas(m).indexOf('bio') >= 0;
-    var precisaNfc = etapas(m).indexOf('nfc') >= 0;
+    var chave = modoCanonico(modo);
+    var m = MODOS[chave] ? MODOS[chave] : MODOS.pin;
+    if (m.alternativas && m.alternativas.length) {
+      var viaveis = m.alternativas.filter(function (fator) {
+        return fator === 'pin' || d[fator] === true;
+      });
+      if (viaveis.length) return { ok: true, motivo: '', alternativas: viaveis };
+      var precisaBio = m.alternativas.indexOf('bio') >= 0;
+      var precisaNfc = m.alternativas.indexOf('nfc') >= 0;
+      var motivo = [];
+      if (precisaBio) motivo.push('biometria forte indisponível');
+      if (precisaNfc) motivo.push('NFC ausente/desligado');
+      return { ok: false, motivo: 'Nenhuma alternativa está disponível: ' + motivo.join(' e ') + '.' };
+    }
+    var precisaBio = m.etapas.indexOf('bio') >= 0;
+    var precisaNfc = m.etapas.indexOf('nfc') >= 0;
     if (precisaBio && !d.bio) return { ok: false, motivo: 'Este aparelho não tem biometria forte disponível para o modo escolhido.' };
     if (precisaNfc && !d.nfc) return { ok: false, motivo: 'O NFC está ausente ou desligado; ative nas configurações do Android.' };
     return { ok: true, motivo: '' };
