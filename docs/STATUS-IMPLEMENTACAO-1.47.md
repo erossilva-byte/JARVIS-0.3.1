@@ -12,7 +12,7 @@ Este registro é atualizado por evidência de código e CI. Código preparado n�
 - [x] `KwsForegroundService.kt` implementa serviço foreground do tipo microphone, notificação persistente, ciclo de vida do motor sherpa-onnx, janela de teste e encaminhamento do evento de wake para a Activity.
 - [x] Script `flutter_app/tool/prepare_android_kws.py` aplica patch reproduzível no runner Android gerado pelo Flutter, copia o motor Java legado, instala fontes Kotlin, registra permissões/serviço, adiciona AAR e fixa minSdk 26.
 - [x] Workflow Android baixa o AAR sherpa-onnx com SHA-256 verificado, prepara os assets do modelo KWS e aplica o patch nativo antes da compilação.
-- [x] Dependência `sentencepiece` adicionada ao ambiente de CI, necessária para o comando oficial `sherpa-onnx-cli text2token`.
+- [x] Dependências `sentencepiece` e `pypinyin` adicionadas ao ambiente de CI, exigidas pelo comando oficial `sherpa-onnx-cli text2token`.
 - [x] Timeout Android ampliado para acomodar download e preparação dos artefatos locais.
 
 ## Estado real das frentes
