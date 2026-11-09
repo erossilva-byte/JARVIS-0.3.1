@@ -32,11 +32,11 @@ A migração deve ser incremental e manter uma camada de compatibilidade até ca
 
 ## 3. Provedores de IA
 
-O array `PROVEDORES` de `app.js` contém Groq, Cerebras, Mistral e Gemini. A busca no arquivo não encontrou OpenRouter, DeepSeek ou Gemma 3 1B IT.
+O array `PROVEDORES` de `app.js` contém Groq, Cerebras, Mistral e Gemini. Na auditoria inicial a busca não encontrou OpenRouter, DeepSeek ou Gemma 3 1B IT. **Nesta etapa da 1.46.0, OpenRouter foi adicionado como reserva logo após Groq, com DeepSeek como modelo inicial; a chave é independente e usa o fluxo de cofre seguro já existente.** A validação automatizada foi adicionada, mas ainda depende da execução do CI e de teste real com uma chave do usuário.
 
 Requisitos de implementação:
 1. Groq como prioridade.
-2. OpenRouter como segundo adaptador, com DeepSeek como modelo preferido configurável.
+2. OpenRouter como segundo adaptador, com DeepSeek como modelo inicial; testar troca de modelo e fallback.
 3. Mistral, Gemini e Cerebras como provedores independentes.
 4. Cinco campos de chave separados, armazenamento em cofre seguro, teste real, limites, timeout, cooldown, métricas e fallback.
 5. Nunca embutir chaves em código, workflow, logs ou artefatos.
@@ -104,3 +104,24 @@ O workflow `release-pc.yml` ainda empacota Electron/NSIS/portátil. A documenta�
 7. Completar matriz de paridade, testes reais e Release.
 
 **Status deste documento:** diagnóstico inicial registrado; não declara migração, build ou Release concluídos.
+
+
+## 9. Execução da linha 1.46.0 — andamento
+- [x] Branch isolada criada: `feat/flutter-dart-migration-1.46.0`.
+- [x] Documento de pré-auditoria registrado.
+- [x] OpenRouter adicionado ao roteador após Groq; DeepSeek é o modelo inicial.
+- [x] Campo de chave OpenRouter adicionado à interface; armazenamento, leitura e remoção reaproveitam o cofre seguro genérico existente.
+- [x] OpenRouter excluído da seleção automática de visão nesta etapa, pois o modelo DeepSeek configurado é textual.
+- [x] Teste estático de contrato criado e incluído em `test:all` e `test:syntax`.
+- [x] Pipeline CI de desenvolvimento criado para pull requests e pushes nas branches de trabalho.
+- [x] Documentação do Windows corrigida: `.cad` é formato interno Jarvis CAD, não formato nativo CADeSIMU.
+- [ ] Executar CI remoto e corrigir todos os erros encontrados.
+- [ ] Validar OpenRouter com chave real sem expor segredo em logs.
+- [ ] Iniciar workspace Flutter e migrar uma tela/fluxo por vez, com paridade funcional.
+- [ ] Implementar e validar KWS acústico local sem fallback de rede antes da palavra de ativação.
+- [ ] Completar políticas de segurança AND/OR respeitando os fatores que o hardware oferece.
+- [ ] Validar CADeSIMU com arquivos reais e o aplicativo original.
+- [ ] Completar paridade Android/Windows e testes físicos.
+- [ ] Gerar APK e pacote Windows a partir do mesmo commit de release, com hashes e evidências.
+
+**Regra de status:** os itens marcados como concluídos acima são alterações registradas no repositório, não certificação de funcionamento em dispositivo. Os itens pendentes não podem ser anunciados como entregues.
