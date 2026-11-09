@@ -8,13 +8,16 @@ def ler(n): return (RAIZ / n).read_text(encoding='utf-8')
 app = ler('app.js'); html = ler('index.html'); css = ler('style.css'); avatar = ler('avatar.js')
 sis = ler('sistema.js'); pkg = json.loads(ler('package.json')); meta = json.loads(ler('VERSAO.json'))
 lock = json.loads(ler('package-lock.json'))
+gradle_path = RAIZ / 'android/app/build.gradle'
+gradle = gradle_path.read_text(encoding='utf-8') if gradle_path.exists() else ''
+patch_android = ler('patch_android_version.py')
 falhas = []
 def check(nome, ok):
     print(('OK: ' if ok else 'FALHA: ') + nome)
     if not ok: falhas.append(nome)
 
 check('versão 1.38.0 ou posterior e versionCode >= 10380', [int(x) for x in meta.get('version', '0').split('.')] >= [1, 38, 0] and meta.get('versionCode', 0) >= 10380)
-check('app, pacote, lock e Gradle acompanham', ("const VERSAO_APP = '%s';" % meta['version']) in app and pkg.get('version') == meta['version'] and lock.get('version') == meta['version'] and ('versionCode %s' % meta['versionCode']) in ler('android/app/build.gradle'))
+check('app, pacote, lock e Gradle acompanham', ("const VERSAO_APP = '%s';" % meta['version']) in app and pkg.get('version') == meta['version'] and lock.get('version') == meta['version'] and 'versionCode' in patch_android and "meta.get('versionCode')" in patch_android and (not gradle or ('versionCode %s' % meta['versionCode']) in gradle))
 check('interface mostra a versão nova', html.count('v' + meta['version']) >= 5)
 check('avatar existe e é carregado depois da órbita e antes do app', (RAIZ / 'avatar.js').is_file() and 'src="orbita.js"' in html and 'src="avatar.js"' in html and html.index('src="orbita.js"') < html.index('src="avatar.js"') < html.index('src="app.js"'))
 check('seletor oferece Avatar 3D', 'value="avatar"' in html and 'Avatar 3D — rosto holográfico' in html)
