@@ -42,8 +42,6 @@ void main() {
     expect(find.textContaining('sherpa-onnx'), findsOneWidget);
     expect(find.textContaining('ainda não estão integrados'), findsOneWidget);
   });
-}
-
   testWidgets('núcleo responde ao toque e abre painel holográfico', (tester) async {
     await tester.pumpWidget(const JarvisApp());
     await tester.tap(find.text('NÚCLEO HOLOGRÁFICO'));
@@ -52,3 +50,5 @@ void main() {
     expect(find.text('Núcleo holográfico'), findsOneWidget);
     expect(find.textContaining('A animação responde ao toque'), findsOneWidget);
   });
+
+}
