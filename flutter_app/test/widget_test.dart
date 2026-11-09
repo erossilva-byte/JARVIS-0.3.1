@@ -41,6 +41,33 @@ void main() {
     expect(find.textContaining('sincronização bidirecional'), findsOneWidget);
   });
 
+
+  testWidgets('atalho Provedores de IA abre a configuração funcional', (tester) async {
+    await tester.pumpWidget(const JarvisApp());
+    await tester.tap(find.text('Sistemas'));
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.tap(find.text('Provedores de IA'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.text('Provedores de IA'), findsOneWidget);
+    expect(find.textContaining('Groq é o provedor principal'), findsOneWidget);
+  });
+
+  testWidgets('atalho Voz e KWS abre o painel nativo de diagnóstico', (tester) async {
+    await tester.pumpWidget(const JarvisApp());
+    await tester.tap(find.text('Sistemas'));
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.enterText(find.byType(TextField), 'Voz e KWS');
+    await tester.pump();
+    await tester.tap(find.text('Voz e KWS'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.text('Voz e palavra de ativação'), findsOneWidget);
+    expect(find.textContaining('sherpa-onnx'), findsWidgets);
+  });
+
   testWidgets('núcleo responde ao toque e abre painel holográfico', (tester) async {
     await tester.pumpWidget(const JarvisApp());
     await tester.tap(find.text('NÚCLEO HOLOGRÁFICO'));
