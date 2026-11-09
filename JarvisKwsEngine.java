@@ -21,6 +21,7 @@ import com.k2fsa.sherpa.onnx.OnlineTransducerModelConfig;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.util.LinkedHashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -45,17 +46,33 @@ final class JarvisKwsEngine {
     private final Context context;
     private final Listener listener;
     private final float keywordThreshold;
+    private final String keywords;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private volatile AudioRecord recorder;
     private volatile Thread worker;
     private volatile KeywordSpotter spotter;
     private volatile OnlineStream stream;
 
-    JarvisKwsEngine(Context context, Listener listener, int sensitivity) {
+    JarvisKwsEngine(Context context, Listener listener, int sensitivity, String extraKeywords) {
         this.context = context.getApplicationContext();
         this.listener = listener;
         int s = Math.max(0, Math.min(100, sensitivity));
         this.keywordThreshold = s >= 75 ? 0.25f : (s >= 45 ? 0.35f : 0.45f);
+        this.keywords = montarPalavrasChave(extraKeywords);
+    }
+
+    private String montarPalavrasChave(String extras) {
+        LinkedHashSet<String> lista = new LinkedHashSet<>();
+        lista.add("Jarvis");
+        lista.add("Javis");
+        if (extras != null) {
+            for (String item : extras.split("[,;\\n/]+")) {
+                String palavra = item.trim().replaceAll("[^\\p{L}\\p{N} ]", "").replaceAll("\\s+", " ");
+                if (palavra.length() >= 3 && palavra.length() <= 40) lista.add(palavra);
+                if (lista.size() >= 12) break;
+            }
+        }
+        return String.join("/", lista);
     }
 
     boolean isRunning() {
@@ -123,7 +140,7 @@ final class JarvisKwsEngine {
                     .build();
             if (!running.get()) return;
             kws = new KeywordSpotter(config);
-            kwsStream = kws.createStream();
+            kwsStream = kws.createStream(keywords);
             if (!running.get()) return;
 
             int minBuffer = AudioRecord.getMinBufferSize(SAMPLE_RATE,
@@ -144,7 +161,7 @@ final class JarvisKwsEngine {
             }
             spotter = kws;
             stream = kwsStream;
-            listener.onState("KWS local ativo · limiar " + keywordThreshold + " · áudio não enviado à rede");
+            listener.onState("KWS local ativo · limiar " + keywordThreshold + " · palavras: " + keywords.replace('/', ',') + " · áudio não enviado à rede");
 
             short[] pcm = new short[Math.max(1600, SAMPLE_RATE / 10)];
             float[] samples = new float[pcm.length];
