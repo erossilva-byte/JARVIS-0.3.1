@@ -13,6 +13,7 @@ Este registro é atualizado por evidência de código e CI. Código preparado n�
 - [x] Script `flutter_app/tool/prepare_android_kws.py` aplica patch reproduzível no runner Android gerado pelo Flutter, copia o motor Java legado, instala fontes Kotlin, registra permissões/serviço, adiciona AAR e fixa minSdk 26.
 - [x] Workflow Android baixa o AAR sherpa-onnx com SHA-256 verificado, prepara os assets do modelo KWS e aplica o patch nativo antes da compilação.
 - [x] Dependências `sentencepiece` e `pypinyin` adicionadas ao ambiente de CI, exigidas pelo comando oficial `sherpa-onnx-cli text2token`.
+- [x] Script de preparação nativa ajustado para inserir dependências Gradle mesmo quando o template do Flutter não gera previamente um bloco `dependencies`.
 - [x] Timeout Android ampliado para acomodar download e preparação dos artefatos locais.
 
 ## Estado real das frentes
@@ -29,7 +30,7 @@ Este registro é atualizado por evidência de código e CI. Código preparado n�
 
 ## Limitações e bloqueios conhecidos
 
-1. O runner Android continua sendo gerado durante CI. A integração foi tornada reproduzível por script, mas o script precisa passar no workflow real.
+1. O runner Android continua sendo gerado durante CI. A preparação do KWS e o download do AAR passaram; a execução mais recente falhou ao aplicar as dependências Gradle porque o template Flutter não continha o bloco `dependencies`. O script foi corrigido para tratar ambos os formatos, mas ainda precisa passar no workflow seguinte.
 2. O serviço KWS Flutter atual não implementa ainda a política completa de persistência/rearme do serviço legado (reinício do processo, reboot, watchdog, pausa por chamadas/mídia e Doze).
 3. O reconhecimento do comando usa o SpeechRecognizer on-device do Android (API 31+) e depende de pacote offline pt-BR instalado no aparelho. A disponibilidade real precisa ser testada; se indisponível, o sistema apresenta erro e não usa reconhecimento online como fallback.
 4. A conversa Flutter envia a transcrição ao primeiro provedor configurado, priorizando Groq. A execução de ações locais/dispositivo ainda não está ligada ao chat e não deve ser presumida.
