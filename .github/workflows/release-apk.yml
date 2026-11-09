@@ -99,6 +99,8 @@ jobs:
           npx cap add android
           npx cap sync android
           python3 preparar_kws.py android/app
+          test -s android/app/src/main/assets/kws/keywords.txt
+          test -s android/app/src/main/assets/kws/encoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx
 
       - name: Guardar o runtime de voz neural em cache
         uses: actions/cache@v4
