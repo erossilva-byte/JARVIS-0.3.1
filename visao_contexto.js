@@ -74,7 +74,6 @@
     c.ocrDescartado = ocr.descartado;
     var evid = [];
     c.objetos.forEach(function (o) { evid = evid.concat(o.evidencia); });
-    if (c.textoLegivel) evid.push(c.textoLegivel);
     var temEvidencia = evid.join(' ').trim().length >= 3;
     c.objetos.forEach(function (o) {
       if (!temEvidencia) { o.marca = ''; o.modelo = ''; o.confianca = CONFIANCA.ESTIMADO; }
