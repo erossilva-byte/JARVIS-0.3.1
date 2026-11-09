@@ -7,7 +7,6 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Process;
-import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
@@ -45,15 +44,18 @@ final class JarvisKwsEngine {
 
     private final Context context;
     private final Listener listener;
+    private final float keywordThreshold;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private volatile AudioRecord recorder;
     private volatile Thread worker;
     private volatile KeywordSpotter spotter;
     private volatile OnlineStream stream;
 
-    JarvisKwsEngine(Context context, Listener listener) {
+    JarvisKwsEngine(Context context, Listener listener, int sensitivity) {
         this.context = context.getApplicationContext();
         this.listener = listener;
+        int s = Math.max(0, Math.min(100, sensitivity));
+        this.keywordThreshold = s >= 75 ? 0.25f : (s >= 45 ? 0.35f : 0.45f);
     }
 
     boolean isRunning() {
@@ -115,12 +117,14 @@ final class JarvisKwsEngine {
                     .setOnlineModelConfig(model)
                     .setKeywordsFile(base + "keywords.txt")
                     .setKeywordsScore(1.5f)
-                    .setKeywordsThreshold(0.35f)
+                    .setKeywordsThreshold(keywordThreshold)
                     .setMaxActivePaths(4)
                     .setNumTrailingBlanks(2)
                     .build();
+            if (!running.get()) return;
             kws = new KeywordSpotter(config);
             kwsStream = kws.createStream();
+            if (!running.get()) return;
 
             int minBuffer = AudioRecord.getMinBufferSize(SAMPLE_RATE,
                     AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
@@ -133,13 +137,14 @@ final class JarvisKwsEngine {
                 throw new IllegalStateException("Não foi possível inicializar o microfone para KWS.");
             }
             recorder = audio;
+            if (!running.get()) return;
             audio.startRecording();
             if (audio.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
                 throw new IllegalStateException("O microfone não entrou em estado de gravação.");
             }
             spotter = kws;
             stream = kwsStream;
-            listener.onState("KWS local ativo · áudio não enviado à rede");
+            listener.onState("KWS local ativo · limiar " + keywordThreshold + " · áudio não enviado à rede");
 
             short[] pcm = new short[Math.max(1600, SAMPLE_RATE / 10)];
             float[] samples = new float[pcm.length];
