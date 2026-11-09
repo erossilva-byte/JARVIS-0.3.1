@@ -143,7 +143,9 @@ final class JarvisKwsEngine {
             config.setMaxActivePaths(4);
             config.setNumTrailingBlanks(2);
             if (!running.get()) return;
-            kws = new KeywordSpotter(context.getAssets(), config);
+            // Os caminhos do modelo são arquivos absolutos em filesDir; null seleciona newFromFile(),
+            // enquanto AssetManager selecionaria newFromAsset() e procuraria esses caminhos nos assets.
+            kws = new KeywordSpotter(null, config);
             kwsStream = kws.createStream(keywords);
             if (!running.get()) return;
 
