@@ -1468,9 +1468,9 @@ const ACOES = {
       if (r && r.chamando) return { info: 'Chamando ' + (a.contato || a.numero) + ' agora, ' + trat() + '.' };
       return { info: (r && r.aviso) || 'Abri o discador com o número pronto. Toque em chamar para completar a ligação.' };
     } },
-  abrir_conversa_whatsapp: { risco: 1, disp: ['android'], ajuda: 'args {"contato":"<nome cadastrado>"}. Abre a conversa no WhatsApp; chamadas, áudio e envio são concluídos pelo usuário no app.',
+  abrir_conversa_whatsapp: { risco: 1, disp: T, ajuda: 'args {"contato":"<nome cadastrado>"}. Abre a conversa no WhatsApp; chamadas, áudio e envio são concluídos pelo usuário no app.',
     prep: (a) => { const r = resolverNumero(a.contato); return r ? { args: { numero: r.numero, contato: r.nome }, desc: `Abrir a conversa do WhatsApp com ${r.nome}.` } : { erro: 'Não encontrei esse contato. Cadastre o nome e o número em Ajustes.' }; },
-    run: async (a) => { const numero = String(a.numero || '').replace(/\D/g, ''); if (!numero) throw new Error('Número do contato inválido.'); await nativo('abrir_url', { url: `https://wa.me/${numero}` }); return { info: 'Abri a conversa do WhatsApp. Para enviar áudio ou iniciar chamada de voz/vídeo, use os controles do próprio WhatsApp.' }; } },
+    run: async (a) => { const numero = String(a.numero || '').replace(/\D/g, ''); if (!numero) throw new Error('Número do contato inválido.'); if (plataforma === 'desktop') await nativo('whatsapp', { numero, texto: '' }); else await nativo('abrir_url', { url: `https://wa.me/${numero}` }); return { info: 'Abri a conversa do WhatsApp. Para enviar áudio ou iniciar chamada de voz/vídeo, use os controles do próprio WhatsApp.' }; } },
   mensagem: { risco: 2, disp: T, ajuda: 'args {"contato":"<nome cadastrado>","texto":"..."}. Abre o WhatsApp com a mensagem pronta; o usuário toca em enviar.',
     prep: (a) => {
       const r = resolverNumero(a.contato);
@@ -1508,9 +1508,10 @@ const ACOES = {
     run: async () => { await nativo('irInicio', {}); return { info: 'Voltando à tela inicial. O Android não permite forçar o encerramento de qualquer aplicativo.' }; } },
   retornar_app: { risco: 0, disp: ['android'], ajuda: 'args {"app":"nome da lista de apps"}. Reabre ou traz o app para primeiro plano.',
     run: async (a) => { const k = acharApp(String(a.app || '')); if (!k) return { info: 'Não reconheci esse aplicativo na lista disponível.' }; await nativo('abrirAplicativo', { app: k }); return { info: 'Solicitei a abertura de ' + k.replace(/_/g, ' ') + '.' }; } },
-  controle_midia: { risco: 0, disp: ['android'], ajuda: 'args {"comando":"pausar|continuar|proxima|anterior|alternar|parar"}. Controla o app que está tocando (Spotify, YouTube Music e outros) pela sessão de mídia do Android; sem acesso às notificações, envia teclas de mídia.',
+  controle_midia: { risco: 0, disp: T, ajuda: 'args {"comando":"pausar|continuar|proxima|anterior|alternar|parar"}. Controla o app que está tocando (Spotify, YouTube Music e outros) pela sessão de mídia do Android; sem acesso às notificações, envia teclas de mídia.',
     run: async (a) => {
       const c = String(a.comando || 'pausar');
+      if (plataforma === 'desktop') { const r = await nativo('controle_midia_pc', { comando: c }); return { info: r.info || 'Comando enviado ao controle multimídia do Windows.', incerto: true }; }
       // Player do próprio app: se é ele que está tocando, obedece direto (não depende
       // do acesso às notificações nem da sessão de outro aplicativo).
       const M = plug('JarvisMusica');
@@ -1562,8 +1563,9 @@ const ACOES = {
       if (busca) return { info: 'Abri o ' + onde + ' na busca por “' + busca + '”. Toque no resultado para começar a ouvir; o Spotify não deixa eu iniciar a faixa sozinho.' };
       return { info: 'Abri o ' + onde + (tipo === 'curtidas' ? ' nas suas músicas curtidas.' : '.') };
     } },
-  volume: { risco: 0, disp: ['android'], ajuda: 'args {"direcao":"aumentar|diminuir|silenciar"} OU {"percentual":0-100}, com "tipo" opcional: musica|chamada|notificacao|alarme|toque|sistema (padrão musica). Ajusta o volume em um passo.',
+  volume: { risco: 0, disp: T, ajuda: 'args {"direcao":"aumentar|diminuir|silenciar"} OU {"percentual":0-100}, com "tipo" opcional: musica|chamada|notificacao|alarme|toque|sistema (padrão musica). Ajusta o volume em um passo.',
     run: async (a) => {
+      if (plataforma === 'desktop') { const r = await nativo('volume_pc', { direcao: a && a.direcao, tipo: a && a.tipo, percentual: a && a.percentual }); return { info: r.info || 'Comando enviado ao volume principal do Windows.', incerto: true }; }
       const r = await nativo('ajustarVolume', { direcao: (a && a.direcao) || (a && a.percentual != null ? 'definir' : 'aumentar'), tipo: a && a.tipo, percentual: a && a.percentual });
       const t = (a && a.tipo) || 'musica';
       if (r && typeof r.nivel === 'number') return { info: `Volume de ${t} em ${Math.round(r.nivel * 100 / Math.max(1, r.maximo))} por cento.` };
@@ -1579,7 +1581,7 @@ const ACOES = {
     run: async (a) => { const r = await nativo('ajustarBrilho', a || {}); return { info: (r && r.info) || 'Brilho ajustado.' }; } },
   painel: { risco: 0, disp: ['android'], ajuda: 'args {"alvo":"notificacoes|rapido|configuracoes"}. Tenta abrir o painel de notificações ou configurações rápidas; se o Android bloquear o atalho, abre as Configurações.',
     run: async (a) => { const r = await nativo('abrirPainel', { alvo: (a && a.alvo) || 'rapido' }); return { info: (r && r.info) || 'Painel aberto.' }; } },
-  email: { risco: 2, disp: ['android'], ajuda: 'args {"para":"endereco@email.com ou nome","assunto":"...","texto":"..."}. Prepara um e-mail no app de e-mail do aparelho; o usuário revisa e envia.',
+  email: { risco: 2, disp: T, ajuda: 'args {"para":"endereco@email.com ou nome","assunto":"...","texto":"..."}. Prepara um e-mail no app de e-mail do aparelho; o usuário revisa e envia.',
     prep: (a) => {
       const para = String((a && a.para) || '').trim().slice(0, 200);
       const assunto = String((a && a.assunto) || '').trim().slice(0, 200);
@@ -1588,7 +1590,7 @@ const ACOES = {
       return { args: { para: emailValido ? para : '', rascunhoPara: para, assunto, texto },
         desc: emailValido ? `Enviar e-mail para ${para} — “${(texto || assunto).slice(0, 120)}”` : `Abrir o app de e-mail para escrever para “${para}”.` };
     },
-    run: async (a) => { const r = await nativo('enviarEmail', a || {}); return { info: (r && r.info) || 'Abri o app de e-mail com a mensagem pronta.' }; } },
+    run: async (a) => { const r = plataforma === 'desktop' ? await nativo('email_pc', a || {}) : await nativo('enviarEmail', a || {}); return { info: (r && r.info) || 'Abri o app de e-mail com a mensagem pronta.', incerto: plataforma === 'desktop' }; } },
   fechar_app: { risco: 1, disp: ['android'], ajuda: 'args {"app":"<chave da lista>"}. O Android não permite encerrar apps à força: abro os detalhes do aplicativo para você usar “Forçar parada”, ou volto à tela inicial.',
     run: async (a) => {
       const k = acharApp(String((a && a.app) || ''));
