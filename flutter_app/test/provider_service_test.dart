@@ -10,9 +10,9 @@ class MemorySecrets implements SecretStore {
   @override
   Future<String?> read(String key) async => values[key];
   @override
-  Future<void> write(String key, String value) async => values[key] = value;
+  Future<void> write(String key, String value) async { values[key] = value; }
   @override
-  Future<void> delete(String key) async => values.remove(key);
+  Future<void> delete(String key) async { values.remove(key); }
 }
 
 class FakeClient extends http.BaseClient {
@@ -49,10 +49,10 @@ void main() {
 
   test('rejeita chave vazia, curta ou com espaços e provedor desconhecido', () async {
     final service = ProviderService(secrets: MemorySecrets(), client: FakeClient(200, '{}'));
-    expect(() => service.saveKey('groq', '   '), throwsArgumentError);
-    expect(() => service.saveKey('groq', 'short'), throwsArgumentError);
-    expect(() => service.saveKey('groq', 'invalid key 12345'), throwsArgumentError);
-    expect(() => service.saveKey('unknown', '123456789'), throwsArgumentError);
+    await expectLater(service.saveKey('groq', '   '), throwsArgumentError);
+    await expectLater(service.saveKey('groq', 'short'), throwsArgumentError);
+    await expectLater(service.saveKey('groq', 'invalid key 12345'), throwsArgumentError);
+    await expectLater(service.saveKey('unknown', '123456789'), throwsArgumentError);
     service.close();
   });
 
