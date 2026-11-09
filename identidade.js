@@ -45,13 +45,13 @@
   };
 
   var CAMPOS = {
-    nome: 60, apelido: 40, nascimento: 10, alturaCm: 3, pesoKg: 6, profissao: 60,
+    nome: 60, apelido: 40, nascimento: 10, alturaCm: 3, pesoKg: 6, idadeBase: 3, idadeEm: 10, profissao: 60,
     relacao: 60, telefone: 24, email: 90, endereco: 120, cidade: 60,
     descricao: 500, preferencias: 500, interesses: 500, observacoes: 900,
     contexto: 500
   };
   var ROTULO = {
-    nome: 'Nome', apelido: 'Apelido', nascimento: 'Nascimento', alturaCm: 'Altura', pesoKg: 'Peso',
+    nome: 'Nome', apelido: 'Apelido', nascimento: 'Nascimento', alturaCm: 'Altura', pesoKg: 'Peso', idadeBase: 'Idade informada',
     profissao: 'Profissão', relacao: 'Relação', telefone: 'Telefone', email: 'E-mail',
     endereco: 'Endereço', cidade: 'Cidade', descricao: 'Descrição',
     preferencias: 'Preferências', interesses: 'Interesses',
@@ -260,19 +260,31 @@
     return d.getUTCFullYear() === Number(m[1]) && d.getUTCMonth() === Number(m[2]) - 1 &&
       d.getUTCDate() === Number(m[3]) && d.getTime() <= relogio();
   }
-  function idadeDetalhada(nascimento) {
-    if (!dataValida(nascimento)) return null;
-    var n = String(nascimento).split('-').map(Number);
+  function idadeDetalhada(nascimento, perfil) {
     var h = new Date(relogio());
-    var anos = h.getFullYear() - n[0];
-    var meses = h.getMonth() + 1 - n[1];
-    if (h.getDate() < n[2]) meses--;
-    if (meses < 0) { anos--; meses += 12; }
-    if (anos < 0 || anos >= 130) return null;
-    return { anos: anos, meses: meses, totalMeses: anos * 12 + meses };
+    if (nascimento && dataValida(nascimento)) {
+      var n = String(nascimento).split('-').map(Number);
+      var anos = h.getFullYear() - n[0];
+      var meses = h.getMonth() + 1 - n[1];
+      if (h.getDate() < n[2]) meses--;
+      if (meses < 0) { anos--; meses += 12; }
+      if (anos < 0 || anos >= 130) return null;
+      return { anos: anos, meses: meses, totalMeses: anos * 12 + meses, aproximada: false };
+    }
+    var base = perfil || {};
+    if (base.idadeBase === '' || base.idadeBase == null || !dataValida(base.idadeEm)) return null;
+    var idadeBase = Number(base.idadeBase);
+    if (!Number.isInteger(idadeBase) || idadeBase < 0 || idadeBase >= 130) return null;
+    var origem = String(base.idadeEm).split('-').map(Number);
+    var mesesPassados = (h.getFullYear() - origem[0]) * 12 + h.getMonth() + 1 - origem[1];
+    if (h.getDate() < origem[2]) mesesPassados--;
+    mesesPassados = Math.max(0, mesesPassados);
+    var total = idadeBase * 12 + mesesPassados;
+    if (total >= 130 * 12) return null;
+    return { anos: Math.floor(total / 12), meses: total % 12, totalMeses: total, aproximada: true };
   }
-  function idade(nascimento) {
-    var detalhe = idadeDetalhada(nascimento);
+  function idade(nascimento, perfil) {
+    var detalhe = idadeDetalhada(nascimento, perfil);
     return detalhe ? detalhe.anos : null;
   }
   function diasAteAniversario(nascimento) {
@@ -316,8 +328,10 @@
         ? String(d[campo] == null ? '' : d[campo]).replace(/[^0-9]/g, '').slice(0, 3)
         : campo === 'pesoKg'
           ? String(d[campo] == null ? '' : d[campo]).replace(',', '.').replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1').slice(0, 6)
-          : limpar(d[campo], CAMPOS[campo]);
-      if (campo === 'nascimento' && valor && !dataValida(valor)) valor = '';
+          : campo === 'idadeBase'
+            ? String(d[campo] == null ? '' : d[campo]).replace(/[^0-9]/g, '').slice(0, 3)
+            : limpar(d[campo], CAMPOS[campo]);
+      if ((campo === 'nascimento' || campo === 'idadeEm') && valor && !dataValida(valor)) valor = '';
       antes[campo] = p[campo] || '';
       p[campo] = valor;
     });
@@ -355,6 +369,11 @@
     if (p.pesoKg) {
       var peso = Number(p.pesoKg);
       if (!(peso >= 1 && peso <= 500)) return 'Peso deve ficar entre 1 kg e 500 kg.';
+    }
+    if (p.idadeBase !== '' && p.idadeBase != null) {
+      var idadeBase = Number(p.idadeBase);
+      if (!Number.isInteger(idadeBase) || idadeBase < 0 || idadeBase >= 130) return 'Idade informada deve ficar entre 0 e 129 anos.';
+      if (!dataValida(p.idadeEm)) return 'A data de referência da idade informada é inválida.';
     }
     if (p.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(p.email)) return 'E-mail inválido.';
     return '';
@@ -425,8 +444,9 @@
   function descrever(p) {
     if (!p) return '';
     var partes = [];
-    var anos = idade(p.nascimento);
-    if (anos != null) partes.push(anos + ' anos');
+    var detalheIdade = idadeDetalhada(p.nascimento, p);
+    if (detalheIdade) partes.push((detalheIdade.aproximada ? 'idade aproximada: ' : '') +
+      detalheIdade.anos + ' anos' + (detalheIdade.meses ? ' e ' + detalheIdade.meses + ' meses' : ''));
     if (p.apelido) partes.push('também conhecido como ' + p.apelido);
     if (p.relacao) partes.push(p.relacao);
     if (p.profissao) partes.push(p.profissao);
@@ -449,6 +469,11 @@
       if (p.apelido) bits.push('(' + p.apelido + ')');
       if (p.relacao) bits.push(p.relacao);
       if (p.profissao) bits.push(p.profissao);
+      var idadePessoa = idadeDetalhada(p.nascimento, p);
+      if (idadePessoa) bits.push((idadePessoa.aproximada ? 'idade aprox. ' : '') +
+        idadePessoa.anos + ' anos' + (idadePessoa.meses ? ' e ' + idadePessoa.meses + ' meses' : ''));
+      if (p.pesoKg) bits.push(p.pesoKg + ' kg');
+      if (p.alturaCm) bits.push(p.alturaCm + ' cm');
       if (p.cidade) bits.push(p.cidade);
       if (p.preferencias) bits.push('prefere ' + p.preferencias);
       var linha = '- ' + p.nome + (bits.length ? ' · ' + bits.join(' · ') : '');
