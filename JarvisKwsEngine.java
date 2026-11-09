@@ -81,6 +81,15 @@ final class JarvisKwsEngine {
 
     synchronized void start() {
         if (running.get()) return;
+        Thread anterior = worker;
+        if (anterior != null && anterior.isAlive()) {
+            try { anterior.join(1200); }
+            catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            if (anterior.isAlive()) {
+                listener.onError("O detector anterior ainda está encerrando; evitei iniciar dois microfones simultaneamente.");
+                return;
+            }
+        }
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             listener.onError("Permissão de microfone não concedida.");
