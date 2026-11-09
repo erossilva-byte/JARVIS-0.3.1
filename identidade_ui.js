@@ -111,7 +111,9 @@
     meta.className = 'idp-meta';
     var idade = IDENT.idadeDetalhada(p.nascimento, p);
     var idadeTexto = idade ? (idade.aproximada ? 'idade aprox. ' : '') + idade.anos + ' anos' + (idade.meses ? ' e ' + idade.meses + ' meses' : '') : '';
-    meta.textContent = [p.relacao, p.profissao, idadeTexto, p.pesoKg ? p.pesoKg + ' kg' : '', p.alturaCm ? p.alturaCm + ' cm' : '', p.cidade]
+    var diasAniversario = IDENT.diasAteAniversario(p.nascimento);
+    var aniversarioTexto = diasAniversario == null ? '' : 'aniversário em ' + diasAniversario + ' dia(s)';
+    meta.textContent = [p.relacao, p.profissao, idadeTexto, aniversarioTexto, p.pesoKg ? p.pesoKg + ' kg' : '', p.alturaCm ? p.alturaCm + ' cm' : '', p.cidade]
       .filter(Boolean).join(' · ') || 'sem dados complementares';
     corpo.appendChild(meta);
 
@@ -755,6 +757,10 @@
     ligarRecorte();
     if ($('pessoa-busca')) $('pessoa-busca').addEventListener('input', renderLista);
     if ($('pessoa-nascimento')) $('pessoa-nascimento').addEventListener('input', atualizarIdade);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) { renderLista(); atualizarIdade(); }
+    });
+    window.addEventListener('focus', function () { renderLista(); atualizarIdade(); });
     if ($('idp-novo')) $('idp-novo').onclick = function () { abrirEditor(null); };
     if ($('pessoa-salvar')) $('pessoa-salvar').onclick = function () { salvarPerfil(); };
     if ($('idp-cancelar')) $('idp-cancelar').onclick = fecharEditor;
