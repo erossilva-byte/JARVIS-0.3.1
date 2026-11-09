@@ -191,9 +191,9 @@ class HologramPainter extends CustomPainter{
   const ringScale=<double>[.57,.75,.93,1.08];
   for(var ring=0;ring<ringScale.length;ring++){
    final path=Path();
-   final p=Paint()..style=PaintingStyle.stroke..strokeWidth=ring==0?2.0:1.0..color=cyan.withValues(alpha:.88-ring*.16)..strokeCap=StrokeCap.round;
+   final p=Paint()..style=PaintingStyle.stroke..strokeWidth=(ring==0?2.0:1.0)..color=cyan.withValues(alpha:.88-ring*.16)..strokeCap=StrokeCap.round;
    final radius=r*ringScale[ring];
-   final ay=spin*(ring.isEven?.18:-.14)+pointer.dx*.8+ring*.45;
+   final ay=spin*(ring.isEven ? .18 : -.14)+pointer.dx*.8+ring*.45;
    final ax=.62+pointer.dy*.65+ring*.17;
    final cy=math.cos(ay),sy=math.sin(ay),cx=math.cos(ax),sx=math.sin(ax);
    for(var step=0;step<=96;step++){
