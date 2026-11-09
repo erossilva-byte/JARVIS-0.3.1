@@ -13,7 +13,9 @@ ui = (RAIZ / 'interface.js').read_text(encoding='utf-8')
 pkg = json.loads((RAIZ / 'package.json').read_text(encoding='utf-8'))
 lock = json.loads((RAIZ / 'package-lock.json').read_text(encoding='utf-8'))
 meta = json.loads((RAIZ / 'VERSAO.json').read_text(encoding='utf-8'))
-gradle = (RAIZ / 'android/app/build.gradle').read_text(encoding='utf-8')
+gradle_path = RAIZ / 'android/app/build.gradle'
+gradle = gradle_path.read_text(encoding='utf-8') if gradle_path.exists() else ''
+patch_android = (RAIZ / 'patch_android_version.py').read_text(encoding='utf-8')
 suite = pkg.get('scripts', {}).get('test:all', '')
 falhas = []
 
