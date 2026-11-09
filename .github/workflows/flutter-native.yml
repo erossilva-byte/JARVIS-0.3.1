@@ -65,7 +65,7 @@ jobs:
           grep -q 'namespace = "com.jarvis.nova"' android/app/build.gradle.kts
       - name: Install sherpa-onnx model tokenizer
         if: runner.os == 'Linux'
-        run: python3 -m pip install --disable-pip-version-check sherpa-onnx==1.13.8
+        run: python3 -m pip install --disable-pip-version-check sherpa-onnx==1.13.8 sentencepiece
       - name: Download and verify sherpa-onnx Android runtime
         if: runner.os == 'Linux'
         run: python3 ../baixar_sherpa.py android/app
