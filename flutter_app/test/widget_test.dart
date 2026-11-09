@@ -14,7 +14,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
     expect(find.text('Capacidades do J.A.R.V.I.S.'), findsOneWidget);
     expect(find.text('Hermes Agent'), findsOneWidget);
-
   });
 
   testWidgets('a busca filtra os módulos apresentados', (tester) async {
@@ -26,7 +25,6 @@ void main() {
     await tester.pump();
     expect(find.text('Hermes Agent'), findsNothing);
     expect(find.text('Memória semântica'), findsNothing);
-
     expect(find.text('Obsidian'), findsNWidgets(2));
   });
 
@@ -40,6 +38,42 @@ void main() {
     expect(find.text('Central de ajustes'), findsOneWidget);
     expect(find.text('Provedores de IA'), findsOneWidget);
     expect(find.textContaining('sherpa-onnx'), findsOneWidget);
-    expect(find.textContaining('ainda não estão integrados'), findsOneWidget);
+    expect(find.textContaining('sincronização bidirecional'), findsOneWidget);
+  });
+
+
+  testWidgets('atalho Provedores de IA abre a configuração funcional', (tester) async {
+    await tester.pumpWidget(const JarvisApp());
+    await tester.tap(find.text('Sistemas'));
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.tap(find.text('Provedores de IA'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.text('Provedores de IA'), findsWidgets);
+    expect(find.textContaining('Groq é o provedor principal'), findsOneWidget);
+  });
+
+  testWidgets('atalho Voz e KWS abre o painel nativo de diagnóstico', (tester) async {
+    await tester.pumpWidget(const JarvisApp());
+    await tester.tap(find.text('Sistemas'));
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.enterText(find.byType(TextField), 'Voz e KWS');
+    await tester.pump();
+    await tester.tap(find.text('Voz e KWS').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.text('Voz e palavra de ativação'), findsOneWidget);
+    expect(find.textContaining('sherpa-onnx'), findsWidgets);
+  });
+
+  testWidgets('núcleo responde ao toque e abre painel holográfico', (tester) async {
+    await tester.pumpWidget(const JarvisApp());
+    await tester.tap(find.text('NÚCLEO HOLOGRÁFICO'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 450));
+    expect(find.text('Núcleo holográfico'), findsOneWidget);
+    expect(find.textContaining('A animação responde ao toque'), findsOneWidget);
   });
 }

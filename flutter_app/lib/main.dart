@@ -1,13 +1,20 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'services/provider_service.dart';
+import 'services/kws_settings_page.dart';
+import 'services/kws_controller.dart';
+import 'services/kws_bridge.dart';
+import 'services/voice_conversation_page.dart';
+
+final jarvisKwsController = KwsController();
 
 void main()=>runApp(const JarvisApp());
 const cyan=Color(0xFF55DFFF),bg=Color(0xFF050A12),panel=Color(0xFF0B1725),muted=Color(0xFF8CA5B9);
 
 class JarvisApp extends StatelessWidget{
  const JarvisApp({super.key});
- @override Widget build(BuildContext context)=>MaterialApp(debugShowCheckedModeBanner:false,title:'J.A.R.V.I.S. Nova',theme:ThemeData(brightness:Brightness.dark,scaffoldBackgroundColor:bg,colorScheme:ColorScheme.fromSeed(seedColor:cyan,brightness:Brightness.dark),useMaterial3:true),home:const HomeScreen());
+ @override Widget build(BuildContext context)=>MaterialApp(debugShowCheckedModeBanner:false,title:'J.A.R.V.I.S. Nova',theme:ThemeData(brightness:Brightness.dark,scaffoldBackgroundColor:bg,colorScheme:ColorScheme.fromSeed(seedColor:cyan,brightness:Brightness.dark),useMaterial3:true),home:const LegacyHomeScreen());
 }
 class JarvisModule{
  const JarvisModule(this.name,this.group,this.icon,this.description);
@@ -42,19 +49,34 @@ class HomeScreen extends StatefulWidget{
  @override State<HomeScreen> createState()=>_HomeScreenState();
 }
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
+ StreamSubscription<KwsCommandEvent>? voiceSubscription;
+
+ @override void initState(){
+  super.initState();
+  unawaited(jarvisKwsController.initialize());
+  voiceSubscription=KwsController.commandBus.listen((event){
+   if (!mounted) { return; }
+   if(event.type=='command_result'&&event.text.trim().isNotEmpty){
+    Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>VoiceConversationPage(initialCommand:event.text.trim())));
+   }else if(event.type=='command_error'&&event.message.isNotEmpty){
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(event.message)));
+   }
+  });
+ }
  late final AnimationController motion=AnimationController(vsync:this,duration:const Duration(seconds:20))..repeat();
  late final AnimationController intro=AnimationController(vsync:this,duration:const Duration(milliseconds:700))..forward();
+ late final AnimationController touch=AnimationController(vsync:this,duration:const Duration(milliseconds:420));
  final search=TextEditingController();
  int tab=0;String filter='Todos',query='';Offset tilt=Offset.zero;
  static const groups=['Todos','Inteligência','Conhecimento','Interação','Produtividade','Engenharia','Interface','Contexto','Sistema','Conectividade'];
- @override void dispose(){motion.dispose();intro.dispose();search.dispose();super.dispose();}
+ @override void dispose(){voiceSubscription?.cancel();motion.dispose();intro.dispose();touch.dispose();search.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(backgroundColor:bg,titleSpacing:18,title:const Row(children:[
    _Brand(),SizedBox(width:10),Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     Text('J.A.R.V.I.S. NOVA',style:TextStyle(fontSize:13,letterSpacing:2,fontWeight:FontWeight.w700)),
     Text('PERSONAL AI SYSTEM',style:TextStyle(fontSize:8,letterSpacing:2,color:muted)),
    ]),
-  ]),actions:[Builder(builder:(buttonContext)=>IconButton(key:const ValueKey('settings-button'),tooltip:'Configurações',onPressed:()=>Navigator.of(buttonContext,rootNavigator:true).push(MaterialPageRoute<void>(builder:(_)=>const SettingsPage())),icon:const Icon(Icons.tune_rounded,color:cyan))),const SizedBox(width:8)]),
+  ]),actions:[Builder(builder:(buttonContext)=>IconButton(key:const ValueKey('settings-button'),tooltip:'Configurações',onPressed:()=>Navigator.of(buttonContext,rootNavigator:true).push(MaterialPageRoute<void>(builder:(_)=>SettingsPage(controller:jarvisKwsController))),icon:const Icon(Icons.tune_rounded,color:cyan))),const SizedBox(width:8)]),
   body:SafeArea(child:AnimatedSwitcher(duration:const Duration(milliseconds:300),switchInCurve:Curves.easeOutCubic,child:tab==0?homeView(key:const ValueKey('home')):catalog(key:const ValueKey('catalog')))),
   bottomNavigationBar:NavigationBar(height:68,backgroundColor:const Color(0xFF08121E),indicatorColor:cyan.withValues(alpha: .13),selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:const[
    NavigationDestination(icon:Icon(Icons.blur_circular_rounded),selectedIcon:Icon(Icons.blur_on_rounded,color:cyan),label:'Núcleo'),
@@ -64,20 +86,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
  Widget homeView({Key? key})=>AnimatedBuilder(animation:intro,builder:(_,child)=>Opacity(opacity:intro.value,child:Transform.translate(offset:Offset(0,14*(1-intro.value)),child:child)),child:ListView(key:key,padding:const EdgeInsets.fromLTRB(20,18,20,28),children:[
   const _Eyebrow('SISTEMA DE INTELIGÊNCIA'),const SizedBox(height:8),
   const Text('À sua disposição.',style:TextStyle(fontSize:30,fontWeight:FontWeight.w300)),
-  const SizedBox(height:5),const Text('Uma interface em evolução.',style:TextStyle(color:muted,fontSize:12)),
-  Center(child:AnimatedBuilder(animation:motion,builder:(_,__)=>GestureDetector(
+  const SizedBox(height:5),const Text('Inteligência em movimento. Sempre ao seu comando.',style:TextStyle(color:muted,fontSize:12)),
+  Center(child:AnimatedBuilder(animation:Listenable.merge([motion,touch]),builder:(_,__)=>GestureDetector(
+   behavior:HitTestBehavior.opaque,
    onTap:coreInfo,
+   onTapDown:(_)=>touch.forward(from:0),
+   onTapUp:(_)=>touch.reverse(),
+   onTapCancel:()=>touch.reverse(),
    onPanUpdate:(d)=>tilt=Offset((tilt.dx+d.delta.dx/500).clamp(-.35,.35),(tilt.dy+d.delta.dy/500).clamp(-.35,.35)),
    onPanEnd:(_)=>tilt=Offset.zero,
-   child:SizedBox(width:330,height:330,child:CustomPaint(painter:HologramPainter(motion.value,tilt),child:const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   child:Transform.scale(scale:1+touch.value*.022,child:SizedBox(width:330,height:330,child:CustomPaint(painter:HologramPainter(motion.value+touch.value*.035,tilt),child:const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
     Icon(Icons.all_inclusive_rounded,color:cyan,size:48),SizedBox(height:8),
     Text('J.A.R.V.I.S.',style:TextStyle(letterSpacing:3.5,fontSize:16)),SizedBox(height:5),
     Text('NÚCLEO HOLOGRÁFICO',style:TextStyle(color:cyan,fontSize:8,letterSpacing:2)),SizedBox(height:12),
     Icon(Icons.touch_app_rounded,size:15,color:muted),
-   ])))),
+   ]))))),
   ))),
   const _Heading('VISÃO GERAL','ESTADO DA INTERFACE'),const SizedBox(height:10),
-  const _Status(icon:Icons.blur_circular_rounded,title:'Núcleo visual',detail:'Animação vetorial Flutter em execução',state:'ATIVO',color:Color(0xFF64E6B1)),
+  const _Status(icon:Icons.blur_circular_rounded,title:'Núcleo holográfico',detail:'Renderização 3D simulada, órbitas e resposta tátil',state:'ATIVO',color:Color(0xFF64E6B1)),
   const SizedBox(height:8),const _Status(icon:Icons.hub_rounded,title:'Serviços inteligentes',detail:'Pontes nativas ainda em migração',state:'PENDENTE',color:Color(0xFFFFC66D)),
   const SizedBox(height:8),const _Status(icon:Icons.widgets_rounded,title:'Módulos catalogados',detail:'21 áreas identificadas; integração não presumida',state:'CATÁLOGO',color:cyan),
   const SizedBox(height:18),const _Heading('ACESSO RÁPIDO','EXPLORAR'),const SizedBox(height:10),
@@ -113,8 +139,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
   Icon(Icons.blur_circular_rounded,color:cyan,size:36),SizedBox(height:12),Text('Núcleo holográfico',style:TextStyle(fontSize:19)),
   SizedBox(height:8),Text('A animação responde ao toque e ao arraste. Captura de voz e execução de comandos dependem dos serviços nativos, ainda não conectados nesta tela.',textAlign:TextAlign.center,style:TextStyle(color:muted,height:1.5)),
  ])));
- void openModule(JarvisModule m)=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>ModulePage(module:m)));
- void settings()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const SettingsPage()));
+ void openModule(JarvisModule m){
+  switch(m.name){
+   case 'Provedores de IA':
+    Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const ProviderSettingsPage()));
+    return;
+   case 'Voz e KWS':
+    Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>KwsSettingsPage(controller:jarvisKwsController)));
+    return;
+   default:
+    Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>ModulePage(module:m)));
+  }
+ }
+ void settings()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>SettingsPage(controller:jarvisKwsController)));
 }
 
 class _Brand extends StatelessWidget{const _Brand();@override Widget build(BuildContext c)=>Container(width:31,height:31,decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:cyan.withValues(alpha: .7)),boxShadow:[BoxShadow(color:cyan.withValues(alpha: .18),blurRadius:13)]),child:const Icon(Icons.all_inclusive_rounded,color:cyan,size:19));}
@@ -160,7 +197,8 @@ class ModulePage extends StatelessWidget{
  ]));
 }
 class SettingsPage extends StatelessWidget{
- const SettingsPage({super.key});
+ const SettingsPage({super.key,this.controller});
+ final KwsController? controller;
  @override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Configurações',style:TextStyle(fontSize:15))),body:ListView(padding:const EdgeInsets.all(20),children:[
   const _Eyebrow('PREFERÊNCIAS DO SISTEMA'),const SizedBox(height:8),const Text('Central de ajustes',style:TextStyle(fontSize:27,fontWeight:FontWeight.w300)),
   const SizedBox(height:7),const Text('Credenciais dos provedores são protegidas pelo armazenamento seguro da plataforma. Outros serviços serão habilitados quando suas pontes nativas estiverem validadas.',style:TextStyle(color:muted,fontSize:11,height:1.5)),
@@ -172,10 +210,16 @@ class SettingsPage extends StatelessWidget{
    onTap:()=>Navigator.of(c).push(MaterialPageRoute<void>(builder:(_)=>const ProviderSettingsPage())),
   )),
   const SizedBox(height:9),
-  const _Setting(icon:Icons.graphic_eq_rounded,title:'Voz e palavra de ativação',detail:'O motor KWS sherpa-onnx existe no aplicativo Android legado. Ainda não está conectado à interface Flutter. Picovoice não será utilizado.'),
-  const _Setting(icon:Icons.memory_rounded,title:'Memória e Obsidian',detail:'A memória semântica e o vínculo Obsidian do aplicativo legado ainda precisam de adaptadores Flutter testados.'),
+  Material(color:panel,borderRadius:BorderRadius.circular(14),child:ListTile(
+   leading:const Icon(Icons.graphic_eq_rounded,color:cyan),
+   title:const Text('Voz e palavra de ativação',style:TextStyle(fontSize:12,fontWeight:FontWeight.w600)),
+   subtitle:const Text('Controlar KWS sherpa-onnx local, testar e consultar diagnóstico',style:TextStyle(color:muted,fontSize:10)),
+   trailing:const Icon(Icons.chevron_right_rounded,color:muted),
+   onTap:()=>Navigator.of(c).push(MaterialPageRoute<void>(builder:(_)=>KwsSettingsPage(controller:controller))),
+  )),
+  const _Setting(icon:Icons.memory_rounded,title:'Memória semântica e Obsidian',detail:'A migração precisa preservar notas e IDs, integrar busca vetorial multilíngue e sincronização bidirecional sem duplicações.'),
   const _Setting(icon:Icons.shield_outlined,title:'Privacidade e permissões',detail:'As permissões serão solicitadas somente quando uma função real precisar delas.'),
-  const _Setting(icon:Icons.devices_rounded,title:'Dispositivos conectados',detail:'Pareamento Android–Windows, ESP32 e Home Assistant ainda não estão integrados à interface Flutter.'),
+  const _Setting(icon:Icons.devices_rounded,title:'Dispositivos conectados',detail:'O pareamento QR Android–Windows precisa de autenticação mútua, criptografia, expiração, escopos e revogação. ESP32 fica fora desta sequência.'),
  ]));
 }
 
@@ -311,4 +355,314 @@ class HologramPainter extends CustomPainter{
   canvas.drawLine(Offset(c.dx,c.dy-r*1.12),Offset(c.dx,c.dy-r*.98),marks);canvas.drawLine(Offset(c.dx,c.dy+r*.98),Offset(c.dx,c.dy+r*1.12),marks);
  }
  @override bool shouldRepaint(covariant HologramPainter old)=>old.t!=t||old.pointer!=pointer;
+}
+
+
+// Interface clássica restaurada: HUD central, barra superior, painel lateral,
+// monitor do sistema, comandos rápidos e conversa.
+class LegacyHomeScreen extends StatefulWidget {
+  const LegacyHomeScreen({super.key});
+  @override
+  State<LegacyHomeScreen> createState() => _LegacyHomeScreenState();
+}
+class _LegacyHomeScreenState extends State<LegacyHomeScreen>
+    with TickerProviderStateMixin {
+  late final AnimationController motion = AnimationController(
+    vsync: this, duration: const Duration(seconds: 20),
+  )..repeat();
+  late final TextEditingController composer = TextEditingController();
+  late final TextEditingController search = TextEditingController();
+  StreamSubscription<KwsCommandEvent>? voiceSubscription;
+  String query = '';
+  int tab = 0;
+  String clock = '';
+  Timer? clockTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateClock();
+    clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateClock());
+    unawaited(jarvisKwsController.initialize());
+    voiceSubscription = KwsController.commandBus.listen((event) {
+      if (!mounted) { return; }
+      if (event.type == 'command_result' && event.text.trim().isNotEmpty) {
+        _openConversation(event.text.trim());
+      } else if (event.type == 'command_error' && event.message.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(event.message)));
+      }
+    });
+  }
+
+  void _updateClock() {
+    if (!mounted) { return; }
+    final now = DateTime.now();
+    setState(() => clock = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}');
+  }
+
+  @override
+  void dispose() {
+    clockTimer?.cancel();
+    voiceSubscription?.cancel();
+    motion.dispose();
+    composer.dispose();
+    search.dispose();
+    super.dispose();
+  }
+
+  void _openConversation(String command) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => VoiceConversationPage(initialCommand: command),
+    ));
+  }
+
+  void _openModule(String name) {
+    final matches = modules.where((item) => item.name == name);
+    if (matches.isEmpty) { return; }
+    final module = matches.first;
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => ModulePage(module: module),
+    ));
+  }
+
+  void _openSettings() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => SettingsPage(controller: jarvisKwsController),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: bg, titleSpacing: 16,
+        title: const Row(children: [
+          _Brand(), SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('J.A.R.V.I.S. NOVA', style: TextStyle(fontSize: 13, letterSpacing: 2, fontWeight: FontWeight.w700)),
+            Text('PERSONAL AI SYSTEM', style: TextStyle(fontSize: 8, letterSpacing: 2, color: muted)),
+          ]),
+        ]),
+        actions: [
+          IconButton(tooltip: 'Voz e palavra de ativação',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => KwsSettingsPage(controller: jarvisKwsController))),
+            icon: const Icon(Icons.graphic_eq_rounded, color: cyan)),
+          IconButton(key: const ValueKey('settings-button'), tooltip: 'Configurações',
+            onPressed: _openSettings, icon: const Icon(Icons.tune_rounded, color: cyan)),
+          const SizedBox(width: 6),
+        ],
+      ),
+      drawer: _buildDrawer(),
+      body: SafeArea(child: tab == 0 ? _buildCommandCenter() : _buildSystems()),
+      bottomNavigationBar: NavigationBar(
+        height: 66, backgroundColor: const Color(0xFF08121E),
+        indicatorColor: cyan.withValues(alpha: .13), selectedIndex: tab,
+        onDestinationSelected: (value) => setState(() => tab = value),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.blur_circular_rounded), selectedIcon: Icon(Icons.blur_on_rounded, color: cyan), label: 'Comando'),
+          NavigationDestination(icon: Icon(Icons.grid_view_rounded), selectedIcon: Icon(Icons.grid_view_rounded, color: cyan), label: 'Sistemas'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer() => Drawer(
+    backgroundColor: const Color(0xFF080F1B),
+    child: SafeArea(child: Column(children: [
+      const Padding(padding: EdgeInsets.fromLTRB(18, 24, 18, 18),
+        child: Row(children: [
+          _Brand(), SizedBox(width: 12),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('COMMAND CENTER', style: TextStyle(color: cyan, fontSize: 10, letterSpacing: 2)),
+            Text('J.A.R.V.I.S. Nova', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+          ]),
+        ])),
+      const Divider(color: Colors.white12),
+      Expanded(child: ListView(children: [
+        _drawerItem(Icons.blur_circular_rounded, 'Comando', () { Navigator.pop(context); setState(() => tab = 0); }),
+        _drawerItem(Icons.psychology_rounded, 'IA Core', () { Navigator.pop(context); _openProviderSettings(); }),
+        _drawerItem(Icons.graphic_eq_rounded, 'Voz', () { Navigator.pop(context); _openKwsSettings(); }),
+        _drawerItem(Icons.visibility_rounded, 'Visão', () { Navigator.pop(context); _openModule('Visão e OCR'); }),
+        _drawerItem(Icons.checklist_rounded, 'Tarefas', () { Navigator.pop(context); _openModule('Tarefas e rotinas'); }),
+        _drawerItem(Icons.people_alt_rounded, 'Pessoas', () { Navigator.pop(context); _openModule('Pessoas e contexto'); }),
+        _drawerItem(Icons.terminal_rounded, 'Dev. Arquivos', () { Navigator.pop(context); _openModule('Programação e sandbox'); }),
+        _drawerItem(Icons.bolt_rounded, 'Rotinas', () { Navigator.pop(context); _openModule('Tarefas e rotinas'); }),
+        _drawerItem(Icons.phone_android_rounded, 'Celular', () { Navigator.pop(context); _openModule('Android e dispositivos'); }),
+        _drawerItem(Icons.account_tree_rounded, 'Memória', () { Navigator.pop(context); _openModule('Memória semântica'); }),
+        _drawerItem(Icons.folder_copy_rounded, 'Arquivos', () { Navigator.pop(context); _openModule('Arquivos'); }),
+        _drawerItem(Icons.electrical_services_rounded, 'CADeSIMU', () { Navigator.pop(context); _openModule('CADeSIMU e elétrica'); }),
+        _drawerItem(Icons.desktop_windows_rounded, 'Computador', () { Navigator.pop(context); _openModule('Controle do Windows'); }),
+        _drawerItem(Icons.tune_rounded, 'Configurações', () { Navigator.pop(context); _openSettings(); }),
+      ])),
+      const Divider(color: Colors.white12),
+      const Padding(padding: EdgeInsets.all(16), child: Row(children: [
+        Icon(Icons.circle, size: 8, color: Color(0xFF64E6B1)), SizedBox(width: 9),
+        Text('SYSTEM STATUS', style: TextStyle(fontSize: 9, color: muted, letterSpacing: 1.5)),
+        Spacer(), Text('ONLINE', style: TextStyle(fontSize: 9, color: Color(0xFF64E6B1))),
+      ])),
+    ])),
+  );
+
+  Widget _drawerItem(IconData icon, String title, VoidCallback onTap) => ListTile(
+    dense: true, leading: Icon(icon, color: cyan, size: 20),
+    title: Text(title, style: const TextStyle(fontSize: 13)),
+    trailing: const Icon(Icons.chevron_right_rounded, color: muted, size: 18),
+    onTap: onTap,
+  );
+
+  void _openProviderSettings() => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ProviderSettingsPage()));
+  void _openKwsSettings() => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => KwsSettingsPage(controller: jarvisKwsController)));
+
+  Widget _buildCommandCenter() => ListView(
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+    children: [
+      Row(children: [
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('CENTRAL DE COMANDO', style: TextStyle(color: cyan, fontSize: 9, letterSpacing: 2, fontWeight: FontWeight.w700)),
+          SizedBox(height: 5), Text('À sua disposição.', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w300)),
+        ])),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(clock, style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w300)),
+          Text(DateTime.now().toString().substring(0, 10), style: const TextStyle(fontSize: 9, color: muted)),
+        ]),
+      ]),
+      const SizedBox(height: 8),
+      const Text('Inteligência em movimento. Sempre ao seu comando.', style: TextStyle(color: muted, fontSize: 11)),
+      Center(child: AnimatedBuilder(animation: motion, builder: (_, __) => GestureDetector(
+        onTap: () => showModalBottomSheet<void>(context: context, backgroundColor: panel, showDragHandle: true,
+          builder: (_) => const Padding(padding: EdgeInsets.fromLTRB(24, 12, 24, 28),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.blur_circular_rounded, color: cyan, size: 38), SizedBox(height: 12),
+              Text('Núcleo holográfico', style: TextStyle(fontSize: 19)), SizedBox(height: 8),
+              Text('A animação responde ao toque e ao arraste. Use o microfone para iniciar a escuta KWS local.',
+                textAlign: TextAlign.center, style: TextStyle(color: muted, height: 1.5)),
+            ]))),
+        child: SizedBox(width: 310, height: 310,
+          child: CustomPaint(painter: HologramPainter(motion.value, Offset.zero),
+            child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.all_inclusive_rounded, color: cyan, size: 48), SizedBox(height: 8),
+              Text('J.A.R.V.I.S.', style: TextStyle(letterSpacing: 3.5, fontSize: 16)), SizedBox(height: 5),
+              Text('NÚCLEO HOLOGRÁFICO', style: TextStyle(color: cyan, fontSize: 8, letterSpacing: 2)),
+            ]))),
+        ),
+      ))),
+      const SizedBox(height: 4),
+      _sectionHeader('SYSTEM MONITOR', 'ESTADO DO SISTEMA'),
+      const SizedBox(height: 9),
+      _statusCard(Icons.hub_rounded, 'Núcleo de IA', 'Provedores configuráveis · Groq prioritário',
+        'CONFIGURAR', cyan, () => _openProviderSettings()),
+      const SizedBox(height: 8),
+      _statusCard(Icons.graphic_eq_rounded, 'Voz e palavra de ativação',
+        'KWS local sherpa-onnx · diagnóstico nativo', 'VERIFICAR',
+        const Color(0xFFFFC66D), () => _openKwsSettings()),
+      const SizedBox(height: 8),
+      _statusCard(Icons.widgets_rounded, 'Módulos do sistema',
+        '${modules.length} áreas identificadas no catálogo', 'SISTEMAS', cyan,
+        () => setState(() => tab = 1)),
+      const SizedBox(height: 16),
+      _sectionHeader('QUICK COMMANDS', 'COMANDOS RÁPIDOS'),
+      const SizedBox(height: 9),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final command in ['Bom dia', 'Que horas são?', 'Como está o tempo?', 'Conte uma piada'])
+          ActionChip(
+            avatar: const Icon(Icons.bolt_rounded, size: 15, color: cyan),
+            label: Text(command, style: const TextStyle(fontSize: 11)),
+            onPressed: () => _openConversation(command),
+            backgroundColor: panel, side: const BorderSide(color: Colors.white12),
+          ),
+      ]),
+      const SizedBox(height: 16),
+      _sectionHeader('CONVERSA', 'CHAT'),
+      const SizedBox(height: 9),
+      Container(
+        padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+        decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(28), border: Border.all(color: Colors.white12)),
+        child: Row(children: [
+          Expanded(child: TextField(
+            controller: composer, textInputAction: TextInputAction.send,
+            onSubmitted: (value) { final text = value.trim(); if (text.isEmpty) { return; } composer.clear(); _openConversation(text); },
+            decoration: const InputDecoration(hintText: 'Fale com J.A.R.V.I.S....', border: InputBorder.none, isDense: true),
+          )),
+          IconButton(tooltip: 'Enviar mensagem', onPressed: () {
+            final text = composer.text.trim(); if (text.isEmpty) { return; } composer.clear(); _openConversation(text);
+          }, icon: const Icon(Icons.send_rounded, color: cyan)),
+          IconButton(tooltip: 'Iniciar escuta por voz', onPressed: () async {
+            try {
+              final status = await jarvisKwsController.start();
+              if (!mounted) { return; }
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status.listening ? 'Escuta KWS iniciada.' : status.detail)));
+            } catch (error) {
+              if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Não foi possível iniciar a escuta: $error'))); }
+            }
+          }, icon: const Icon(Icons.mic_rounded, color: cyan)),
+        ]),
+      ),
+      const SizedBox(height: 14),
+      const Text('Ações de dispositivo e módulos sem integração comprovada não são exibidos como ativos.',
+        style: TextStyle(color: Color(0xFF63798B), fontSize: 9, height: 1.5)),
+    ],
+  );
+
+  Widget _sectionHeader(String title, String trailing) => Row(children: [
+    Text(title, style: const TextStyle(fontSize: 9, letterSpacing: 1.6, fontWeight: FontWeight.w700)),
+    const Spacer(), Text(trailing, style: const TextStyle(fontSize: 8, letterSpacing: 1.1, color: muted)),
+  ]);
+
+  Widget _statusCard(IconData icon, String title, String detail, String state,
+    Color color, VoidCallback onTap) => Material(
+    color: panel, borderRadius: BorderRadius.circular(13),
+    child: InkWell(borderRadius: BorderRadius.circular(13), onTap: onTap,
+      child: Padding(padding: const EdgeInsets.all(12), child: Row(children: [
+        Icon(icon, color: cyan, size: 21), const SizedBox(width: 11),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 3), Text(detail, style: const TextStyle(fontSize: 10, color: muted)),
+        ])),
+        Text(state, style: TextStyle(fontSize: 8, letterSpacing: .8, color: color, fontWeight: FontWeight.w700)),
+      ])),
+    ),
+  );
+
+  Widget _buildSystems() {
+    final visible = modules.where((module) =>
+      '${module.name} ${module.group} ${module.description}'.toLowerCase().contains(query.toLowerCase())).toList();
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+      children: [
+        const Text('CENTRAL DE SISTEMAS', style: TextStyle(color: cyan, fontSize: 9, letterSpacing: 2, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 7),
+        const Text('Capacidades do J.A.R.V.I.S.', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w300)),
+        const SizedBox(height: 6),
+        const Text('Acesse os módulos disponíveis no projeto.', style: TextStyle(color: muted, fontSize: 12)),
+        const SizedBox(height: 16),
+        TextField(
+          controller: search,
+          onChanged: (value) => setState(() => query = value),
+          decoration: InputDecoration(
+            hintText: 'Buscar sistema ou função...',
+            prefixIcon: const Icon(Icons.search_rounded, color: cyan),
+            suffixIcon: query.isEmpty ? null : IconButton(
+              onPressed: () { search.clear(); setState(() => query = ''); },
+              icon: const Icon(Icons.close),
+            ),
+            filled: true, fillColor: panel,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+          ),
+        ),
+        const SizedBox(height: 14),
+        for (final module in visible)
+          Padding(padding: const EdgeInsets.only(bottom: 8),
+            child: _ModuleTile(module: module, onTap: () {
+              if (module.name == 'Provedores de IA') {
+                _openProviderSettings();
+              } else if (module.name == 'Voz e KWS') {
+                _openKwsSettings();
+              } else {
+                _openModule(module.name);
+              }
+            })),
+      ],
+    );
+  }
 }
