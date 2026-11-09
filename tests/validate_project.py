@@ -70,7 +70,13 @@ if 'data-config-tab="celular"' not in html: issues.append('Aba de estado do celu
 if 'https://console.groq.com/keys' not in html or 'https://aistudio.google.com/apikey' not in html: issues.append('Links oficiais para chaves de IA ausentes')
 if 'sherpa-onnx KWS' not in html or 'c-wake-sensibilidade' not in html or 'Hermes.ativacao.presente' not in app: issues.append('KWS local ou escuta alternativa Hermes ausente na interface/aplicativo')
 if 'picovoice' in (ROOT / 'patch_gradle.py').read_text(encoding='utf-8').lower(): issues.append('SDK de palavra de ativação de terceiro ainda configurado no patch Gradle')
-if 'new JarvisKwsEngine(' not in (ROOT / 'JarvisService.java').read_text(encoding='utf-8') or 'new AudioRecord(' not in (ROOT / 'JarvisKwsEngine.java').read_text(encoding='utf-8') or 'new KeywordSpotter(config)' not in (ROOT / 'JarvisKwsEngine.java').read_text(encoding='utf-8'): issues.append('KWS acústico sherpa-onnx não conectado ao serviço de escuta')
+service_kws = (ROOT / 'JarvisService.java').read_text(encoding='utf-8')
+kws_engine = (ROOT / 'JarvisKwsEngine.java').read_text(encoding='utf-8')
+if ('new JarvisKwsEngine(' not in service_kws or 'new AudioRecord(' not in kws_engine
+        or 'new KeywordSpotter(context.getAssets(), config)' not in kws_engine
+        or 'kwsStream.acceptWaveform(' not in kws_engine or 'kws.decode(kwsStream)' not in kws_engine
+        or 'disparar(keyword' not in service_kws or 'JarvisWakeBus.acordou' not in service_kws):
+    issues.append('KWS acústico sherpa-onnx não conectado ao serviço de escuta ou ao evento de ativação')
 if 'prefers-reduced-motion' not in (ROOT / 'style.css').read_text(encoding='utf-8'): issues.append('Falta respeito a prefers-reduced-motion')
 for token in [
     'function chaveContato', 'WAKE_WORD_DISPONIVEL = true', 'const PERSONALIDADE = {', 'Fonte retornada pela pesquisa', 'não validado de forma independente',
