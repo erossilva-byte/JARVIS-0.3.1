@@ -10,7 +10,7 @@ checks = {
     "Desktop usa safeStorage": "safeStorage.encryptString" in main and "safeStorage.decryptString" in main,
     "Cofre desktop falha fechado": "O armazenamento criptografado do sistema não está disponível" in main,
     "Segredos do desktop ficam fora do renderer": "jarvis-secrets.json" in main and "guardar_chave_segura" in main,
-    "Nomes de chave são permitidos por lista": "groq|cerebras|mistral|gemini" in main and "picovoice" not in main,
+    "Nomes de chave são permitidos por lista": "groq|openrouter|cerebras|mistral|gemini" in main and "picovoice" not in main,
     "Navegador não persiste chaves em texto puro": "O navegador comum não possui cofre criptográfico integrado" in app,
     # O detector de ativação é próprio: nenhum campo de chave na interface. A checagem
     # olha para o campo (input), não para a palavra: o texto explica que nenhuma chave
