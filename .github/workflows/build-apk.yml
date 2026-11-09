@@ -9,6 +9,7 @@ on:
       - 'JARVIS-NOVA-*-fonte.zip'
       - '.github/workflows/build-apk.yml'
       - 'app.js'
+      - 'sandbox.js'
       - 'identidade.js'
       - 'fala.js'
       - 'audio_pcm.js'
