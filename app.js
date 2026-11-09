@@ -9161,7 +9161,7 @@ async function vsTela() {
     if (img) { img.src = r.imagem; img.hidden = false; }
     if (VIS_VIDEO()) VIS_VIDEO().hidden = true;
     const a = await analisarDataUrl(r.imagem, 'Analise esta captura de tela do computador.');
-    if (a) await falar(a.fala);
+    if (a) await falar(a.fala + ((a.textoLegivel && a.textoLegivel.length) ? ' Texto legível: ' + a.textoLegivel.join(' ').slice(0, 500) : ''));
   } catch (e) { visaoStatus('Falha na captura: ' + ((e && e.message) || e), 'fail'); }
 }
 function vsMemoria() {
@@ -10799,7 +10799,7 @@ async function perguntarSobreVisao() {
     anexarTextoVisao('pergunta', 'Pergunta: ' + pergunta + '\n' + (r.fala || r.resumo || ''));
     visaoPerguntaStatus(onde + ' · ' + (visaoProvedor || 'provedor') + '.', 'ok');
     registrar('visão', 'pergunta sobre imagem: ' + pergunta.slice(0, 80));
-    await falar(r.fala);
+    await falar(r.fala + ((r.textoLegivel && r.textoLegivel.length) ? ' Texto legível: ' + r.textoLegivel.join(' ').slice(0, 700) : ''));
   } catch (e) {
     visaoPerguntaStatus('Não consegui perguntar: ' + ((e && e.message) || e), true);
   } finally {
