@@ -45,13 +45,13 @@
   };
 
   var CAMPOS = {
-    nome: 60, apelido: 40, nascimento: 10, alturaCm: 3, profissao: 60,
+    nome: 60, apelido: 40, nascimento: 10, alturaCm: 3, pesoKg: 6, profissao: 60,
     relacao: 60, telefone: 24, email: 90, endereco: 120, cidade: 60,
     descricao: 500, preferencias: 500, interesses: 500, observacoes: 900,
     contexto: 500
   };
   var ROTULO = {
-    nome: 'Nome', apelido: 'Apelido', nascimento: 'Nascimento', alturaCm: 'Altura',
+    nome: 'Nome', apelido: 'Apelido', nascimento: 'Nascimento', alturaCm: 'Altura', pesoKg: 'Peso',
     profissao: 'Profissão', relacao: 'Relação', telefone: 'Telefone', email: 'E-mail',
     endereco: 'Endereço', cidade: 'Cidade', descricao: 'Descrição',
     preferencias: 'Preferências', interesses: 'Interesses',
@@ -260,14 +260,37 @@
     return d.getUTCFullYear() === Number(m[1]) && d.getUTCMonth() === Number(m[2]) - 1 &&
       d.getUTCDate() === Number(m[3]) && d.getTime() <= relogio();
   }
-  function idade(nascimento) {
+  function idadeDetalhada(nascimento) {
     if (!dataValida(nascimento)) return null;
     var n = String(nascimento).split('-').map(Number);
     var h = new Date(relogio());
     var anos = h.getFullYear() - n[0];
-    var md = (h.getMonth() + 1) - n[1];
-    if (md < 0 || (md === 0 && h.getDate() < n[2])) anos--;
-    return anos >= 0 && anos < 130 ? anos : null;
+    var meses = h.getMonth() + 1 - n[1];
+    if (h.getDate() < n[2]) meses--;
+    if (meses < 0) { anos--; meses += 12; }
+    if (anos < 0 || anos >= 130) return null;
+    return { anos: anos, meses: meses, totalMeses: anos * 12 + meses };
+  }
+  function idade(nascimento) {
+    var detalhe = idadeDetalhada(nascimento);
+    return detalhe ? detalhe.anos : null;
+  }
+  function diasAteAniversario(nascimento) {
+    if (!dataValida(nascimento)) return null;
+    var n = String(nascimento).split('-').map(Number);
+    var hoje = new Date(relogio());
+    var ano = hoje.getFullYear();
+    var mes = n[1] - 1;
+    var dia = n[2];
+    function dataAniversario(y) {
+      var d = dia;
+      if (mes === 1 && d === 29 && !((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0)) d = 28;
+      return new Date(y, mes, d);
+    }
+    var inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    var proximo = dataAniversario(ano);
+    if (proximo < inicioHoje) proximo = dataAniversario(ano + 1);
+    return Math.ceil((proximo.getTime() - inicioHoje.getTime()) / 86400000);
   }
   function camposPersonalizados(lista) {
     if (!Array.isArray(lista)) return [];
@@ -290,8 +313,10 @@
     Object.keys(CAMPOS).forEach(function (campo) {
       if (d[campo] === undefined && atual) return;
       var valor = campo === 'alturaCm'
-        ? (String(d[campo] == null ? '' : d[campo]).replace(/[^0-9]/g, '').slice(0, 3))
-        : limpar(d[campo], CAMPOS[campo]);
+        ? String(d[campo] == null ? '' : d[campo]).replace(/[^0-9]/g, '').slice(0, 3)
+        : campo === 'pesoKg'
+          ? String(d[campo] == null ? '' : d[campo]).replace(',', '.').replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1').slice(0, 6)
+          : limpar(d[campo], CAMPOS[campo]);
       if (campo === 'nascimento' && valor && !dataValida(valor)) valor = '';
       antes[campo] = p[campo] || '';
       p[campo] = valor;
@@ -326,6 +351,10 @@
     if (p.alturaCm) {
       var a = Number(p.alturaCm);
       if (!(a >= 30 && a <= 250)) return 'Altura deve ficar entre 30 cm e 250 cm.';
+    }
+    if (p.pesoKg) {
+      var peso = Number(p.pesoKg);
+      if (!(peso >= 1 && peso <= 500)) return 'Peso deve ficar entre 1 kg e 500 kg.';
     }
     if (p.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(p.email)) return 'E-mail inválido.';
     return '';
@@ -823,7 +852,8 @@
     configurar: configurar, iniciar: iniciar, config: config, salvarConfig: salvarConfig,
     listar: listar, obter: obter, salvar: salvar, remover: remover, buscar: buscar,
     resolver: resolver, descrever: descrever, contexto: contexto, resumo: resumo,
-    idade: idade, dataValida: dataValida, consentir: consentir,
+    idade: idade, idadeDetalhada: idadeDetalhada, diasAteAniversario: diasAteAniversario,
+    dataValida: dataValida, consentir: consentir,
     revogarConsentimento: revogarConsentimento,
     definirFoto: definirFoto, removerFoto: removerFoto,
     definirRosto: definirRosto, removerRosto: removerRosto,
