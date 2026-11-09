@@ -66,8 +66,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
   const SizedBox(height:5),const Text('Uma interface em evolução.',style:TextStyle(color:muted,fontSize:12)),
   Center(child:AnimatedBuilder(animation:motion,builder:(_,__)=>GestureDetector(
    onTap:coreInfo,
-   onPanUpdate:(d)=>setState(()=>tilt=Offset((tilt.dx+d.delta.dx/500).clamp(-.35,.35),(tilt.dy+d.delta.dy/500).clamp(-.35,.35))),
-   onPanEnd:(_)=>setState(()=>tilt=Offset.zero),
+   onPanUpdate:(d)=>tilt=Offset((tilt.dx+d.delta.dx/500).clamp(-.35,.35),(tilt.dy+d.delta.dy/500).clamp(-.35,.35)),
+   onPanEnd:(_)=>tilt=Offset.zero,
    child:SizedBox(width:330,height:330,child:CustomPaint(painter:HologramPainter(motion.value,tilt),child:const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
     Icon(Icons.all_inclusive_rounded,color:cyan,size:48),SizedBox(height:8),
     Text('J.A.R.V.I.S.',style:TextStyle(letterSpacing:3.5,fontSize:16)),SizedBox(height:5),
