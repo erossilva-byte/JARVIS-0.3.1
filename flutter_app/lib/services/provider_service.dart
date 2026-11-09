@@ -127,7 +127,7 @@ class ProviderService {
   Future<String> complete(String providerId, List<Map<String, String>> messages) async {
     final provider = _provider(providerId);
     final key = await _secrets.read(providerId);
-    if (key == null || key.isEmpty) throw StateError('O provedor ${provider.name} não tem chave cadastrada.');
+    if (key == null || key.isEmpty) { throw StateError('O provedor ${provider.name} não tem chave cadastrada.'); }
 
     final response = await _client
         .post(
