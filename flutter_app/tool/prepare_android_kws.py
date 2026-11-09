@@ -28,12 +28,20 @@ shutil.copy2(ROOT / "flutter_app/android/KwsForegroundService.kt", PACKAGE_DIR /
 shutil.copy2(ROOT / "flutter_app/android/MainActivity.kt", PACKAGE_DIR / "MainActivity.kt")
 
 gradle = GRADLE.read_text(encoding="utf-8")
-gradle = replace_once(
-    gradle,
-    "dependencies {",
-    'dependencies {\n    implementation(files("libs/sherpa-onnx-1.13.8.aar"))\n    implementation("androidx.core:core:1.15.0")',
-    "dependências sherpa-onnx"
-)
+# O template do Flutter pode gerar o build.gradle.kts sem bloco dependencies.
+# Inserimos as dependências de forma idempotente, sem presumir um trecho-base.
+dependencias = [
+    '    implementation(files("libs/sherpa-onnx-1.13.8.aar"))',
+    '    implementation("androidx.core:core:1.15.0")',
+]
+faltantes = [linha for linha in dependencias if linha not in gradle]
+if faltantes:
+    inicio = gradle.find("dependencies {")
+    if inicio >= 0:
+        abertura = inicio + len("dependencies {")
+        gradle = gradle[:abertura] + "\\n" + "\\n".join(faltantes) + gradle[abertura:]
+    else:
+        gradle = gradle.rstrip() + "\\n\\ndependencies {\\n" + "\\n".join(dependencias) + "\\n}\\n"
 if "minSdk = 26" not in gradle:
     if "minSdk = flutter.minSdkVersion" in gradle:
         gradle = gradle.replace("minSdk = flutter.minSdkVersion", "minSdk = 26", 1)
