@@ -513,7 +513,10 @@ public class JarvisService extends Service {
     /* ---------- Motor KWS acústico local ---------- */
     static String calibragem() {
         JarvisService s = instancia;
-        if (s == null) return "";\n        int sens = JarvisPrefs.sensibilidade(s);\n        float limiar = sens >= 75 ? 0.25f : (sens >= 45 ? 0.35f : 0.45f);\n        return "Sherpa-ONNX KWS local · GigaSpeech inglês · limiar " + limiar;
+        if (s == null) return "";
+        int sens = JarvisPrefs.sensibilidade(s);
+        float limiar = sens >= 75 ? 0.25f : (sens >= 45 ? 0.35f : 0.45f);
+        return "Sherpa-ONNX KWS local · GigaSpeech inglês · limiar " + limiar;
     }
 
     /* ---------- Notificação ---------- */
