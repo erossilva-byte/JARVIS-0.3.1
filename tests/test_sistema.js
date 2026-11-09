@@ -78,6 +78,12 @@ t('interpretar calculadora e conversão', () => {
   assert.strictEqual(u.ferramenta, 'converter');
   assert.strictEqual(n.interpretar('qual é a capital da França?'), null);
 });
+t('interpretar execução explícita no sandbox', () => {
+  const r = n.interpretar('execute esse código no sandbox: return 2 + 2;');
+  assert.strictEqual(r.ferramenta, 'sandbox_js');
+  assert.strictEqual(r.args.codigo, 'return 2 + 2;');
+  assert.strictEqual(n.interpretar('converse sobre JavaScript'), null);
+});
 
 a('tarefa cria checkpoint e retoma sem repetir etapa concluída', async () => {
   const tarefa = n.criarTarefa('teste persistente', [
