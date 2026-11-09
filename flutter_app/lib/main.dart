@@ -53,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
     Text('J.A.R.V.I.S. NOVA',style:TextStyle(fontSize:13,letterSpacing:2,fontWeight:FontWeight.w700)),
     Text('PERSONAL AI SYSTEM',style:TextStyle(fontSize:8,letterSpacing:2,color:muted)),
    ]),
-  ]),actions:[IconButton(key:const ValueKey('settings-button'),tooltip:'Configurações',onPressed:settings,icon:const Icon(Icons.tune_rounded,color:cyan)),const SizedBox(width:8)]),
+  ]),actions:[Builder(builder:(buttonContext)=>IconButton(key:const ValueKey('settings-button'),tooltip:'Configurações',onPressed:()=>Navigator.of(buttonContext,rootNavigator:true).push(MaterialPageRoute<void>(builder:(_)=>const SettingsPage())),icon:const Icon(Icons.tune_rounded,color:cyan))),const SizedBox(width:8)]),
   body:SafeArea(child:AnimatedSwitcher(duration:const Duration(milliseconds:300),switchInCurve:Curves.easeOutCubic,child:tab==0?homeView(key:const ValueKey('home')):catalog(key:const ValueKey('catalog')))),
   bottomNavigationBar:NavigationBar(height:68,backgroundColor:const Color(0xFF08121E),indicatorColor:cyan.withValues(alpha: .13),selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:const[
    NavigationDestination(icon:Icon(Icons.blur_circular_rounded),selectedIcon:Icon(Icons.blur_on_rounded,color:cyan),label:'Núcleo'),
