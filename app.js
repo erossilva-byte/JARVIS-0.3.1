@@ -674,6 +674,16 @@ async function bloqConsultarAparelho(forcar) {
   return bloqDisp;
 }
 
+function bloqDisponibilidadeModo(cfg) {
+  const d = bloqDisp || {};
+  const c = cfg || segCfg();
+  return {
+    bio: !!d.biometria && !!c.bioAtivo,
+    nfc: !!d.nfc && !!c.nfcAtivo,
+    pin: true
+  };
+}
+
 function atualizarBloqueioUI() {
   if (!SEGN) return;
   const chk = $('#c-bloqueio');
@@ -692,7 +702,7 @@ function atualizarBloqueioUI() {
   if (sel) {
     sel.value = cfg.modo;
     Array.prototype.forEach.call(sel.options, (o) => {
-      const ex = SEGN.modoViavel(o.value, disp);
+      const ex = SEGN.modoViavel(o.value, bloqDisponibilidadeModo(cfg));
       o.disabled = !ex.ok;
       o.title = ex.ok ? '' : ex.motivo;
     });
@@ -1147,18 +1157,24 @@ function restaurarSeguranca() {
   const restaurar = $('#c-bloq-restaurar'); if (restaurar) restaurar.onclick = () => restaurarSeguranca();
   const modo = $('#c-bloq-modo');
   if (modo) modo.addEventListener('change', () => {
-    const cfg = segCfg(); cfg.modo = modo.value; segSalvar(cfg);
+    const cfg = segCfg(); cfg.modo = modo.value;
+    const ex = SEGN.modoViavel(cfg.modo, bloqDisponibilidadeModo(cfg));
+    if (!ex.ok) {
+      cfg.modo = 'pin';
+      bloqStatus('Modo indisponível: ' + ex.motivo + ' O modo foi mantido em PIN.', true);
+    }
+    segSalvar(cfg);
     atualizarBloqueioUI();
-    registrar('segurança', 'modo de desbloqueio: ' + modo.value);
+    registrar('segurança', 'modo de desbloqueio: ' + cfg.modo);
   });
   const limite = $('#c-bloq-timeout');
   if (limite) limite.addEventListener('change', () => { const cfg = segCfg(); cfg.timeoutSeg = Number(limite.value); segSalvar(cfg); atualizarBloqueioUI(); });
   const max = $('#c-bloq-max');
   if (max) max.addEventListener('change', () => { const cfg = segCfg(); cfg.maxTentativas = Number(max.value); segSalvar(cfg); atualizarBloqueioUI(); });
   const nfcChk = $('#c-bloq-nfc');
-  if (nfcChk) nfcChk.addEventListener('change', () => { const cfg = segCfg(); cfg.nfcAtivo = nfcChk.checked; segSalvar(cfg); atualizarBloqueioUI(); });
+  if (nfcChk) nfcChk.addEventListener('change', () => { const cfg = segCfg(); cfg.nfcAtivo = nfcChk.checked; const ex = SEGN.modoViavel(cfg.modo, bloqDisponibilidadeModo(cfg)); if (!ex.ok) { cfg.modo = 'pin'; bloqStatus('O modo anterior exigia NFC; foi alterado para PIN para evitar bloqueio do acesso.', true); } segSalvar(cfg); atualizarBloqueioUI(); });
   const bioChk = $('#c-bloq-bio');
-  if (bioChk) bioChk.addEventListener('change', () => { const cfg = segCfg(); cfg.bioAtivo = bioChk.checked; segSalvar(cfg); atualizarBloqueioUI(); });
+  if (bioChk) bioChk.addEventListener('change', () => { const cfg = segCfg(); cfg.bioAtivo = bioChk.checked; const ex = SEGN.modoViavel(cfg.modo, bloqDisponibilidadeModo(cfg)); if (!ex.ok) { cfg.modo = 'pin'; bloqStatus('O modo anterior exigia biometria; foi alterado para PIN para evitar bloqueio do acesso.', true); } segSalvar(cfg); atualizarBloqueioUI(); });
   const chk = $('#c-bloqueio');
   if (chk) chk.addEventListener('change', () => {
     const querBloqueio = chk.checked;
@@ -1169,7 +1185,7 @@ function restaurarSeguranca() {
       return;
     }
     const cfg = segCfg();
-    const ex = SEGN.modoViavel(cfg.modo, bloqDisp || { bio: false, nfc: false });
+    const ex = SEGN.modoViavel(cfg.modo, bloqDisponibilidadeModo(cfg));
     if (querBloqueio && !ex.ok && cfg.modo !== 'pin') {
       bloqStatus('Modo ' + SEGN.rotulo(cfg.modo) + ' indisponível: ' + ex.motivo + ' O bloqueio foi ativado em PIN até você escolher outro modo.', true);
       cfg.modo = 'pin'; segSalvar(cfg);
