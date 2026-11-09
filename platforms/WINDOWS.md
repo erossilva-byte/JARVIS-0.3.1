@@ -1,7 +1,7 @@
 # J.A.R.V.I.S. Nova no Windows — camada PC
 
 Este documento descreve **o que a versão de PC faz, o que ela não faz e como isso foi
-verificado**. Ele acompanha a versão 1.21.5: o núcleo é o mesmo do Android, e a camada
+verificado**. O núcleo compartilhado está em evolução para a linha 1.46.0: o núcleo é o mesmo do Android, e a camada
 `platforms/desktop` é a única parte específica de computador.
 
 ## 1. Arquitetura: um núcleo, três arquivos de PC
@@ -20,9 +20,7 @@ platforms/desktop
 
 Por que assim:
 
-- **`cad.js` não foi duplicado.** Um `.cad` criado no PC abre no Android e vice-versa,
-  porque a geometria, a malha e os exportadores são os mesmos arquivos. A camada de PC
-  apenas lê o disco e entrega geometria para o canvas.
+- **`cad.js` não foi duplicado.** O arquivo `.cad` desta aplicação é o formato interno do Jarvis CAD; ele abre no PC e no Android porque ambos compartilham o mesmo parser e a mesma geometria. **Não é o formato nativo do CADeSIMU.** Para CADeSIMU, a aplicação deve exportar intercâmbio documentado e validar o redesenho no programa original; não afirmar leitura/gravação nativa até comprovar com amostras reais.
 - **`arquivos.js` e `cad_pc.js` são Node puro, sem `require('electron')`.** Isso permite
   rodar os testes de verdade (`node tests/test_pc_arquivos.js`) fora da janela — e é o
   que garante que o que foi testado é o mesmo código que o app usa.
@@ -77,7 +75,7 @@ Todas as funções resolvem o caminho dentro da pasta do usuário (`app.getPath(
 
 | Formato | Identifica | Abre/visualiza | Cria | Edita (nova versão) | Exporta | Limitação real |
 | --- | --- | --- | --- | --- | --- | --- |
-| `.cad` CadSimu | sim | sim, malha 3D | sim | **sim** (posição, dimensões, raio, altura, nome) | sim | — |
+| `.cad` Jarvis CAD (formato interno) | sim | sim, malha 3D | sim | **sim** (posição, dimensões, raio, altura, nome) | sim | **não é o formato nativo proprietário do CADeSIMU**; não declarar intercâmbio nativo sem teste com arquivos reais |
 | DXF (ASCII) | sim | sim, linhas por camada | sim | não | sim | não edito entidade a entidade; sem hachura, bloco ou cota |
 | STL (binário/ASCII) | sim | sim, malha com profundidade | sim | não | sim | sem unidades no arquivo; malha facetada |
 | 3MF | sim | não no painel | sim | não | sim | visualização pelo `.cad` de origem |
