@@ -357,10 +357,8 @@ public class JarvisService extends Service {
         int sensibilidade = JarvisPrefs.sensibilidade(this);
         detectorAtual = DETECTOR;
         sessao = true;
-        escutando = true;
-        estadoNotificacao = testeAtivoInterno()
-                ? "Teste KWS local · diga “Jarvis” (" + testeDeteccoes + ")"
-                : "KWS acústico local ouvindo “Jarvis”";
+        escutando = false; // só passa a true depois que AudioRecord confirma gravação ativa
+        estadoNotificacao = "Preparando o detector KWS local…";
         notificar();
 
         if (kwsEngine != null) {
@@ -389,6 +387,7 @@ public class JarvisService extends Service {
             @Override public void onState(String state) {
                 main.post(() -> {
                     if (!querEscuta) return;
+                    escutando = state != null && state.startsWith("KWS local ativo");
                     estadoNotificacao = state;
                     notificar();
                 });
