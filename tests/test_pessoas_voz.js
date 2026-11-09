@@ -30,9 +30,9 @@ const PESSOAS = {
   descrever(p) { return p.nome + (p.relacao ? ' — ' + p.relacao : ''); },
   interpretarCadastroVoz(frase) {
     if (!/cadastre (?:meu amigo )?marcelo/i.test(frase)) return null;
-    const peso = String(frase).match(/peso\\s*(?:de|é|e)?\\s*(\\d{1,3}(?:[,.]\\d{1,2})?)\\s*kg/i);
-    const altura = String(frase).match(/altura\\s*(?:de|é|e)?\\s*(\\d{1,3}(?:[,.]\\d{1,2})?)\\s*(cm|m)/i);
-    const idade = String(frase).match(/idade\\s*(?:de|é|e)?\\s*(\\d{1,3})/i);
+    const peso = String(frase).match(/peso\s*(?:de|é|e)?\s*(\d{1,3}(?:[,.]\d{1,2})?)\s*kg/i);
+    const altura = String(frase).match(/altura\s*(?:de|é|e)?\s*(\d{1,3}(?:[,.]\d{1,2})?)\s*(cm|m)/i);
+    const idade = String(frase).match(/idade\s*(?:de|é|e)?\s*(\d{1,3})/i);
     const dados = { nome: 'Marcelo', relacao: 'amigo' };
     if (idade) { dados.idadeBase = idade[1]; dados.idadeEm = '2026-11-09'; }
     if (peso) dados.pesoKg = peso[1].replace(',', '.');
