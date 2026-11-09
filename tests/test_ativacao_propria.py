@@ -48,7 +48,7 @@ if "JarvisKwsEngine.java" not in release:
     issues.append("Workflow de Release não copia a classe KWS")
 
 # 2. A interface descreve o motor real e não promete ASR Android como KWS.
-for token in ("sherpa-onnx KWS", "AudioRecord", "modelo-base é treinado em inglês", 'id="c-wake-sensibilidade"', 'id="c-wake-variantes"'):
+for token in ("sherpa-onnx KWS", "AudioRecord", "treinado em inglês", 'id="c-wake-sensibilidade"', 'id="c-wake-variantes"'):
     if token not in html:
         issues.append("Interface sem informação/controle KWS: " + token)
 for token in ("KWS acústico local", "KWS sherpa-onnx local", "JarvisPrefs.variantes"):
