@@ -9,13 +9,13 @@ Este registro é atualizado por evidência de código e CI. Não confundir arqui
 - [x] Núcleo visual Flutter ajustado: resposta tátil com escala animada, animação contínua, interação por toque/arraste e painel de contexto.
 - [x] Teste de widget para a interação do núcleo adicionado.
 - [x] Textos de configurações deixam explícito que KWS sherpa-onnx já existe no Android legado, mas a ponte Flutter ainda está pendente; deixam explícito também o estado pendente de Obsidian, memória e pareamento.
-- [x] Workflow Flutter atualizado para incluir a branch 1.47 e PRs encadeadas na branch Flutter 1.46.
+- [x] Workflow Flutter atualizado para incluir a branch 1.47 e PRs encadeadas na branch Flutter 1.46.\n- [x] Contrato `KwsGateway` isolado da implementação de canais para permitir testes sem Android nativo.\n- [x] `KwsController` adicionado para coordenar diagnóstico, iniciar/parar/teste, eventos de wake, concorrência e erros sem afirmar escuta ativa sem confirmação do serviço.\n- [x] Testes unitários do controlador adicionados: plugin ausente, start, stop, evento de ativação e falha.
 
 ## Estado real das frentes
 | Frente | Evidência atual | Estado |
 |---|---|---|
 | Flutter UI | Shell Flutter, provedor de IA e núcleo holográfico; tela ainda não chama todos os serviços | Parcial |
-| Kotlin + KWS | `JarvisKwsEngine` e `JarvisService` sherpa-onnx/AudioRecord existem no legado Android; modelo KWS base GigaSpeech é inglês | Parcial; ponte Flutter ausente e PT-BR precisa validação |
+| Kotlin + KWS | `JarvisKwsEngine` e `JarvisService` sherpa-onnx/AudioRecord existem no legado Android; contrato Dart e controlador de ciclo de vida agora estão implementados e testáveis; modelo KWS base GigaSpeech é inglês | Parcial; plugin/serviço Flutter nativo ainda ausente e PT-BR precisa validação |
 | CADeSIMU | Projetista e formato Jarvis próprio; sem round-trip demonstrado com o CADeSIMU oficial | Pendente |
 | Paridade Windows | Electron/Node legado existe; Flutter Windows compila, sem todos os serviços migrados | Pendente |
 | IA local | Plugin MediaPipe legado existe; Gemma 3 1B IT ainda requer teste real no Poco X7; Windows sem runtime integrado | Parcial |
@@ -31,7 +31,7 @@ Este registro é atualizado por evidência de código e CI. Não confundir arqui
 6. A sincronização Obsidian precisa lidar com SAF no Android e caminhos/permissões no Windows, além de conflitos e deduplicação.
 
 ## Critérios de saída
-- [ ] Bridge Flutter ↔ Kotlin com lifecycle, permissões e eventos KWS; iniciar/parar/diagnóstico/teste de ativação.
+- [ ] Implementar plugin Flutter Android ↔ Kotlin que registre os canais, peça permissão em contexto de Activity, opere serviço foreground compatível com Android 16 e encaminhe eventos do motor sherpa-onnx; o controlador Dart criado nesta etapa ainda não substitui essa ponte nativa.
 - [ ] KWS validado em Android 16/HyperOS, inclusive tela bloqueada, Doze, app removido dos recentes, reinício, falsos positivos e pronúncia PT-BR.
 - [ ] CADeSIMU: abrir/editar/salvar cópia e reabrir no CADeSIMU oficial.
 - [ ] Matriz Android/Windows por capacidade, com ações e testes reais.
