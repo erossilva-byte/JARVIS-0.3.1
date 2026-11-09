@@ -23,7 +23,7 @@ checks = {
         "AndroidKeyStore" not in prefs and "cifrar(" not in prefs and "lerChave" not in prefs),
     "Calibragem da ativação persistida": (
         "static int sensibilidade(Context c)" in prefs and "static String variantes(Context c)" in prefs
-        and "static int variantes(Context c)" in prefs),
+        ),
     "Serviço lê a calibragem salva ao abrir sessão": (
         "JarvisPrefs.sensibilidade(this)" in servico and "JarvisPrefs.variantes(this)" in servico),
     # ---- Serviço ----
