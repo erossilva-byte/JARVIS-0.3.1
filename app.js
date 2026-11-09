@@ -10158,15 +10158,15 @@ function responderPessoaPorVoz(texto) {
     setTimeout(() => { abrirPessoas(); }, 600);
     return { fala: 'Abrindo a ficha de pessoas, ' + trat() + '. Você pode informar nascimento, peso e altura; voz não é necessária.' };
   }
-  if (IDENT && typeof IDENT.interpretarCadastroVoz === 'function') {
-    const cadastro = IDENT.interpretarCadastroVoz(bruto);
+  if (PESSOAS && typeof PESSOAS.interpretarCadastroVoz === 'function') {
+    const cadastro = PESSOAS.interpretarCadastroVoz(bruto);
     if (cadastro) {
       if (!cadastro.ok) return { fala: cadastro.erro };
-      const salvo = IDENT.salvar(cadastro.dados);
+      const salvo = PESSOAS.salvar(cadastro.dados);
       if (!salvo.ok) return { fala: 'Não consegui salvar o perfil: ' + salvo.erro };
       registrar('identidade', 'perfil cadastrado por voz: ' + salvo.perfil.nome);
       setTimeout(() => { abrirPessoas(); }, 600);
-      const detalhe = IDENT.idadeDetalhada(salvo.perfil.nascimento, salvo.perfil);
+      const detalhe = PESSOAS.idadeDetalhada(salvo.perfil.nascimento, salvo.perfil);
       const idadeTexto = detalhe ? (detalhe.aproximada ? 'idade aproximada de ' : '') +
         detalhe.anos + ' anos' + (detalhe.meses ? ' e ' + detalhe.meses + ' meses' : '') : '';
       return {
