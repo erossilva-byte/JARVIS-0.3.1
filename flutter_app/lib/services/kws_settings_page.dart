@@ -4,7 +4,8 @@ import 'kws_controller.dart';
 import 'kws_bridge.dart';
 
 class KwsSettingsPage extends StatefulWidget {
-  const KwsSettingsPage({super.key});
+  const KwsSettingsPage({super.key, this.controller});
+  final KwsController? controller;
 
   @override
   State<KwsSettingsPage> createState() => _KwsSettingsPageState();
@@ -12,12 +13,15 @@ class KwsSettingsPage extends StatefulWidget {
 
 class _KwsSettingsPageState extends State<KwsSettingsPage> {
   late final KwsController controller;
+  late final bool ownsController;
 
   @override
   void initState() {
     super.initState();
-    controller = KwsController()..addListener(_refresh);
-    unawaited(controller.initialize());
+    ownsController = widget.controller == null;
+    controller = widget.controller ?? KwsController();
+    controller.addListener(_refresh);
+    if (ownsController) unawaited(controller.initialize());
   }
 
   void _refresh() {
@@ -26,9 +30,8 @@ class _KwsSettingsPageState extends State<KwsSettingsPage> {
 
   @override
   void dispose() {
-    controller
-      ..removeListener(_refresh)
-      ..dispose();
+    controller.removeListener(_refresh);
+    if (ownsController) controller.dispose();
     super.dispose();
   }
 
@@ -185,6 +188,13 @@ class _KwsSettingsPageState extends State<KwsSettingsPage> {
             title: 'Limitação do modelo atual',
             description:
                 'O modelo KWS disponível foi treinado em inglês. A palavra “Jarvis” e pronúncias brasileiras ainda precisam de validação acústica no aparelho.',
+          ),
+          const SizedBox(height: 10),
+          const _InfoCard(
+            icon: Icons.record_voice_over_rounded,
+            title: 'Comando após a ativação',
+            description:
+                'Depois de detectar Jarvis, o Android tenta iniciar reconhecimento de fala offline pt-BR. O texto reconhecido abre uma conversa automaticamente. Se o pacote offline não estiver disponível, o sistema informa o erro e não envia áudio para a nuvem.',
           ),
           const SizedBox(height: 10),
           const _InfoCard(
