@@ -43,3 +43,12 @@ void main() {
     expect(find.textContaining('ainda não estão integrados'), findsOneWidget);
   });
 }
+
+  testWidgets('núcleo responde ao toque e abre painel holográfico', (tester) async {
+    await tester.pumpWidget(const JarvisApp());
+    await tester.tap(find.text('NÚCLEO HOLOGRÁFICO'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 450));
+    expect(find.text('Núcleo holográfico'), findsOneWidget);
+    expect(find.textContaining('A animação responde ao toque'), findsOneWidget);
+  });
