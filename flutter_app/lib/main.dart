@@ -2,6 +2,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'services/provider_service.dart';
 import 'services/kws_settings_page.dart';
+import 'services/kws_controller.dart';
+import 'services/kws_bridge.dart';
+import 'services/voice_conversation_page.dart';
+
+final jarvisKwsController = KwsController();
 
 void main()=>runApp(const JarvisApp());
 const cyan=Color(0xFF55DFFF),bg=Color(0xFF050A12),panel=Color(0xFF0B1725),muted=Color(0xFF8CA5B9);
@@ -43,20 +48,34 @@ class HomeScreen extends StatefulWidget{
  @override State<HomeScreen> createState()=>_HomeScreenState();
 }
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
+ StreamSubscription<KwsCommandEvent>? voiceSubscription;
+
+ @override void initState(){
+  super.initState();
+  unawaited(jarvisKwsController.initialize());
+  voiceSubscription=KwsController.commandBus.listen((event){
+   if(!mounted)return;
+   if(event.type=='command_result'&&event.text.trim().isNotEmpty){
+    Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>VoiceConversationPage(initialCommand:event.text.trim())));
+   }else if(event.type=='command_error'&&event.message.isNotEmpty){
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(event.message)));
+   }
+  });
+ }
  late final AnimationController motion=AnimationController(vsync:this,duration:const Duration(seconds:20))..repeat();
  late final AnimationController intro=AnimationController(vsync:this,duration:const Duration(milliseconds:700))..forward();
  late final AnimationController touch=AnimationController(vsync:this,duration:const Duration(milliseconds:420));
  final search=TextEditingController();
  int tab=0;String filter='Todos',query='';Offset tilt=Offset.zero;
  static const groups=['Todos','Inteligência','Conhecimento','Interação','Produtividade','Engenharia','Interface','Contexto','Sistema','Conectividade'];
- @override void dispose(){motion.dispose();intro.dispose();touch.dispose();search.dispose();super.dispose();}
+ @override void dispose(){voiceSubscription?.cancel();motion.dispose();intro.dispose();touch.dispose();search.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(backgroundColor:bg,titleSpacing:18,title:const Row(children:[
    _Brand(),SizedBox(width:10),Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     Text('J.A.R.V.I.S. NOVA',style:TextStyle(fontSize:13,letterSpacing:2,fontWeight:FontWeight.w700)),
     Text('PERSONAL AI SYSTEM',style:TextStyle(fontSize:8,letterSpacing:2,color:muted)),
    ]),
-  ]),actions:[Builder(builder:(buttonContext)=>IconButton(key:const ValueKey('settings-button'),tooltip:'Configurações',onPressed:()=>Navigator.of(buttonContext,rootNavigator:true).push(MaterialPageRoute<void>(builder:(_)=>const SettingsPage())),icon:const Icon(Icons.tune_rounded,color:cyan))),const SizedBox(width:8)]),
+  ]),actions:[Builder(builder:(buttonContext)=>IconButton(key:const ValueKey('settings-button'),tooltip:'Configurações',onPressed:()=>Navigator.of(buttonContext,rootNavigator:true).push(MaterialPageRoute<void>(builder:(_)=>SettingsPage(controller:jarvisKwsController))),icon:const Icon(Icons.tune_rounded,color:cyan))),const SizedBox(width:8)]),
   body:SafeArea(child:AnimatedSwitcher(duration:const Duration(milliseconds:300),switchInCurve:Curves.easeOutCubic,child:tab==0?homeView(key:const ValueKey('home')):catalog(key:const ValueKey('catalog')))),
   bottomNavigationBar:NavigationBar(height:68,backgroundColor:const Color(0xFF08121E),indicatorColor:cyan.withValues(alpha: .13),selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:const[
    NavigationDestination(icon:Icon(Icons.blur_circular_rounded),selectedIcon:Icon(Icons.blur_on_rounded,color:cyan),label:'Núcleo'),
@@ -120,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
   SizedBox(height:8),Text('A animação responde ao toque e ao arraste. Captura de voz e execução de comandos dependem dos serviços nativos, ainda não conectados nesta tela.',textAlign:TextAlign.center,style:TextStyle(color:muted,height:1.5)),
  ])));
  void openModule(JarvisModule m)=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>ModulePage(module:m)));
- void settings()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const SettingsPage()));
+ void settings()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>SettingsPage(controller:jarvisKwsController)));
 }
 
 class _Brand extends StatelessWidget{const _Brand();@override Widget build(BuildContext c)=>Container(width:31,height:31,decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:cyan.withValues(alpha: .7)),boxShadow:[BoxShadow(color:cyan.withValues(alpha: .18),blurRadius:13)]),child:const Icon(Icons.all_inclusive_rounded,color:cyan,size:19));}
@@ -166,7 +185,8 @@ class ModulePage extends StatelessWidget{
  ]));
 }
 class SettingsPage extends StatelessWidget{
- const SettingsPage({super.key});
+ const SettingsPage({super.key,this.controller});
+ final KwsController? controller;
  @override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Configurações',style:TextStyle(fontSize:15))),body:ListView(padding:const EdgeInsets.all(20),children:[
   const _Eyebrow('PREFERÊNCIAS DO SISTEMA'),const SizedBox(height:8),const Text('Central de ajustes',style:TextStyle(fontSize:27,fontWeight:FontWeight.w300)),
   const SizedBox(height:7),const Text('Credenciais dos provedores são protegidas pelo armazenamento seguro da plataforma. Outros serviços serão habilitados quando suas pontes nativas estiverem validadas.',style:TextStyle(color:muted,fontSize:11,height:1.5)),
@@ -183,7 +203,7 @@ class SettingsPage extends StatelessWidget{
    title:const Text('Voz e palavra de ativação',style:TextStyle(fontSize:12,fontWeight:FontWeight.w600)),
    subtitle:const Text('Controlar KWS sherpa-onnx local, testar e consultar diagnóstico',style:TextStyle(color:muted,fontSize:10)),
    trailing:const Icon(Icons.chevron_right_rounded,color:muted),
-   onTap:()=>Navigator.of(c).push(MaterialPageRoute<void>(builder:(_)=>const KwsSettingsPage())),
+   onTap:()=>Navigator.of(c).push(MaterialPageRoute<void>(builder:(_)=>KwsSettingsPage(controller:controller))),
   )),
   const _Setting(icon:Icons.memory_rounded,title:'Memória semântica e Obsidian',detail:'A migração precisa preservar notas e IDs, integrar busca vetorial multilíngue e sincronização bidirecional sem duplicações.'),
   const _Setting(icon:Icons.shield_outlined,title:'Privacidade e permissões',detail:'As permissões serão solicitadas somente quando uma função real precisar delas.'),
