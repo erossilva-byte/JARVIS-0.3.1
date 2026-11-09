@@ -55,3 +55,27 @@ Este registro é atualizado por evidência de código e CI. Código preparado n�
 - [ ] Release Android e Windows do mesmo commit, com checksums e notas.
 
 **Status da sequência:** integração KWS nativa implementada em código, aguardando prova de compilação e execução. Não publicar como versão pronta enquanto houver qualquer critério de saída desmarcado.
+
+
+## Gate obrigatório para avançar de etapa
+
+Nenhuma nova etapa de integração, merge ou Release pode ser considerada autorizada sem cumprir os gates abaixo. Falha, cancelamento, execução pendente ou ausência de evidência contam como **bloqueio**, não como aprovação.
+
+### Gate A — CI reproduzível (obrigatório em cada commit candidato)
+- [ ] Android: geração limpa do runner, preparação do sherpa-onnx/AAR/modelo, `dart format`, `flutter analyze`, `flutter test`, APK debug compilado e artefato publicado.
+- [ ] Windows: geração limpa do runner, `flutter analyze`, `flutter test`, build Windows e artefato publicado.
+- [ ] Job agregado `advance-gate (Android + Windows)` concluído com sucesso; ele falha se qualquer plataforma falhar ou não concluir com sucesso.
+- [ ] Conferir que os dois artefatos pertencem ao mesmo SHA do commit avaliado; não reutilizar artefatos antigos.
+- [ ] Corrigir a causa raiz de toda falha e repetir o workflow no novo commit. Não contornar removendo testes, etapas ou validações.
+
+### Gate B — validação funcional antes de declarar a etapa pronta
+- [ ] Instalar e executar o APK no Poco X7 com Android 16/HyperOS.
+- [ ] Testar KWS com a palavra “Jarvis” em português brasileiro em ambiente silencioso e com ruído; medir falsos positivos, falsos negativos e latência. O modelo inglês atual não recebe aprovação automática.
+- [ ] Validar captura/transcrição offline pt-BR, permissões, bloqueio de tela, Doze, app removido dos recentes, rearme, reinício e consumo de bateria.
+- [ ] Verificar que nenhuma captura/transcrição de áudio é enviada à nuvem sem autorização explícita.
+- [ ] Executar a matriz de funções equivalentes Android/Windows e registrar o que ainda estiver parcial.
+
+### Regra de decisão
+- **Avançar para a próxima etapa de implementação:** Gate A verde no SHA atual; Gate B pode continuar como tarefa explícita da etapa, sem rotular como concluída a função ainda não testada.
+- **Marcar a etapa como concluída, retirar o rascunho, fazer merge ou publicar Release:** Gates A e B aprovados, além dos critérios específicos da funcionalidade e evidência registrada.
+- ESP32 continua fora do escopo desta sequência. Picovoice não pode ser introduzido como dependência ou alternativa obrigatória.
