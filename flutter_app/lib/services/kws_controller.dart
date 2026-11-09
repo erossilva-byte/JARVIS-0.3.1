@@ -65,11 +65,12 @@ class KwsController extends ChangeNotifier {
     _phase = transitional;
     _notify();
     try {
-      final result = await action();
-      _apply(result);
-      if (result.available) {
+      // Subscribe antes de iniciar o microfone para não perder uma detecção muito rápida.
+      if (transitional == KwsPhase.starting) {
         await _listenForWakeEvents();
       }
+      final result = await action();
+      _apply(result);
       return _status;
     } catch (e) {
       _fail(e);
