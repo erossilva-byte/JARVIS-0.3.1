@@ -17,6 +17,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   bool sending = false;
   String? error;
   String? providerName;
+  AiProvider? activeProvider;
   bool submittedInitial = false;
 
   @override
@@ -50,7 +51,8 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   Future<void> _send({AiProvider? provider}) async {
     final text = composer.text.trim();
     if (text.isEmpty || sending) return;
-    final selected = provider ?? aiProviders.firstWhere((p) => p.id == 'groq');
+    final selected = provider ?? activeProvider ?? aiProviders.firstWhere((p) => p.id == 'groq');
+    activeProvider = selected;
     setState(() {
       sending = true;
       error = null;
