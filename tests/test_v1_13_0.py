@@ -77,7 +77,7 @@ checagens = {
         and "indexOf('v') < 0" in hermes and "/^j/.test(t)" in hermes),
     "Serviço executa KWS acústico local por PCM": (
         "new JarvisKwsEngine(" in servico and "AudioRecord" in ler("JarvisKwsEngine.java")
-        and "new KeywordSpotter(config)" in ler("JarvisKwsEngine.java")
+        and "new KeywordSpotter(null, config)" in ler("JarvisKwsEngine.java")
         and "SpeechRecognizer.create" not in servico),
     "Serviço lê a calibragem salva a cada sessão": (
         "JarvisPrefs.sensibilidade(this)" in servico and "JarvisPrefs.variantes(this)" in servico
