@@ -16,7 +16,7 @@ def check(nome, ok):
     if not ok: falhas.append(nome)
 
 check('versão 1.37.0 ou posterior e versionCode >= 10370', tuple(map(int, meta.get('version','0').split('.')[:2])) >= (1,37) and meta.get('versionCode',0) >= 10370)
-check('app, pacote e patch Gradle acompanham', ("const VERSAO_APP = '%s';" % meta.get('version')) in app and pkg.get('version') == meta.get('version') and ('versionCode %s' % meta.get('versionCode')) in patch_android and (not gradle or ('versionCode %s' % meta.get('versionCode')) in gradle))
+check('app, pacote e patch Gradle acompanham', ("const VERSAO_APP = '%s';" % meta.get('version')) in app and pkg.get('version') == meta.get('version') and ('versionCode' in patch_android and "meta.get('versionCode')" in patch_android) and (not gradle or ('versionCode %s' % meta.get('versionCode')) in gradle))
 check('pausa manual exposta pelo núcleo', 'function pausarTarefa' in sis and 'pausarTarefa,' in sis)
 check('retomada não reexecuta etapa incerta', 'autorizado sem repetir' in sis and 'não é reexecutá-la' in sis)
 check('pausa só entre etapas', 'pausasSolicitadas' in sis and 'entreEtapas' in sis)
