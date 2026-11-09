@@ -29,9 +29,15 @@ const PESSOAS = {
   },
   descrever(p) { return p.nome + (p.relacao ? ' — ' + p.relacao : ''); },
   interpretarCadastroVoz(frase) {
-    return /cadastre (?:meu amigo )?marcelo/i.test(frase)
-      ? { ok: true, dados: { nome: 'Marcelo', relacao: 'amigo', idadeBase: '27', pesoKg: '72.5', alturaCm: '178' }, idadeAproximada: true }
-      : null;
+    if (!/cadastre (?:meu amigo )?marcelo/i.test(frase)) return null;
+    const peso = String(frase).match(/peso\\s*(?:de|é|e)?\\s*(\\d{1,3}(?:[,.]\\d{1,2})?)\\s*kg/i);
+    const altura = String(frase).match(/altura\\s*(?:de|é|e)?\\s*(\\d{1,3}(?:[,.]\\d{1,2})?)\\s*(cm|m)/i);
+    const idade = String(frase).match(/idade\\s*(?:de|é|e)?\\s*(\\d{1,3})/i);
+    const dados = { nome: 'Marcelo', relacao: 'amigo' };
+    if (idade) { dados.idadeBase = idade[1]; dados.idadeEm = '2026-11-09'; }
+    if (peso) dados.pesoKg = peso[1].replace(',', '.');
+    if (altura) dados.alturaCm = String(Math.round(Number(altura[1].replace(',', '.')) * (altura[2] === 'm' ? 100 : 1)));
+    return { ok: true, dados, idadeAproximada: !!idade };
   },
   salvar(dados) {
     salvos.push(dados);
