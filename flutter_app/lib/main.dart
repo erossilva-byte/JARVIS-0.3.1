@@ -139,7 +139,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin{
   Icon(Icons.blur_circular_rounded,color:cyan,size:36),SizedBox(height:12),Text('Núcleo holográfico',style:TextStyle(fontSize:19)),
   SizedBox(height:8),Text('A animação responde ao toque e ao arraste. Captura de voz e execução de comandos dependem dos serviços nativos, ainda não conectados nesta tela.',textAlign:TextAlign.center,style:TextStyle(color:muted,height:1.5)),
  ])));
- void openModule(JarvisModule m)=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>ModulePage(module:m)));
+ void openModule(JarvisModule m){
+  switch(m.name){
+   case 'Provedores de IA':
+    Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const ProviderSettingsPage()));
+    return;
+   case 'Voz e KWS':
+    Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>KwsSettingsPage(controller:jarvisKwsController)));
+    return;
+   default:
+    Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>ModulePage(module:m)));
+  }
+ }
  void settings()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>SettingsPage(controller:jarvisKwsController)));
 }
 
