@@ -25,7 +25,7 @@ import com.getcapacitor.JSObject;
  * Serviço em primeiro plano que mantém a escuta de ativação viva fora da tela.
  *
  * O detector pertence ao serviço (não à tela) e o estado desejado é persistido em
- * JarvisPrefs, junto da sensibilidade do KWS. Assim, quando o
+ * JarvisPrefs, junto da sensibilidade e das palavras extras do KWS. Assim, quando o
  * Android reinicia o serviço (START_STICKY), reinicia o aparelho ou encerra o app pelos
  * recentes, a escuta volta sozinha e calibrada do jeito que o usuário deixou.
  *
@@ -394,7 +394,7 @@ public class JarvisService extends Service {
                     notificar();
                 });
             }
-        }, sensibilidade);
+        }, sensibilidade, JarvisPrefs.variantes(this));
         kwsEngine.start();
     }
 
