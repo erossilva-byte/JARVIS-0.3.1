@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - feat/flutter-dart-migration-1.46.0
+      - feat/functional-integration-1.47.0
   pull_request:
     branches:
       - work/1.46.0-auditoria-funcoes-apk
+      - feat/functional-integration-1.47.0
       - main
   workflow_dispatch:
 
