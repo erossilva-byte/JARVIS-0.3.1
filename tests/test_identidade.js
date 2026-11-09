@@ -59,6 +59,22 @@ function amostra(seed, extra) {
   assert.strictEqual(I.salvar({ nome: 'Peso inválido', pesoKg: '0' }).ok, false, 'peso fora da faixa é recusado');
   assert.ok(/68.5 kg/.test(I.descrever(bia.perfil)));
   assert.ok(/Beatriz Lima/.test(I.descrever(bia.perfil)));
+  const comandoCadastro = I.interpretarCadastroVoz('Cadastre meu amigo Marcelo, idade 27 anos, peso 72,5 kg e altura 1,78 m');
+  assert.ok(comandoCadastro && comandoCadastro.ok, JSON.stringify(comandoCadastro));
+  assert.strictEqual(comandoCadastro.dados.nome, 'Marcelo');
+  assert.strictEqual(comandoCadastro.dados.relacao, 'amigo');
+  assert.strictEqual(comandoCadastro.dados.pesoKg, '72.5');
+  assert.strictEqual(comandoCadastro.dados.alturaCm, '178');
+  assert.strictEqual(comandoCadastro.idadeAproximada, true);
+  const idadeMarcelo = I.idadeDetalhada('', comandoCadastro.dados);
+  assert.deepStrictEqual({ anos: idadeMarcelo.anos, meses: idadeMarcelo.meses, aproximada: idadeMarcelo.aproximada },
+    { anos: 27, meses: 0, aproximada: true });
+  assert.ok(/idade aproximada: 27 anos/.test(I.descrever(Object.assign({ nome: 'Marcelo' }, comandoCadastro.dados))));
+  assert.strictEqual(I.interpretarCadastroVoz('cadastre meu amigo, idade 27 anos').ok, false,
+    'não cria perfil sem nome');
+  assert.strictEqual(I.interpretarCadastroVoz('fale sobre Marcelo'), null, 'não captura uma conversa comum');
+  console.log('OK: cadastro por voz extrai relação, idade, peso e altura sem inventar aniversário');
+
   assert.ok(/36 anos/.test(I.descrever(bia.perfil)));
   const ctx = I.contexto();
   assert.ok(ctx.indexOf('Beatriz Lima') >= 0 && ctx.indexOf('São Paulo') >= 0);
