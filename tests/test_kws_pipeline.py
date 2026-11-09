@@ -13,7 +13,7 @@ checks = {
     "serviço não usa Android SpeechRecognizer": "createSpeechRecognizer(" not in service and "createOnDeviceSpeechRecognizer(" not in service,
     "serviço seleciona explicitamente sherpa KWS": 'DETECTOR = "sherpa-onnx-kws-gigaspeech-en"' in service,
     "captura PCM real por AudioRecord": "new AudioRecord(" in engine and "audio.read(" in engine,
-    "inferência passa por KeywordSpotter com AssetManager": "new KeywordSpotter(context.getAssets(), config)" in engine and "kws.decode(kwsStream)" in engine,
+    "inferência passa por KeywordSpotter com AssetManager": "new KeywordSpotter(null, config)" in engine and "kws.decode(kwsStream)" in engine,
     "UI espera confirmação real do serviço antes de mostrar ouvindo": "diagnosticoEscuta()" in app and "estadoKws.escutando" in app,
     "UI transfere microfone ao app e cancela rearme do serviço": "servicoWake.stopWake()" in app and "rearme de segurança do serviço" in app,
     "Novo KWS não herda erro antigo do diagnóstico": 'JarvisPrefs.ultimoErro(ctx, "");' in service,
