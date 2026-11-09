@@ -10165,7 +10165,7 @@ function responderPessoaPorVoz(texto) {
       const salvo = PESSOAS.salvar(cadastro.dados);
       if (!salvo.ok) return { fala: 'Não consegui salvar o perfil: ' + salvo.erro };
       registrar('identidade', 'perfil cadastrado por voz: ' + salvo.perfil.nome);
-      setTimeout(() => { abrirPessoas(); }, 600);
+      if (typeof abrirPessoas === 'function') setTimeout(() => { abrirPessoas(); }, 600);
       const detalhe = PESSOAS.idadeDetalhada(salvo.perfil.nascimento, salvo.perfil);
       const idadeTexto = detalhe ? (detalhe.aproximada ? 'idade aproximada de ' : '') +
         detalhe.anos + ' anos' + (detalhe.meses ? ' e ' + detalhe.meses + ' meses' : '') : '';
