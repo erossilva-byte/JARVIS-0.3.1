@@ -28,7 +28,7 @@ jobs:
       - name: Generate native platform runners without touching legacy Android project
         run: flutter create --project-name jarvis_nova --platforms=android,windows .
       - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: dart format lib test
       - run: flutter analyze
       - run: flutter test
       - run: flutter build apk --debug
