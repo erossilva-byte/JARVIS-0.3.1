@@ -9141,7 +9141,8 @@ async function analisarDataUrl(d, q) {
     visaoResumo = r.resumo;
     visaoProvedor = r.provedor;
     desenharBaloes(r.objetos);
-    visaoStatus('Análise de ' + r.provedor + ' · ' + (r.objetos.length ? r.objetos.length + ' objeto(s)' : 'nada identificado') + '.', 'ok');
+    visaoStatus('Análise de ' + r.provedor + ' · ' + (r.objetos.length ? r.objetos.length + ' objeto(s)' : 'nada identificado') +
+      ' · OCR: ' + (r.textoLegivel && r.textoLegivel.length ? 'texto reconhecido' : 'sem texto legível') + '.', 'ok');
     registrarContextoVisual(r);
     if (r.textoLegivel && r.textoLegivel.length) anexarTextoVisao('OCR · texto reconhecido', r.textoLegivel.join('\n'));
     return { fala: fala, objetos: r.objetos, resumo: r.resumo, textoLegivel: r.textoLegivel || [] };
