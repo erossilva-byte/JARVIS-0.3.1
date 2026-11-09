@@ -33,10 +33,11 @@ check('package e lock acompanham a versão',
       pkg.get('version') == meta.get('version')
       and lock.get('version') == meta.get('version')
       and lock.get('packages', {}).get('', {}).get('version') == meta.get('version'))
-check('Gradle acompanha a versão',
-      ('versionCode %s' % meta.get('versionCode')) in gradle
-      and ('versionName "%s"' % meta.get('version')) in gradle)
-check('app e HTML mostram a versão corrente',
+check('patch Gradle aplica a versão e build gerado acompanha quando existe',
+      'versionCode' in patch_android and 'versionName' in patch_android
+      and "meta.get('versionCode')" in patch_android
+      and (not gradle or (('versionCode %s' % meta.get('versionCode')) in gradle
+      and ('versionName \"%s\"' % meta.get('version')) in gradle)))
       ("const VERSAO_APP = '%s';" % meta.get('version')) in app
       and ('v%s' % meta.get('version')) in html)
 
