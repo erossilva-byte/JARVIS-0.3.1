@@ -5,11 +5,13 @@ on:
     branches:
       - feat/flutter-dart-migration-1.46.0
       - feat/functional-integration-1.47.0
+      - work/1.48.0-fase2-consolidacao
   pull_request:
     branches:
       - work/1.46.0-auditoria-funcoes-apk
       - feat/functional-integration-1.47.0
       - feat/flutter-dart-migration-1.46.0
+      - work/1.48.0-fase2-consolidacao
       - main
   workflow_dispatch:
 
