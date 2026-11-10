@@ -49,16 +49,28 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     if (text.isEmpty || sending) return;
     AiProvider? selected = provider ?? activeProvider;
     if (selected == null) {
+      setState(() {
+        sending = true;
+        error = null;
+      });
       try {
         selected = await service.firstConfiguredProvider();
       } catch (_) {
-        if (mounted) setState(() => error = 'Não foi possível acessar o cofre seguro de credenciais.');
+        if (mounted) {
+          setState(() {
+            sending = false;
+            error = 'Não foi possível acessar o cofre seguro de credenciais.';
+          });
+        }
         return;
       }
     }
     if (!mounted) return;
     if (selected == null) {
-      setState(() => error = 'Nenhum provedor configurado. Configure o Groq ou outro provedor antes de enviar.');
+      setState(() {
+        sending = false;
+        error = 'Nenhum provedor configurado. Configure o Groq ou outro provedor antes de enviar.';
+      });
       return;
     }
     activeProvider = selected;
