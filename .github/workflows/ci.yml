@@ -1,12 +1,13 @@
 name: J.A.R.V.I.S. Nova — CI de desenvolvimento
 on:
   pull_request:
-    branches: [main, integration/jarvis-nova-1.46-reconcile, work/1.46.0-auditoria-funcoes-apk]
+    branches: [main, integration/jarvis-nova-1.46-reconcile, work/1.46.0-auditoria-funcoes-apk, feat/functional-integration-1.47.0]
   push:
     branches:
       - feat/**
       - fix/**
       - integration/**
+      - work/1.48.0-fase2-consolidacao
   workflow_dispatch:
 
 permissions:
