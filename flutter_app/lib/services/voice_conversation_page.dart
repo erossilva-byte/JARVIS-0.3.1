@@ -29,15 +29,12 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     if (submittedInitial || !mounted) return;
     submittedInitial = true;
     AiProvider? selected;
-    for (final provider in aiProviders) {
-      try {
-        if (await service.isConfigured(provider.id)) {
-          selected = provider;
-          if (provider.id == 'groq') break;
-        }
-      } catch (_) {
-        // A indisponibilidade do cofre é mostrada abaixo sem expor credenciais.
-      }
+    try {
+      selected = await service.firstConfiguredProvider();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => error = 'Não foi possível acessar o cofre seguro de credenciais. A transcrição foi preservada.');
+      return;
     }
     if (!mounted) return;
     if (selected == null) {
@@ -50,7 +47,20 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   Future<void> _send({AiProvider? provider}) async {
     final text = composer.text.trim();
     if (text.isEmpty || sending) return;
-    final selected = provider ?? activeProvider ?? aiProviders.firstWhere((p) => p.id == 'groq');
+    AiProvider? selected = provider ?? activeProvider;
+    if (selected == null) {
+      try {
+        selected = await service.firstConfiguredProvider();
+      } catch (_) {
+        if (mounted) setState(() => error = 'Não foi possível acessar o cofre seguro de credenciais.');
+        return;
+      }
+    }
+    if (!mounted) return;
+    if (selected == null) {
+      setState(() => error = 'Nenhum provedor configurado. Configure o Groq ou outro provedor antes de enviar.');
+      return;
+    }
     activeProvider = selected;
     setState(() {
       sending = true;
