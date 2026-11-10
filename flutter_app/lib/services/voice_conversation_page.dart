@@ -73,11 +73,12 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       });
       return;
     }
-    activeProvider = selected;
+    final chosen = selected;
+    activeProvider = chosen;
     setState(() {
       sending = true;
       error = null;
-      providerName = selected.name;
+      providerName = chosen.name;
       if (history.isEmpty || history.last['role'] != 'user' || history.last['content'] != text) {
         history.add({'role': 'user', 'content': text});
       }
