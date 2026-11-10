@@ -11,7 +11,8 @@ local_ai_coordinate = 'implementation "com.google.mediapipe:tasks-genai:0.10.24"
 # palavra de ativação entra no APK. A integração de IA local e o resto do código nativo miram Android 8.0+.
 # MediaPipe 0.10.14 NÃO suporta Gemma 3: o runtime antigo aborta o processo ao abrir o .task
 # (SIGABRT nativo, impossível de capturar em Java). 0.10.24 suporta Gemma 3, mas o AAR é
-# compilado para Java 21 (class file 65): exige JDK 21 + AGP 8.7 + Gradle 8.9 + compileSdk 35.
+# compilado para Java 21 (class file 65): exige JDK 21 + AGP 8.13 + Gradle 8.13 + compileSdk 36.
+# AGP 8.9 suporta no máximo API 35; Android 16 (API 36) exige AGP 8.10+ e aqui usamos 8.13.
 # Override the Capacitor template default so the APK does not install on unsupported devices.
 default_config = re.search(r"\bdefaultConfig\s*\{", app_text)
 if not default_config:
@@ -150,6 +151,19 @@ signing_block = """    signingConfigs {
                 keyPassword 'android'
             }
         }
+        // Release assina com a chave do projeto, nunca com a de debug.
+        // Os valores chegam por propriedade do Gradle (-PJARVIS_*) vindos dos secrets
+        // do workflow. Sem a propriedade, a config fica vazia e o APK sai sem assinatura,
+        // o que o workflow detecta e reprova em vez de publicar um APK assinado em debug.
+        release {
+            def ks = project.findProperty('JARVIS_KEYSTORE')
+            if (ks) {
+                storeFile file(ks)
+                storePassword project.findProperty('JARVIS_KEYSTORE_PASSWORD')
+                keyAlias project.findProperty('JARVIS_KEY_ALIAS')
+                keyPassword project.findProperty('JARVIS_KEY_PASSWORD')
+            }
+        }
     }
 """
 if "ci/debug.keystore" not in app_text:
@@ -160,6 +174,41 @@ if "ci/debug.keystore" not in app_text:
     print(f"Assinatura de debug fixada em ci/debug.keystore: {app_gradle}")
 else:
     print(f"Assinatura de debug já fixada: {app_gradle}")
+
+
+def anexar_assinatura_release(texto):
+    """Liga signingConfigs.release ao buildType release, quando ele existir."""
+    if "signingConfig signingConfigs.release" in texto:
+        return texto, False
+    mapa = re.search(r"\bbuildTypes\s*\{", texto)
+    if not mapa:
+        return texto, False
+    inicio = mapa.end() - 1
+    nivel = 0
+    fim = None
+    for i in range(inicio, len(texto)):
+        if texto[i] == "{":
+            nivel += 1
+        elif texto[i] == "}":
+            nivel -= 1
+            if nivel == 0:
+                fim = i
+                break
+    if fim is None:
+        return texto, False
+    bloco = texto[inicio:fim + 1]
+    alvo = re.search(r"\brelease\s*\{", bloco)
+    if not alvo:
+        return texto, False
+    ponto = inicio + alvo.end()
+    return texto[:ponto] + "\n            signingConfig signingConfigs.release" + texto[ponto:], True
+
+
+app_text, release_anexado = anexar_assinatura_release(app_text)
+if release_anexado:
+    print(f"Assinatura de release anexada ao buildType release: {app_gradle}")
+else:
+    print(f"BuildType release ausente ou já assinado: {app_gradle}")
 
 # Persist both the SDK-floor adjustment and dependency changes on every run.
 app_gradle.write_text(app_text, encoding="utf-8")
@@ -187,26 +236,26 @@ def alinhar_toolchain():
     build = raiz / "build.gradle"
     if build.exists():
         t = build.read_text(encoding="utf-8")
-        novo = re.sub(r"com\.android\.tools\.build:gradle:[0-9.]+", "com.android.tools.build:gradle:8.7.3", t)
+        novo = re.sub(r"com\.android\.tools\.build:gradle:[0-9.]+", "com.android.tools.build:gradle:8.13.0", t)
         if novo != t:
             build.write_text(novo, encoding="utf-8")
-            print(f"AGP atualizado para 8.7.3: {build}")
+            print(f"AGP atualizado para 8.13.0: {build}")
     variaveis = raiz / "variables.gradle"
     if variaveis.exists():
         t = variaveis.read_text(encoding="utf-8")
-        novo = re.sub(r"(?m)^(\s*compileSdkVersion\s*=\s*)\d+", r"\g<1>35", t)
+        novo = re.sub(r"(?m)^(\s*compileSdkVersion\s*=\s*)\d+", r"\g<1>36", t)
         novo = re.sub(r"(?m)^(\s*minSdkVersion\s*=\s*)\d+", r"\g<1>26", novo)
-        novo = re.sub(r"(?m)^(\s*targetSdkVersion\s*=\s*)\d+", r"\g<1>34", novo)
+        novo = re.sub(r"(?m)^(\s*targetSdkVersion\s*=\s*)\d+", r"\g<1>36", novo)
         if novo != t:
             variaveis.write_text(novo, encoding="utf-8")
-            print(f"SDKs atualizados (min 26, compile 35, target 34): {variaveis}")
+            print(f"SDKs atualizados (min 26, compile 36, target 36): {variaveis}")
     wrapper = raiz / "gradle/wrapper/gradle-wrapper.properties"
     if wrapper.exists():
         t = wrapper.read_text(encoding="utf-8")
-        novo = re.sub(r"gradle-[0-9.]+-(?:all|bin)\.zip", "gradle-8.9-all.zip", t)
+        novo = re.sub(r"gradle-[0-9.]+-(?:all|bin)\.zip", "gradle-8.13-all.zip", t)
         if novo != t:
             wrapper.write_text(novo, encoding="utf-8")
-            print(f"Gradle Wrapper atualizado para 8.9: {wrapper}")
+            print(f"Gradle Wrapper atualizado para 8.13: {wrapper}")
 
 
 alinhar_toolchain()

@@ -56,11 +56,11 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Garantir Android SDK 35
+      - name: Garantir Android SDK 36
         run: |
           SDKM="$(command -v sdkmanager || true)"
           [ -n "$SDKM" ] || SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKM" "platforms;android-35" "build-tools;35.0.0" >/dev/null
+          yes | "$SDKM" "platforms;android-36" "build-tools;36.0.0" >/dev/null
 
       - name: Verificar código-fonte na raiz
         run: |
@@ -69,11 +69,26 @@ jobs:
       - name: Instalar dependências Node
         run: npm install --ignore-scripts --legacy-peer-deps
 
-      - name: Fixar assinatura de debug do CI (obrigatória para o auto-update)
+      - name: Preparar assinatura de release a partir dos secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.JARVIS_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.JARVIS_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.JARVIS_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.JARVIS_KEY_PASSWORD }}
         run: |
-          test -s ci/debug.keystore || { echo 'ci/debug.keystore ausente.'; exit 1; }
-          mkdir -p "$HOME/.android"
-          cp ci/debug.keystore "$HOME/.android/debug.keystore"
+          # A release não é assinada com a chave de debug: sem estes secrets o build para aqui,
+          # em vez de publicar um APK que o Android recusa atualizar depois.
+          test -n "$KEYSTORE_B64" || { echo 'Secret JARVIS_KEYSTORE_B64 ausente (keystore de release em base64).'; exit 1; }
+          test -n "$KEYSTORE_PASSWORD" || { echo 'Secret JARVIS_KEYSTORE_PASSWORD ausente.'; exit 1; }
+          test -n "$KEY_ALIAS" || { echo 'Secret JARVIS_KEY_ALIAS ausente.'; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo 'Secret JARVIS_KEY_PASSWORD ausente.'; exit 1; }
+          KS="$RUNNER_TEMP/jarvis-release.keystore"
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$KS"
+          test -s "$KS" || { echo 'Keystore de release vazio após decodificar o secret.'; exit 1; }
+          keytool -list -keystore "$KS" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null || {
+            echo 'Keystore de release inválido ou alias/senha não conferem.'; exit 1; }
+          echo "JARVIS_KEYSTORE=$KS" >> "$GITHUB_ENV"
+          echo "Keystore de release conferido: alias $KEY_ALIAS presente."
 
       - name: Preparar os recursos web do aplicativo
         run: |
@@ -134,12 +149,27 @@ jobs:
       - name: Testes estáticos e regressão
         run: npm run test:all
 
-      - name: Compilar APK
+      - name: Compilar APK de release assinado
         working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.JARVIS_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.JARVIS_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.JARVIS_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-          test -s app/build/outputs/apk/debug/app-debug.apk
+          ./gradlew assembleRelease --no-daemon \
+            -PJARVIS_KEYSTORE="$JARVIS_KEYSTORE" \
+            -PJARVIS_KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
+            -PJARVIS_KEY_ALIAS="$KEY_ALIAS" \
+            -PJARVIS_KEY_PASSWORD="$KEY_PASSWORD"
+          APK=app/build/outputs/apk/release/app-release.apk
+          test -s "$APK" || { echo 'APK de release não foi gerado.'; exit 1; }
+          CERTS="$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK")"
+          if echo "$CERTS" | grep -q 'CN=Android Debug'; then
+            echo 'APK assinado com a chave de debug; release recusada.'
+            exit 1
+          fi
+          echo "$CERTS" | head -3
 
       - name: Conferir tag e nomear o APK da release
         id: versao
@@ -154,7 +184,7 @@ jobs:
             fi
           fi
           APK="jarvis-nova-${V}-${C}.apk"
-          cp android/app/build/outputs/apk/debug/app-debug.apk "$APK"
+          cp android/app/build/outputs/apk/release/app-release.apk "$APK"
           sha256sum "$APK" > "${APK%.apk}.sha256"
           echo "apk=$APK" >> "$GITHUB_OUTPUT"
           echo "sha=${APK%.apk}.sha256" >> "$GITHUB_OUTPUT"
