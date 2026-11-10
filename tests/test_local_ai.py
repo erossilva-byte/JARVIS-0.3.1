@@ -24,7 +24,7 @@ checks = {
     "Modo offline tenta inferência local": "const local = await gerarIALocal(texto, true)" in js,
     "Workflow copia o plugin": "JarvisLocalAIPlugin.java" in workflow,
     "Plugin usa ActivityResult compatível com AndroidX": "import androidx.activity.result.ActivityResult;" in plugin,
-    "Toolchain Java 21 alinhada no patch do CI": "AGP atualizado para 8.7.3" in gradle_patch and "gradle-8.9-all.zip" in gradle_patch and "compileSdk" in gradle_patch,
+    "Toolchain Java 21 alinhada no patch do CI": "AGP atualizado para 8.13.0" in gradle_patch and "gradle-8.13-all.zip" in gradle_patch and "compileSdk" in gradle_patch,
     "Runtime suporta Gemma 3 (>=0.10.22)": "tasks-genai:0.10.24" in gradle_patch and (not gradle or "tasks-genai:0.10.24" in gradle),
     "Não usa mais o runtime 0.10.14": "tasks-genai:0.10.14" not in gradle_patch and "tasks-genai:0.10.14" not in gradle,
     "Prompt local limitado ao contexto do modelo": "MAX_PROMPT_CHARS = 6000" in plugin and "promptLocal" in js,
