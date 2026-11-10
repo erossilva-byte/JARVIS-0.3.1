@@ -60,6 +60,7 @@ Sem eles o workflow de release **para com mensagem clara** em vez de publicar AP
 ## 8. Pendências declaradas
 
 - `CHANGELOG.md` não foi atualizado neste commit: o arquivo tem 121 KB e a publicação foi feita por API, que substitui o arquivo inteiro. Entra no próximo ajuste, junto com a entrada da Fase 2.
+- `tests/test_patch_gradle.py` atualizado está no commit local; a publicação pela API de um arquivo com muitos escapes será feita junto do próximo push por git.
 
 ## 9. Próximos passos
 

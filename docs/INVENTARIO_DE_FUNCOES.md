@@ -1,6 +1,6 @@
 # Inventário de funções — J.A.R.V.I.S. Nova
 
-Estado em 2026-11-10, branch `work/1.48.0-fase2-consolidacao` + commit local `b47a76f`.
+Estado em 2026-11-10, branch `work/1.48.0-fase2-consolidacao`, após o ajuste 002.
 Gerado por leitura do código (registro `ACOES`, plugins Java, services Dart, workflows). **Não é inventário de campo**: nada aqui foi testado em aparelho nesta auditoria.
 
 Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com limites) · **Com falha conhecida** · **Não implementada** · **Fora de escopo** · **Não verificado** (existe no código, sem teste de campo).
@@ -76,10 +76,12 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Função | Android | Windows | Estado | Evidência | Requisito | Limitações |
 |---|---|---|---|---|---|---|
 | APK debug pelo CI | Sim | — | Verificada | `build-apk.yml` #66 verde | — | Só debug |
-| Release assinada | Sim | Sim | Com falha conhecida | `ci/debug.keystore` versionado | secret | Contraria 3B.1 |
+| Release assinada | Sim | Sim | Parcial | `patch_gradle.py`, `release-apk.yml` | 4 secrets | Ajuste 002; falta configurar os secrets |
 | Atualização in-app | Sim | Sim | Parcial | `JarvisUpdatePlugin.java` | REQUEST_INSTALL_PACKAGES | Conflita com a Fase 10C |
 | Paridade Windows em Flutter | — | Não | Não implementada | — | — | Só existe em Electron |
 
-## O que mudou neste relatório
+## O que mudou desde o relatório anterior
 
-Primeiro inventário gerado. Nenhum estado anterior para comparar.
+- **Release assinada**: de *com falha conhecida* para *Parcial* — assinatura separada da de debug, dependente dos secrets.
+- **Android SDK**: `compileSdk`/`targetSdk` em 36; AGP 8.13, Gradle 8.13.
+- Nenhuma regressão registrada.
