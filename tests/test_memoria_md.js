@@ -49,6 +49,28 @@ assert.equal(MEM.listar('gostos')[0].texto, 'prefiro café expresso', 'versão l
 const agrupado = MEM.arquivosPorTopico().find((arquivo) => arquivo.nome === MEM.ARQUIVOS.gostos);
 assert.ok(agrupado && /<!-- jarvis_id:/.test(agrupado.texto), 'arquivo por tópico carrega ID de cada nota');
 
+/* ---------- Separador `---` no corpo da nota não pode truncar o texto ----------
+ * Um separador horizontal é uso comum no Obsidian, e a importação parava nele: o texto seguinte
+ * era descartado em silêncio. Aqui o caso exato fica travado. */
+MEM.apagarTudo();
+const comSeparador = MEM.importarMarkdown('---\ntitle: "Com separador"\ntema: gostos\n---\n\n# Com separador\n\nantes\n\n---\n\ndepois\n');
+assert.equal(comSeparador.criadas, 1, 'nota com separador no corpo é importada');
+assert.match(MEM.listar('gostos')[0].texto, /antes/, 'texto antes do separador é preservado');
+assert.match(MEM.listar('gostos')[0].texto, /depois/, 'texto depois do separador não é descartado');
+MEM.apagarTudo();
+const semFrontmatter = MEM.importarMarkdown('# Nota solta\n\nprimeira parte\n\n---\n\nsegunda parte\n');
+assert.equal(semFrontmatter.criadas, 1, 'nota sem frontmatter com separador é importada');
+assert.match(MEM.listar()[0].texto, /primeira parte/, 'primeira parte da nota fica');
+assert.match(MEM.listar()[0].texto, /segunda parte/, 'sem frontmatter, o texto depois do separador também fica');
+MEM.apagarTudo();
+const varios = MEM.importarMarkdown(
+  '---\ntitle: "A"\ntema: gostos\n---\n\ntexto A\n\n---\n\nmais A\n' +
+  '---\ntitle: "B"\ntema: projetos\n---\n\ntexto B\n\n---\n\nmais B\n'
+);
+assert.equal(varios.criadas, 2, 'dois arquivos em sequência continuam virando duas notas');
+assert.match(MEM.listar('gostos')[0].texto, /mais A/, 'primeira nota mantém o texto após o separador');
+assert.match(MEM.listar('projetos')[0].texto, /mais B/, 'segunda nota mantém o texto após o separador');
+
 /* ---------- Cofre em disco de verdade: grava os .md, relê do disco e importa ----------
  * É o caminho que a ponte do Obsidian usa no PC: um arquivo Markdown por tópico dentro de
  * `Memoria/`. Aqui ele é exercitado com arquivos reais, para provar escrita e leitura em
