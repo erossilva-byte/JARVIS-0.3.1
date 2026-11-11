@@ -1,6 +1,6 @@
 # Inventário de funções — J.A.R.V.I.S. Nova
 
-Estado em 2026-11-11, branch `work/1.48.0-fase2-consolidacao`, após o ajuste 007.
+Estado em 2026-11-11, branch `work/1.48.0-fase2-consolidacao`, após o ajuste 008.
 Gerado por leitura do código (registro `ACOES`, plugins Java, services Dart, workflows). **Não é inventário de campo**: nada aqui foi testado em aparelho nesta auditoria.
 
 Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com limites) · **Com falha conhecida** · **Não implementada** · **Fora de escopo** · **Não verificado** (existe no código, sem teste de campo).
@@ -35,7 +35,7 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 
 | Função | Android | Windows | Estado | Evidência | Requisito | Limitações |
 |---|---|---|---|---|---|---|
-| Cofre de notas temático | Sim | Sim | Parcial | `memoria.js` (`localStorage`) | — | **Não é cofre Obsidian em disco**; texto puro no armazenamento local |
+| Cofre de notas temático | Sim | Sim | Parcial | `memoria.js` (`localStorage`), `tests/test_memoria_md.js` (gravação e leitura reais dos `.md` em disco) | — | **Não é cofre Obsidian em disco**; texto puro no armazenamento local |
 | Busca semântica local | Sim | Sim | Parcial | `memoria.js` (hash+cosseno) | — | Embedding por hash, não modelo |
 | Cofre real via SAF (Fase 7B) | Não | Não | Não implementada | — | permissão de pasta | WAL, FTS5, conflitos ausentes |
 | Fichas de pessoas | Sim | Sim | Parcial | `pessoas.js`, `tests/test_pessoas.js` | consentimento | Sem criptografia dedicada |
@@ -91,5 +91,6 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 - **Matriz de capacidades do Flutter (2026-11-11)**: dos 21 módulos do catálogo, 1 implementado (Provedores de IA), 3 parciais (Voz/KWS, Avatar 3D, Segurança), 16 não migrados e 1 fora de escopo; fonte em `docs/MATRIZ-CAPACIDADES-FLUTTER.md`.
 - **Contrato de conversa auditado (2026-11-11)**: rota do turno verificada no código (Core → projetista → pessoas → Hermes → IA), persona/humor injetados por `promptSistema()`, histórico por `COGNICAO.selecionarHistorico()` e ação sensível sempre por `executarSeguro()` (risco ≥ 2 confirma; ≥ 3 pede PIN). Corrigidos o histórico fora de ordem e a checagem de repetição que nunca disparava; fonte em `docs/relatorios/2026-11-11_006_contrato-de-conversa.md`.
 - **Credenciais auditadas (2026-11-11)**: chaves de API no AndroidKeyStore (AES-256-GCM) no Android, `safeStorage` com arquivo `0o600` e troca atômica no desktop, falha fechada sem cofre e remoção da cópia em claro migrada; PIN e recuperação em PBKDF2-SHA256 com sal e 120k iterações; biometria de voz e memória pessoal **não** têm cofre de hardware (chave local / texto puro) e assim estão declaradas. Fonte em `docs/relatorios/2026-11-11_007_persistencia-de-credenciais.md`.
+- **Cofre Obsidian em disco (2026-11-11)**: o formato por tópico (`Memoria/*.md`) foi exercitado com arquivos reais — gravados em pasta temporária, relidos e reimportados, com acentos preservados, nomes saneados (barra não vira pasta) e reimportação idempotente. Defeito conhecido: nota cujo corpo tem uma linha `---` perde o texto posterior na importação. Ponte de pasta do Electron e SAF do Android seguem sem teste. Fonte em `docs/relatorios/2026-11-11_008_cofre-obsidian-em-disco.md`.
 - **CI da branch verde no commit `20168c8`**: regressão completa, compilação Android 36 e portão Flutter (Android + Windows) no mesmo SHA.
 - Nenhuma regressão registrada.
