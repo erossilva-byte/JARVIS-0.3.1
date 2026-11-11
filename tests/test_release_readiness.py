@@ -3,6 +3,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 import json
 import re
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -88,6 +89,24 @@ if 'painel-visao' not in html_doc or 'pedirVisaoIA' not in app or 'desenharBaloe
 hermes_src = (ROOT / 'hermes.js').read_text(encoding='utf-8')
 if 'planejarIA' not in hermes_src or 'Hermes.planejarIA' not in app:
     issues.append('Roteador de motores de IA não está ligado ao aplicativo')
+
+# Chaves de assinatura: a de release nunca pode ser versionada; só a de debug do CI fica.
+gitignore = (ROOT / '.gitignore').read_text(encoding='utf-8')
+for padrao in ('*.jks', '*.keystore'):
+    if padrao not in gitignore:
+        issues.append(f'.gitignore precisa ignorar {padrao}: chave de assinatura não entra no repositório')
+release_wf = (ROOT / '.github/workflows/release-apk.yml').read_text(encoding='utf-8')
+if 'debug.keystore' in release_wf:
+    issues.append('Workflow de release não pode referenciar a chave de debug')
+if 'assembleRelease' not in release_wf or 'CN=Android Debug' not in release_wf:
+    issues.append('Workflow de release deve compilar assembleRelease e recusar APK assinado em debug')
+try:
+    rastreados = subprocess.run(['git', 'ls-files'], cwd=ROOT, capture_output=True, text=True, timeout=60).stdout.split()
+    proibidos = [f for f in rastreados if f.endswith('.jks') or (f.endswith('.keystore') and f != 'ci/debug.keystore')]
+    if proibidos:
+        issues.append('Chave de assinatura versionada: ' + ', '.join(proibidos[:3]))
+except (OSError, subprocess.SubprocessError):
+    pass  # fora de um clone git (ZIP exportado) a checagem não se aplica
 
 if issues:
     print('FALHA na auditoria de prontidão:')
