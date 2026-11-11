@@ -1,6 +1,6 @@
 # Inventário de funções — J.A.R.V.I.S. Nova
 
-Estado em 2026-11-11, branch `work/1.48.0-fase2-consolidacao`, após o ajuste 006.
+Estado em 2026-11-11, branch `work/1.48.0-fase2-consolidacao`, após o ajuste 007.
 Gerado por leitura do código (registro `ACOES`, plugins Java, services Dart, workflows). **Não é inventário de campo**: nada aqui foi testado em aparelho nesta auditoria.
 
 Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com limites) · **Com falha conhecida** · **Não implementada** · **Fora de escopo** · **Não verificado** (existe no código, sem teste de campo).
@@ -15,6 +15,9 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Agentes especializados | Sim | Sim | Parcial | `agentes.js`, `tests/test_agentes.js` | provedor | Sem verificação de resultado no campo |
 | Planos multi-etapas | Sim | Sim | Parcial | `plano.js`, `docs/REGISTRO-1.31.0.md` | provedor | Sem retomada após morte do processo |
 | Personalidade e humor | Sim | Sim | Parcial | `humor.js`, `identidade.js` | — | Calibragem não avaliada por humano |
+| Cofre de chaves de API | Sim | Sim | Verificada (código e testes) | `JarvisUtilPlugin.java` (AES-256-GCM + AndroidKeyStore), `platforms/desktop/main.js` (`safeStorage`, `0o600`, troca atômica), `tests/test_secure_keys.py` | — | Sem teste em aparelho/Windows real |
+| PIN e código de recuperação | Sim | Sim | Verificada (código e testes) | `app.js` PBKDF2-SHA256, sal por instalação, 120k iterações, migração do hash antigo | — | Sem teste de digitação no aparelho |
+| Biometria de voz (perfil vocal) | Sim | Não | Parcial | `identidade.js` AES-GCM com **chave local** | microfone | Chave no mesmo armazenamento: ofuscação, não cofre |
 | Modo offline | Sim | Parcial | Parcial | `MODO-OFFLINE.md`, `seguranca.js` | — | Depende de pacote de voz do aparelho |
 
 ## Voz
@@ -32,7 +35,7 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 
 | Função | Android | Windows | Estado | Evidência | Requisito | Limitações |
 |---|---|---|---|---|---|---|
-| Cofre de notas temático | Sim | Sim | Parcial | `memoria.js` (`localStorage`) | — | **Não é cofre Obsidian em disco** |
+| Cofre de notas temático | Sim | Sim | Parcial | `memoria.js` (`localStorage`) | — | **Não é cofre Obsidian em disco**; texto puro no armazenamento local |
 | Busca semântica local | Sim | Sim | Parcial | `memoria.js` (hash+cosseno) | — | Embedding por hash, não modelo |
 | Cofre real via SAF (Fase 7B) | Não | Não | Não implementada | — | permissão de pasta | WAL, FTS5, conflitos ausentes |
 | Fichas de pessoas | Sim | Sim | Parcial | `pessoas.js`, `tests/test_pessoas.js` | consentimento | Sem criptografia dedicada |
@@ -87,5 +90,6 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 - **Chave de assinatura fora do repositório**: `.gitignore` cobre `*.jks`/`*.keystore` e um teste reprova se alguma chave de release for versionada.
 - **Matriz de capacidades do Flutter (2026-11-11)**: dos 21 módulos do catálogo, 1 implementado (Provedores de IA), 3 parciais (Voz/KWS, Avatar 3D, Segurança), 16 não migrados e 1 fora de escopo; fonte em `docs/MATRIZ-CAPACIDADES-FLUTTER.md`.
 - **Contrato de conversa auditado (2026-11-11)**: rota do turno verificada no código (Core → projetista → pessoas → Hermes → IA), persona/humor injetados por `promptSistema()`, histórico por `COGNICAO.selecionarHistorico()` e ação sensível sempre por `executarSeguro()` (risco ≥ 2 confirma; ≥ 3 pede PIN). Corrigidos o histórico fora de ordem e a checagem de repetição que nunca disparava; fonte em `docs/relatorios/2026-11-11_006_contrato-de-conversa.md`.
+- **Credenciais auditadas (2026-11-11)**: chaves de API no AndroidKeyStore (AES-256-GCM) no Android, `safeStorage` com arquivo `0o600` e troca atômica no desktop, falha fechada sem cofre e remoção da cópia em claro migrada; PIN e recuperação em PBKDF2-SHA256 com sal e 120k iterações; biometria de voz e memória pessoal **não** têm cofre de hardware (chave local / texto puro) e assim estão declaradas. Fonte em `docs/relatorios/2026-11-11_007_persistencia-de-credenciais.md`.
 - **CI da branch verde no commit `20168c8`**: regressão completa, compilação Android 36 e portão Flutter (Android + Windows) no mesmo SHA.
 - Nenhuma regressão registrada.
