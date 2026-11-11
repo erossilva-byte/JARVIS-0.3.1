@@ -75,8 +75,8 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 
 | Função | Android | Windows | Estado | Evidência | Requisito | Limitações |
 |---|---|---|---|---|---|---|
-| APK debug pelo CI | Sim | — | Verificada | `build-apk.yml` #66 verde | — | Só debug |
-| Release assinada | Sim | Sim | Parcial | `patch_gradle.py`, `release-apk.yml` | 4 secrets | Ajuste 002; falta configurar os secrets |
+| APK debug pelo CI | Sim | — | Verificada | `build-apk.yml` #66 verde; compilação Android 36 verde no CI `42923146108` | — | Só debug |
+| Release assinada | Sim | Sim | Parcial | `patch_gradle.py`, `release-apk.yml` (secrets + recusa de `CN=Android Debug`) | 4 secrets | Workflow só roda em tag; falta configurar os secrets |
 | Atualização in-app | Sim | Sim | Parcial | `JarvisUpdatePlugin.java` | REQUEST_INSTALL_PACKAGES | Conflita com a Fase 10C |
 | Paridade Windows em Flutter | — | Não | Não implementada | — | — | Só existe em Electron |
 
@@ -84,4 +84,6 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 
 - **Release assinada**: de *com falha conhecida* para *Parcial* — assinatura separada da de debug, dependente dos secrets.
 - **Android SDK**: `compileSdk`/`targetSdk` em 36; AGP 8.13, Gradle 8.13.
+- **Chave de assinatura fora do repositório**: `.gitignore` cobre `*.jks`/`*.keystore` e um teste reprova se alguma chave de release for versionada.
+- **CI da branch verde no commit `20168c8`**: regressão completa, compilação Android 36 e portão Flutter (Android + Windows) no mesmo SHA.
 - Nenhuma regressão registrada.
