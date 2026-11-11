@@ -36,25 +36,42 @@ projetos/projeto-beta-2026-ozdtx.md
 A barra **não** cria subpasta e o acento é normalizado — o nome é estável e previsível, com o fim do
 id para diferenciar notas de mesmo título.
 
-## 4. Defeito encontrado: linha `---` no corpo apaga o resto
+## 4. Defeito encontrado e corrigido: linha `---` no corpo apagava o resto
 
 Reprodução (nota vinda do Obsidian com um separador horizontal, uso comum em Markdown):
 
 ```
----\ntitle: "Com separador"\ntema: gostos\n---\n\n# Com separador\n\nantes\n\n---\n\ndepois\n
+---
+title: "Com separador"
+tema: gostos
+---
+
+# Com separador
+
+antes
+
+---
+
+depois
 ```
 
-Resultado real: `criadas: 1, ignoradas: 0, conflitos: 0` e o texto da nota é só `antes`. **O trecho
-depois do `---` desaparece em silêncio** — sem conflito, sem aviso, sem contagem de ignoradas.
+**Antes:** `criadas: 1, ignoradas: 0, conflitos: 0` e a nota ficava só com `antes` — o trecho depois
+do `---` era descartado em silêncio, sem conflito, sem aviso, sem contagem de ignoradas.
 
-A causa está no recorte de blocos de `importarMarkdown()`: o separador do meio do corpo encerra o
-bloco, e o restante não casa com o padrão de frontmatter, então é descartado.
+**Causa:** o recorte de blocos de `importarMarkdown()` usava uma expressão regular que encerrava o
+corpo no primeiro `---` do texto. Como o resto do arquivo também não casava com o padrão de
+frontmatter, era simplesmente perdido.
 
-Não foi corrigido nesta sessão: `memoria.js` tem 37 KB e a via de publicação usada aqui trabalha com
-arquivos pequenos (mesma limitação registrada para `hermes.js` no ajuste 006). O defeito fica
-documentado com a reprodução acima para ser corrigido por quem tiver a via de escrita completa —
-o conserto é restringir o frontmatter a linhas `chave: valor` e tratar o resto como continuação do
-corpo, sem perder texto.
+**Correção:** o recorte passou a ser por linhas. Um `---` só abre frontmatter quando o bloco entre
+ele e o próximo `---` tem linhas `chave: valor` (ou itens/continuações indentados); qualquer outro
+`---` é conteúdo. O corpo vai até o próximo frontmatter **de verdade** ou o fim do arquivo, então
+separadores horizontais no meio da nota são preservados, e dois arquivos colados continuam virando
+duas notas.
+
+**Depois**, na mesma entrada: `{"criadas":1,"texto":"antes\n\n---\n\ndepois"}`.
+
+Regressões travadas em `tests/test_memoria_md.js`: nota com frontmatter e separador no corpo, nota
+sem frontmatter com separador, e dois arquivos em sequência com separador em cada um.
 
 ## 5. O que continua sem prova
 
@@ -66,6 +83,7 @@ corpo, sem perder texto.
 
 ## 6. Evidência
 
-- `node tests/test_memoria_md.js` → passa, incluindo a seção de disco
+- `node tests/test_memoria_md.js` → passa, incluindo as seções de separador `---` e de disco
   (`memoria.md: cofre em disco ok — 2 arquivo(s) gravado(s) e relido(s)`).
-- `npm run test:all` → exit 0 com a verificação nova dentro da suíte.
+- `npm run test:all` → exit 0 com as verificações novas dentro da suíte.
+- Reimportação do caso do separador após a correção: `{"criadas":1,"texto":"antes\n\n---\n\ndepois"}`.
