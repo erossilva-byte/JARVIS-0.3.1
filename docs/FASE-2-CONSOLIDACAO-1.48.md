@@ -33,7 +33,7 @@
 - [x] Executar o workflow no head atual e corrigir falhas sem remover testes ou reduzir critérios. (duas asserções obsoletas corrigidas; ver `docs/relatorios/2026-11-11_003_ci-verde-e-chave-de-release.md`)
 - [ ] Auditar o contrato de conversa: integrar Hermes/Core, histórico, persona/humor e roteamento de ferramentas sem permitir ações sensíveis sem confirmação.
 - [ ] Auditar persistência segura e comportamento de credenciais em Android e Windows.
-- [ ] Construir matriz de capacidades reais versus catálogo Flutter e eliminar indicadores enganosos.
+- [x] Construir matriz de capacidades reais versus catálogo Flutter e eliminar indicadores enganosos. (`docs/MATRIZ-CAPACIDADES-FLUTTER.md`: 1 implementado, 3 parciais, 16 não migrados, 1 fora de escopo; gaveta e tarja de voz corrigidas; overflow de 68 px eliminado; ver `docs/relatorios/2026-11-11_004_matriz-capacidades-flutter.md`)
 - [ ] Avançar para as integrações prioritárias: memória/Obsidian, arquivos/sandbox, visão, pessoas e CADeSIMU.
 - [ ] Documentar as diferenças de hardware e a paridade Android/Windows.
 
