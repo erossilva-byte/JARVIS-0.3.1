@@ -59,7 +59,7 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Função | Android | Windows | Estado | Evidência | Requisito | Limitações |
 |---|---|---|---|---|---|---|
 | Interface atual (Capacitor/Web) | Sim | Electron | Verificada (CI) | `index.html`, `style.css` | — | **Contraria a regra 15 do prompt** |
-| Interface Flutter nativa | Sim (branch) | Sim (branch) | Parcial | `lib/main.dart` (668 linhas) | — | Núcleo, Sistemas, Ajustes e Provedores |
+| Interface Flutter nativa | Sim (branch) | Sim (branch) | Parcial | `lib/` em 9 módulos (`main`, `home_screen`, `command_center`, `catalog`, `ui_common`, `hologram`, `pages`, `systems_view`, `drawer`) | — | Núcleo, Sistemas, Ajustes e Provedores |
 
 ## Arquivos, CAD e desenvolvimento
 
@@ -85,5 +85,6 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 - **Release assinada**: de *com falha conhecida* para *Parcial* — assinatura separada da de debug, dependente dos secrets.
 - **Android SDK**: `compileSdk`/`targetSdk` em 36; AGP 8.13, Gradle 8.13.
 - **Chave de assinatura fora do repositório**: `.gitignore` cobre `*.jks`/`*.keystore` e um teste reprova se alguma chave de release for versionada.
+- **Matriz de capacidades do Flutter (2026-11-11)**: dos 21 módulos do catálogo, 1 implementado (Provedores de IA), 3 parciais (Voz/KWS, Avatar 3D, Segurança), 16 não migrados e 1 fora de escopo; fonte em `docs/MATRIZ-CAPACIDADES-FLUTTER.md`.
 - **CI da branch verde no commit `20168c8`**: regressão completa, compilação Android 36 e portão Flutter (Android + Windows) no mesmo SHA.
 - Nenhuma regressão registrada.
