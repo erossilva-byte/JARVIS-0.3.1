@@ -57,6 +57,15 @@ class ProviderService {
   Future<bool> isConfigured(String providerId) async =>
       (await _secrets.read(providerId))?.isNotEmpty ?? false;
 
+  /// Retorna o primeiro provedor configurado respeitando a prioridade oficial.
+  /// A ordem de [aiProviders] mantém Groq como principal e OpenRouter como fallback.
+  Future<AiProvider?> firstConfiguredProvider() async {
+    for (final provider in aiProviders) {
+      if (await isConfigured(provider.id)) return provider;
+    }
+    return null;
+  }
+
   Future<void> saveKey(String providerId, String rawKey) async {
     _provider(providerId);
     final key = rawKey.trim().replaceFirst(RegExp(r'^Bearer\s+', caseSensitive: false), '');

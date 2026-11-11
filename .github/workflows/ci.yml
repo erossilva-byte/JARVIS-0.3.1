@@ -1,12 +1,13 @@
 name: J.A.R.V.I.S. Nova — CI de desenvolvimento
 on:
   pull_request:
-    branches: [main, integration/jarvis-nova-1.46-reconcile, work/1.46.0-auditoria-funcoes-apk]
+    branches: [main, integration/jarvis-nova-1.46-reconcile, work/1.46.0-auditoria-funcoes-apk, feat/functional-integration-1.47.0]
   push:
     branches:
       - feat/**
       - fix/**
       - integration/**
+      - work/1.48.0-fase2-consolidacao
   workflow_dispatch:
 
 permissions:
@@ -82,9 +83,9 @@ jobs:
           npm install --ignore-scripts --legacy-peer-deps
           python3 -m pip install --upgrade pip 'click>=8.1.7,<9.0' 'sentencepiece>=0.2,<0.3' 'pypinyin>=0.50,<1.0' sherpa-onnx==1.13.8
 
-      - name: Instalar Android 35
+      - name: Instalar Android 36
         run: |
-          yes | sdkmanager "platforms;android-35" "build-tools;35.0.0" >/dev/null
+          yes | sdkmanager "platforms;android-36" "build-tools;36.0.0" >/dev/null
 
       - name: Preparar recursos web do APK
         run: |

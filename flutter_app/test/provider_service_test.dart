@@ -56,6 +56,25 @@ void main() {
     service.close();
   });
 
+  test('seleciona o primeiro provedor configurado na ordem de prioridade', () async {
+    final secrets = MemorySecrets()
+      ..values['openrouter'] = 'or_test_secret'
+      ..values['gemini'] = 'gem_test_secret';
+    final service = ProviderService(secrets: secrets, client: FakeClient(200, '{}'));
+
+    expect((await service.firstConfiguredProvider())?.id, 'openrouter');
+
+    secrets.values['groq'] = 'gsk_test_secret';
+    expect((await service.firstConfiguredProvider())?.id, 'groq');
+    service.close();
+  });
+
+  test('retorna nulo quando nenhum provedor está configurado', () async {
+    final service = ProviderService(secrets: MemorySecrets(), client: FakeClient(200, '{}'));
+    expect(await service.firstConfiguredProvider(), isNull);
+    service.close();
+  });
+
   test('testa endpoint real e envia a chave apenas no cabeçalho', () async {
     final secrets = MemorySecrets()..values['groq'] = 'gsk_secret_test';
     final client = FakeClient(200, '{"choices":[{"message":{"content":"OK"}}]}');

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'provider_service.dart';
 
 class VoiceConversationPage extends StatefulWidget {
-  const VoiceConversationPage({super.key, required this.initialCommand});
+  const VoiceConversationPage({super.key, required this.initialCommand, this.fromVoice = false});
   final String initialCommand;
+  /// Origem do comando: só a captura pelo KWS nativo pode dizer "capturado por voz".
+  final bool fromVoice;
 
   @override
   State<VoiceConversationPage> createState() => _VoiceConversationPageState();
@@ -29,15 +31,12 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     if (submittedInitial || !mounted) return;
     submittedInitial = true;
     AiProvider? selected;
-    for (final provider in aiProviders) {
-      try {
-        if (await service.isConfigured(provider.id)) {
-          selected = provider;
-          if (provider.id == 'groq') break;
-        }
-      } catch (_) {
-        // A indisponibilidade do cofre é mostrada abaixo sem expor credenciais.
-      }
+    try {
+      selected = await service.firstConfiguredProvider();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => error = 'Não foi possível acessar o cofre seguro de credenciais. A transcrição foi preservada.');
+      return;
     }
     if (!mounted) return;
     if (selected == null) {
@@ -50,12 +49,38 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   Future<void> _send({AiProvider? provider}) async {
     final text = composer.text.trim();
     if (text.isEmpty || sending) return;
-    final selected = provider ?? activeProvider ?? aiProviders.firstWhere((p) => p.id == 'groq');
-    activeProvider = selected;
+    AiProvider? selected = provider ?? activeProvider;
+    if (selected == null) {
+      setState(() {
+        sending = true;
+        error = null;
+      });
+      try {
+        selected = await service.firstConfiguredProvider();
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            sending = false;
+            error = 'Não foi possível acessar o cofre seguro de credenciais.';
+          });
+        }
+        return;
+      }
+    }
+    if (!mounted) return;
+    if (selected == null) {
+      setState(() {
+        sending = false;
+        error = 'Nenhum provedor configurado. Configure o Groq ou outro provedor antes de enviar.';
+      });
+      return;
+    }
+    final chosen = selected;
+    activeProvider = chosen;
     setState(() {
       sending = true;
       error = null;
-      providerName = selected.name;
+      providerName = chosen.name;
       if (history.isEmpty || history.last['role'] != 'user' || history.last['content'] != text) {
         history.add({'role': 'user', 'content': text});
       }
@@ -105,11 +130,11 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Comando capturado por voz', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                            Text(widget.fromVoice ? 'Comando capturado por voz' : 'Comando digitado', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
                             const SizedBox(height: 5),
                             Text(widget.initialCommand, style: const TextStyle(fontSize: 14)),
                             const SizedBox(height: 5),
-                            const Text('Reconhecimento de fala no dispositivo · pt-BR', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                            Text(widget.fromVoice ? 'Reconhecimento de fala no dispositivo · pt-BR' : 'Enviado pelo campo de conversa', style: const TextStyle(color: Colors.grey, fontSize: 10)),
                           ],
                         ),
                       ),

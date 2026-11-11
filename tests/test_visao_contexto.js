@@ -63,6 +63,42 @@ assert.ok(cmp.ok && cmp.diferencas.length >= 2, cmp.resumo);
 assert.ok(!/melhor/.test(cmp.resumo), 'comparação não emite opinião sem dados');
 ok('múltiplos objetos, seleção e comparação');
 
+// 4b — atributos que a análise traz precisam sobreviver ao registro (antes eram descartados)
+const comAtributos = C.registrar(C.novoContexto(), {
+  objetos: [
+    { nome: 'contator', evidencia: ['etiqueta 25A'], atributos: { 'tensão': '24 V', corrente: '9 A' } },
+    { nome: 'disjuntor', evidencia: ['etiqueta curva C'], atributos: { 'tensão': '220 V', corrente: '9 A' } }
+  ]
+});
+assert.deepStrictEqual(comAtributos.contexto.objetos[0].atributos, { 'tensão': '24 V', corrente: '9 A' },
+  'atributos da análise não podem ser descartados no registro');
+const cmpReal = C.comparar(comAtributos.contexto, 0, 1);
+assert.ok(cmpReal.ok && cmpReal.diferencas.length === 1 && cmpReal.diferencas[0].campo === 'tensão', cmpReal.resumo);
+assert.ok(/tensão/.test(cmpReal.resumo), 'diferença aparece sem injeção manual de atributos');
+ok('atributos da análise chegam à comparação');
+
+// 4c — atributo segue a regra da marca: sem evidência legível, não é mantido
+const semEvidAtributo = C.registrar(C.novoContexto(), {
+  objetos: [{ nome: 'peça', atributos: { material: 'aço' } }]
+});
+assert.deepStrictEqual(semEvidAtributo.contexto.objetos[0].atributos, {}, 'sem evidência, atributo visual não é mantido');
+ok('atributo sem evidência é descartado');
+
+// 4d — atributo estranho é saneado e limitado, sem quebrar
+const estranhos = C.registrar(C.novoContexto(), {
+  objetos: [{
+    nome: 'placa', evidencia: ['serigrafia legível'],
+    atributos: { a: '<script>alert(1)</script>', b: 3, c: null, d: { x: 1 }, e: ['y'],
+      f: 'ok', g: 'h', i: 'j', k: 'l', m: 'n', o: 'p', q: 'r', s: 't', u: 'v' }
+  }]
+});
+const atrs = estranhos.contexto.objetos[0].atributos;
+assert.ok(!Object.keys(atrs).some((k) => /[<>]/.test(atrs[k])), 'tag não passa para o atributo');
+assert.strictEqual(atrs.b, '3', 'número vira texto');
+assert.ok(!('c' in atrs) && !('d' in atrs) && !('e' in atrs), 'nulo, objeto e lista são ignorados');
+assert.ok(Object.keys(atrs).length <= 12, 'quantidade de atributos é limitada');
+ok('atributos estranhos são saneados e limitados');
+
 // 5 — consultas de pesquisa derivam do objeto e da intenção
 const qs = C.consultas({ marca: 'Nike', modelo: 'Pegasus 40', nome: 'tênis' }, 'preco');
 assert.ok(qs.length === 1 && /Nike Pegasus 40/.test(qs[0]) && /preço/.test(qs[0]), qs[0]);

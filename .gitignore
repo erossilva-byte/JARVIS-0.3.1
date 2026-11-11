@@ -13,3 +13,10 @@ www/
 /*.apk.sha256
 /*.sha256
 /*-fonte.zip
+
+# Chaves de assinatura nunca entram no repositório.
+# A chave de release vive só nos secrets do GitHub (JARVIS_KEYSTORE_B64 e companhia).
+# Exceção histórica mantida de propósito: ci/debug.keystore, usado apenas nos artefatos
+# de validação do CI e recusado pela release.
+*.jks
+*.keystore
