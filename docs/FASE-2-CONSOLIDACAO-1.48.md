@@ -32,7 +32,7 @@
 - [x] Habilitar o workflow Flutter Android/Windows para a branch de consolidação.
 - [x] Executar o workflow no head atual e corrigir falhas sem remover testes ou reduzir critérios. (duas asserções obsoletas corrigidas; ver `docs/relatorios/2026-11-11_003_ci-verde-e-chave-de-release.md`)
 - [x] Auditar o contrato de conversa: integrar Hermes/Core, histórico, persona/humor e roteamento de ferramentas sem permitir ações sensíveis sem confirmação. (contrato mapeado com arquivo e função; histórico passou a ir em ordem cronológica com o turno atual por último; checagem de repetição passou a comparar a fala do turno guardado, não o JSON bruto; ver `docs/relatorios/2026-11-11_006_contrato-de-conversa.md`)
-- [ ] Auditar persistência segura e comportamento de credenciais em Android e Windows.
+- [x] Auditar persistência segura e comportamento de credenciais em Android e Windows. (chaves no AndroidKeyStore com AES-256-GCM, `safeStorage` com `0o600` e troca atômica no desktop, falha fechada sem cofre, cópia em claro removida em qualquer desfecho, PIN/recuperação em PBKDF2 120k; biometria de voz e memória continuam fora de cofre, declaradas como tal; ver `docs/relatorios/2026-11-11_007_persistencia-de-credenciais.md`)
 - [x] Construir matriz de capacidades reais versus catálogo Flutter e eliminar indicadores enganosos. (`docs/MATRIZ-CAPACIDADES-FLUTTER.md`: 1 implementado, 3 parciais, 16 não migrados, 1 fora de escopo; gaveta e tarja de voz corrigidas; overflow de 68 px eliminado; ver `docs/relatorios/2026-11-11_004_matriz-capacidades-flutter.md`)
 - [ ] Avançar para as integrações prioritárias: memória/Obsidian, arquivos/sandbox, visão, pessoas e CADeSIMU.
 - [ ] Documentar as diferenças de hardware e a paridade Android/Windows.
