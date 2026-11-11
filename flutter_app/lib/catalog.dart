@@ -1,21 +1,5 @@
-import 'dart:async';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'services/provider_service.dart';
-import 'services/kws_settings_page.dart';
-import 'services/kws_controller.dart';
-import 'services/kws_bridge.dart';
-import 'services/voice_conversation_page.dart';
 
-final jarvisKwsController = KwsController();
-
-void main()=>runApp(const JarvisApp());
-const cyan=Color(0xFF55DFFF),bg=Color(0xFF050A12),panel=Color(0xFF0B1725),muted=Color(0xFF8CA5B9);
-
-class JarvisApp extends StatelessWidget{
- const JarvisApp({super.key});
- @override Widget build(BuildContext context)=>MaterialApp(debugShowCheckedModeBanner:false,title:'J.A.R.V.I.S. Nova',theme:ThemeData(brightness:Brightness.dark,scaffoldBackgroundColor:bg,colorScheme:ColorScheme.fromSeed(seedColor:cyan,brightness:Brightness.dark),useMaterial3:true),home:const LegacyHomeScreen());
-}
 class JarvisModule{
  const JarvisModule(this.name,this.group,this.icon,this.description);
  final String name,group,description;final IconData icon;
