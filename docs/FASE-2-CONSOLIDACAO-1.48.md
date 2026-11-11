@@ -30,12 +30,21 @@
 - [x] Evitar envios manuais duplicados enquanto a leitura do cofre está em andamento.
 - [x] Adicionar testes para prioridade Groq/OpenRouter e ausência de credenciais.
 - [x] Habilitar o workflow Flutter Android/Windows para a branch de consolidação.
-- [ ] Executar o workflow no head atual e corrigir falhas sem remover testes ou reduzir critérios.
+- [x] Executar o workflow no head atual e corrigir falhas sem remover testes ou reduzir critérios. (duas asserções obsoletas corrigidas; ver `docs/relatorios/2026-11-11_003_ci-verde-e-chave-de-release.md`)
 - [ ] Auditar o contrato de conversa: integrar Hermes/Core, histórico, persona/humor e roteamento de ferramentas sem permitir ações sensíveis sem confirmação.
 - [ ] Auditar persistência segura e comportamento de credenciais em Android e Windows.
 - [ ] Construir matriz de capacidades reais versus catálogo Flutter e eliminar indicadores enganosos.
 - [ ] Avançar para as integrações prioritárias: memória/Obsidian, arquivos/sandbox, visão, pessoas e CADeSIMU.
 - [ ] Documentar as diferenças de hardware e a paridade Android/Windows.
+
+## Estado verificado (2026-11-11)
+
+No commit `20168c8` da branch, os dois workflows passaram por inteiro:
+
+- **CI de desenvolvimento** (run `42923146108`): job "Regressão estática e funcional automatizada" com a etapa *Executar suíte de regressão existente* verde, e job "Compilação Android real com KWS local" verde, incluindo *Compilar APK de validação* (92 s) com `compileSdk`/`targetSdk` 36, AGP 8.13.0 e Gradle 8.13.
+- **Flutter native UI validation** (run `42923146213`): `flutter-android` (formato, analyze, testes, build APK debug, verificação do APK), `flutter-windows` (analyze, testes, build Windows) e o agregador `advance-gate`, todos verdes.
+
+Falha anterior, para registro: o run `568` reprovava na suíte de regressão porque `tests/test_local_ai.py` exigia AGP 8.7.3/Gradle 8.9 e `tests/test_novos_recursos.py` exigia APK de release assinado em debug — asserções contrárias à própria Fase 2. Foram corrigidas para a nova verdade, não afrouxadas. Runs do Flutter entre `403` e `409` aparecem cancelados por concorrência (cada push cancela o anterior), não reprovados.
 
 ## Gates
 
@@ -45,6 +54,8 @@
 - Build APK debug e build Windows no mesmo commit.
 - Job agregado deve exigir sucesso de Android e Windows.
 - Suíte legada deve continuar preservada e ser executada no pipeline correspondente.
+
+**Situação do Gate A:** atendido no commit `20168c8` (evidência acima).
 
 ### Gate B — validação funcional
 
