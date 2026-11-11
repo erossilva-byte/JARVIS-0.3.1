@@ -72,7 +72,7 @@ class CommandCenter extends StatelessWidget {
         const Color(0xFFFFC66D), () => onKws()),
       const SizedBox(height: 8),
       _statusCard(Icons.widgets_rounded, 'Módulos do sistema',
-        '${moduleCount} áreas identificadas no catálogo', 'SISTEMAS', cyan,
+        '$moduleCount áreas identificadas no catálogo', 'SISTEMAS', cyan,
         () => onSystems()),
       const SizedBox(height: 16),
       _sectionHeader('QUICK COMMANDS', 'COMANDOS RÁPIDOS'),
