@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'provider_service.dart';
 
 class VoiceConversationPage extends StatefulWidget {
-  const VoiceConversationPage({super.key, required this.initialCommand});
+  const VoiceConversationPage({super.key, required this.initialCommand, this.fromVoice = false});
   final String initialCommand;
+  /// Origem do comando: só a captura pelo KWS nativo pode dizer "capturado por voz".
+  final bool fromVoice;
 
   @override
   State<VoiceConversationPage> createState() => _VoiceConversationPageState();
@@ -128,11 +130,11 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Comando capturado por voz', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                            Text(widget.fromVoice ? 'Comando capturado por voz' : 'Comando digitado', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
                             const SizedBox(height: 5),
                             Text(widget.initialCommand, style: const TextStyle(fontSize: 14)),
                             const SizedBox(height: 5),
-                            const Text('Reconhecimento de fala no dispositivo · pt-BR', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                            Text(widget.fromVoice ? 'Reconhecimento de fala no dispositivo · pt-BR' : 'Enviado pelo campo de conversa', style: const TextStyle(color: Colors.grey, fontSize: 10)),
                           ],
                         ),
                       ),
