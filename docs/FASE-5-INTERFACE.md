@@ -67,8 +67,7 @@ janela, entrega imediata ao concluir, limpeza e token tardio ignorado. Roda com
 `dart run tool/stream_buffer_test.dart`, sem Flutter, e também pelo `npm run test:all` quando
 há Dart instalado (`tests/test_dart_core.py`).
 
-**Ainda não está ligado à tela de conversa**: a interface continua usando a resposta simples
-atual. O buffer é a peça testada; a integração visual é o próximo item.
+O buffer está ligado à tela de conversa (ajuste 040), junto com o parser SSE e o botão de parar.
 
 ## 3. Critérios da fase
 
@@ -78,8 +77,9 @@ atual. O buffer é a peça testada; a integração visual é o próximo item.
 | Navegação com as 12 seções | **Verificado** | pré-checagem confere a gaveta |
 | Modo de animação reduzida | **Implementado, não compilado** | `MediaQuery.disableAnimations` |
 | `RepaintBoundary` no núcleo | **Implementado, não compilado** | `command_center.dart` |
-| Conversa com streaming, parar, regenerar, fontes | Parcial: núcleo testado, tela pendente | `stream_buffer.dart` + teste |
+| Conversa com streaming, parar, regenerar, fontes | Parcial: streaming e parar prontos; regenerar e fontes pendentes | `voice_conversation_page.dart` + testes puros |
 | Atualização em janela de 16–50 ms | **Verificado no núcleo** | teste do `StreamBuffer` |
+| Streaming cancelável na tela | **Implementado, não compilado** | `streamComplete` + botão parar |
 | Histórico de conversas com busca e fixar | Pendente | — |
 | Modo voz em tela cheia com legendas | Pendente | — |
 | Estados de carregando/vazio/erro em toda tela | Pendente | hoje há aviso de auditoria |

@@ -328,3 +328,7 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Núcleo com `RepaintBoundary` | Sim | — | Implementado | `command_center.dart` | Seção 3D | FPS não medido |
 
 | Núcleo de streaming com janela | Sim | — | Verificado | `dart run tool/stream_buffer_test.dart` | Fase 5 | Ainda não ligado à tela |
+
+| Conversa em streaming com parar | Sim | — | Implementado | `streamComplete` + `StreamBuffer` na tela | Fase 5 | Não compilado |
+| Parser SSE tolerante a corte | Sim | — | Verificado | `dart run tool/sse_test.dart` | Fase 5 | Sem teste contra API real |
+| Estados vazio/processando/erro na conversa | Sim | — | Implementado | tela de conversa | Seção 3D | Só a conversa; outras telas pendentes |

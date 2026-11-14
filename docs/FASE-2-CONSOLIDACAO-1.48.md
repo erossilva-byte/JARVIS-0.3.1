@@ -385,3 +385,15 @@ Relatório: `docs/relatorios/2026-11-14_038-fase-5-interface.md`.
 - [ ] `flutter analyze` e `flutter test` (CI).
 
 Relatório: `docs/relatorios/2026-11-14_039-nucleo-de-streaming.md`.
+
+### Ajuste 040 — conversa em streaming, parar e estados (2026-11-14)
+
+- [x] Parser SSE em Dart puro, tolerante a linha cortada, com teste (`tool/sse_test.dart`).
+- [x] `ProviderService.streamComplete` cancelável; botão de parar mantém o texto recebido.
+- [x] Estados vazio, processando e erro com “tentar de novo” na conversa.
+- [x] Campo `fontes` preparado; memória da Fase 7 é quem vai preencher.
+- [x] `npm run verificar` exit 0 — 4 de 4 etapas.
+- [ ] `flutter analyze`, `flutter test` e medição no aparelho.
+
+Relatório: `docs/relatorios/2026-11-14_040-conversa-em-streaming.md`.
+Entrega da fase: `docs/FASE-5-ACEITE.md`.

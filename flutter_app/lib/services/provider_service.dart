@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import '../core/sse.dart';
 
 class AiProvider {
   const AiProvider({required this.id, required this.name, required this.endpoint, required this.model});
@@ -157,6 +158,41 @@ class ProviderService {
       throw StateError('O provedor ${provider.name} retornou uma resposta vazia.');
     }
     return content.trim();
+  }
+
+  /// Resposta em streaming: emite cada fragmento assim que o provedor manda.
+  ///
+  /// Cancelar a assinatura interrompe a leitura e libera a conexão — é o que o botão de parar
+  /// usa. Provedor que ignora `stream` responde pelo envelope normal e o parser ainda entrega o
+  /// texto (o chamador decide se cai para [complete] quando nada chega).
+  Stream<String> streamComplete(String providerId, List<Map<String, String>> messages) async* {
+    final provider = _provider(providerId);
+    final key = await _secrets.read(providerId);
+    if (key == null || key.isEmpty) {
+      throw StateError('O provedor ${provider.name} não tem chave cadastrada.');
+    }
+    final requisicao = http.Request('POST', Uri.parse(provider.endpoint))
+      ..headers.addAll({
+        'Authorization': 'Bearer $key',
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      })
+      ..body = jsonEncode({
+        'model': provider.model,
+        'messages': messages,
+        'temperature': 0.4,
+        'stream': true,
+      });
+    final resposta = await _client.send(requisicao).timeout(const Duration(seconds: 30));
+    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+      throw StateError('O provedor ${provider.name} não concluiu a solicitação (HTTP ${resposta.statusCode}).');
+    }
+    final parser = SseParser();
+    await for (final pedaco in resposta.stream.transform(utf8.decoder)) {
+      for (final texto in parser.alimentar(pedaco)) {
+        yield texto;
+      }
+    }
   }
 
   AiProvider _provider(String id) => aiProviders.firstWhere(

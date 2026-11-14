@@ -49,7 +49,19 @@ def main() -> int:
         print((r.stdout or "") + (r.stderr or ""))
         print("FALHOU: teste puro do núcleo Dart.")
         return 1
-    print("OK: núcleo Dart — agrupamento de tokens do streaming (janela de 32 ms)")
+    sse = subprocess.run(
+        [dart, "run", "tool/sse_test.dart"],
+        cwd=RAIZ / "flutter_app",
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if sse.returncode != 0:
+        print((sse.stdout or "") + (sse.stderr or ""))
+        print("FALHOU: parser SSE do streaming.")
+        return 1
+    print("OK: núcleo Dart — agrupamento de tokens (32 ms) e parser SSE")
     return 0
 
 
