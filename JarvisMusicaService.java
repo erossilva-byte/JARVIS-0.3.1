@@ -131,7 +131,7 @@ public class JarvisMusicaService extends Service {
             }
             String acao = intent.getAction() == null ? "" : intent.getAction();
             if (ACAO_TOCAR.equals(acao)) {
-                iniciarPrimeiroPlano();
+                if (!iniciarPrimeiroPlano()) return START_NOT_STICKY;
                 ArrayList<String> u = intent.getStringArrayListExtra(EXTRA_URIS);
                 ArrayList<String> t = intent.getStringArrayListExtra(EXTRA_TITULOS);
                 ArrayList<String> a = intent.getStringArrayListExtra(EXTRA_ARTISTAS);
@@ -148,7 +148,7 @@ public class JarvisMusicaService extends Service {
                 // startForeground() em poucos segundos, o Android encerra o processo com
                 // ForegroundServiceDidNotStartInTimeException — era o que acontecia ao
                 // pedir "pausar"/"próxima" com o player já parado.
-                iniciarPrimeiroPlano();
+                if (!iniciarPrimeiroPlano()) return START_NOT_STICKY;
                 String c = intent.getStringExtra(EXTRA_COMANDO);
                 c = c == null ? "" : c.trim().toLowerCase(java.util.Locale.ROOT);
                 if (player == null) {
@@ -181,8 +181,8 @@ public class JarvisMusicaService extends Service {
         tituloAtual = i < titulos.size() ? titulos.get(i) : "";
         artistaAtual = i < artistas.size() ? artistas.get(i) : "";
         soltarPlayer();
+        MediaPlayer p = new MediaPlayer();
         try {
-            MediaPlayer p = new MediaPlayer();
             p.setAudioAttributes(new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
@@ -200,6 +200,8 @@ public class JarvisMusicaService extends Service {
             p.prepareAsync();
             atualizarNotificacao();
         } catch (Throwable e) {
+            // Sem soltar aqui, cada arquivo inválido deixava um MediaPlayer nativo vivo.
+            try { p.release(); } catch (Throwable ignored) { }
             erroAtual = "Arquivo de áudio indisponível: " + (e.getMessage() == null ? "erro desconhecido" : e.getMessage());
             if (i + 1 < uris.size()) tocarIndice(i + 1);
             else pararTudo();
@@ -399,7 +401,7 @@ public class JarvisMusicaService extends Service {
         } catch (Throwable ignored) { }
     }
 
-    private void iniciarPrimeiroPlano() {
+    private boolean iniciarPrimeiroPlano() {
         Notification n = montarNotificacao();
         try {
             if (Build.VERSION.SDK_INT >= 29) {
@@ -407,9 +409,20 @@ public class JarvisMusicaService extends Service {
             } else {
                 startForeground(ID, n);
             }
+            return true;
         } catch (Throwable e) {
             erroAtual = "O Android não deixou o player rodar em segundo plano: " + (e.getMessage() == null ? "sem detalhe" : e.getMessage());
-            try { startForeground(ID, n); } catch (Throwable ignored) { }
+        }
+        // Segunda tentativa sem tipo explícito: vale o tipo declarado no manifesto.
+        try {
+            startForeground(ID, n);
+            return true;
+        } catch (Throwable e2) {
+            // Sem primeiro plano o Android encerra o processo em segundos; parar é mais
+            // honesto do que tocar sem notificação e morrer com ForegroundServiceDidNotStartInTime.
+            erroAtual = "Sem permissão para tocar em segundo plano: " + (e2.getMessage() == null ? "sem detalhe" : e2.getMessage());
+            pararTudo();
+            return false;
         }
     }
 

@@ -42,5 +42,21 @@ const hist = [
 ];
 const sel = C.selecionarHistorico(hist, C.analisar('continue o projeto Orion'), 4);
 check('histórico mantém a referência do projeto', sel.some((x) => /Orion/.test(x.content)));
+// Ordem cronológica: um turno antigo trazido por relevância não pode ir para o fim da lista.
+const longo = [];
+for (let i = 0; i < 12; i++) longo.push({ role: i % 2 ? 'assistant' : 'user', content: i === 0 ? 'estamos no projeto Orion' : 'mensagem ' + i });
+longo.push({ role: 'user', content: 'continue o projeto Orion' });
+const selLongo = C.selecionarHistorico(longo, C.analisar('continue o projeto Orion'), 4);
+const posicoes = selLongo.map((x) => longo.indexOf(x));
+check('histórico sai em ordem cronológica', posicoes.every((p, i) => p >= 0 && (i === 0 || p > posicoes[i - 1])));
+check('o turno atual continua por último', selLongo[selLongo.length - 1].content === 'continue o projeto Orion');
+check('turno antigo relevante continua incluído', selLongo.indexOf(longo[0]) >= 0);
+check('histórico não estoura o teto', selLongo.length <= 8);
+
+// Repetição: o histórico guarda o JSON inteiro do modelo, então a comparação usa a fala do turno.
+check('fala do turno guardado sai do JSON', C.falaDoTurno('{"fala":"Feito, senhor.","acao":null}') === 'Feito, senhor.');
+check('fala em texto puro continua igual', C.falaDoTurno('Feito.') === 'Feito.');
+const repetida = C.verificarResposta('O erro está na linha 4.', C.analisar('corrija o código'), { recentes: [C.falaDoTurno('{"fala":"O erro está na linha 4.","acao":null}')] });
+check('repetição é detectada a partir do histórico em JSON', repetida.problemas.indexOf('repetida') >= 0);
 check('diagnóstico declara ausência de rede e DOM', C.diagnostico().rede === false && C.diagnostico().dom === false);
 console.log('\nCognição: ' + ok + ' verificações aprovadas.');

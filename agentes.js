@@ -21,7 +21,9 @@
   const CHAVE = 'recibos';
   let loja = null;
   let abertos = Object.create(null);
+  let tarefas = Object.create(null);
   let sequencia = 0;
+  let sequenciaTarefa = 0;
 
   const AGENTES = {
     conversa: { id: 'conversa', nome: 'Conversa', dominio: 'hora, data, cálculos, explicações e respostas gerais' },
@@ -32,11 +34,17 @@
     pessoas: { id: 'pessoas', nome: 'Pessoas', dominio: 'contatos, perfis e reconhecimento de locutor' },
     visao: { id: 'visao', nome: 'Visão', dominio: 'câmera, imagens e descrição de cena' },
     pc: { id: 'pc', nome: 'Computador', dominio: 'arquivos e comandos do PC conectado' },
-    sistema: { id: 'sistema', nome: 'Sistema', dominio: 'atualização, diagnóstico, segurança e configuração' }
+    sistema: { id: 'sistema', nome: 'Sistema', dominio: 'atualização, diagnóstico, segurança e configuração' },
+    programacao: { id: 'programacao', nome: 'Programação', dominio: 'código, sandbox, testes, correções e revisão do próprio projeto' },
+    engenharia: { id: 'engenharia', nome: 'Engenharia', dominio: 'elétrica, motores, CLP, ladder e texto estruturado' },
+    eletronica: { id: 'eletronica', nome: 'Eletrônica', dominio: 'circuitos, componentes, netlist e intercâmbio CADeSIMU' }
   };
 
   // A ordem importa: "abrir arquivo" é de Arquivos, não do Dispositivo.
   const REGRAS = [
+    ['programacao', /(sandbox|c[oó]digo|codigo|patch|dev_|teste|revis|refator|script|programa)/],
+    ['eletronica', /(cadesimu|componente|netlist|simul|circuito|circ_|spice|placa)/],
+    ['engenharia', /(eletrica|el[eé]trica|projetista|motor|ladder|clp|_st\b|plc|dimension|potencia|contator)/],
     ['pesquisa', /(pesquis|clima|not[ií]cia|noticia|web|link|youtube|wikipedia|google)/],
     ['arquivos', /(arq_|arquivo|pasta|documento|pdf|docx|planilha|zip|projeto|cad_)/],
     ['memoria', /(mem[oó]ria|memoria|nota|obsidian|contexto)/],
@@ -44,7 +52,7 @@
     ['visao', /(vis[aã]o|visao|c[aâ]mera|camera|imagem|foto|ocr)/],
     ['pc', /(^pc_|computador|desktop|servidor)/],
     ['sistema', /(atualiz|diagn[oó]stico|diagnostico|seguran[cç]a|seguranca|config|pin|backup|sincron)/],
-    ['dispositivo', /(app|m[ií]dia|midia|volume|brilho|lanterna|alarme|lembrete|notifica|sms|ligar|chamada|whatsapp|email|agenda|tarefa|rotina|tela|wifi|bluetooth)/]
+    ['dispositivo', /(app|m[ií]dia|midia|volume|brilho|lanterna|alarme|lembrete|notifica|sms|ligar|chamada|whatsapp|email|agenda|tarefa|rotina|tela|wifi|bluetooth|status_dispositivo|acessibilidade)/]
   ];
 
   function agora() { return Date.now(); }
@@ -78,19 +86,94 @@
     catch (e) { return false; }
   }
 
-  /** Abre um recibo ANTES da ferramenta rodar. Guarda apenas as chaves dos argumentos. */
-  function abrir(acao, args) {
+  /**
+   * Abre um recibo ANTES da ferramenta rodar. Guarda apenas as chaves dos argumentos.
+   * `opcoes.de` diz quem delegou (plano, usuário, outro agente) e `opcoes.tarefa` liga o
+   * recibo à tarefa delegada que será validada no fim.
+   */
+  function abrir(acao, args, opcoes) {
+    const o = opcoes || {};
     const agente = agenteDe(acao);
     const rec = {
       id: 'rc-' + agora().toString(36) + '-' + (++sequencia),
       acao: String(acao || 'desconhecida').slice(0, 60),
       agente: agente.id,
+      para: agente.id,
+      de: String(o.de || 'usuario').slice(0, 40),
+      tarefa: String(o.tarefa || '').slice(0, 40),
       inicio: agora(),
       estado: 'aberto',
       argumentos: Object.keys(args && typeof args === 'object' && !Array.isArray(args) ? args : {}).slice(0, 8)
     };
     abertos[rec.id] = rec;
+    if (rec.tarefa && tarefas[rec.tarefa]) tarefas[rec.tarefa].passos++;
     return rec;
+  }
+
+  /** Abre a tarefa delegada: um objetivo que pode passar por vários agentes. */
+  function abrirTarefa(objetivo, de) {
+    const id = 'tr-' + agora().toString(36) + '-' + (++sequenciaTarefa);
+    tarefas[id] = {
+      id,
+      objetivo: String(objetivo || '').slice(0, 160),
+      de: String(de || 'usuario').slice(0, 40),
+      inicio: agora(),
+      passos: 0
+    };
+    return Object.assign({}, tarefas[id]);
+  }
+
+  /** Recibos de uma tarefa: os fechados no histórico mais os que ainda estão abertos. */
+  function recibosDaTarefa(id) {
+    const alvo = String(id || '');
+    if (!alvo) return [];
+    const fechados = lerHistorico().filter((r) => r.tarefa === alvo);
+    const vivos = Object.keys(abertos).map((k) => abertos[k]).filter((r) => r.tarefa === alvo);
+    return fechados.concat(vivos);
+  }
+
+  /**
+   * Valida a tarefa antes de qualquer anúncio de conclusão.
+   * Só é "ok" com pelo menos um recibo e TODOS confirmados: um elo incerto, falho,
+   * bloqueado, cancelado ou ainda aberto mantém a tarefa como não concluída, e a
+   * pendência sai listada com o agente responsável.
+   */
+  function verificarTarefa(id) {
+    const alvo = String(id || '');
+    const lista = recibosDaTarefa(alvo);
+    const pendencias = [];
+    const agentes = [];
+    let confirmados = 0;
+    lista.forEach((r) => {
+      if (agentes.indexOf(r.agente) < 0) agentes.push(r.agente);
+      if (r.estado === 'ok') confirmados++;
+      else pendencias.push({
+        acao: r.acao,
+        agente: r.agente,
+        estado: r.estado || 'aberto',
+        motivo: String(r.motivo || 'sem confirmação de efeito').slice(0, 160)
+      });
+    });
+    return {
+      id: alvo,
+      ok: lista.length > 0 && pendencias.length === 0,
+      total: lista.length,
+      confirmados,
+      pendencias,
+      agentes
+    };
+  }
+
+  /** Desempenho por agente, para o diagnóstico (quem trabalhou e quanto foi confirmado). */
+  function porAgente() {
+    const conta = {};
+    lerHistorico().forEach((r) => {
+      const id = String(r.agente || 'conversa');
+      if (!conta[id]) conta[id] = { total: 0, ok: 0, incerto: 0, falhou: 0, bloqueado: 0, cancelado: 0 };
+      conta[id].total++;
+      if (conta[id][r.estado] != null) conta[id][r.estado]++;
+    });
+    return conta;
   }
 
   /**
@@ -167,13 +250,15 @@
 
   function limpar() {
     abertos = Object.create(null);
+    tarefas = Object.create(null);
     gravar([]);
     return true;
   }
 
   const api = {
     VERSAO, LIMITE, CHAVE, agentes: AGENTES, configurar, agenteDe,
-    abrir, classificar, fechar, cancelar, resumo, historico, limpar
+    abrir, classificar, fechar, cancelar, resumo, historico, limpar,
+    abrirTarefa, recibosDaTarefa, verificarTarefa, porAgente
   };
   return api;
 });

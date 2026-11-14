@@ -49,6 +49,10 @@ import androidx.documentfile.provider.DocumentFile;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Supplier;
+
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -70,6 +74,29 @@ public class JarvisUtilPlugin extends Plugin {
     private static final String KS = "AndroidKeyStore";
     private static final String ALIAS = "jarvis_chaves";
     private static final String PREFS = "jarvis_seguro";
+
+    /**
+     * Percorrer a pasta do cofre pelo SAF e ler 500 contatos são chamadas binder que podem
+     * levar segundos. Na thread principal isso trava a interface; aqui elas rodam numa fila.
+     */
+    private final ExecutorService fundo = Executors.newSingleThreadExecutor();
+
+    private void emFundo(PluginCall call, Supplier<JSObject> tarefa) {
+        fundo.execute(() -> {
+            try {
+                call.resolve(tarefa.get());
+            } catch (Throwable e) {
+                call.reject("Falha ao acessar o armazenamento: "
+                    + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+            }
+        });
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        fundo.shutdownNow();
+        super.handleOnDestroy();
+    }
 
     /* ---------- Cofre de chaves ---------- */
 
@@ -156,12 +183,12 @@ public class JarvisUtilPlugin extends Plugin {
             requestPermissionForAlias("contacts", call, "aposPermissaoContatos");
             return;
         }
-        lerContatos(call);
+        fundo.execute(() -> lerContatos(call));
     }
 
     @PermissionCallback
     private void aposPermissaoContatos(PluginCall call) {
-        if (getPermissionState("contacts") == PermissionState.GRANTED) lerContatos(call);
+        if (getPermissionState("contacts") == PermissionState.GRANTED) fundo.execute(() -> lerContatos(call));
         else call.reject("Acesso aos contatos negado. Você pode cadastrar contatos manualmente.");
     }
 
@@ -1077,6 +1104,7 @@ public class JarvisUtilPlugin extends Plugin {
     private void contarMd(DocumentFile dir, int[] contador, int nivel) {
         if (dir == null || nivel > 3 || contador[0] >= 500) return;
         DocumentFile[] filhos = dir.listFiles();
+        if (filhos == null) return;
         for (DocumentFile f : filhos) {
             if (f.isDirectory()) contarMd(f, contador, nivel + 1);
             else if (f.getName() != null && f.getName().toLowerCase(Locale.ROOT).endsWith(".md")) contador[0]++;
@@ -1125,58 +1153,56 @@ public class JarvisUtilPlugin extends Plugin {
 
     @PluginMethod
     public void cofreStatus(PluginCall call) {
-        JSObject out = new JSObject();
-        DocumentFile raiz = raizCofre();
-        if (raiz == null) {
-            out.put("conectado", false);
-            out.put("motivo", "Nenhuma pasta de cofre escolhida neste aparelho.");
-            call.resolve(out);
-            return;
-        }
-        try {
-            int[] contador = new int[]{0};
-            contarMd(raiz, contador, 0);
-            DocumentFile memoria = raiz.findFile("Memoria");
-            out.put("conectado", raiz.canRead());
-            out.put("nome", raiz.getName() == null ? "cofre" : raiz.getName());
-            out.put("uri", uriCofre() == null ? "" : uriCofre().toString());
-            out.put("podeLer", raiz.canRead());
-            out.put("podeEscrever", raiz.canWrite());
-            out.put("arquivos", contador[0]);
-            out.put("pastaMemoria", memoria != null && memoria.exists());
-            out.put("motivo", raiz.canRead() ? "Pasta acessível." : "O Android revogou a permissão desta pasta; escolha de novo.");
-        } catch (Exception e) {
-            out.put("conectado", false);
-            out.put("motivo", "Falha ao consultar a pasta: " + msg(e));
-        }
-        call.resolve(out);
+        emFundo(call, () -> {
+            JSObject out = new JSObject();
+            DocumentFile raiz = raizCofre();
+            if (raiz == null) {
+                out.put("conectado", false);
+                out.put("motivo", "Nenhuma pasta de cofre escolhida neste aparelho.");
+                return out;
+            }
+            try {
+                int[] contador = new int[]{0};
+                contarMd(raiz, contador, 0);
+                DocumentFile memoria = raiz.findFile("Memoria");
+                out.put("conectado", raiz.canRead());
+                out.put("nome", raiz.getName() == null ? "cofre" : raiz.getName());
+                out.put("uri", uriCofre() == null ? "" : uriCofre().toString());
+                out.put("podeLer", raiz.canRead());
+                out.put("podeEscrever", raiz.canWrite());
+                out.put("arquivos", contador[0]);
+                out.put("pastaMemoria", memoria != null && memoria.exists());
+                out.put("motivo", raiz.canRead() ? "Pasta acessível." : "O Android revogou a permissão desta pasta; escolha de novo.");
+            } catch (Exception e) {
+                out.put("conectado", false);
+                out.put("motivo", "Falha ao consultar a pasta: " + msg(e));
+            }
+            return out;
+        });
     }
 
     @PluginMethod
     public void cofreListar(PluginCall call) {
-        DocumentFile raiz = raizCofre();
-        JSObject out = new JSObject();
-        JSArray lista = new JSArray();
-        if (raiz == null) {
-            out.put("arquivos", lista);
-            out.put("motivo", "Nenhum cofre escolhido.");
-            call.resolve(out);
-            return;
-        }
-        try {
+        emFundo(call, () -> {
+            DocumentFile raiz = raizCofre();
+            JSObject out = new JSObject();
+            JSArray lista = new JSArray();
+            if (raiz == null) {
+                out.put("arquivos", lista);
+                out.put("motivo", "Nenhum cofre escolhido.");
+                return out;
+            }
             coletarMd(raiz, "", lista, 0);
             out.put("arquivos", lista);
             out.put("total", lista.length());
-        } catch (Exception e) {
-            call.reject("Não consegui listar o cofre: " + msg(e));
-            return;
-        }
-        call.resolve(out);
+            return out;
+        });
     }
 
     private void coletarMd(DocumentFile dir, String prefixo, JSArray saida, int nivel) {
         if (dir == null || nivel > 3 || saida.length() >= 200) return;
         DocumentFile[] filhos = dir.listFiles();
+        if (filhos == null) return;
         for (DocumentFile f : filhos) {
             String nome = f.getName();
             if (nome == null || nome.startsWith(".") || f.isDirectory()) {
@@ -1200,10 +1226,13 @@ public class JarvisUtilPlugin extends Plugin {
             java.io.InputStream in = getContext().getContentResolver().openInputStream(alvo.getUri());
             if (in == null) { call.reject("Não foi possível abrir o arquivo."); return; }
             java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
-            byte[] dados = new byte[8192];
-            int n;
-            while ((n = in.read(dados)) != -1) buf.write(dados, 0, n);
-            in.close();
+            try {
+                byte[] dados = new byte[8192];
+                int n;
+                while ((n = in.read(dados)) != -1) buf.write(dados, 0, n);
+            } finally {
+                try { in.close(); } catch (Exception ignored) { }
+            }
             JSObject out = new JSObject();
             out.put("caminho", caminho);
             out.put("texto", buf.toString("UTF-8"));
@@ -1239,9 +1268,12 @@ public class JarvisUtilPlugin extends Plugin {
             }
             java.io.OutputStream out = getContext().getContentResolver().openOutputStream(nota.getUri(), "wt");
             if (out == null) { call.reject("Não foi possível abrir a nota para escrita."); return; }
-            out.write(texto.getBytes("UTF-8"));
-            out.flush();
-            out.close();
+            try {
+                out.write(texto.getBytes("UTF-8"));
+                out.flush();
+            } finally {
+                try { out.close(); } catch (Exception ignored) { }
+            }
             JSObject resp = new JSObject();
             resp.put("ok", true);
             resp.put("caminho", caminho);

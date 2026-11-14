@@ -66,6 +66,16 @@ jobs:
         run: |
           test -f package.json || { echo 'Código-fonte ausente: mantenha package.json na raiz do repositório.'; exit 1; }
 
+      - name: Ensaio do patch antes da compilação
+        run: |
+          PATCH="$(find . -maxdepth 1 -type f -name '*.patch' -print | sort | tail -n 1)"
+          if [ -z "$PATCH" ]; then
+            echo 'Nenhum patch na raiz: compilando o código do repositório.'
+            exit 0
+          fi
+          echo "Ensaio do patch: $PATCH"
+          python3 ci/rehearsal_gate_a.py "$PATCH" --aplicar
+
       - name: Instalar dependências Node
         run: npm install --ignore-scripts --legacy-peer-deps
 
@@ -96,7 +106,7 @@ jobs:
           # Todo recurso web do app precisa estar aqui: sem hermes.js o app.js recusa
           # iniciar ("Núcleo Hermes ausente") e o APK publicado sairia inútil.
           cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js eletrica.js projetista.js pc.js cad_projeto.js visao.js visao_contexto.js seguranca.js pessoas.js utilidades.js cultura.js briefing.js jogos.js utilidades_ui.js www/
-          cp avatar.js www/
+          cp avatar.js nucleo_v3.js consumo_ia.js modo_dev.js escuta_voz.js segundo_plano.js perfil_energia.js manutencao.js privacidade.js www/
           cp interface.css www/
           cp core.css www/
           cp identidade.js identidade_ui.js escuta.js agentes.js sistema.js plano.js interface.js www/
@@ -132,13 +142,15 @@ jobs:
       - name: Baixar bibliotecas nativas de voz (sherpa-onnx)
         run: python3 baixar_sherpa.py android/app
 
+      - name: Pré-checagem das classes e dependências Android
+        run: python3 ci/preflight_android.py
       - name: Aplicar identidade, permissões e versão
         run: |
           D=android/app/src/main/java/com/jarvis/nova
           mkdir -p "$D"
           find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
           # Lista alinhada com o workflow de build: toda classe nativa da raiz é obrigatória.
-          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisKwsEngine.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java JarvisAcessibilidade.java JarvisAcessibilidadePlugin.java; do
+          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisKwsEngine.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java JarvisAcessibilidade.java JarvisAcessibilidadePlugin.java JarvisManutencaoWorker.java; do
             test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
           done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml

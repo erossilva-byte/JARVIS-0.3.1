@@ -335,6 +335,68 @@ const norm = (s) => semAcento(s).toLowerCase().replace(/[^a-z0-9: ]+/g, ' ').rep
 
 /* ---------- Chaves da API (cifradas no Android) ---------- */
 const CHAVES = { groq: '', openrouter: '', cerebras: '', mistral: '', gemini: '' };
+
+/* ---------- Consumo de tokens (Fase 3) ----------
+ * Toda resposta traz (ou não) um bloco usage. Ele era descartado; agora é somado por
+ * provedor e mostrado em Ajustes e no diagnóstico. Quando o provedor não informa, a tela
+ * diz "não informou" — nenhum número é estimado. */
+const CONSUMO_CHAVE_STORE = 'consumo_ia';
+let consumoEstado = {};
+let consumoPronto = false;
+function consumoCarregar() {
+  try {
+    const bruto = store.get(CONSUMO_CHAVE_STORE, '');
+    const obj = bruto ? JSON.parse(bruto) : {};
+    consumoEstado = (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
+  } catch (e) { consumoEstado = {}; }
+}
+function consumoGarantir() {
+  if (!consumoPronto) { consumoCarregar(); consumoPronto = true; }
+  return consumoEstado;
+}
+function consumoSalvar() {
+  try { store.set(CONSUMO_CHAVE_STORE, JSON.stringify(consumoEstado)); }
+  catch (e) { registrar('erro', 'consumo: não foi possível gravar (' + ((e && e.message) || e) + ')'); }
+}
+function anotarConsumo(id, uso) {
+  const C = window.ConsumoIA;
+  if (!C || !id) return;
+  consumoGarantir();
+  consumoEstado = C.somar(consumoEstado, id, uso || null);
+  consumoSalvar();
+  mostrarConsumoIA();
+}
+function textoConsumoIA() {
+  const C = window.ConsumoIA;
+  if (!C) return 'Consumo de tokens indisponível: o módulo de consumo não foi carregado.';
+  consumoGarantir();
+  return C.linhas(consumoEstado, PROVEDORES.map((p) => ({ id: p.id, nome: p.nome }))).join(' ');
+}
+function mostrarConsumoIA() {
+  const el = document.getElementById('c-consumo-ia');
+  if (el) el.textContent = textoConsumoIA();
+}
+
+/* Preferência de motor escolhida pelo usuário: principal e alternativo. O roteador do
+ * Hermes continua no comando do resto da fila; aqui só fixamos os dois primeiros. */
+function opcoesDeProvedor(sel, atual) {
+  if (!sel) return;
+  const lista = [['', 'Automático (roteador Hermes)']].concat(
+    PROVEDORES.map((p) => [p.id, p.nome + (CHAVES[p.id] ? '' : ' (sem chave)')])
+  );
+  sel.innerHTML = '';
+  for (const par of lista) {
+    const o = document.createElement('option');
+    o.value = par[0];
+    o.textContent = par[1];
+    sel.appendChild(o);
+  }
+  sel.value = PROVEDORES.some((p) => p.id === atual) ? atual : '';
+}
+function mostrarPreferenciaIA() {
+  opcoesDeProvedor(document.getElementById('c-prov-principal'), store.get('prov_principal', ''));
+  opcoesDeProvedor(document.getElementById('c-prov-alternativo'), store.get('prov_alternativo', ''));
+}
 const nomeLS = (n) => (n === 'groq' ? 'key' : 'key_' + n);
 const SEG = () => plug('JarvisUtil');
 const LOCAL_AI = () => plug('JarvisLocalAI');
@@ -1763,7 +1825,11 @@ const disponiveis = () => Object.keys(ACOES).filter((k) => ACOES[k].disp.include
 async function executarSeguro(acao, opcoes) {
   const nome = acao.nome;
   const leituraOk = !!(opcoes && opcoes.leituraOk);
-  const rec = AGENTES ? AGENTES.abrir(nome, acao.args) : null;
+  const delegacao = {
+    de: (opcoes && opcoes.de) || tarefaDelegadaAtual.de || 'usuario',
+    tarefa: (opcoes && opcoes.tarefa) || tarefaDelegadaAtual.id || ''
+  };
+  const rec = AGENTES ? AGENTES.abrir(nome, acao.args, delegacao) : null;
   // fim() fecha o recibo em TODOS os caminhos. O resultado devolvido à conversa
   // carrega o recibo, então a UI e o diagnóstico sabem se o efeito foi observado.
   const fim = (res, motivo) => {
@@ -1786,6 +1852,18 @@ async function executarSeguro(acao, opcoes) {
   if (!def || !disponiveis().includes(nome)) {
     registrar('bloqueado', 'ação inexistente: ' + nome);
     return fim({ info: fraseApp('acaoIndisponivel'), bloqueado: true });
+  }
+  // Código do próprio app: escrita só com o modo de desenvolvimento autorizado, e cada
+  // tentativa — permitida ou recusada — entra no registro.
+  if (MODO_DEV && (nome === 'arquivo_editar' || nome === 'arquivo_criar')) {
+    const alvoCaminho = String((acao.args && (acao.args.caminho || acao.args.nome)) || '');
+    if (MODO_DEV.ehCodigoDoProjeto(alvoCaminho)) {
+      const d = MODO_DEV.verificar('editar', alvoCaminho);
+      if (!d.ok) {
+        registrar('bloqueado', 'código do app sem autorização: ' + alvoCaminho);
+        return fim({ info: 'Editar o código do próprio app exige autorizar o modo de desenvolvimento em Ajustes ▸ Dev. Arquivos. ' + d.motivo + '.', bloqueado: true });
+      }
+    }
   }
   let args = acao.args && typeof acao.args === 'object' ? acao.args : {};
   let desc = nome;
@@ -2387,6 +2465,13 @@ async function executarRotina(nome) {
 // O modelo propõe; o PlanoJarvis valida; o usuário confirma; cada etapa só avança
 // com recibo "ok". Uma etapa "incerta" pausa e pede autorização explícita.
 let planoEmCurso = false, ultimoPlano = null;
+// Delegação corrente: enquanto um plano roda, cada etapa é registrada na tarefa delegada
+// do agente responsável, para a validação final antes de anunciar conclusão.
+let tarefaDelegadaAtual = { id: '', de: '' };
+function rotuloAgente(id) {
+  const a = AGENTES && AGENTES.agentes ? AGENTES.agentes[id] : null;
+  return a ? a.nome : String(id || '');
+}
 function descreverPassoPlano(p) {
   return PLANO ? PLANO.descrever(p) : String((p && p.acao) || '').replace(/_/g, ' ');
 }
@@ -2463,6 +2548,10 @@ async function iniciarPlano(objetivo) {
   const confirmado = await confirmar('Plano com ' + plano.passos.length + ' etapa(s): ' + PLANO.resumo(plano, { args: true }) + '. Executar agora? Ações sensíveis pedirão confirmação e etapa sem efeito confirmado vai pausar.', false);
   if (!confirmado) { msg('sis', 'Plano descartado antes de executar qualquer etapa.'); await falar('Plano descartado, ' + trat() + '.'); return true; }
   planoEmCurso = true;
+  // A cadeia de agentes começa aqui: cada etapa entra nesta tarefa com o agente que a
+  // executou, e o fim do plano só pode ser chamado de concluído se todos os elos verificarem.
+  const tarefaAgentes = (AGENTES && typeof AGENTES.abrirTarefa === 'function') ? AGENTES.abrirTarefa(alvo, 'plano') : null;
+  tarefaDelegadaAtual = { id: tarefaAgentes ? tarefaAgentes.id : '', de: 'plano' };
   msg('sis', 'Executando plano de ' + plano.passos.length + ' etapa(s). Nenhuma etapa seguinte roda sem confirmação quando o efeito é incerto.');
   let res = null;
   try {
@@ -2496,8 +2585,24 @@ async function iniciarPlano(objetivo) {
   } finally { planoEmCurso = false; }
   ultimoPlano = res;
   registrar('plano', 'status: ' + res.status + ' · ' + res.ok + ' confirmada(s) · ' + res.incerto + ' incerta(s)');
-  if (res.status === 'concluido') {
-    await falar('Plano concluído: ' + res.ok + ' etapa(s) confirmada(s).' + (res.incerto ? ' ' + res.incerto + ' etapa(s) seguiram sem confirmação, com sua autorização.' : ''), true);
+  // Validação de resultado da tarefa delegada: quem executou cada etapa e se o efeito foi
+  // confirmado. Uma etapa incerta impede a palavra "concluído", mesmo que o supervisor
+  // tenha seguido adiante com a autorização do usuário.
+  const cadeia = (AGENTES && tarefaAgentes && typeof AGENTES.verificarTarefa === 'function')
+    ? AGENTES.verificarTarefa(tarefaAgentes.id) : null;
+  const colaboracao = cadeia && cadeia.agentes.length
+    ? ' Agentes: ' + cadeia.agentes.map(rotuloAgente).join(', ') + '.' : '';
+  if (cadeia && cadeia.total) {
+    registrar('plano', 'cadeia de agentes: ' + cadeia.confirmados + '/' + cadeia.total + ' confirmado(s) · ' + (cadeia.agentes.join(', ') || 'sem agente'));
+  }
+  tarefaDelegadaAtual = { id: '', de: '' };
+  if (res.status === 'concluido' && cadeia && !cadeia.ok) {
+    const p = cadeia.pendencias[0] || {};
+    await falar('Plano encerrado com ' + res.ok + ' etapa(s) confirmada(s), mas a validação final reprovou: ' +
+      (p.acao || 'uma etapa') + ', do agente ' + (rotuloAgente(p.agente) || 'desconhecido') + ', ficou ' + (p.estado || 'sem confirmação') +
+      (p.motivo ? ' (' + p.motivo + ')' : '') + '. Não considero a tarefa concluída.' + colaboracao, true);
+  } else if (res.status === 'concluido') {
+    await falar('Plano concluído: ' + res.ok + ' etapa(s) confirmada(s).' + (res.incerto ? ' ' + res.incerto + ' etapa(s) seguiram sem confirmação, com sua autorização.' : '') + colaboracao, true);
   } else if (res.status === 'pausado') {
     const u = res.ultimo || {};
     await falar('Plano pausado na etapa ' + res.executados + '. ' + (u.motivo || 'O efeito não foi confirmado.') + ' Nenhuma etapa seguinte foi executada.', true);
@@ -3430,7 +3535,7 @@ Regras: no máximo uma ação por resposta. Em "fala", descreva a ação no ger�
 }
 // Degraus de compatibilidade: se o provedor rejeitar (400), tenta de novo com menos exigências.
 const ESTRATEGIAS = [{ json: true, rz: true }, { json: false, rz: true }, { json: false, rz: false }];
-function corpoChat(modelo, e, stream) {
+function corpoChat(modelo, e, stream, p) {
   const b = {
     model: modelo, temperature: 0.6, max_tokens: 1500,
     messages: [{ role: 'system', content: promptSistema() }, ...(usarContextoNestaConversa ? historicoParaIA(10) : hist.slice(-1))]
@@ -3439,7 +3544,12 @@ function corpoChat(modelo, e, stream) {
   // Modelos gpt-oss "pensam" antes de responder; esforço baixo = mais rápido.
   if (e.rz && /gpt-oss/i.test(modelo)) b.reasoning_effort = 'low';
   // Streaming: a resposta chega em pedaços e a fala pode começar antes do fim da geração.
-  if (stream) b.stream = true;
+  if (stream) {
+    b.stream = true;
+    // Pede o consumo no fim do streaming (padrão OpenAI). Provedor que recusa o campo é
+    // marcado e passa a transmitir sem ele, em vez de perder o streaming por um opcional.
+    if (!p || p.usoStream !== false) b.stream_options = { include_usage: true };
+  }
   return b;
 }
 async function postChat(p, key, modelo, e) {
@@ -3453,7 +3563,7 @@ async function postChat(p, key, modelo, e) {
     return await fetch(p.url + '/chat/completions', {
       method: 'POST', signal: ac.signal,
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-      body: JSON.stringify(corpoChat(modelo, e))
+      body: JSON.stringify(corpoChat(modelo, e, false, p))
     });
   } finally { clearTimeout(lim); sinal.removeEventListener('abort', corta); }
 }
@@ -3484,13 +3594,13 @@ async function lerStreamIA(p, key, modelo, e, aoParcial) {
     const res = await fetch(p.url + '/chat/completions', {
       method: 'POST', signal: ac.signal,
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-      body: JSON.stringify(corpoChat(modelo, e, true))
+      body: JSON.stringify(corpoChat(modelo, e, true, p))
     });
     if (!res.ok) return { ok: false, status: res.status, txt: await res.text().catch(() => '') };
     const leitor = res.body && typeof res.body.getReader === 'function' ? res.body.getReader() : null;
     if (!leitor) return { ok: false, status: 0, txt: 'o provedor não devolveu um corpo legível' };
     const dec = new TextDecoder();
-    let buf = '', raw = '';
+    let buf = '', raw = '', uso = null;
     for (;;) {
       const { value, done } = await leitor.read();
       if (done) break;
@@ -3505,6 +3615,7 @@ async function lerStreamIA(p, key, modelo, e, aoParcial) {
         if (!dados || dados === '[DONE]') continue;
         let j = null;
         try { j = JSON.parse(dados); } catch (x) { continue; }
+        if (j.usage) uso = j.usage;
         const c = j.choices && j.choices[0];
         const parte = c && ((c.delta && c.delta.content) || (c.message && c.message.content));
         if (parte) {
@@ -3513,7 +3624,7 @@ async function lerStreamIA(p, key, modelo, e, aoParcial) {
         }
       }
     }
-    return raw ? { ok: true, raw } : { ok: false, status: 200, txt: 'resposta vazia' };
+    return raw ? { ok: true, raw, uso } : { ok: false, status: 200, txt: 'resposta vazia' };
   } catch (err) {
     return { ok: false, status: 0, rede: true, txt: err && err.name === 'AbortError' ? 'tempo esgotado' : (err && err.message ? err.message : 'sem conexão') };
   } finally {
@@ -3539,7 +3650,13 @@ async function tentarStream(p, conteudo, aoFalar) {
     let s = null;
     try { s = await lerStreamIA(p, CHAVES[p.id], m, ESTRATEGIAS[0], aoParcial); }
     catch (e) { return null; }
-    if (s && s.ok) return { ok: true, modelo: m, raw: s.raw, jaFalou };
+    // Provedor que não aceita pedir consumo no streaming: tenta de novo sem o pedido.
+    if (s && !s.ok && s.status === 400 && /stream_options|include_usage/i.test(String(s.txt || '')) && p.usoStream !== false) {
+      p.usoStream = false;
+      try { s = await lerStreamIA(p, CHAVES[p.id], m, ESTRATEGIAS[0], aoParcial); }
+      catch (e) { return null; }
+    }
+    if (s && s.ok) return { ok: true, modelo: m, raw: s.raw, jaFalou, uso: s.uso };
     // Recusa de formato: anota o provedor e passa a usar só o pedido completo.
     if (s && (s.status === 400 || s.status === 415 || s.status === 422)) semStream[p.id] = true;
     const aposentado = s && (s.status === 404 || /model_not_found|does not exist/i.test(String(s.txt || '')));
@@ -3647,7 +3764,9 @@ async function chamar(conteudo, ocultarNoHistorico, aoFalar) {
     provedores: lista.map((p) => p.id),
     latencias: Hermes.metricas().latencias,
     erros: errosIA,
-    indisponiveis: emPausa
+    indisponiveis: emPausa,
+    principal: store.get('prov_principal', ''),
+    alternativo: store.get('prov_alternativo', '')
   });
   modelosPreferidos = planoIA.modelo || {};
   timeoutIA = planoIA.timeoutMs || 25000;
@@ -3672,6 +3791,7 @@ async function chamar(conteudo, ocultarNoHistorico, aoFalar) {
         // A latência real deste provedor alimenta o roteador da próxima pergunta.
         Hermes.registrarLatencia(p.id, Date.now() - t0provedor);
         errosIA[p.id] = 0;
+        anotarConsumo(p.id, s.uso);
         ok = { p, r: { ok: true, modelo: s.modelo }, raw: s.raw, jaFalou: s.jaFalou };
         break;
       }
@@ -3683,6 +3803,7 @@ async function chamar(conteudo, ocultarNoHistorico, aoFalar) {
       let raw = '';
       try {
         const j = await r.r.json();
+        anotarConsumo(p.id, j && j.usage);
         raw = String((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '').trim();
       } catch (e) { raw = ''; }
       if (raw) {
@@ -4211,6 +4332,7 @@ async function falar(texto, semMsg, opcoes, links) {
   sinalHud();
   let i = 0;
   await armarParada();
+  await armarBargeIn();
   try {
     // Voz neural no proprio aparelho (sherpa-onnx): se o usuario baixou e escolheu um
     // modelo, ele fala antes do TTS do Android. Qualquer falha cai no caminho nativo.
@@ -4234,7 +4356,7 @@ async function falar(texto, semMsg, opcoes, links) {
     }
     // Se a voz nativa falhar no meio, o restante sai pela voz do navegador (sem repetir o que já foi dito).
     for (; i < partes.length; i++) { if (abortar) return; await falarWebUm(partes[i], opcoesComProsodia(opcoes, partes[i])); }
-  } finally { await desarmarParada(); }
+  } finally { desarmarBargeIn(); await desarmarParada(); }
 }
 // "Jarvis, para" enquanto ele fala (experimental): escuta só essa combinação, sem gravar nada.
 async function armarParada() {
@@ -4249,6 +4371,51 @@ async function desarmarParada() {
   paradaAtiva = false;
   try { await p.stopWake(); } catch (e) { /* ok */ }
 }
+
+/* Barge-in (Fase 4): enquanto ele fala, o microfone mede o nível e a fala para quando você
+ * começa. Cancelamento de eco ligado no getUserMedia para o próprio TTS não se autointerromper. */
+let bargeAtivo = null;
+function fecharBarge(est) {
+  const e = est || bargeAtivo;
+  bargeAtivo = null;
+  if (!e) return;
+  if (e.raf) { try { cancelAnimationFrame(e.raf); } catch (err) { /* sem rAF */ } }
+  try { e.stream.getTracks().forEach((t) => t.stop()); } catch (err) { /* já parado */ }
+  try { e.ctx.close(); } catch (err) { /* já fechado */ }
+}
+async function armarBargeIn() {
+  if (store.get('voz_interromper', '1') !== '1') return;
+  if (bargeAtivo) return;
+  if (!window.EscutaVoz || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    const anal = ctx.createAnalyser();
+    anal.fftSize = 1024;
+    ctx.createMediaStreamSource(stream).connect(anal);
+    const buf = new Float32Array(anal.fftSize);
+    const det = window.EscutaVoz.criarDetector({ sensibilidade: 0.5 });
+    const est = { ctx, stream, raf: 0 };
+    bargeAtivo = est;
+    const passo = () => {
+      if (bargeAtivo !== est) return;
+      anal.getFloatTimeDomainData(buf);
+      const r = det.processar(buf, ctx.sampleRate);
+      if (window.EscutaVoz.deveInterromper(r.estado, r.desdeFalaMs, 300)) {
+        registrar('voz', 'interrompido por voz: ' + r.db + ' dB acima do limiar ' + r.limiar + ' dB');
+        fecharBarge(est);
+        interromperFala().catch(() => {});
+        return;
+      }
+      est.raf = requestAnimationFrame(passo);
+    };
+    est.raf = requestAnimationFrame(passo);
+  } catch (e) {
+    registrar('interface', 'barge-in indisponível: ' + ((e && e.message) || e));
+  }
+}
+function desarmarBargeIn() { fecharBarge(null); }
 
 /* ---------- Segundo plano (Android) ---------- */
 let segPlanoOk = false;
@@ -5122,6 +5289,30 @@ function bgDiagAbrirAjuste(alvo) {
     if (st) st.textContent = 'Não consegui abrir a tela: ' + (e && e.message ? e.message : 'erro');
   });
 }
+/* "Por que parou?": pega o mesmo diagnóstico nativo e explica a causa em ordem, sem inventar. */
+async function explicarParada() {
+  const st = document.getElementById('c-bg-porque-status');
+  const dizer = (t, erro) => { if (st) { st.textContent = t; st.classList.toggle('erro', Boolean(erro)); } };
+  if (plataforma !== 'android') {
+    dizer('Só no APK Android: aqui não existe serviço de escuta em segundo plano para explicar.', true);
+    return;
+  }
+  if (!window.SegundoPlano) { dizer('O módulo de diagnóstico não carregou.', true); return; }
+  const B = plug('JarvisBackground');
+  if (!B || typeof B.diagnosticoEscuta !== 'function') {
+    dizer('Esta compilação não expõe o diagnóstico nativo. Reinstale o APK mais recente.', true);
+    return;
+  }
+  dizer('Consultando o serviço de escuta…');
+  let d = null;
+  try { d = await B.diagnosticoEscuta(); }
+  catch (e) { dizer('Não consegui consultar o serviço: ' + ((e && e.message) || e) + '.', true); return; }
+  if (!d) { dizer('O serviço não devolveu estado. Reinstale o APK mais recente.', true); return; }
+  const r = window.SegundoPlano.explicar(d);
+  dizer(window.SegundoPlano.frase(r), !r.ativa);
+  registrar('voz', 'por que parou: ' + r.codigo + (r.causas.length ? ' · ' + r.causas.map((c) => c.codigo).join(', ') : ''));
+  if (!r.ativa) { try { diagnosticoSegundoPlano(true); } catch (e) { /* diagnóstico é auxiliar */ } }
+}
 async function diagnosticoSegundoPlano(silencioso) {
   const box = document.getElementById('bg-diag');
   const resumo = document.getElementById('bg-resumo');
@@ -5131,6 +5322,8 @@ async function diagnosticoSegundoPlano(silencioso) {
   if (plataforma !== 'android') {
     bgDiagRow('warn', 'Somente no APK Android', 'A escuta em segundo plano usa o serviço nativo do Android. No navegador/desktop este diagnóstico não se aplica.');
     if (resumo) { resumo.textContent = '—'; resumo.className = ''; }
+    const priv = document.getElementById('c-bg-privacidade');
+    if (priv) priv.textContent = 'Privacidade: a auditoria de tráfego só existe no APK Android, onde a escuta roda.';
     return null;
   }
   const B = plug('JarvisBackground');
@@ -5145,6 +5338,11 @@ async function diagnosticoSegundoPlano(silencioso) {
     return null;
   }
   if (!d) return null;
+  // Atualiza a linha da manutenção com o mesmo estado que acabou de ser lido.
+  const elManutencao = document.getElementById('bg-manutencao');
+  if (elManutencao && window.Manutencao) elManutencao.textContent = window.Manutencao.descrever(d);
+  const elPrivacidade = document.getElementById('c-bg-privacidade');
+  if (elPrivacidade && window.Privacidade) elPrivacidade.textContent = 'Privacidade: ' + window.Privacidade.resumo(d);
   const pendencias = [];
 
   bgDiagRow(d.mic ? 'ok' : 'fail', 'Microfone',
@@ -5319,6 +5517,8 @@ async function carregarVozes() {
 }
 const CAMPOS_CHAVE = { groq: '#c-key', openrouter: '#c-key-openrouter', cerebras: '#c-key-cerebras', mistral: '#c-key-mistral', gemini: '#c-key-gemini' };
 function mostrarChaves() {
+  mostrarConsumoIA();
+  mostrarPreferenciaIA();
   for (const [n, sel] of Object.entries(CAMPOS_CHAVE)) {
     const c = $(sel);
     c.value = '';
@@ -5978,6 +6178,14 @@ async function executarDiagnostico() {
       ? 'Ativos: ' + comChave.map((p) => p.nome).join(', ') + ' · reserva automática em erro, cota ou tempo. '
       : 'Nenhuma chave cadastrada: o roteador só conta com a IA local. Cadastre ao menos o Groq em Ajustes ▸ IA. ')
       + listaMotores + '. Última escolha: ' + ((Hermes.metricas().escolhasIA[0] || {}).motivo || 'nenhuma ainda') + '.');
+    diagLinha('nig', 'Consumo de IA (tokens)', textoConsumoIA());
+    if (AGENTES && typeof AGENTES.porAgente === 'function') {
+      const pa = AGENTES.porAgente();
+      const ids = Object.keys(pa);
+      diagLinha(ids.length ? 'ok' : 'nig', 'Agentes especializados', ids.length
+        ? 'Confirmadas/total por agente: ' + ids.map((id) => rotuloAgente(id) + ' ' + pa[id].ok + '/' + pa[id].total).join(' · ') + '.'
+        : 'Nenhuma tarefa executada por agente ainda; cada ferramenta é registrada no agente responsável ao rodar.');
+    }
     // Câmera: o caminho da visão (reconhecimento de objetos).
     const cam = await estadoCamera();
     diagLinha(cam.estado, 'Câmera (visão)', cam.detalhe);
@@ -6267,6 +6475,7 @@ async function abrirConfig() {
   const perfilSalvo = perfilVozAtual();
   if ($('#c-voz-perfil')) $('#c-voz-perfil').value = perfilSalvo;
   if ($('#c-voz-chime')) $('#c-voz-chime').checked = store.get('voz_chime', '0') === '1';
+  if ($('#c-voz-interromper')) $('#c-voz-interromper').checked = store.get('voz_interromper', '1') === '1';
   const selSensibilidade = $('#c-wake-sensibilidade');
   if (selSensibilidade) {
     selSensibilidade.value = String(wakeCalibragem().sensibilidade);
@@ -6329,6 +6538,20 @@ async function salvarConfig() {
     if (v) { await gravarChave(n, v); registrar('config', 'chave ' + n + ' atualizada'); }
   }
   Object.keys(pausas).forEach((k) => { delete pausas[k]; });
+  // Escolha explícita de motor: vale já na próxima pergunta e libera a pausa de quem havia
+  // falhado (o usuário acabou de decidir; insistir na pausa seria ignorar a decisão).
+  const selPrincipal = document.getElementById('c-prov-principal');
+  const selAlternativo = document.getElementById('c-prov-alternativo');
+  const principalEscolhido = selPrincipal ? String(selPrincipal.value || '') : '';
+  const alternativoEscolhido = selAlternativo ? String(selAlternativo.value || '') : '';
+  const principalValido = PROVEDORES.some((p) => p.id === principalEscolhido) ? principalEscolhido : '';
+  const alternativoValido = (alternativoEscolhido && alternativoEscolhido !== principalValido && PROVEDORES.some((p) => p.id === alternativoEscolhido))
+    ? alternativoEscolhido : '';
+  store.set('prov_principal', principalValido);
+  store.set('prov_alternativo', alternativoValido);
+  if (principalValido) delete pausas[principalValido];
+  if (alternativoValido) delete pausas[alternativoValido];
+  registrar('config', 'motor preferido: ' + (principalValido || 'automático') + ' / ' + (alternativoValido || 'automático'));
   store.set('modelo', $('#c-modelo').value.trim() || MODELO_PADRAO);
   store.set('nome_usuario', $('#c-nome').value.trim().slice(0, 60));
   store.set('trat', $('#c-trat').value.trim().slice(0, 40) || 'senhor');
@@ -6946,7 +7169,7 @@ window.addEventListener('online', () => alternarOfflinePorRede(false));
 $('#c-notificacoes-acesso').onclick = async () => { try { await nativo('abrirAcessoNotificacoes', {}); } catch (e) { $('#c-priv-status').textContent = 'Não consegui abrir as configurações: ' + e.message; } };
 $('#btn-wake-toggle').onclick = toggleWakeRapido;
 $('#c-wake').addEventListener('change', () => { $('#c-wake-toggle').textContent = $('#c-wake').checked ? 'Pausar escuta de ativação' : 'Ativar escuta de ativação'; });
-$('#config-tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-config-tab]'); if (b) { mudarCategoriaConfig(b.dataset.configTab); if (b.dataset.configTab === 'celular') atualizarStatusCelular(); if (b.dataset.configTab === 'voz' && plataforma === 'android') setTimeout(() => diagnosticoSegundoPlano(true), 300); } });
+$('#config-tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-config-tab]'); if (b) { pararVigiaMicrofone(); mudarCategoriaConfig(b.dataset.configTab); if (b.dataset.configTab === 'celular') atualizarStatusCelular(); if (b.dataset.configTab === 'voz') { iniciarVigiaMicrofone(); if (plataforma === 'android') { setTimeout(() => diagnosticoSegundoPlano(true), 300); carregarPerfilEnergia(); } } } });
 $('#rt-acao').addEventListener('change', renderCamposArgsRotina);
 $('#rt-adicionar-passo').onclick = adicionarPassoRotina;
 $('#rt-nova').onclick = novaRotinaEditor;
@@ -7055,6 +7278,16 @@ if (selPerfilVoz) selPerfilVoz.onchange = () => {
   const st = $('#c-voz-status');
   if (st) st.textContent = 'Perfil ' + cfg.nome + ' aplicado: tom ' + cfg.pitch.replace('.', ',') + ' e velocidade ' + cfg.rate.replace('.', ',') + '×. Use “Testar voz” para ouvir.';
 };
+const chkVozInterromper = $('#c-voz-interromper');
+if (chkVozInterromper) {
+  chkVozInterromper.checked = store.get('voz_interromper', '1') === '1';
+  chkVozInterromper.onchange = () => {
+    store.set('voz_interromper', chkVozInterromper.checked ? '1' : '0');
+    registrar('config', 'interromper a fala por voz: ' + (chkVozInterromper.checked ? 'ligado' : 'desligado'));
+  };
+}
+const btnMedirMic = document.getElementById('c-voz-medir-mic');
+if (btnMedirMic) btnMedirMic.onclick = () => { medirMicrofone().catch(() => {}); };
 const chkVozChime = $('#c-voz-chime');
 if (chkVozChime) { chkVozChime.checked = store.get('voz_chime', '0') === '1'; chkVozChime.onchange = () => store.set('voz_chime', chkVozChime.checked ? '1' : '0'); }
 // Palavras base e extras efetivamente enviadas ao motor KWS Android.
@@ -7104,6 +7337,57 @@ function vetorAcustico(samples, sampleRate) {
   return m.analisar(samples, sampleRate).v;
 }
 function statusPerfilAcustico(texto) { const el = document.getElementById('c-voz-perfil-status'); if (el) el.textContent = texto; }
+/* Medição real do microfone: 3 s de blocos, nível em dBFS, piso de ruído, pico e se houve fala.
+ * Não promete SNR nem precisão: mostra o que o aparelho entregou. */
+async function medirMicrofone() {
+  const st = document.getElementById('c-voz-mic-status');
+  const dizer = (t, erro) => { if (st) { st.textContent = t; st.classList.toggle('erro', Boolean(erro)); } };
+  if (!window.EscutaVoz) { dizer('O módulo de escuta não carregou.', true); return; }
+  if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+    dizer('Este WebView não abre o microfone para medição.', true);
+    return;
+  }
+  dizer('Medindo por 3 segundos. Fale normalmente: “Jarvis, qual é o meu próximo compromisso?”');
+  let stream = null, ctx = null;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    ctx = new Ctx();
+    const anal = ctx.createAnalyser();
+    anal.fftSize = 1024;
+    ctx.createMediaStreamSource(stream).connect(anal);
+    const buf = new Float32Array(anal.fftSize);
+    const det = window.EscutaVoz.criarDetector({ sensibilidade: 0.5 });
+    const leituras = [];
+    const inicio = Date.now();
+    await new Promise((resolve) => {
+      const passo = () => {
+        anal.getFloatTimeDomainData(buf);
+        const r = det.processar(buf, ctx.sampleRate);
+        leituras.push({ ms: (buf.length / ctx.sampleRate) * 1000, db: r.db, pico: r.pico, fala: r.fala, classe: r.classe });
+        if (Date.now() - inicio >= 3000) { resolve(); return; }
+        requestAnimationFrame(passo);
+      };
+      requestAnimationFrame(passo);
+    });
+    const resumo = window.EscutaVoz.resumir(leituras);
+    const segundos = (ms) => (ms / 1000).toFixed(2).replace('.', ',');
+    const veredito = resumo.classificacao === 'mudo' ? 'nada chegou ao microfone'
+      : resumo.saturado ? 'sinal saturando: afaste-se do microfone ou baixe o ganho'
+      : resumo.falaMs < 300 ? 'quase nenhuma fala detectada'
+      : 'fala detectada';
+    dizer('Microfone: ' + veredito + '. Em 3 s — fala ' + segundos(resumo.falaMs) + ' s, silêncio ' + segundos(resumo.silencioMs) +
+      ' s, ruído ' + resumo.ruidoDb + ' dB, pico ' + resumo.pico + ' (0 a 1).',
+      resumo.classificacao === 'mudo' || resumo.saturado);
+    registrar('voz', 'medição de microfone: ' + veredito + ' · fala ' + segundos(resumo.falaMs) + ' s · ruído ' + resumo.ruidoDb + ' dB');
+  } catch (e) {
+    dizer('Não consegui abrir o microfone: ' + ((e && e.message) || e) + '. Verifique a permissão do microfone do app.', true);
+    registrar('erro', 'medição de microfone: ' + ((e && e.message) || e));
+  } finally {
+    try { if (stream) stream.getTracks().forEach((t) => t.stop()); } catch (e) { /* ok */ }
+    try { if (ctx) ctx.close(); } catch (e) { /* ok */ }
+  }
+}
 function vozQualidadeUI(texto) { const el = document.getElementById('c-voz-qualidade'); if (el) el.textContent = texto; }
 function vozMicConfig() {
   return {
@@ -7769,6 +8053,119 @@ $('#c-voz-masculina').onclick = async () => { await carregarVozes(); const vs = 
 $('#c-voz-rapida').onclick = () => { $('#c-rate').value = '1.25'; atualizarValoresVoz(); store.set('rate', '1.25'); };
 // Desligar o segundo plano de forma explícita: para o serviço, solta o microfone e
 // cancela o vigia. Diferente de “Pausar”, nada religa sozinho depois.
+/* Perfil de energia: quatro opções, aplicadas e conferidas pelo serviço nativo. */
+const selBgPerfil = document.getElementById('c-bg-perfil');
+const bxBgHorario = document.getElementById('c-bg-horario');
+const inpBgInicio = document.getElementById('c-bg-inicio');
+const inpBgFim = document.getElementById('c-bg-fim');
+const selBgLimite = document.getElementById('c-bg-limite');
+async function rodarManutencaoAgora() {
+  const el = document.getElementById('bg-manutencao');
+  if (plataforma !== 'android') {
+    if (el) el.textContent = 'A manutenção periódica depende do WorkManager do Android.';
+    return;
+  }
+  if (el) el.textContent = 'Pedindo ao Android para rodar a manutenção…';
+  try {
+    await nativo('rodarManutencaoAgora', {});
+    setTimeout(() => { diagnosticoSegundoPlano(true).catch(() => {}); }, 1500);
+  } catch (e) {
+    if (el) el.textContent = 'Não consegui pedir a manutenção: ' + (e && e.message ? e.message : 'erro') + '.';
+  }
+}
+function mostrarHorarioPerfil() {
+  if (bxBgHorario) bxBgHorario.hidden = !selBgPerfil || selBgPerfil.value !== 'horario';
+}
+function aplicarEstadoPerfil(e) {
+  if (!e || !window.PerfilEnergia) return;
+  if (selBgPerfil) selBgPerfil.value = window.PerfilEnergia.normalizarPerfil(e.perfil);
+  if (e.horarioInicio != null && inpBgInicio) inpBgInicio.value = window.PerfilEnergia.horaDeMinutos(e.horarioInicio);
+  if (e.horarioFim != null && inpBgFim) inpBgFim.value = window.PerfilEnergia.horaDeMinutos(e.horarioFim);
+  if (e.limiteBateria != null && selBgLimite) selBgLimite.value = String(window.PerfilEnergia.normalizarLimite(e.limiteBateria));
+  mostrarHorarioPerfil();
+  const st = document.getElementById('c-bg-perfil-status');
+  if (st) { st.textContent = window.PerfilEnergia.resumo(e); st.classList.remove('erro'); }
+}
+async function carregarPerfilEnergia() {
+  if (!selBgPerfil) return;
+  if (plataforma !== 'android') {
+    const st = document.getElementById('c-bg-perfil-status');
+    if (st) st.textContent = 'O perfil de energia depende do serviço nativo do Android: aqui não há escuta em segundo plano para limitar.';
+    return;
+  }
+  try { aplicarEstadoPerfil(await nativo('estadoEnergia', {})); }
+  catch (e) {
+    const st = document.getElementById('c-bg-perfil-status');
+    if (st) { st.textContent = 'Não consegui ler o perfil: ' + (e && e.message ? e.message : 'erro') + '.'; st.classList.add('erro'); }
+  }
+}
+async function salvarPerfilEnergia() {
+  const st = document.getElementById('c-bg-perfil-status');
+  if (!selBgPerfil) return;
+  mostrarHorarioPerfil();
+  if (plataforma !== 'android') {
+    if (st) { st.textContent = 'O perfil de energia depende do serviço nativo do Android.'; st.classList.add('erro'); }
+    return;
+  }
+  const pedido = window.PerfilEnergia.montarPedido({
+    perfil: selBgPerfil.value,
+    inicio: inpBgInicio ? inpBgInicio.value : '',
+    fim: inpBgFim ? inpBgFim.value : '',
+    limite: selBgLimite ? selBgLimite.value : ''
+  });
+  if (!pedido.ok) {
+    if (st) { st.textContent = pedido.erro; st.classList.add('erro'); }
+    return;
+  }
+  try {
+    aplicarEstadoPerfil(await nativo('definirPerfilEnergia', pedido.args));
+    registrar('voz', 'perfil de energia: ' + window.PerfilEnergia.rotulo(pedido.args.perfil));
+  } catch (e) {
+    if (st) { st.textContent = 'Não consegui aplicar o perfil: ' + (e && e.message ? e.message : 'erro') + '.'; st.classList.add('erro'); }
+  }
+}
+if (selBgPerfil) { selBgPerfil.onchange = salvarPerfilEnergia; mostrarHorarioPerfil(); }
+if (inpBgInicio) inpBgInicio.onchange = salvarPerfilEnergia;
+if (inpBgFim) inpBgFim.onchange = salvarPerfilEnergia;
+if (selBgLimite) selBgLimite.onchange = salvarPerfilEnergia;
+const btnManutencao = document.getElementById('bg-manutencao-agora');
+if (btnManutencao) btnManutencao.onclick = () => { rodarManutencaoAgora(); };
+/* Linha viva do microfone: consulta o Android a cada 2,5 s só enquanto esta aba está aberta. */
+let vigiaMicrofone = null;
+async function atualizarMicrofoneAgora() {
+  const el = document.getElementById('c-bg-microfone');
+  if (!el) return;
+  if (plataforma !== 'android') {
+    el.textContent = 'Microfone: só no APK Android — aqui não há serviço de escuta para monitorar.';
+    el.classList.remove('erro');
+    return;
+  }
+  try {
+    const d = await nativo('estadoMicrofone', {});
+    const m = window.SegundoPlano.microfone(d);
+    el.textContent = m.texto;
+    el.classList.toggle('erro', m.nivel === 'erro');
+  } catch (e) {
+    el.textContent = 'Microfone: não consegui consultar o serviço (' + (e && e.message ? e.message : 'erro') + ').';
+    el.classList.add('erro');
+  }
+}
+function pararVigiaMicrofone() {
+  if (vigiaMicrofone) { clearInterval(vigiaMicrofone); vigiaMicrofone = null; }
+}
+function iniciarVigiaMicrofone() {
+  if (vigiaMicrofone) return;
+  atualizarMicrofoneAgora();
+  vigiaMicrofone = setInterval(() => {
+    const painel = document.getElementById('painel-config');
+    const grupo = document.querySelector('[data-category="voz"]');
+    // Aba fechada, outra categoria aberta ou app em segundo plano: para de consultar.
+    if (document.hidden || !painel || painel.hidden || !grupo || grupo.hidden) { pararVigiaMicrofone(); return; }
+    atualizarMicrofoneAgora();
+  }, 2500);
+}
+const btnPorque = document.getElementById('c-bg-porque');
+if (btnPorque) btnPorque.onclick = () => { explicarParada().catch(() => {}); };
 const btnBgDesligar = document.getElementById('c-bg-desligar');
 if (btnBgDesligar) btnBgDesligar.onclick = async () => {
   store.set('wake', '0');
@@ -10419,6 +10816,9 @@ if (btnAnexo && inputAnexo) {
 
 /* ---------------- Desenvolvimento de Arquivos ---------------- */
 const DEV = (typeof ArquivosDev !== 'undefined') ? ArquivosDev : null;
+// Autorização do modo de desenvolvimento (Fase 3): leitura livre, escrita com prazo.
+const MODO_DEV = (typeof window !== 'undefined' && window.ModoDev && typeof window.ModoDev.criar === 'function')
+  ? window.ModoDev.criar({ store }) : null;
 const DEV_HIST_KEY = 'jv_dev_hist';
 let devArquivos = [];
 let devResultados = [];
@@ -10567,6 +10967,26 @@ function devRenderRelatorio(rel) {
   });
   if (rel.problemas.length > 80) { const p = document.createElement('p'); p.className = 'dica'; p.textContent = 'Mostrando 80 de ' + rel.problemas.length + ' ocorrências.'; caixa.appendChild(p); }
 }
+/* Porta única do modo de desenvolvimento: decide e registra. */
+function devAutorizado(operacao, detalhe) {
+  if (!MODO_DEV) {
+    devStatus('O módulo de autorização não carregou; nada será alterado.', true);
+    return { ok: false, motivo: 'módulo de autorização ausente' };
+  }
+  const d = MODO_DEV.verificar(operacao, detalhe);
+  if (!d.ok) devStatus('Modo de desenvolvimento: ' + d.motivo + '. Autorize no topo deste painel.', true);
+  devRenderModo();
+  return d;
+}
+function devRenderModo() {
+  const el = document.getElementById('dev-modo-status');
+  if (!el) return;
+  if (!MODO_DEV) { el.textContent = 'Modo de desenvolvimento: módulo de autorização ausente.'; return; }
+  const e = MODO_DEV.estado();
+  el.textContent = e.ativo
+    ? 'Modo de desenvolvimento: ATIVO por mais ' + Math.ceil(e.restanteMs / 60000) + ' minuto(s). Cada operação fica registrada.'
+    : 'Modo de desenvolvimento: desligado. Analisar e testar continuam livres; corrigir e criar exigem autorização.';
+}
 function devAnalisar() {
   if (!devArquivos.length) { devStatus('Adicione ao menos um arquivo antes de analisar.', true); return; }
   if (!DEV) { devStatus('O módulo de arquivos não carregou.', true); return; }
@@ -10576,6 +10996,7 @@ function devAnalisar() {
   devHistAdd('análise', devArquivos.map((a) => a.nome), rel.resumo.erros + ' erro(s)');
 }
 function devCorrigir(acao) {
+  if (!devAutorizado('corrigir', 'correção ' + acao).ok) return;
   if (!DEV || !devArquivos.length) { devStatus('Adicione arquivos antes de corrigir.', true); return; }
   let alterados = 0, erros = 0;
   devArquivos.forEach((a) => {
@@ -10587,7 +11008,12 @@ function devCorrigir(acao) {
   devRenderLista();
   devStatus(alterados + ' arquivo(s) corrigido(s)' + (erros ? '; ' + erros + ' sem correção possível' : '') + '. O original continua guardado nesta sessão.');
   devHistAdd('correção ' + acao, devArquivos.filter((a) => a.modificado).map((a) => a.nome), alterados + ' alterado(s)');
-  if (alterados) devAnalisar();
+  if (alterados) {
+    // A análise refeita escreveria por cima do aviso de correção: o resultado da correção fica visível.
+    const avisoCorrecao = alterados + ' arquivo(s) corrigido(s) com o original guardado; análise refeita.';
+    devAnalisar();
+    devStatus(avisoCorrecao);
+  }
 }
 function devProjeto(descricao) {
   const t = String(descricao || '').toLowerCase();
@@ -10611,6 +11037,7 @@ function devProjeto(descricao) {
   return [{ nome: 'README.md', texto: '# ' + (descricao || 'Projeto') + '\n' }];
 }
 function devCriarProjeto(descricao, plano) {
+  if (!devAutorizado('criar', 'projeto').ok) return;
   if (!DEV) return;
   try {
     const nome = (plano && plano.nome) || 'projeto';
@@ -10624,6 +11051,7 @@ function devCriarProjeto(descricao, plano) {
   } catch (e) { devStatus('Não consegui criar o projeto: ' + (e.message || e), true); }
 }
 function devCriarArquivo() {
+  if (!devAutorizado('criar', 'arquivo').ok) return;
   if (!DEV) return;
   const formato = document.getElementById('dev-formato').value;
   const nome = document.getElementById('dev-nome').value.trim();
@@ -10670,6 +11098,7 @@ function devZipTudo() {
   devHistAdd('pacote ZIP', entradas.map((e) => e.nome), entradas.length + ' arquivo(s)');
 }
 function devAbrir() {
+  devRenderModo();
   devRenderLista(); devRenderHistorico(); devRenderResultados();
   const sel = document.getElementById('dev-formato');
   if (sel && DEV && !sel.options.length) {
@@ -10711,6 +11140,26 @@ if (devCriarBtn) devCriarBtn.onclick = devCriarArquivo;
 const devZipBtn = document.getElementById('dev-zip');
 if (devZipBtn) devZipBtn.onclick = devZipTudo;
 const devHistLimpar = document.getElementById('dev-historico-limpar');
+const devAutorizarBtn = document.getElementById('dev-autorizar');
+if (devAutorizarBtn) devAutorizarBtn.onclick = async () => {
+  if (!MODO_DEV) { devStatus('O módulo de autorização não carregou.', true); return; }
+  let ok = false;
+  try {
+    ok = await confirmar('Autorizar o modo de desenvolvimento por 30 minutos? Ele permite corrigir, criar e editar arquivos do próprio app. Cada operação fica registrada e o prazo encerra sozinho.', false);
+  } catch (e) { ok = false; }
+  if (!ok) { devStatus('Autorização recusada; nada foi alterado.'); return; }
+  const e = MODO_DEV.ligar(30);
+  devRenderModo();
+  devStatus('Modo de desenvolvimento autorizado até ' + new Date(e.ate).toLocaleTimeString('pt-BR') + '.');
+  registrar('config', 'modo de desenvolvimento autorizado por 30 min');
+};
+const devRevogarBtn = document.getElementById('dev-revogar');
+if (devRevogarBtn) devRevogarBtn.onclick = () => {
+  if (MODO_DEV) MODO_DEV.desligar();
+  devRenderModo();
+  devStatus('Modo de desenvolvimento encerrado pelo usuário.');
+  registrar('config', 'modo de desenvolvimento encerrado');
+};
 if (devHistLimpar) devHistLimpar.onclick = () => { if (!confirm('Limpar o histórico de operações?')) return; store.set(DEV_HIST_KEY, '[]'); devRenderHistorico(); };
 const devFechar = document.getElementById('dev-fechar');
 if (devFechar) devFechar.onclick = () => fecharPaineis();

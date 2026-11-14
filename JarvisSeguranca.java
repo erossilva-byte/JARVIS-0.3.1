@@ -194,14 +194,26 @@ public class JarvisSeguranca extends Plugin {
     /** A leitura nunca sobrevive à saída da tela: sem isso o sensor ficaria ativo em segundo plano. */
     @Override
     protected void handleOnPause() {
-        encerrarLeitura();
+        cancelarLeitura("Leitura NFC interrompida porque a tela saiu do primeiro plano.");
         super.handleOnPause();
     }
 
     @Override
     protected void handleOnDestroy() {
-        encerrarLeitura();
+        cancelarLeitura("Leitura NFC interrompida porque a tela foi fechada.");
         super.handleOnDestroy();
+    }
+
+    /**
+     * Encerra a leitura e responde a quem esperava. Sem isso, sair da tela deixava a
+     * promessa do JavaScript pendente para sempre — a interface ficava em "lendo tag".
+     */
+    private void cancelarLeitura(String motivo) {
+        PluginCall pendente = chamadaNfc;
+        encerrarLeitura();
+        if (pendente != null) {
+            try { pendente.reject(motivo); } catch (Exception ignored) { }
+        }
     }
 
     private void encerrarLeitura() {

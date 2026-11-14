@@ -10,8 +10,37 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Supplier;
+
 @CapacitorPlugin(name = "JarvisAcessibilidade")
 public class JarvisAcessibilidadePlugin extends Plugin {
+
+    private final ExecutorService worker = Executors.newSingleThreadExecutor();
+
+    /**
+     * Percorrer a árvore da tela custa tempo, e `esperar` dorme de verdade até o tempo
+     * limite. Na thread principal (onde o Capacitor chama os métodos de plugin) isso
+     * travaria a interface por segundos e poderia dar ANR. O Capacitor aceita
+     * resolve/reject de qualquer thread, então o trabalho roda numa fila própria.
+     */
+    private void emSegundoPlano(PluginCall call, Supplier<JSONObject> tarefa) {
+        worker.execute(() -> {
+            try {
+                resolver(call, tarefa.get());
+            } catch (Throwable e) {
+                call.reject("Falha na automação de tela: "
+                    + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+            }
+        });
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        worker.shutdownNow();
+        super.handleOnDestroy();
+    }
 
     private void resolver(PluginCall call, JSONObject dados) {
         try {
@@ -44,7 +73,8 @@ public class JarvisAcessibilidadePlugin extends Plugin {
     @PluginMethod
     public void arvore(PluginCall call) {
         Integer limite = call.getInt("limite", 120);
-        resolver(call, JarvisAcessibilidade.arvore(limite == null ? 120 : limite));
+        final int maximo = limite == null ? 120 : limite;
+        emSegundoPlano(call, () -> JarvisAcessibilidade.arvore(maximo));
     }
 
     @PluginMethod
@@ -55,7 +85,8 @@ public class JarvisAcessibilidadePlugin extends Plugin {
             return;
         }
         Integer ocorrencia = call.getInt("ocorrencia", 0);
-        resolver(call, JarvisAcessibilidade.clicar(texto, ocorrencia == null ? 0 : ocorrencia));
+        final int vezes = ocorrencia == null ? 0 : ocorrencia;
+        emSegundoPlano(call, () -> JarvisAcessibilidade.clicar(texto, vezes));
     }
 
     @PluginMethod
@@ -65,12 +96,13 @@ public class JarvisAcessibilidadePlugin extends Plugin {
             call.reject("Texto ausente.");
             return;
         }
-        resolver(call, JarvisAcessibilidade.digitar(texto));
+        emSegundoPlano(call, () -> JarvisAcessibilidade.digitar(texto));
     }
 
     @PluginMethod
     public void rolar(PluginCall call) {
-        resolver(call, JarvisAcessibilidade.rolar(call.getString("direcao", "baixo")));
+        final String direcao = call.getString("direcao", "baixo");
+        emSegundoPlano(call, () -> JarvisAcessibilidade.rolar(direcao));
     }
 
     @PluginMethod
@@ -91,7 +123,8 @@ public class JarvisAcessibilidadePlugin extends Plugin {
             return;
         }
         Integer ms = call.getInt("timeoutMs", 4000);
-        resolver(call, JarvisAcessibilidade.esperar(texto, ms == null ? 4000 : ms));
+        final int limiteMs = ms == null ? 4000 : ms;
+        emSegundoPlano(call, () -> JarvisAcessibilidade.esperar(texto, limiteMs));
     }
 
     @PluginMethod

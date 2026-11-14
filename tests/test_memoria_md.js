@@ -48,4 +48,66 @@ assert.equal(MEM.listar('gostos')[0].texto, 'prefiro café expresso', 'versão l
 
 const agrupado = MEM.arquivosPorTopico().find((arquivo) => arquivo.nome === MEM.ARQUIVOS.gostos);
 assert.ok(agrupado && /<!-- jarvis_id:/.test(agrupado.texto), 'arquivo por tópico carrega ID de cada nota');
+
+/* ---------- Separador `---` no corpo da nota não pode truncar o texto ----------
+ * Um separador horizontal é uso comum no Obsidian, e a importação parava nele: o texto seguinte
+ * era descartado em silêncio. Aqui o caso exato fica travado. */
+MEM.apagarTudo();
+const comSeparador = MEM.importarMarkdown('---\ntitle: "Com separador"\ntema: gostos\n---\n\n# Com separador\n\nantes\n\n---\n\ndepois\n');
+assert.equal(comSeparador.criadas, 1, 'nota com separador no corpo é importada');
+assert.match(MEM.listar('gostos')[0].texto, /antes/, 'texto antes do separador é preservado');
+assert.match(MEM.listar('gostos')[0].texto, /depois/, 'texto depois do separador não é descartado');
+MEM.apagarTudo();
+const semFrontmatter = MEM.importarMarkdown('# Nota solta\n\nprimeira parte\n\n---\n\nsegunda parte\n');
+assert.equal(semFrontmatter.criadas, 1, 'nota sem frontmatter com separador é importada');
+assert.match(MEM.listar()[0].texto, /primeira parte/, 'primeira parte da nota fica');
+assert.match(MEM.listar()[0].texto, /segunda parte/, 'sem frontmatter, o texto depois do separador também fica');
+MEM.apagarTudo();
+const varios = MEM.importarMarkdown(
+  '---\ntitle: "A"\ntema: gostos\n---\n\ntexto A\n\n---\n\nmais A\n' +
+  '---\ntitle: "B"\ntema: projetos\n---\n\ntexto B\n\n---\n\nmais B\n'
+);
+assert.equal(varios.criadas, 2, 'dois arquivos em sequência continuam virando duas notas');
+assert.match(MEM.listar('gostos')[0].texto, /mais A/, 'primeira nota mantém o texto após o separador');
+assert.match(MEM.listar('projetos')[0].texto, /mais B/, 'segunda nota mantém o texto após o separador');
+
+/* ---------- Cofre em disco de verdade: grava os .md, relê do disco e importa ----------
+ * É o caminho que a ponte do Obsidian usa no PC: um arquivo Markdown por tópico dentro de
+ * `Memoria/`. Aqui ele é exercitado com arquivos reais, para provar escrita e leitura em
+ * disco — não só a string em memória. */
+const fs = require('node:fs');
+const os = require('node:os');
+const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'jarvis-cofre-'));
+try {
+  MEM.apagarTudo();
+  MEM.criar({ tema: 'gostos', titulo: 'Café', texto: 'prefiro café sem açúcar' });
+  MEM.criar({ tema: 'projetos', titulo: 'Força de atuação', texto: 'atuador de 12 V no portão' });
+
+  const arquivos = MEM.arquivosPorTopico();
+  assert.equal(arquivos.length, 2, 'um arquivo por tópico com nota');
+  arquivos.forEach((arquivo) => {
+    const destino = path.join(pasta, arquivo.nome);
+    fs.mkdirSync(path.dirname(destino), { recursive: true });
+    fs.writeFileSync(destino, arquivo.texto, 'utf8');
+  });
+  assert.ok(fs.existsSync(path.join(pasta, 'Memoria', 'Gostos.md')), 'Gostos.md existe no disco');
+  assert.ok(fs.existsSync(path.join(pasta, 'Memoria', 'Projetos.md')), 'Projetos.md existe no disco');
+
+  const lidos = fs.readdirSync(path.join(pasta, 'Memoria')).filter((n) => n.endsWith('.md')).sort();
+  assert.equal(lidos.length, 2, 'dois arquivos .md gravados');
+  const doDisco = lidos.map((nome) => fs.readFileSync(path.join(pasta, 'Memoria', nome), 'utf8')).join('\n');
+  assert.match(doDisco, /prefiro café sem açúcar/, 'acento sobrevive à ida e volta pelo disco');
+  assert.match(doDisco, /atuador de 12 V no portão/, 'segundo tópico também volta legível');
+
+  MEM.apagarTudo();
+  const volta = MEM.importarMarkdown(doDisco);
+  assert.equal(volta.ok, true, 'importa o que veio do disco');
+  assert.equal(volta.criadas, 2, 'as duas notas voltam do disco');
+  assert.equal(MEM.listar().length, 2, 'cofre reconstruído a partir do disco');
+  assert.equal(MEM.listar('gostos')[0].texto.trim(), 'prefiro café sem açúcar', 'texto volta idêntico');
+  assert.equal(MEM.importarMarkdown(doDisco).repetidas, 2, 'reimportar o mesmo disco não duplica');
+  console.log('memoria.md: cofre em disco ok — ' + arquivos.length + ' arquivo(s) gravado(s) e relido(s)');
+} finally {
+  fs.rmSync(pasta, { recursive: true, force: true });
+}
 console.log('memoria.md: round-trip ok — ' + MEM.listar().length + ' notas, ' + MEM.arquivosMarkdown().length + ' arquivo(s) .md');

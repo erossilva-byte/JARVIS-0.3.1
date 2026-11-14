@@ -79,6 +79,13 @@ final class JarvisKwsEngine {
         return running.get();
     }
 
+    /** Sessão de áudio do AudioRecord atual; 0 quando ainda não há captura. */
+    int sessaoAudio() {
+        AudioRecord atual = recorder;
+        if (atual == null) return 0;
+        try { return atual.getAudioSessionId(); } catch (Throwable e) { return 0; }
+    }
+
     synchronized void start() {
         if (running.get()) return;
         Thread anterior = worker;

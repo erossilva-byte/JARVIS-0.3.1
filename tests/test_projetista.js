@@ -62,6 +62,20 @@ const lad = P.ladder(projetos.clp);
 assert.ok(lad.includes('%Q0.0') && lad.includes('TABELA DE ENTRADAS/SAÍDAS'), ok('ladder com saída e tabela de I/O'));
 assert.ok(/não tem lógica de CLP/.test(P.ladder(projetos.direta)), ok('ladder recusa projeto sem CLP'));
 
+// 10b — o desenho do ladder usa símbolo de contato, e o ST não inventa funções
+const ladDesenho = P.ladder(projetos.clp);
+// A bobina é desenhada como ( Q0.0 ), que é a convenção do ladder: ela sai da checagem
+// de parênteses, que existe para pegar parêntese de agrupamento vazando para o desenho.
+const soDesenho = ladDesenho.split('TABELA DE ENTRADAS')[0].split('\n')
+  .filter((l) => l.includes('---')).join('\n').split('---( %Q0.0 )').join('');
+assert.ok(!/[()]/.test(soDesenho), ok('desenho do ladder sem parênteses de agrupamento'));
+assert.ok(!/NAO/.test(soDesenho), ok('desenho do ladder sem a palavra NAO'));
+assert.ok(/---\| \|--- %I0\.0/.test(soDesenho), ok('contato NA desenhado como | |'));
+assert.ok(/---\|\/\|--- %I0\.1/.test(soDesenho), ok('contato NF desenhado como |/|'));
+assert.strictEqual((soDesenho.match(/^ {3}\+---\| \|---/gm) || []).length, 3, ok('três ramos do OU desenhados em paralelo'));
+assert.ok(/%Q0\.0 := \(%I0\.0 OR %I0\.2 OR %Q0\.0\) AND NOT %I0\.1;/.test(ladDesenho), ok('ST traduz os operadores e mantém os endereços'));
+assert.ok(!/IN\(|OUT\(/.test(ladDesenho), ok('ST não inventa IN()/OUT()'));
+
 // 11 — arquivo do projeto volta pela reabertura
 const texto = P.serializar(projetos.reversao);
 const lido = P.parse(texto);

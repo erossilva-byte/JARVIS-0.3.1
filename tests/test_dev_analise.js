@@ -69,6 +69,12 @@ ok('ZIP de projeto é gerado', !erroZip);
   ok('nome seguro remove barras', A.nomeSeguro('../x/y', 'txt') === '..-x-y.txt' || A.nomeSeguro('../x/y', 'txt').indexOf('/') < 0);
   ok('impressão é estável', A.impressao('abc') === A.impressao('abc') && A.impressao('abc') !== A.impressao('abd'));
 
+  // O teste do motor de arquivos (PDF/DOCX/XLSX/CSV/ZIP com leitor independente) roda aqui
+  // para entrar na suíte junto com este arquivo, sem depender da lista de scripts.
+  try {
+    require('node:child_process').execFileSync(process.execPath,
+      [require('node:path').join(__dirname, 'test_arquivos_dev.js')], { stdio: 'inherit' });
+  } catch (e) { falhas++; console.log('FALHA: test_arquivos_dev.js -> ' + (e.message || e)); }
   if (falhas) { console.log('\n' + falhas + ' verificação(ões) do motor de arquivos falharam.'); process.exit(1); }
   console.log('\nDesenvolvimento de arquivos: formatos, ZIP, análise, correções e instruções verificados.');
 })();

@@ -26,7 +26,11 @@ trecho_parar_falha = trecho_parar_falha[:trecho_parar_falha.index("private void 
 
 checagens = {
     "Comando de mídia promove o serviço a primeiro plano antes de controlar": (
-        "iniciarPrimeiroPlano();\n                String c = intent.getStringExtra(EXTRA_COMANDO);" in musica),
+        "if (!iniciarPrimeiroPlano()) return START_NOT_STICKY;\n"
+        "                String c = intent.getStringExtra(EXTRA_COMANDO);" in musica),
+    "Player sem primeiro plano para em vez de morrer sem notificação": (
+        "private boolean iniciarPrimeiroPlano()" in musica
+        and "pararTudo();\n            return false;" in musica),
     "Comando de mídia sem player encerra o serviço (nada para controlar)": (
         "if (player == null) {" in musica.split("ACAO_CONTROLE.equals(acao)")[1][:600]
         and "pararTudo();\n                    return START_NOT_STICKY;" in musica),

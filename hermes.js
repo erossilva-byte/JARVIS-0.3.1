@@ -312,7 +312,16 @@
       }
       notas[id] = Math.round(pontos * 100) / 100;
     });
-    const ordem = elegiveis.slice().sort((a, b) => (notas[b] - notas[a]) || (ids.indexOf(a) - ids.indexOf(b)));
+    const ordemRoteador = elegiveis.slice().sort((a, b) => (notas[b] - notas[a]) || (ids.indexOf(a) - ids.indexOf(b)));
+    // Escolha explícita do usuário (Ajustes ▸ IA): o principal vai na frente e o alternativo
+    // em segundo, mesmo quando o roteador preferiria outro. Provedor sem chave não está em
+    // `elegiveis` e por isso é ignorado; repetir o mesmo id não duplica a fila.
+    const preferidos = [];
+    [e.principal, e.alternativo].forEach((v) => {
+      const id = String(v || '');
+      if (id && elegiveis.indexOf(id) >= 0 && preferidos.indexOf(id) < 0) preferidos.push(id);
+    });
+    const ordem = preferidos.concat(ordemRoteador.filter((id) => preferidos.indexOf(id) < 0));
     const modelo = {};
     ordem.forEach((id) => {
       const c = CATALOGO[id] || {};
@@ -323,7 +332,8 @@
     const motivo = !ordem.length
       ? (precisaVisao ? 'nenhum provedor com chave reconhece imagens' : 'nenhum provedor disponível')
       : CATALOGO[primeira].nome + ' escolhido para tarefa ' + tarefa + ' (' + (razoes[primeira] || 'melhor nota') + ')' +
-        (ordem.length > 1 ? '; reserva: ' + ordem.slice(1, 3).map((id) => CATALOGO[id].nome).join(' → ') : '');
+        (ordem.length > 1 ? '; reserva: ' + ordem.slice(1, 3).map((id) => CATALOGO[id].nome).join(' → ') : '') +
+        (preferidos.length ? ' · preferência do usuário: ' + preferidos.map((id) => CATALOGO[id].nome).join(' → ') : '');
     return {
       tarefa, ordem, modelo, notas, motivo,
       timeoutMs: tarefa === 'rapida' ? 12000 : tarefa === 'raciocinio' ? 30000 : 22000,

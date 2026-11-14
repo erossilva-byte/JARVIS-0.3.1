@@ -107,6 +107,78 @@ public class JarvisBackgroundPlugin extends Plugin {
         call.resolve();
     }
 
+    /* ---------- Perfil de energia e pausa manual (Fase 4B) ---------- */
+
+    @PluginMethod
+    public void estadoEnergia(PluginCall call) {
+        call.resolve(estadoEnergia(getContext()));
+    }
+
+    @PluginMethod
+    public void definirPerfilEnergia(PluginCall call) {
+        Context c = getContext();
+        JarvisPrefs.perfilEnergia(c, call.getString("perfil", JarvisPrefs.PERFIL_SEMPRE));
+        Integer inicio = call.getInt("inicio");
+        if (inicio != null) JarvisPrefs.horarioInicio(c, inicio.intValue());
+        Integer fim = call.getInt("fim");
+        if (fim != null) JarvisPrefs.horarioFim(c, fim.intValue());
+        Integer limite = call.getInt("limiteBateria");
+        if (limite != null) JarvisPrefs.limiteBateria(c, limite.intValue());
+        JarvisService.aplicarPerfil(c);
+        call.resolve(estadoEnergia(c));
+    }
+
+    /** Estado leve do microfone, para a tela acompanhar em tempo real. */
+    @PluginMethod
+    public void estadoMicrofone(PluginCall call) {
+        Context c = getContext();
+        JSObject o = new JSObject();
+        o.put("bloqueioMicrofone", JarvisService.bloqueioMicrofone(c));
+        o.put("pausaFoneSegundos", Math.round(JarvisService.pausaFoneRestanteMs() / 1000.0));
+        o.put("escutando", JarvisService.escutando());
+        o.put("servico", JarvisService.ativo());
+        call.resolve(o);
+    }
+
+    /** Roda a manutenção periódica agora, para conferir sem esperar o ciclo. */
+    @PluginMethod
+    public void rodarManutencaoAgora(PluginCall call) {
+        JarvisManutencaoWorker.rodarAgora(getContext());
+        JSObject o = estadoEnergia(getContext());
+        o.put("pedido", true);
+        call.resolve(o);
+    }
+
+    /** Pausa pelo botão da notificação; o estado volta persistido. */
+    @PluginMethod
+    public void pausarEscutaManual(PluginCall call) {
+        JarvisService.pausarEscutaManual(getContext());
+        call.resolve(estadoEnergia(getContext()));
+    }
+
+    @PluginMethod
+    public void retomarEscutaManual(PluginCall call) {
+        JarvisService.retomarEscutaManual(getContext());
+        call.resolve(estadoEnergia(getContext()));
+    }
+
+    private JSObject estadoEnergia(Context c) {
+        JSObject o = new JSObject();
+        o.put("perfil", JarvisPrefs.perfilEnergia(c));
+        o.put("nivelBateria", JarvisService.nivelBateria(c));
+        o.put("economiaEnergia", JarvisService.economiaEnergia(c));
+        o.put("bloqueioBateria", JarvisService.bloqueioBateria(c));
+        o.put("pausadoManual", JarvisPrefs.pausadoManual(c));
+        o.put("horarioInicio", JarvisPrefs.horarioInicio(c));
+        o.put("horarioFim", JarvisPrefs.horarioFim(c));
+        o.put("carregando", JarvisService.carregando(c));
+        o.put("bloqueioPerfil", JarvisService.bloqueioPerfil(c));
+        o.put("limiteBateria", JarvisPrefs.limiteBateria(c));
+        o.put("ultimaManutencao", JarvisPrefs.ultimaManutencao(c));
+        o.put("manutencaoAgendada", JarvisPrefs.manutencaoAgendada(c));
+        return o;
+    }
+
     /* ---------- Palavra de ativação ---------- */
 
     @PluginMethod
@@ -236,6 +308,21 @@ public class JarvisBackgroundPlugin extends Plugin {
         o.put("escutando", JarvisService.escutando());
         o.put("detector", JarvisService.detectorAtual());
         o.put("desejada", JarvisPrefs.desejaOuvir(c));
+        o.put("pausadoManual", JarvisPrefs.pausadoManual(c));
+        o.put("perfil", JarvisPrefs.perfilEnergia(c));
+        o.put("horarioInicio", JarvisPrefs.horarioInicio(c));
+        o.put("horarioFim", JarvisPrefs.horarioFim(c));
+        o.put("carregando", JarvisService.carregando(c));
+        o.put("bloqueioPerfil", JarvisService.bloqueioPerfil(c));
+        o.put("nivelBateria", JarvisService.nivelBateria(c));
+        o.put("economiaEnergia", JarvisService.economiaEnergia(c));
+        o.put("bloqueioBateria", JarvisService.bloqueioBateria(c));
+        o.put("limiteBateria", JarvisPrefs.limiteBateria(c));
+        o.put("ultimaManutencao", JarvisPrefs.ultimaManutencao(c));
+        o.put("manutencaoAgendada", JarvisPrefs.manutencaoAgendada(c));
+        o.put("bloqueioMicrofone", JarvisService.bloqueioMicrofone(c));
+        o.put("pausaFoneSegundos", Math.round(JarvisService.pausaFoneRestanteMs() / 1000.0));
+        o.put("redeBytesDesdeInicio", JarvisService.redeDesdeInicioBytes());
         o.put("sensibilidade", JarvisPrefs.sensibilidade(c));
         o.put("variantes", JarvisPrefs.variantes(c));
         o.put("calibragem", JarvisService.calibragem());

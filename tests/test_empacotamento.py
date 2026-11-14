@@ -40,6 +40,16 @@ checks = {
     'workflow Android copia todos os scripts': not faltando_www,
     'pacote Windows inclui todos os scripts': not faltando_windows,
     'projetista.js existe na raiz': (raiz / 'projetista.js').is_file(),
+    # O comando único precisa continuar existindo e apontar para o script certo.
+    'comando único de verificação existe': (
+        pacote.get('scripts', {}).get('verificar') == 'python3 ci/verificar.py'
+        and (raiz / 'ci' / 'verificar.py').is_file()
+    ),
+    # A pré-checagem Android é a primeira barreira do CI; precisa rodar também na suíte local.
+    'pré-checagem Android roda na suíte': (
+        'python3 ci/preflight_android.py' in pacote.get('scripts', {}).get('test:all', '')
+        and (raiz / 'ci' / 'preflight_android.py').is_file()
+    ),
 }
 for rotulo, ok in checks.items():
     print(('OK' if ok else 'FALHOU') + ': ' + rotulo +

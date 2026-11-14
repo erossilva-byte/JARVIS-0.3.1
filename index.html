@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="interface.css">
 <link rel="stylesheet" href="core.css">
+<link rel="stylesheet" href="nucleo_v3.css">
 </head>
 <body data-state="idle" class="travado">
 <div id="boot" class="boot" aria-busy="true" aria-label="Inicializando o J.A.R.V.I.S. Nova">
@@ -95,6 +96,7 @@
       <div class="halo"></div>
       <div class="hud-grade" aria-hidden="true"></div>
       <canvas id="nucleo-orbita" class="nucleo-orbita" aria-hidden="true"></canvas>
+      <canvas id="nucleo-v3" aria-hidden="true"></canvas>
       <div class="plas" aria-hidden="true">
         <span class="fil f1"><i></i></span>
         <span class="fil f2"><i></i></span>
@@ -172,7 +174,7 @@
       <p class="dash-nota" id="dash-nota">Toque em atualizar para ler o estado do aparelho.</p>
     </div>
     <div class="dash-card comandos">
-      <div class="dash-head"><span class="dash-eyebrow">QUICK COMMANDS</span></div>
+      <div class="dash-head"><span class="dash-eyebrow">COMANDOS RÁPIDOS</span></div>
       <div class="cmd-lista">
         <button type="button" class="cmd" data-cmd="bom dia">Bom dia</button>
         <button type="button" class="cmd" data-cmd="que horas são">Hora</button>
@@ -266,6 +268,13 @@
     <div class="chave"><label>2. Cerebras<input id="c-key-cerebras" type="password" autocomplete="off" placeholder="opcional"></label><button type="button" class="mini" id="c-apagar-cerebras">apagar</button></div><p class="dica links-chaves"><a href="https://cloud.cerebras.ai/" target="_blank" rel="noreferrer">Criar conta / chave Cerebras</a></p>
     <div class="chave"><label>3. Mistral<input id="c-key-mistral" type="password" autocomplete="off" placeholder="opcional"></label><button type="button" class="mini" id="c-apagar-mistral">apagar</button></div><p class="dica links-chaves"><a href="https://console.mistral.ai/" target="_blank" rel="noreferrer">Criar conta / chave Mistral</a></p>
     <div class="chave"><label>4. Gemini<input id="c-key-gemini" type="password" autocomplete="off" placeholder="opcional"></label><button type="button" class="mini" id="c-apagar-gemini">apagar</button></div><p class="dica links-chaves"><a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">Criar chave Gemini</a></p><p class="dica">Os planos e limites mudam. Verifique a cota gratuita na página oficial antes de usar. Não compartilhe suas chaves; o app não oferece garantia de cota ilimitada.</p>
+    <p class="dica" id="c-consumo-ia">O consumo aparece aqui depois da primeira resposta. Provedor que não informa os tokens é mostrado como tal.</p>
+
+    <div class="util-linha">
+      <label>Motor principal<select id="c-prov-principal"></select></label>
+      <label>Motor alternativo<select id="c-prov-alternativo"></select></label>
+    </div>
+    <p class="dica">O principal é tentado primeiro e o alternativo logo depois, mesmo que o roteador preferisse outro. Se os dois falharem, o roteador segue a fila dele. Escolher aqui também libera a pausa de um motor que tinha falhado.</p>
     <label>Modelo preferido da Groq<input id="c-modelo" type="text" autocomplete="off"></label>
     <div class="info-card local-ai-card"><span class="info-icon">◈</span><div><b>IA local no aparelho · experimental</b><p>Importe um modelo <code>.task</code> compatível com MediaPipe. Depois de importado, a inferência pode funcionar sem internet e sem chave de API. O modelo não vem dentro do APK; o tamanho depende do arquivo escolhido.</p><p id="c-local-ai-status" role="status" aria-live="polite">Verificando suporte à IA local…</p><div class="botoes"><button id="c-local-ai-import" type="button" class="secundario">Importar modelo .task</button><button id="c-local-ai-test" type="button" class="secundario">Testar modelo</button><button id="c-local-ai-unload" type="button" class="secundario" disabled>Descarregar</button><button id="c-local-ai-delete" type="button" class="secundario perigo">Apagar modelo</button></div><p class="dica">Use um <code>.task</code> do MediaPipe; GGUF não é compatível. <b>Gemma 3 1B IT exige runtime 0.10.22 ou mais novo</b> — esta versão usa 0.10.24, porque a 0.10.14 abortava o processo ao abrir o modelo. O primeiro teste carrega o modelo na memória e pode demorar; se falhar, o app continua nos provedores remotos.</p></div></div>
     <details class="modelos-card">
@@ -315,6 +324,9 @@
     <label>Perfil de voz<select id="c-voz-perfil"><option value="padrao">Padrão</option><option value="filme">JARVIS do filme (grave e cadenciado)</option><option value="jarvis">Jarvis completo (mais grave e formal)</option><option value="ultra">Ultra grave</option></select></label>
     <p class="dica">O perfil ajusta tom e velocidade de uma vez; os controles abaixo continuam livres para o ajuste fino. O timbre depende das vozes instaladas no aparelho: se não houver uma voz masculina em português, o app usa a melhor voz pt-BR e compensa no tom.</p>
     <label class="linha"><input id="c-voz-chime" type="checkbox"><span>Sinal do HUD antes de responder<small>Duas notas curtas, como no filme, antes de cada resposta falada. Fica junto do áudio do app; em modo silencioso o Android pode abaixar o volume.</small></span></label>
+    <label class="linha"><input id="c-voz-interromper" type="checkbox"><span>Interromper a resposta quando eu começar a falar<small>Enquanto o JARVIS fala, o microfone mede o nível com cancelamento de eco. Se você falar por mais de 0,3 s, a fala para na hora. Nenhum áudio é gravado nem enviado.</small></span></label>
+    <button id="c-voz-medir-mic" type="button" class="secundario">Medir microfone (3 s)</button>
+    <p id="c-voz-mic-status" class="dica" role="status" aria-live="polite">O microfone não foi medido nesta sessão.</p>
     <div class="nucleo-card">
       <div class="nucleo-card-cabecalho"><div><span class="eyebrow">APARÊNCIA DO NÚCLEO</span><b>Estilo do núcleo central</b></div><span class="status-pill" id="c-nucleo-pill">HUD</span></div>
       <p class="dica">O núcleo é o círculo do topo da tela: ele gira, respira e reage ao nível do seu microfone. Escolha o estilo que combina com o seu aparelho — a troca vale na hora e fica salva.</p>
@@ -388,15 +400,31 @@
     <button id="c-wake-toggle" type="button" class="secundario">Pausar escuta de ativação</button>
     <button id="c-bg-desligar" type="button" class="secundario perigo">Desligar escuta em segundo plano</button>
     <p class="dica">Este botão encerra o serviço em primeiro plano, solta o microfone e cancela o vigia que religa a escuta — o ícone de microfone do Android desaparece e nada volta sozinho. Alarmes e lembretes continuam agendados. Use “Pausar” quando quiser só uma pausa momentânea.</p>
+    <label>Perfil de energia da escuta
+      <select id="c-bg-perfil"><option value="sempre">Sempre ouvindo</option><option value="carregando">Somente carregando</option><option value="horario">Horários definidos</option><option value="desligado">Desligado</option></select>
+    </label>
+    <label>Reduzir a escuta com bateria em
+      <select id="c-bg-limite"><option value="10">10%</option><option value="15" selected>15% (padrão)</option><option value="20">20%</option></select>
+    </label>
+    <div id="c-bg-horario" hidden>
+      <label>Início da janela<input id="c-bg-inicio" type="time" value="07:00"></label>
+      <label>Fim da janela<input id="c-bg-fim" type="time" value="23:00"></label>
+    </div>
+    <p id="c-bg-perfil-status" class="dica" role="status" aria-live="polite">O perfil é aplicado pelo serviço: em “Somente carregando” ou “Horários”, o microfone não abre fora da condição. Com bateria em 15% ou menos (sem carregador) ou economia de energia ligada, a escuta é reduzida até carregar, sem desligar o perfil.</p>
     <div class="botoes"><button id="c-bg-bateria" type="button" class="secundario">Impedir suspensão pela bateria</button><button id="c-bg-sobreposicao" type="button" class="secundario">Permitir abrir na tela</button></div>
+    <p id="c-bg-privacidade" class="dica" role="status" aria-live="polite">Privacidade: a auditoria de tráfego da ativação é medida no APK Android.</p>
+    <p id="c-bg-microfone" class="dica" role="status" aria-live="polite">Microfone: consultando o Android…</p>
     <p id="c-bg-status" class="dica" role="status" aria-live="polite">Xiaomi, Samsung e Motorola suspendem serviços em segundo plano: libere o Jarvis da otimização de bateria e permita sobreposição para ele abrir a tela quando for chamado.</p>
+    <div class="botoes"><button id="c-bg-porque" type="button" class="secundario">Por que parou?</button></div>
+    <p id="c-bg-porque-status" class="dica" role="status" aria-live="polite">Toque em “Por que parou?” para o JARVIS explicar, com os dados reais do Android, o que interrompeu a escuta.</p>
     <div class="divider-small"></div>
     <h3>Diagnóstico do segundo plano</h3>
     <p class="dica">Cada linha é uma consulta real ao Android — não é um teste genérico. Se a escuta parar sozinha, é aqui que aparece o motivo. O serviço em primeiro plano é reiniciado automaticamente pelo vigia (a cada 15 minutos) enquanto a ativação estiver ligada, inclusive depois de reiniciar o aparelho.</p>
     <div class="diag-card">
       <div class="audio-head"><b>Permissões e serviço</b><output id="bg-resumo">—</output></div>
       <div id="bg-diag" class="diag-lista"><p class="dica">Toque em “Verificar agora” para consultar o estado do aparelho.</p></div>
-      <div class="botoes"><button id="bg-atualizar" type="button" class="secundario">Verificar agora</button><button id="bg-autostart" type="button" class="secundario">Abrir início automático</button></div>
+      <div class="botoes"><button id="bg-atualizar" type="button" class="secundario">Verificar agora</button><button id="bg-autostart" type="button" class="secundario">Abrir início automático</button><button id="bg-manutencao-agora" type="button" class="secundario">Rodar manutenção agora</button></div>
+      <p id="bg-manutencao" class="dica" role="status" aria-live="polite">Verificação automática: ainda não consultada.</p>
       <p id="bg-diag-status" class="dica" role="status" aria-live="polite">Microfone, notificação, bateria sem restrição e início automático são os quatro pontos que mais derrubam a escuta.</p>
     </div>
     <h3>Teste da palavra de ativação</h3>
@@ -1194,6 +1222,12 @@
 
 <aside id="painel-dev" class="painel painel-dev" hidden aria-label="Desenvolvimento de arquivos do J.A.R.V.I.S. Nova">
   <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · DESENVOLVIMENTO</p><h2>Desenvolvimento de Arquivos</h2></div><span class="versao-chip">local · com original preservado</span></div>
+  <section class="grupo" aria-label="Autorização do modo de desenvolvimento">
+    <h3>Autorização</h3>
+    <p class="dica">Analisar, testar e exportar são livres: nada é alterado. Corrigir, criar ou editar arquivos do próprio app exige autorizar o modo de desenvolvimento — por tempo limitado, com cada tentativa registrada, inclusive as recusadas.</p>
+    <div class="botoes botoes-autorizacao"><button id="dev-autorizar" type="button" class="primario">Autorizar por 30 minutos</button><button id="dev-revogar" type="button" class="secundario">Encerrar agora</button></div>
+    <p id="dev-modo-status" class="dica" role="status" aria-live="polite">Modo de desenvolvimento: desligado.</p>
+  </section>
   <section class="grupo">
     <p class="dica">Receba arquivos de texto, código ou um projeto <code>.zip</code>. A análise é real: estrutura, JSON inválido, importações que faltam, duplicatas, segredos e marcadores de conflito. Nada é executado e nada sai do aparelho sem você mandar.</p>
     <div id="dev-drop" class="dev-drop" tabindex="0" role="button" aria-label="Adicionar arquivos ao desenvolvimento">
@@ -1461,6 +1495,10 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="vendor/three.min.js"></script>
 <script src="orbita.js"></script>
 <script src="avatar.js"></script>
+<script src="nucleo_v3.js"></script>
+<script src="consumo_ia.js"></script>
+<script src="modo_dev.js"></script>
+<script src="escuta.js"></script>
 <script src="cad.js"></script>
 <script src="cad_projeto.js"></script>
 <script src="visao.js"></script>
@@ -1484,7 +1522,11 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="interface.js"></script>
 <script src="sistema.js"></script>
 <script src="plano.js"></script>
-<script src="escuta.js"></script>
+<script src="escuta_voz.js"></script>
+<script src="segundo_plano.js"></script>
+<script src="perfil_energia.js"></script>
+<script src="manutencao.js"></script>
+<script src="privacidade.js"></script>
 <script src="fala.js"></script>
 <script src="audio_pcm.js"></script>
 <script src="arquivos_dev.js"></script>

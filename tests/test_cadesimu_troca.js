@@ -45,4 +45,19 @@ assert.ok(monoDir.ok, 'partida direta monofásica continua válida');
 assert.ok(P.validar(monoDir.projeto).ok, 'partida direta monofásica passa na verificação');
 ok('topologia trifásica recusada no monofásico');
 
+// ID repetido: antes reprovava o conjunto sem aparecer em nenhum item do checklist,
+// então o relatório imprimia "1 pendência" seguido de todas as linhas OK.
+const doisIguais = JSON.parse(JSON.stringify(direta.projeto));
+doisIguais.componentes.push(JSON.parse(JSON.stringify(doisIguais.componentes[0])));
+const ponteRepetida = P.conferirTrocaCadesimu(doisIguais);
+assert.strictEqual(ponteRepetida.ok, false, 'ID repetido reprova a ponte');
+const falhasRepetidas = ponteRepetida.verificacoes.filter((x) => !x.ok);
+assert.ok(falhasRepetidas.length >= 1, 'ID repetido aparece como item reprovado');
+assert.ok(falhasRepetidas.some((x) => /repetid/i.test(x.detalhe)), 'detalhe aponta o ID: ' + JSON.stringify(falhasRepetidas));
+assert.strictEqual(ponteRepetida.pendencias.length, falhasRepetidas.length,
+  'toda pendência corresponde a um item reprovado (' + ponteRepetida.pendencias.length + ' x ' + falhasRepetidas.length + ')');
+assert.ok(/FALTA sem ID repetido/.test(P.relatorio(doisIguais)), 'relatório mostra o item reprovado');
+assert.ok(!/PONTE CADeSIMU \(INTERC\u00c2MBIO\)[\s\S]*FALTA sem ID repetido[\s\S]*Checklist de redesenho: completo/.test(P.relatorio(doisIguais)), 'relatório não se declara completo com pendência');
+ok('ID repetido reprova com item de verificação');
+
 console.log('\nPonte CADeSIMU: ' + checks + ' grupos de verificação aprovados.');
