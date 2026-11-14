@@ -47,6 +47,27 @@
     return { texto: limpar(mantidas.join(' '), 2000), descartado: descartado, tratado_como: 'dado' };
   }
 
+  /* Atributos que a análise traz (tensão, material, medida…) eram descartados aqui: o objeto
+   * ficava com `atributos: {}` e `comparar()` nunca encontrava diferença nenhuma. Agora eles
+   * entram saneados — chave curta, valor curto, só texto/número/booleano — e seguem a mesma
+   * regra da marca e do modelo: sem evidência legível, não são mantidos. */
+  var LIMITE_ATRIBUTOS = 12;
+  function atributosDe(origem) {
+    var saida = {};
+    if (!origem || typeof origem !== 'object' || Array.isArray(origem)) return saida;
+    Object.keys(origem).slice(0, LIMITE_ATRIBUTOS).forEach(function (chave) {
+      var v = origem[chave];
+      if (v == null) return;
+      var k = limpar(chave, 40);
+      if (!k) return;
+      if (typeof v === 'number' || typeof v === 'boolean') { saida[k] = String(v); return; }
+      if (typeof v !== 'string') return;
+      var valor = limpar(v, 120);
+      if (valor) saida[k] = valor;
+    });
+    return saida;
+  }
+
   function objetoBasico(o, indice) {
     var nome = limpar(o && (o.nome || o.tipo || o.classe), 80);
     return {
@@ -57,7 +78,7 @@
       modelo: o && o.modelo ? limpar(o.modelo, 60) : '',
       confianca: o && o.confianca === CONFIANCA.CONFIRMADO ? CONFIANCA.CONFIRMADO : (o && o.confianca === CONFIANCA.LOJA ? CONFIANCA.LOJA : CONFIANCA.ESTIMADO),
       evidencia: Array.isArray(o && o.evidencia) ? o.evidencia.map(function (e) { return limpar(e, 60); }).slice(0, 6) : [],
-      atributos: {},
+      atributos: atributosDe(o && o.atributos),
       consultas: [],
       tecnico: null
     };
@@ -76,7 +97,7 @@
     c.objetos.forEach(function (o) { evid = evid.concat(o.evidencia); });
     var temEvidencia = evid.join(' ').trim().length >= 3;
     c.objetos.forEach(function (o) {
-      if (!temEvidencia) { o.marca = ''; o.modelo = ''; o.confianca = CONFIANCA.ESTIMADO; }
+      if (!temEvidencia) { o.marca = ''; o.modelo = ''; o.atributos = {}; o.confianca = CONFIANCA.ESTIMADO; }
       o.consultas = consultas(o, 'identificacao');
     });
     c.atual = c.objetos.length ? 0 : -1;

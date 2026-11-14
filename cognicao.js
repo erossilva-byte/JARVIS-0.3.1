@@ -129,28 +129,58 @@
       'Ao terminar, verifique se a resposta entrega o pedido, não repete a abertura padrão e não inventa resultado.';
   }
 
-  /** Seleciona histórico curto, priorizando sobreposição de termos e referências. */
+  /** Seleciona histórico curto, priorizando sobreposição de termos e referências.
+   * A ordem devolvida é sempre a cronológica: um turno antigo trazido por relevância entra
+   * no lugar dele, nunca depois do turno atual — o modelo recebe a conversa na sequência em
+   * que ela aconteceu e a pergunta de agora continua sendo a última mensagem. */
   function selecionarHistorico(hist, a, limite) {
     var lista = (Array.isArray(hist) ? hist : []).filter(function (x) {
       return x && (x.role === 'user' || x.role === 'assistant') && typeof x.content === 'string' && x.content;
     });
     var max = Math.max(2, Math.min(16, Number(limite) || 8));
     if (!lista.length) return [];
-    var base = lista.slice(-(a && a.referencia ? Math.min(16, max + 4) : max));
-    if (!a || !a.termos || !a.termos.length) return base;
-    var relevantes = [];
-    for (var i = 0; i < lista.length; i++) {
-      var c = normalizar(lista[i].content);
-      var pontos = 0;
-      a.termos.forEach(function (termo) { if (c.indexOf(termo) >= 0) pontos++; });
-      if (pontos >= 2) relevantes.push({ i: i, item: lista[i], pontos: pontos });
+    var teto = max + 4;
+    var inicio = Math.max(0, lista.length - (a && a.referencia ? Math.min(16, teto) : max));
+    var escolhidos = {}, marcados = {};
+    for (var k = inicio; k < lista.length; k++) escolhidos[k] = true;
+    if (a && a.termos && a.termos.length) {
+      var relevantes = [];
+      for (var i = 0; i < lista.length; i++) {
+        if (escolhidos[i]) continue;
+        var c = normalizar(lista[i].content);
+        var pontos = 0;
+        a.termos.forEach(function (termo) { if (c.indexOf(termo) >= 0) pontos++; });
+        if (pontos >= 2) relevantes.push({ i: i, pontos: pontos });
+      }
+      relevantes.sort(function (x, y) { return y.pontos - x.pontos; });
+      relevantes.slice(0, 4).forEach(function (r) { escolhidos[r.i] = true; marcados[r.i] = true; });
     }
-    relevantes.sort(function (x, y) { return y.pontos - x.pontos; });
-    var escolhidos = base.slice();
-    relevantes.slice(0, 4).forEach(function (r) {
-      if (escolhidos.indexOf(r.item) < 0) escolhidos.push(r.item);
-    });
-    return escolhidos.slice(-(max + 4));
+    // O excedente sai do começo da conversa; o turno atual (sempre o último) e os turnos
+    // trazidos por relevância ficam, porque são eles que explicam a referência em uso.
+    var indices = Object.keys(escolhidos).map(Number).sort(function (x, y) { return x - y; });
+    while (indices.length > teto) {
+      var cortado = false;
+      for (var j = 0; j < indices.length - 1; j++) {
+        if (!marcados[indices[j]]) { delete escolhidos[indices[j]]; indices.splice(j, 1); cortado = true; break; }
+      }
+      if (!cortado) { delete escolhidos[indices[0]]; indices.shift(); }
+    }
+    return Object.keys(escolhidos).map(Number).sort(function (x, y) { return x - y; })
+      .map(function (i) { return lista[i]; });
+  }
+
+  /** Fala de um turno já guardado: o histórico salva o JSON inteiro do modelo.
+   * Serve para comparar repetição e para ler o que foi dito, sem o envelope da ação. */
+  function falaDoTurno(conteudo) {
+    var bruto = String(conteudo == null ? '' : conteudo).trim();
+    if (!bruto) return '';
+    if (bruto.charAt(0) === '{') {
+      try {
+        var o = JSON.parse(bruto);
+        if (o && typeof o.fala === 'string' && o.fala.trim()) return o.fala.trim();
+      } catch (e) { /* texto puro */ }
+    }
+    return bruto;
   }
 
   /** Verificação conservadora da fala. Não julga fatos; aponta falhas observáveis. */
@@ -166,7 +196,9 @@
     if (a && a.precisaFerramenta && !o.acao && /(ja abri|j[aá] abri|executei|acabei de|liguei|enviei|instalei|baixei|criei o arquivo)/i.test(f)) problemas.push('alegacao_sem_execucao');
     if (o.recentes && f) {
       var nf = normalizar(f);
-      if (o.recentes.some(function (r) { return normalizar(r) === nf; })) problemas.push('repetida');
+      // O histórico guarda o turno inteiro do modelo (JSON com fala e ação); a comparação é
+      // feita com a fala de cada turno, senão nenhuma repetição seria reconhecida.
+      if (o.recentes.some(function (r) { return normalizar(falaDoTurno(r)) === nf; })) problemas.push('repetida');
     }
     return {
       ok: problemas.length === 0, problemas: problemas,
@@ -188,12 +220,13 @@
   }
 
   function diagnostico() {
-    return { versao: VERSAO, funcoes: ['analisar', 'promptPlano', 'selecionarHistorico', 'verificarResposta', 'revisarFala'], rede: false, dom: false };
+    return { versao: VERSAO, funcoes: ['analisar', 'promptPlano', 'selecionarHistorico', 'falaDoTurno', 'verificarResposta', 'revisarFala'], rede: false, dom: false };
   }
 
   return {
     VERSAO: VERSAO, normalizar: normalizar, termos: termos, analisar: analisar,
     promptPlano: promptPlano, selecionarHistorico: selecionarHistorico,
+    falaDoTurno: falaDoTurno,
     verificarResposta: verificarResposta, revisarFala: revisarFala, diagnostico: diagnostico
   };
 });

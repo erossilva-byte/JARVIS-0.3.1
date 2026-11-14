@@ -961,13 +961,40 @@
     return linhas.join('\n') + '\n';
   }
 
+  /* Um contato, no desenho de ladder: NA é | | e NF é |/|. O endereço vem depois. */
+  function contatoLadder(termo) {
+    var t = String(termo).trim();
+    if (/^NAO\s+/i.test(t)) return '---|/|--- ' + t.replace(/^NAO\s+/i, '').trim();
+    return '---| |--- ' + t;
+  }
+
+  /* Desenha o rung: o grupo em OU vira ramos paralelos, o resto entra em série. */
+  function desenharRung(logica, saida) {
+    var ramos = [], serie = [];
+    String(logica).split(' E ').forEach(function (parte) {
+      var t = parte.trim();
+      var grupo = /^\((.*)\)$/.exec(t);
+      if (grupo) grupo[1].split(' OU ').forEach(function (b) { ramos.push(b.trim()); });
+      else serie.push(t);
+    });
+    var depois = serie.map(contatoLadder).join(' ');
+    var final = ' ---( ' + saida + ' )';
+    if (!ramos.length) return ['   ' + depois + final];
+    var contatos = ramos.map(contatoLadder);
+    var largura = Math.max.apply(null, contatos.map(function (c) { return c.length; }));
+    return contatos.map(function (c, i) {
+      var linha = '   +' + c + new Array(largura - c.length + 1).join(' ') + '   +';
+      return i === contatos.length - 1 ? linha + (depois ? ' ' + depois : '') + final : linha;
+    });
+  }
+
   function ladder(projeto) {
     var rungs = projeto.rungs || [];
     if (!rungs.length) return 'Este projeto não tem lógica de CLP: o ladder só existe para projetos com CLP.\n';
     var linhas = ['LISTA LADDER (texto) — ' + (projeto.titulo || 'projeto'), ''];
     rungs.forEach(function (r, i) {
       linhas.push('RUNG ' + (i + 1) + '  ' + r.saida);
-      linhas.push('   |--- ' + r.logica.replace(/ E /g, ' --- ').replace(/ OU /g, ' ---+--- ') + ' ---( ' + r.saida + ' )');
+      desenharRung(r.logica, r.saida).forEach(function (l) { linhas.push(l); });
       linhas.push('   // ' + r.descricao);
       linhas.push('');
     });
@@ -980,7 +1007,6 @@
     linhas.push('ST equivalente:');
     rungs.forEach(function (r) {
       linhas.push('   ' + r.saida + ' := ' + r.logica
-        .replace(/%I(\d+)\.(\d)/g, 'IN($1,$2)').replace(/%Q(\d+)\.(\d)/g, 'OUT($1,$2)')
         .replace(/ E /g, ' AND ').replace(/ OU /g, ' OR ').replace(/NAO /g, 'NOT ') + ';');
     });
     linhas.push('');
@@ -1408,9 +1434,9 @@
     }
     var v = validar(projeto);
     item('verificação estrutural', v.ok, v.ok ? 'aprovada' : v.erros.map(function (e) { return e.codigo; }).join(','));
-    var ids = {}, semMapa = [], semRede = [], soltos = [], curto = [];
+    var ids = {}, repetidos = [], semMapa = [], semRede = [], soltos = [], curto = [];
     projeto.componentes.forEach(function (c) {
-      if (ids[c.id]) pendencias.push('ID repetido: ' + c.id);
+      if (ids[c.id]) repetidos.push(c.id);
       ids[c.id] = true;
       if (!MAPA_CADESIMU[c.tipo]) semMapa.push(c.id + ' (' + c.tipo + ')');
       var def = TIPOS[c.tipo] || {};
@@ -1422,6 +1448,7 @@
         if (c.pinos && c.pinos[par[0]] && c.pinos[par[0]] === c.pinos[par[1]]) curto.push(c.id + ' ' + par[0] + '/' + par[1]);
       });
     });
+    item('sem ID repetido', repetidos.length === 0, repetidos.length ? 'IDs repetidos: ' + repetidos.join(', ') : 'IDs únicos');
     item('todos os tipos têm símbolo mapeado', semMapa.length === 0, semMapa.length ? 'sem mapa: ' + semMapa.join(', ') : 'todos os tipos mapeados');
     item('todo terminal obrigatório tem rede', soltos.length === 0, soltos.length ? 'soltos: ' + soltos.join(', ') : 'nenhum terminal solto');
     item('nenhum terminal obrigatório com rede vazia', semRede.length === 0, semRede.length ? 'vazios: ' + semRede.join(', ') : 'redes preenchidas');
