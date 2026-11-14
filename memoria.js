@@ -562,9 +562,41 @@
     var bruto = String(txt || '');
     if (!bruto.trim()) return { ok: false, erro: 'O Markdown está vazio.' };
     var blocos = [];
-    var re = /---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*?)(?=\n---\s*\n|$)/g;
-    var achado;
-    while ((achado = re.exec(bruto))) blocos.push({ meta: achado[1], corpo: achado[2] });
+    /* O recorte por expressão regular parava no primeiro `---` do corpo e descartava o resto:
+     * uma nota do Obsidian com separador horizontal chegava pela metade. Agora o frontmatter só
+     * é reconhecido quando o bloco entre os dois `---` tem linhas `chave: valor`, e o corpo
+     * segue até o próximo frontmatter de verdade (ou o fim do arquivo), preservando os `---`
+     * internos. */
+    var linhas = bruto.split('\n');
+    function ehDivisor(linha) { return /^---\s*$/.test(linha); }
+    function pareceChave(linha) { return /^\s*[A-Za-z_][A-Za-z0-9_-]*\s*:/.test(linha); }
+    function frontmatterEm(inicio) {
+      if (!ehDivisor(linhas[inicio])) return null;
+      var temChave = false;
+      for (var j = inicio + 1; j < linhas.length && j - inicio <= 60; j++) {
+        var linha = linhas[j];
+        if (ehDivisor(linha)) return temChave ? { metaFim: j, corpoInicio: j + 1 } : null;
+        if (pareceChave(linha)) { temChave = true; continue; }
+        if (!linha.trim()) continue;
+        if (/^\s*[-*]\s+/.test(linha) || /^\s{2,}/.test(linha)) continue;
+        return null;
+      }
+      return null;
+    }
+    var cursor = 0;
+    while (cursor < linhas.length) {
+      var bloco = frontmatterEm(cursor);
+      if (!bloco) { cursor++; continue; }
+      var fim = linhas.length;
+      for (var proximo = bloco.corpoInicio; proximo < linhas.length; proximo++) {
+        if (frontmatterEm(proximo)) { fim = proximo; break; }
+      }
+      blocos.push({
+        meta: linhas.slice(cursor + 1, bloco.metaFim).join('\n'),
+        corpo: linhas.slice(bloco.corpoInicio, fim).join('\n')
+      });
+      cursor = fim;
+    }
     if (!blocos.length) blocos.push({ meta: '', corpo: bruto });
     var criadas = 0, repetidas = 0, atualizadas = 0, ignoradas = 0, conflitos = [];
     blocos.forEach(function (b) {
@@ -583,9 +615,9 @@
       var secoes = [];
       if (partes.length > 1) {
         for (var si = 1; si < partes.length; si++) {
-          var linhas = partes[si].split('\n');
-          var tituloSecao = String(linhas.shift() || '').trim();
-          var brutoSecao = linhas.join('\n');
+          var linhasSecao = partes[si].split('\n');
+          var tituloSecao = String(linhasSecao.shift() || '').trim();
+          var brutoSecao = linhasSecao.join('\n');
           var idSecao = brutoSecao.match(/<!--\s*jarvis_id:\s*([a-z0-9_-]{1,80})\s*-->/i);
           var atualizadoSecao = brutoSecao.match(/_atualizado:\s*([^\s·_]+)/i);
           var tagsSecao = brutoSecao.match(/_atualizado:[^\n]*?·\s*tags:\s*([^·_]+)/i);
