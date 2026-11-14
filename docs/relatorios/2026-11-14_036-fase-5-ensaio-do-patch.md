@@ -38,4 +38,4 @@ O patch tem 530 KB. `npm run verificar` continua exit 0 (2364 verificações, 3 
 
 Compilar no CI (`assembleDebug`) e medir no aparelho. Sem JDK/SDK e sem Poco X7 nesta
 máquina, esses dois critérios continuam abertos e não são declarados aqui. Ver
-`docs/FASE-5-GATE-A.md`.
+`docs/GATE-A-ENSAIO-DO-PATCH.md`.

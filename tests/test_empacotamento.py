@@ -50,6 +50,11 @@ checks = {
         'python3 ci/preflight_android.py' in pacote.get('scripts', {}).get('test:all', '')
         and (raiz / 'ci' / 'preflight_android.py').is_file()
     ),
+    # A interface nativa também é barreira: sem WebView e com as seções da Fase 5.
+    'pré-checagem da interface roda na suíte': (
+        'python3 ci/preflight_interface.py' in pacote.get('scripts', {}).get('test:all', '')
+        and (raiz / 'ci' / 'preflight_interface.py').is_file()
+    ),
 }
 for rotulo, ok in checks.items():
     print(('OK' if ok else 'FALHOU') + ': ' + rotulo +

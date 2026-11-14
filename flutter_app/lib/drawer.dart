@@ -50,6 +50,8 @@ class JarvisDrawer extends StatelessWidget {
         _item(Icons.folder_copy_rounded, 'Arquivos', () { Navigator.pop(context); onModule('Arquivos'); }),
         _item(Icons.electrical_services_rounded, 'CADeSIMU', () { Navigator.pop(context); onModule('CADeSIMU e elétrica'); }),
         _item(Icons.desktop_windows_rounded, 'Computador', () { Navigator.pop(context); onModule('Controle do Windows'); }),
+        _item(Icons.shield_rounded, 'Segurança', () { Navigator.pop(context); onModule('Segurança e privacidade'); }),
+        _item(Icons.palette_rounded, 'Personalização', () { Navigator.pop(context); onModule('Personalização'); }),
         _item(Icons.tune_rounded, 'Configurações', () { Navigator.pop(context); onSettings(); }),
       ])),
       const Divider(color: Colors.white12),

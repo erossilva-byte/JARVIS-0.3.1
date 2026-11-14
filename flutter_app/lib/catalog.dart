@@ -26,4 +26,5 @@ const modules=<JarvisModule>[
  JarvisModule('ESP32 e Home Assistant','Conectividade',Icons.sensors_rounded,'Integração residencial e dispositivos.'),
  JarvisModule('Backup e restauração','Sistema',Icons.backup_rounded,'Cópia e recuperação dos dados.'),
  JarvisModule('Atualizações','Sistema',Icons.system_update_alt_rounded,'Versões, integridade e atualização.'),
+ JarvisModule('Personalização','Sistema',Icons.palette_rounded,'Tratamento, humor, voz e preferências.'),
 ];

@@ -349,7 +349,7 @@ Relatório: `docs/relatorios/2026-11-14_035-plugins-restantes-e-primeiro-plano.m
 - [ ] CI compilar (`assembleDebug`) — Gate A.
 - [ ] Aparelho medir — Gate B.
 
-Documento da fase: `docs/FASE-5-GATE-A.md`.
+Documento: `docs/GATE-A-ENSAIO-DO-PATCH.md`.
 Relatório: `docs/relatorios/2026-11-14_036-fase-5-ensaio-do-patch.md`.
 
 ### Ajuste 037 — ensaio do patch no GitHub Actions (2026-11-14)
@@ -362,3 +362,15 @@ Relatório: `docs/relatorios/2026-11-14_036-fase-5-ensaio-do-patch.md`.
 - [ ] CI compilar (`assembleDebug`) — Gate A.
 
 Relatório: `docs/relatorios/2026-11-14_037-ensaio-no-workflow.md`.
+
+### Ajuste 038 — início da Fase 5: interface nativa (2026-11-14)
+
+- [x] Pré-checagem da interface: reprova WebView, HTML embutido e pacote de webview.
+- [x] Navegação confere as doze seções pedidas; Segurança e Personalização entraram.
+- [x] Animação reduzida respeitada; núcleo isolado com `RepaintBoundary`.
+- [x] Etapa própria no `npm run verificar` e no `npm run test:all`, com teste negativo.
+- [x] `npm run verificar` exit 0 — 4 de 4 etapas, 2365 verificações.
+- [ ] `flutter analyze`, teste de widget e medição de fps (sem SDK aqui).
+
+Documento da fase: `docs/FASE-5-INTERFACE.md`.
+Relatório: `docs/relatorios/2026-11-14_038-fase-5-interface.md`.

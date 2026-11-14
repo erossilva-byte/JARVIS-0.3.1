@@ -1,6 +1,7 @@
 """Roda a verificação completa do projeto e imprime um resumo legível.
 
-Um comando só: pré-checagem Android, suíte completa e empacotamento. Cada etapa é executada
+Um comando só: pré-checagem Android, pré-checagem da interface Flutter, suíte completa e
+empacotamento. Cada etapa é executada
 mesmo que a anterior falhe, para mostrar o estado inteiro de uma vez; o código de saída é
 diferente de zero se qualquer etapa falhar.
 
@@ -19,6 +20,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 
 ETAPAS = [
     ("Pré-checagem Android", ["python3", "ci/preflight_android.py"]),
+    ("Pré-checagem da interface", ["python3", "ci/preflight_interface.py"]),
     ("Suíte completa", ["npm", "run", "test:all"]),
     ("Empacotamento", ["python3", "tests/test_empacotamento.py"]),
 ]

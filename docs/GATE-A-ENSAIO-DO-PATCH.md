@@ -1,4 +1,4 @@
-# Fase 5 — Gate A: ensaio do patch (2026-11-14)
+# Gate A — ensaio do patch (2026-11-14)
 
 ## Por que esta fase
 
@@ -7,7 +7,8 @@ código revisado e virar app instalado depende de duas coisas que esta máquina 
 com o SDK Android (compilar) e um aparelho (medir). São o Gate A e o Gate B já descritos em
 `docs/STATUS-IMPLEMENTACAO-1.47.md`.
 
-O único trecho do Gate A que dá para exercitar aqui é o caminho de publicação: o GitHub recusa
+Este ensaio nasceu antes de a Fase 5 (interface Flutter) começar; ele continua sendo o portão
+do caminho de publicação. O único trecho do Gate A que dá para exercitar aqui é esse: o GitHub recusa
 os arquivos grandes, então tudo sai como patch (`files/interface-v3.patch`). Se esse patch
 não aplicar limpo ou não contiver algum arquivo, a rodada de CI inteira é perdida. Foi isso
 que a Fase 5 atacou primeiro.

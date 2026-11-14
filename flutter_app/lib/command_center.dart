@@ -43,7 +43,7 @@ class CommandCenter extends StatelessWidget {
       ]),
       const SizedBox(height: 8),
       const Text('Inteligência em movimento. Sempre ao seu comando.', style: TextStyle(color: muted, fontSize: 11)),
-      Center(child: AnimatedBuilder(animation: animation, builder: (_, __) => GestureDetector(
+      Center(child: RepaintBoundary(child: AnimatedBuilder(animation: animation, builder: (_, __) => GestureDetector(
         onTap: () => showModalBottomSheet<void>(context: context, backgroundColor: panel, showDragHandle: true,
           builder: (_) => const Padding(padding: EdgeInsets.fromLTRB(24, 12, 24, 28),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -60,7 +60,7 @@ class CommandCenter extends StatelessWidget {
               Text('NÚCLEO HOLOGRÁFICO', style: TextStyle(color: cyan, fontSize: 8, letterSpacing: 2)),
             ]))),
         ),
-      ))),
+      )))),
       const SizedBox(height: 4),
       _sectionHeader('SYSTEM MONITOR', 'ESTADO DO SISTEMA'),
       const SizedBox(height: 9),

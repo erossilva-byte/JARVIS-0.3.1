@@ -49,6 +49,20 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Modo de animação reduzida (Seção 3D): com a preferência do sistema ligada, o núcleo
+    // para de girar em vez de continuar consumindo quadros.
+    final reduzir = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduzir) {
+      motion.stop();
+      motion.value = 0;
+    } else if (!motion.isAnimating) {
+      motion.repeat();
+    }
+  }
+
   void _updateClock() {
     if (!mounted) { return; }
     final now = DateTime.now();

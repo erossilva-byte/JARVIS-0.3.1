@@ -317,3 +317,12 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Ensaio antes de compilar no CI | — | — | Verificado | passo nos 4 workflows; teste do modo `--aplicar` | Fase 5 | Não compila |
 | Patch inválido para a compilação | — | — | Verificado | teste negativo: exit 1 no `git apply` | Fase 5 | Exige patch contra o commit atual |
 | Fluxo sem patch continua | — | — | Verificado | mensagem e `exit 0` no passo | Fase 5 | — |
+
+## Fase 5 — interface nativa (ajuste 038, 2026-11-14)
+
+| Função | Android | Windows | Estado | Evidência | Requisito | Limitações |
+|---|---|---|---|---|---|---|
+| Interface sem WebView | Sim | — | Verificado | `ci/preflight_interface.py` + teste negativo | Fase 5 | Só o app Flutter; web legada em migração |
+| Navegação com as 12 seções | Sim | — | Verificado | pré-checagem confere a gaveta | Fase 5 | Seções abrem páginas de módulo |
+| Animação reduzida | Sim | — | Implementado | `MediaQuery.disableAnimations` | Seção 3D | Não compilado |
+| Núcleo com `RepaintBoundary` | Sim | — | Implementado | `command_center.dart` | Seção 3D | FPS não medido |
