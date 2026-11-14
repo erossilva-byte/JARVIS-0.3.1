@@ -326,3 +326,5 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Navegação com as 12 seções | Sim | — | Verificado | pré-checagem confere a gaveta | Fase 5 | Seções abrem páginas de módulo |
 | Animação reduzida | Sim | — | Implementado | `MediaQuery.disableAnimations` | Seção 3D | Não compilado |
 | Núcleo com `RepaintBoundary` | Sim | — | Implementado | `command_center.dart` | Seção 3D | FPS não medido |
+
+| Núcleo de streaming com janela | Sim | — | Verificado | `dart run tool/stream_buffer_test.dart` | Fase 5 | Ainda não ligado à tela |

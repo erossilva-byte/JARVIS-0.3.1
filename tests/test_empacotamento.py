@@ -55,6 +55,11 @@ checks = {
         'python3 ci/preflight_interface.py' in pacote.get('scripts', {}).get('test:all', '')
         and (raiz / 'ci' / 'preflight_interface.py').is_file()
     ),
+    # O núcleo Dart puro precisa rodar na suíte, mesmo sem Flutter.
+    'núcleo Dart roda na suíte': (
+        'python3 tests/test_dart_core.py' in pacote.get('scripts', {}).get('test:all', '')
+        and (raiz / 'flutter_app' / 'tool' / 'stream_buffer_test.dart').is_file()
+    ),
 }
 for rotulo, ok in checks.items():
     print(('OK' if ok else 'FALHOU') + ': ' + rotulo +

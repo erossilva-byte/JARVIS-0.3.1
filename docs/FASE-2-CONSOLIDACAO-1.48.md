@@ -374,3 +374,14 @@ Relatório: `docs/relatorios/2026-11-14_037-ensaio-no-workflow.md`.
 
 Documento da fase: `docs/FASE-5-INTERFACE.md`.
 Relatório: `docs/relatorios/2026-11-14_038-fase-5-interface.md`.
+
+### Ajuste 039 — núcleo de streaming da conversa (2026-11-14)
+
+- [x] `StreamBuffer` em Dart puro: agrupa tokens e entrega no máximo a cada 32 ms.
+- [x] Teste executável sem Flutter (`dart run tool/stream_buffer_test.dart`), 5 casos.
+- [x] Passo `tests/test_dart_core.py` na suíte local e no workflow nativo.
+- [x] Sintaxe dos 20 arquivos Dart conferida com `dart format --output=none`.
+- [ ] Ligar o buffer à tela de conversa (Fase 5).
+- [ ] `flutter analyze` e `flutter test` (CI).
+
+Relatório: `docs/relatorios/2026-11-14_039-nucleo-de-streaming.md`.

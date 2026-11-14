@@ -20,6 +20,7 @@ medido.
 | KWS | tela de ajustes e controlador com estados reais (escutando, indisponível, falha…) |
 | Módulos | `ModulePage` declara explicitamente “integração em auditoria” |
 | Interface web legada | `index.html`/`app.js` sob Capacitor — é o que a Fase 5 substitui |
+| Núcleo de streaming | `lib/core/stream_buffer.dart` em Dart puro, com teste executável sem Flutter |
 
 O app Flutter não carrega nenhum HTML: não há `webview_flutter`, `flutter_html`, `dart:html`
 nem `WebView` no código. A interface web antiga continua no repositório como aplicativo
@@ -55,6 +56,20 @@ segunda — sem botão que não leva a lugar nenhum.
 - `command_center.dart` isola o núcleo animado com `RepaintBoundary`, para o `CustomPaint` não
   repintar a lista inteira a cada quadro.
 
+### Núcleo de streaming (agrupamento de tokens)
+
+A Seção 3D exige atualizar a tela a cada 16–50 ms, não a cada token. `StreamBuffer` acumula os
+fragmentos do provedor e entrega o texto completo no máximo uma vez por janela (32 ms por
+padrão), com agendador injetável para o teste controlar o tempo.
+
+`flutter_app/tool/stream_buffer_test.dart` cobre: vários tokens em uma atualização, respeito à
+janela, entrega imediata ao concluir, limpeza e token tardio ignorado. Roda com
+`dart run tool/stream_buffer_test.dart`, sem Flutter, e também pelo `npm run test:all` quando
+há Dart instalado (`tests/test_dart_core.py`).
+
+**Ainda não está ligado à tela de conversa**: a interface continua usando a resposta simples
+atual. O buffer é a peça testada; a integração visual é o próximo item.
+
 ## 3. Critérios da fase
 
 | Critério (Seção 3D / Fase 5) | Estado | Evidência |
@@ -63,7 +78,8 @@ segunda — sem botão que não leva a lugar nenhum.
 | Navegação com as 12 seções | **Verificado** | pré-checagem confere a gaveta |
 | Modo de animação reduzida | **Implementado, não compilado** | `MediaQuery.disableAnimations` |
 | `RepaintBoundary` no núcleo | **Implementado, não compilado** | `command_center.dart` |
-| Conversa com streaming, parar, regenerar, fontes | Pendente | — |
+| Conversa com streaming, parar, regenerar, fontes | Parcial: núcleo testado, tela pendente | `stream_buffer.dart` + teste |
+| Atualização em janela de 16–50 ms | **Verificado no núcleo** | teste do `StreamBuffer` |
 | Histórico de conversas com busca e fixar | Pendente | — |
 | Modo voz em tela cheia com legendas | Pendente | — |
 | Estados de carregando/vazio/erro em toda tela | Pendente | hoje há aviso de auditoria |
@@ -76,8 +92,8 @@ segunda — sem botão que não leva a lugar nenhum.
 
 1. **Estados completos** nas telas existentes (carregando, vazio, erro com “tentar de novo”):
    é o que mais aparece na Seção 3D e não depende de serviço novo.
-2. **Conversa de verdade**: streaming com agrupamento de tokens, parar geração, regenerar e
-   citação das notas usadas — hoje a tela mostra o comando e a resposta de forma simples.
+2. **Conversa de verdade**: ligar o `StreamBuffer` à tela, com parar geração, regenerar e
+   citação das notas usadas. O agrupamento de tokens já está pronto e testado; falta a parte visual.
 3. **Modo voz em tela cheia** com os cinco estados já definidos no serviço.
 4. **Persistência** de conversa e rascunho após o processo ser morto.
 5. **Integração com o sistema**: atalhos do ícone, compartilhar, notificação do serviço de voz.
