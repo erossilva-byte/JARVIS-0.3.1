@@ -397,3 +397,17 @@ Relatório: `docs/relatorios/2026-11-14_039-nucleo-de-streaming.md`.
 
 Relatório: `docs/relatorios/2026-11-14_040-conversa-em-streaming.md`.
 Entrega da fase: `docs/FASE-5-ACEITE.md`.
+
+### Ajuste 041 — fecha os itens abertos da Fase 5 (2026-11-14)
+
+- [x] Flutter 3.50 instalado em pasta temporária: `flutter analyze` e `flutter test` rodaram.
+- [x] Migração para `material_ui` (depreciação do `flutter/material.dart` no 3.50): 0 problemas.
+- [x] Histórico de conversas com busca, fixar, apagar e nova conversa, persistido localmente.
+- [x] Rascunho restaurado; conversa salva a cada mensagem.
+- [x] Modo voz em tela cheia com estado real do KWS e legendas.
+- [x] Regenerar resposta e copiar; atalho de tela cheia na tela principal.
+- [x] `npm run verificar` exit 0 — 4 de 4 etapas; 36 testes de widget, 2.368 verificações.
+- [ ] Integração com o sistema Android (atalhos, widget, compartilhar) e medição no Poco X7.
+
+Relatório: `docs/relatorios/2026-11-14_041-fechamento-fase-5.md`.
+Entrega: `docs/FASE-5-ACEITE.md`.

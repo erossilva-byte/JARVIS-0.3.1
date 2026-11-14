@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'ui_common.dart';
 
 /// Painel lateral: navegação e o estado real do detector local.

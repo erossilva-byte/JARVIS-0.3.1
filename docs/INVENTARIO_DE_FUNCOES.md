@@ -332,3 +332,9 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Conversa em streaming com parar | Sim | — | Implementado | `streamComplete` + `StreamBuffer` na tela | Fase 5 | Não compilado |
 | Parser SSE tolerante a corte | Sim | — | Verificado | `dart run tool/sse_test.dart` | Fase 5 | Sem teste contra API real |
 | Estados vazio/processando/erro na conversa | Sim | — | Implementado | tela de conversa | Seção 3D | Só a conversa; outras telas pendentes |
+
+| Histórico de conversas persistente | Sim | — | Verificado | testes de widget + `ConversaStore` | Fase 5 | Sem teste em aparelho |
+| Rascunho restaurado | Sim | — | Verificado | teste do store | Fase 5 | — |
+| Voz em tela cheia | Sim | — | Implementado | `VozTelaCheiaPage` + teste | Fase 5 | Estado real do KWS no aparelho não medido |
+| Regenerar e copiar resposta | Sim | — | Implementado | tela de conversa | Seção 3D | — |
+| `flutter analyze` e `flutter test` | Sim | — | Verificado | 0 problemas; 36 testes | Fase 5 | Rodado com Flutter 3.50 |

@@ -1,4 +1,6 @@
-import '../lib/core/sse.dart';
+import 'dart:io';
+
+import 'package:jarvis_nova/core/sse.dart';
 
 /// Teste do parser SSE em Dart puro: `dart run tool/sse_test.dart`.
 void main() {
@@ -7,7 +9,7 @@ void main() {
   _ignoraDoneEEventos();
   _respostaSemStreaming();
   _linhaInvalidaNaoQuebra();
-  print('OK: parser SSE — deltas, cortes, [DONE], resposta única e linha inválida');
+  stdout.writeln('OK: parser SSE — deltas, cortes, [DONE], resposta única e linha inválida');
 }
 
 void _leituraSimples() {

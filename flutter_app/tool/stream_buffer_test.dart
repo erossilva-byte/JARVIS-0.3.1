@@ -1,4 +1,6 @@
-import '../lib/core/stream_buffer.dart';
+import 'dart:io';
+
+import 'package:jarvis_nova/core/stream_buffer.dart';
 
 /// Teste do núcleo Dart puro, executável sem Flutter: `dart run tool/stream_buffer_test.dart`.
 void main() {
@@ -7,7 +9,7 @@ void main() {
   _concluirDespejaNaHora();
   _limparZeraTudo();
   _ignoraDepoisDeConcluido();
-  print('OK: stream buffer — agrupamento, janela, conclusão e limpeza');
+  stdout.writeln('OK: stream buffer — agrupamento, janela, conclusão e limpeza');
 }
 
 void _agrupaTokensNaJanela() {

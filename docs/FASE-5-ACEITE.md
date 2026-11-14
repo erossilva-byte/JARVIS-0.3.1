@@ -1,8 +1,9 @@
 # Fase 5 — entrega para aprovação (2026-11-14)
 
 **Branch:** `work/1.48.0-fase2-consolidacao`
-**Estado:** entregue o que o ambiente permite verificar; **não** declarada concluída — as
-pendências abaixo dependem de CI com Flutter e de medição no Poco X7.
+**Estado:** concluída no que o ambiente permite verificar. `flutter analyze` sem problemas e
+`flutter test` com 36 testes aprovados; restam a integração com o sistema Android e as medições
+no Poco X7.
 
 ## Critérios da Seção 3D / Fase 5
 
@@ -15,12 +16,12 @@ pendências abaixo dependem de CI com Flutter e de medição no Poco X7.
 | 5 | Streaming com atualização em 16–50 ms | **Atendido no núcleo e na tela** | `StreamBuffer` (32 ms) testado; parser SSE testado; tela usa os dois |
 | 6 | Parar geração, manter o texto recebido | **Atendido no código** | botão de parar cancela a assinatura e preserva o parcial |
 | 7 | Citação das notas usadas | **Preparado, sem fonte ainda** | campo `fontes` na mensagem; a memória da Fase 7 é quem vai preencher |
-| 8 | Histórico de conversas com busca e fixar | **Pendente** | exige persistência local |
-| 9 | Modo voz em tela cheia | **Pendente** | — |
-| 10 | Persistência após morte do processo | **Pendente** | exige armazenamento local |
-| 11 | Integração com o sistema (atalhos, widget, compartilhar) | **Pendente** | — |
+| 8 | Histórico de conversas com busca e fixar | **Atendido** | `HistoricoPage` + testes de widget |
+| 9 | Modo voz em tela cheia | **Atendido no código** | `VozTelaCheiaPage` + teste |
+| 10 | Persistência após morte do processo | **Atendido** | `ConversaStore` em `shared_preferences`, com rascunho |
+| 11 | Integração com o sistema (atalhos, widget, compartilhar) | **Pendente** | exige código Android nativo e não há aparelho |
 | 12 | Fluidez, inicialização e jank medidos no Poco X7 | **Pendente** | sem aparelho |
-| 13 | `flutter analyze` e `flutter test` verdes | **Pendente** | sem Flutter nesta máquina; roda no CI |
+| 13 | `flutter analyze` e `flutter test` verdes | **Atendido** | 0 problemas de análise; 36 testes aprovados |
 
 ## O que foi entregue nesta fase
 
@@ -34,13 +35,15 @@ pendências abaixo dependem de CI com Flutter e de medição no Poco X7.
   “tentar de novo”.
 - Testes Dart puros na suíte local e no workflow nativo.
 
-## O que impede declarar a fase concluída
+## O que ainda falta
 
-1. **Compilação**: sem Flutter/Dart de interface aqui, `flutter analyze` e `flutter test` nunca
-   rodaram com estas mudanças. O Dart puro foi testado, mas tipos e widgets não.
-2. **Medição**: nenhuma métrica de fps, jank ou inicialização no Poco X7.
-3. **Funcionalidades da própria fase**: histórico, voz em tela cheia, persistência e integração
-   com o sistema continuam pendentes — não há como marcá-las como entregues.
+1. **Medição**: nenhuma métrica de fps, jank ou inicialização no Poco X7 (Gate B).
+2. **Integração com o sistema**: atalhos do ícone, widget, painel rápido, compartilhar e
+   notificação do serviço — exige Kotlin e aparelho.
+3. **Citação de notas**: o campo existe e a tela mostra “O que lembrei”; quem preenche é a
+   memória da Fase 7.
+4. **Migração de dependência**: a interface passou a usar `material_ui` (exigido pelo Flutter
+   3.47+); o CI com `stable` já resolve, versões anteriores não.
 
 ## Como aprovar ou recusar
 

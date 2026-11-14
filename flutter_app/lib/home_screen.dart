@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'catalog.dart';
 import 'drawer.dart';
 import 'command_center.dart';
@@ -11,6 +11,7 @@ import 'services/kws_bridge.dart';
 import 'services/kws_controller.dart';
 import 'services/kws_settings_page.dart';
 import 'services/voice_conversation_page.dart';
+import 'services/voz_tela_cheia_page.dart';
 
 // Interface clássica restaurada: HUD central, barra superior, painel lateral,
 // monitor do sistema, comandos rápidos e conversa.
@@ -148,6 +149,10 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
             onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
               builder: (_) => KwsSettingsPage(controller: jarvisKwsController))),
             icon: const Icon(Icons.graphic_eq_rounded, color: cyan)),
+          IconButton(tooltip: 'Modo voz em tela cheia',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => VozTelaCheiaPage(controller: jarvisKwsController))),
+            icon: const Icon(Icons.fullscreen_rounded, color: cyan)),
           IconButton(key: const ValueKey('settings-button'), tooltip: 'Configurações',
             onPressed: _openSettings, icon: const Icon(Icons.tune_rounded, color: cyan)),
           const SizedBox(width: 6),

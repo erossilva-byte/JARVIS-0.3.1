@@ -55,6 +55,11 @@ checks = {
         'python3 ci/preflight_interface.py' in pacote.get('scripts', {}).get('test:all', '')
         and (raiz / 'ci' / 'preflight_interface.py').is_file()
     ),
+    # A interface roda analyze e testes de widget quando há Flutter na máquina.
+    'interface Flutter roda na suíte': (
+        'python3 tests/test_flutter_ui.py' in pacote.get('scripts', {}).get('test:all', '')
+        and (raiz / 'tests' / 'test_flutter_ui.py').is_file()
+    ),
     # O núcleo Dart puro precisa rodar na suíte, mesmo sem Flutter.
     'núcleo Dart roda na suíte': (
         'python3 tests/test_dart_core.py' in pacote.get('scripts', {}).get('test:all', '')
