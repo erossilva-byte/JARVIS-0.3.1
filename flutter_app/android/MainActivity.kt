@@ -19,6 +19,11 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventChannel.StreamHandler {
     companion object {
+        const val ACAO_VOZ = "com.jarvis.nova.ACAO_VOZ"
+        const val ACAO_CONVERSA = "com.jarvis.nova.ACAO_CONVERSA"
+        const val ACAO_HISTORICO = "com.jarvis.nova.ACAO_HISTORICO"
+        const val CANAL_SISTEMA = "com.jarvis.nova/sistema"
+
         private var eventSink: EventChannel.EventSink? = null
         private val pendingEvents = ArrayDeque<Map<String, Any>>()
         private val mainHandler = Handler(Looper.getMainLooper())
@@ -38,6 +43,8 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         fun emitWake(keyword: String) = emitEvent(mapOf("type" to "wake", "keyword" to keyword))
     }
 
+    private var sistemaCanal: MethodChannel? = null
+    private var intencaoInicial: Map<String, Any>? = null
     private var pendingPermissionResult: MethodChannel.Result? = null
     private var pendingTestSeconds: Int? = null
     private var speechRecognizer: SpeechRecognizer? = null
@@ -51,16 +58,43 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
             .setMethodCallHandler(this)
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, "com.jarvis.nova/kws/events")
             .setStreamHandler(this)
+        val sistema = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CANAL_SISTEMA)
+        sistema.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "compartilhar" -> {
+                    val texto = call.argument<String>("texto").orEmpty().trim()
+                    if (texto.isEmpty()) {
+                        result.error("texto_vazio", "Nada para compartilhar.", null)
+                    } else {
+                        compartilharTexto(texto)
+                        result.success(true)
+                    }
+                }
+                "atualizarWidget" -> {
+                    JarvisWidgetProvider.atualizar(this, call.argument<String>("texto").orEmpty())
+                    result.success(true)
+                }
+                "intencaoPendente" -> {
+                    result.success(intencaoInicial)
+                    intencaoInicial = null
+                }
+                else -> result.notImplemented()
+            }
+        }
+        sistemaCanal = sistema
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         wakeIntentPending = intent?.getStringExtra("jarvis_wake_keyword") != null
+        // Atalho, widget ou compartilhamento que abriu o app: o Flutter busca ao iniciar.
+        intencaoInicial = lerIntencao(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        despacharIntencao(intent)
         if (intent.getStringExtra("jarvis_wake_keyword") != null) {
             wakeIntentPending = true
             startCommandRecognitionWhenResumed()
@@ -70,6 +104,44 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
     override fun onResume() {
         super.onResume()
         if (wakeIntentPending) startCommandRecognitionWhenResumed()
+    }
+
+    /** Entrega a intenção ao Flutter quando ele já está ouvindo; senão guarda para a abertura. */
+    private fun despacharIntencao(intent: Intent?) {
+        val intencao = lerIntencao(intent) ?: return
+        val canal = sistemaCanal
+        if (canal == null) {
+            intencaoInicial = intencao
+        } else {
+            canal.invokeMethod("intencao", intencao)
+        }
+    }
+
+    /** Traduz a ação Android em um pedido conhecido pelo Flutter; consome a intenção. */
+    private fun lerIntencao(intent: Intent?): Map<String, Any>? {
+        if (intent == null) return null
+        val texto = intent.getStringExtra(Intent.EXTRA_TEXT)?.trim().orEmpty()
+        val dados = when (intent.action) {
+            ACAO_VOZ -> mapOf("acao" to "voz", "texto" to "")
+            ACAO_CONVERSA -> mapOf("acao" to "conversa", "texto" to "")
+            ACAO_HISTORICO -> mapOf("acao" to "historico", "texto" to "")
+            Intent.ACTION_SEND -> if (texto.isEmpty()) null else mapOf("acao" to "compartilhar", "texto" to texto)
+            else -> null
+        }
+        if (dados != null) {
+            // Sem isso, girar a tela ou voltar ao app repetiria o mesmo pedido.
+            intent.action = Intent.ACTION_MAIN
+            intent.removeExtra(Intent.EXTRA_TEXT)
+        }
+        return dados
+    }
+
+    private fun compartilharTexto(texto: String) {
+        val envio = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, texto)
+        }
+        startActivity(Intent.createChooser(envio, "Compartilhar conversa"))
     }
 
     private fun startCommandRecognitionWhenResumed() {

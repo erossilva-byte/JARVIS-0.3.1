@@ -411,3 +411,15 @@ Entrega da fase: `docs/FASE-5-ACEITE.md`.
 
 Relatório: `docs/relatorios/2026-11-14_041-fechamento-fase-5.md`.
 Entrega: `docs/FASE-5-ACEITE.md`.
+
+### Ajuste 042 — integração com o sistema Android (2026-11-14)
+
+- [x] Atalhos estáticos do ícone: falar, nova conversa e histórico.
+- [x] Widget da tela inicial com estado real do KWS e dois botões.
+- [x] Receber texto de outros apps (ACTION_SEND) e compartilhar a conversa.
+- [x] Canal `com.jarvis.nova/sistema` ligado ao Flutter (intenção pendente + eventos).
+- [x] Script de preparação idempotente do runner e 5 testes com runner falso.
+- [x] 43 testes de widget e 7 casos Dart novos para as intenções.
+- [ ] Compilar o APK no CI e testar atalhos/widget/compartilhar no Poco X7.
+
+Relatório: `docs/relatorios/2026-11-14_042-integracao-android.md`.

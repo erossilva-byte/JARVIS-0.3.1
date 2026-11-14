@@ -55,6 +55,11 @@ checks = {
         'python3 ci/preflight_interface.py' in pacote.get('scripts', {}).get('test:all', '')
         and (raiz / 'ci' / 'preflight_interface.py').is_file()
     ),
+    # A integração com o sistema Android é preparada e testada com runner falso.
+    'integração Android roda na suíte': (
+        'python3 tests/test_sistema_android.py' in pacote.get('scripts', {}).get('test:all', '')
+        and (raiz / 'flutter_app' / 'tool' / 'prepare_android_sistema.py').is_file()
+    ),
     # A interface roda analyze e testes de widget quando há Flutter na máquina.
     'interface Flutter roda na suíte': (
         'python3 tests/test_flutter_ui.py' in pacote.get('scripts', {}).get('test:all', '')

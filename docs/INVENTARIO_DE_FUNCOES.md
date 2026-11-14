@@ -338,3 +338,8 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Voz em tela cheia | Sim | — | Implementado | `VozTelaCheiaPage` + teste | Fase 5 | Estado real do KWS no aparelho não medido |
 | Regenerar e copiar resposta | Sim | — | Implementado | tela de conversa | Seção 3D | — |
 | `flutter analyze` e `flutter test` | Sim | — | Verificado | 0 problemas; 36 testes | Fase 5 | Rodado com Flutter 3.50 |
+
+| Atalhos do ícone (falar, conversa, histórico) | Sim | — | Implementado | `shortcuts.xml` + `prepare_android_sistema.py` + teste | Fase 5 | Não instalado em aparelho |
+| Widget da tela inicial | Sim | — | Implementado | `JarvisWidgetProvider.kt` + layout | Fase 5 | Estado vem do app; sem teste no launcher |
+| Receber texto compartilhado | Sim | — | Implementado | filtro `ACTION_SEND` + teste Dart | Fase 5 | — |
+| Compartilhar conversa | Sim | — | Implementado | `SistemaAndroid.compartilhar` + folha do sistema | Seção 3D | Sem teste no aparelho |

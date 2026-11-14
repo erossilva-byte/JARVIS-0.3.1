@@ -19,7 +19,7 @@ no Poco X7.
 | 8 | Histórico de conversas com busca e fixar | **Atendido** | `HistoricoPage` + testes de widget |
 | 9 | Modo voz em tela cheia | **Atendido no código** | `VozTelaCheiaPage` + teste |
 | 10 | Persistência após morte do processo | **Atendido** | `ConversaStore` em `shared_preferences`, com rascunho |
-| 11 | Integração com o sistema (atalhos, widget, compartilhar) | **Pendente** | exige código Android nativo e não há aparelho |
+| 11 | Integração com o sistema (atalhos, widget, compartilhar) | **Atendido no código** | atalhos XML, widget com `AppWidgetProvider`, `ACTION_SEND` e canal `com.jarvis.nova/sistema`; compilação só no CI |
 | 12 | Fluidez, inicialização e jank medidos no Poco X7 | **Pendente** | sem aparelho |
 | 13 | `flutter analyze` e `flutter test` verdes | **Atendido** | 0 problemas de análise; 36 testes aprovados |
 
@@ -38,8 +38,10 @@ no Poco X7.
 ## O que ainda falta
 
 1. **Medição**: nenhuma métrica de fps, jank ou inicialização no Poco X7 (Gate B).
-2. **Integração com o sistema**: atalhos do ícone, widget, painel rápido, compartilhar e
-   notificação do serviço — exige Kotlin e aparelho.
+2. **Compilação nativa**: atalhos, widget e compartilhamento têm código e teste de preparação,
+   mas nenhum APK foi compilado aqui (sem Android SDK) nem instalado em aparelho.
+3. **Painel rápido** (Quick Settings) e notificação do serviço ficaram fora; o pedido cobria
+   atalhos, widget e compartilhar.
 3. **Citação de notas**: o campo existe e a tela mostra “O que lembrei”; quem preenche é a
    memória da Fase 7.
 4. **Migração de dependência**: a interface passou a usar `material_ui` (exigido pelo Flutter

@@ -80,6 +80,10 @@ jobs:
         if: runner.os == 'Linux'
         run: python3 tool/prepare_android_kws.py android/app
         working-directory: flutter_app
+      - name: Register Android shortcuts, widget and share target
+        if: runner.os == 'Linux'
+        run: python3 tool/prepare_android_sistema.py android/app
+        working-directory: flutter_app
       - run: flutter pub get
       - run: dart format lib test
       - run: flutter analyze

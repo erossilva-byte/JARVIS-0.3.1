@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="jarvis_voz"
+        android:shortcutLongLabel="@string/atalho_voz_longo"
+        android:shortcutShortLabel="@string/atalho_voz_curto">
+        <intent
+            android:action="com.jarvis.nova.ACAO_VOZ"
+            android:targetClass="com.jarvis.nova.MainActivity"
+            android:targetPackage="com.jarvis.nova" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="jarvis_conversa"
+        android:shortcutLongLabel="@string/atalho_conversa_longo"
+        android:shortcutShortLabel="@string/atalho_conversa_curto">
+        <intent
+            android:action="com.jarvis.nova.ACAO_CONVERSA"
+            android:targetClass="com.jarvis.nova.MainActivity"
+            android:targetPackage="com.jarvis.nova" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="jarvis_historico"
+        android:shortcutLongLabel="@string/atalho_historico_longo"
+        android:shortcutShortLabel="@string/atalho_historico_curto">
+        <intent
+            android:action="com.jarvis.nova.ACAO_HISTORICO"
+            android:targetClass="com.jarvis.nova.MainActivity"
+            android:targetPackage="com.jarvis.nova" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+</shortcuts>

@@ -9,7 +9,10 @@ import 'systems_view.dart';
 import 'ui_common.dart';
 import 'services/kws_bridge.dart';
 import 'services/kws_controller.dart';
+import 'services/conversa_store.dart';
+import 'services/historico_page.dart';
 import 'services/kws_settings_page.dart';
+import 'services/sistema_android.dart';
 import 'services/voice_conversation_page.dart';
 import 'services/voz_tela_cheia_page.dart';
 
@@ -28,6 +31,7 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
   late final TextEditingController composer = TextEditingController();
   late final TextEditingController search = TextEditingController();
   StreamSubscription<KwsCommandEvent>? voiceSubscription;
+  StreamSubscription<IntencaoSistema>? sistemaSubscription;
   String query = '';
   int tab = 0;
   String clock = '';
@@ -40,6 +44,7 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateClock());
     unawaited(jarvisKwsController.initialize());
     jarvisKwsController.addListener(_refreshKws);
+    unawaited(_ligarSistema());
     voiceSubscription = KwsController.commandBus.listen((event) {
       if (!mounted) { return; }
       if (event.type == 'command_result' && event.text.trim().isNotEmpty) {
@@ -75,10 +80,47 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     clockTimer?.cancel();
     jarvisKwsController.removeListener(_refreshKws);
     voiceSubscription?.cancel();
+    sistemaSubscription?.cancel();
     motion.dispose();
     composer.dispose();
     search.dispose();
     super.dispose();
+  }
+
+  /// Atalhos do ícone, widget e compartilhamento entram pela mesma porta.
+  Future<void> _ligarSistema() async {
+    await SistemaAndroid.iniciar();
+    if (!mounted) return;
+    sistemaSubscription = SistemaAndroid.intencoes.listen(_abrirIntencao);
+    unawaited(SistemaAndroid.atualizarWidget(_kwsLabel));
+  }
+
+  void _abrirIntencao(IntencaoSistema intencao) {
+    if (!mounted) return;
+    if (intencao.abrirVoz) {
+      Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => VozTelaCheiaPage(controller: jarvisKwsController),
+      ));
+    } else if (intencao.abrirHistorico) {
+      unawaited(_abrirHistorico());
+    } else if (intencao.textoCompartilhado) {
+      _openConversation(intencao.texto);
+    } else if (intencao.abrirConversa) {
+      _openConversation('');
+    }
+  }
+
+  Future<void> _abrirHistorico() async {
+    try {
+      final store = await ConversaStore.abrir();
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HistoricoPage(store: store)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('O histórico não está disponível neste aparelho.')),
+      );
+    }
   }
 
   void _openConversation(String command, {bool fromVoice = false}) {
@@ -88,7 +130,9 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
   }
 
   void _refreshKws() {
-    if (mounted) { setState(() {}); }
+    if (!mounted) { return; }
+    setState(() {});
+    unawaited(SistemaAndroid.atualizarWidget(_kwsLabel));
   }
 
   /// Estado real do detector local. Substitui o antigo "ONLINE" fixo da gaveta,

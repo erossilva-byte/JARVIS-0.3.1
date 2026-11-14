@@ -9,6 +9,7 @@ import '../ui_common.dart';
 import 'conversa_store.dart';
 import 'historico_page.dart';
 import 'provider_service.dart';
+import 'sistema_android.dart';
 import 'voz_tela_cheia_page.dart';
 
 class VoiceConversationPage extends StatefulWidget {
@@ -203,6 +204,23 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Resposta copiada.')));
   }
 
+  Future<void> _compartilhar() async {
+    final texto = conversa.mensagens
+        .map((m) => '${m.doUsuario ? 'Você' : 'J.A.R.V.I.S.'}: ${m.texto}')
+        .join('\n\n');
+    if (texto.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ainda não há conversa para compartilhar.')));
+      return;
+    }
+    final enviado = await SistemaAndroid.compartilhar(texto);
+    if (!mounted) return;
+    if (!enviado) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Compartilhar não está disponível nesta plataforma.')),
+      );
+    }
+  }
+
   Future<void> _abrirHistorico() async {
     final atual = store;
     if (atual == null) return;
@@ -227,6 +245,11 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       appBar: AppBar(
         title: Text(conversa.titulo, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
+          IconButton(
+            tooltip: 'Compartilhar conversa',
+            onPressed: _compartilhar,
+            icon: const Icon(Icons.share_rounded),
+          ),
           IconButton(
             tooltip: 'Histórico de conversas',
             onPressed: store == null ? null : _abrirHistorico,
