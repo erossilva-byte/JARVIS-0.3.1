@@ -55,6 +55,11 @@ checks = {
         'python3 ci/preflight_interface.py' in pacote.get('scripts', {}).get('test:all', '')
         and (raiz / 'ci' / 'preflight_interface.py').is_file()
     ),
+    # O workflow que compila o APK é revisado (ordem e conteúdo do pacote).
+    'workflow do APK roda na suíte': (
+        'python3 tests/test_workflow_flutter.py' in pacote.get('scripts', {}).get('test:all', '')
+        and (raiz / 'tests' / 'test_workflow_flutter.py').is_file()
+    ),
     # A integração com o sistema Android é preparada e testada com runner falso.
     'integração Android roda na suíte': (
         'python3 tests/test_sistema_android.py' in pacote.get('scripts', {}).get('test:all', '')

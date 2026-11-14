@@ -84,12 +84,71 @@ jobs:
         if: runner.os == 'Linux'
         run: python3 tool/prepare_android_sistema.py android/app
         working-directory: flutter_app
+      - name: Test Android system integration preparation
+        if: runner.os == 'Linux'
+        run: python3 ../tests/test_sistema_android.py
+        working-directory: flutter_app
       - run: flutter pub get
       - run: dart format lib test
       - run: flutter analyze
       - run: flutter test
       - run: dart run tool/stream_buffer_test.dart
-      - run: flutter build apk --debug
+      - name: Build debug APK
+        run: flutter build apk --debug
+      - name: Verify the APK carries shortcuts, widget and share target
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-debug.apk
+          test -s "$APK"
+
+          for recurso in res/xml/shortcuts.xml res/xml/jarvis_widget_info.xml res/layout/jarvis_widget.xml; do
+            if ! unzip -Z1 "$APK" | grep -qx "$recurso"; then
+              echo "FALTA no APK: $recurso"
+              exit 1
+            fi
+          done
+
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          AAPT2=$(ls -d "$SDK"/build-tools/*/aapt2 2>/dev/null | tail -1 || true)
+          if [ -n "$AAPT2" ]; then
+            MANIFESTO=$("$AAPT2" dump xmltree --file AndroidManifest.xml "$APK")
+            ATALHOS=$("$AAPT2" dump xmltree --file res/xml/shortcuts.xml "$APK")
+          else
+            echo "aapt2 não encontrado; conferindo o manifesto por strings"
+            MANIFESTO=$(unzip -p "$APK" AndroidManifest.xml | strings)
+            ATALHOS=$(unzip -p "$APK" res/xml/shortcuts.xml | strings)
+          fi
+
+          for marca in JarvisWidgetProvider android.app.shortcuts com.jarvis.nova.ACAO_VOZ android.intent.action.SEND; do
+            if ! grep -q "$marca" <<<"$MANIFESTO"; then
+              echo "FALTA no manifesto do APK: $marca"
+              exit 1
+            fi
+          done
+          for marca in ACAO_VOZ ACAO_CONVERSA ACAO_HISTORICO; do
+            if ! grep -q "$marca" <<<"$ATALHOS"; then
+              echo "FALTA nos atalhos do APK: $marca"
+              exit 1
+            fi
+          done
+          mapfile -t DEXES < <(unzip -Z1 "$APK" | grep -E '^classes[0-9]*\.dex$' || true)
+          if [ "${#DEXES[@]}" -eq 0 ]; then
+            echo "FALTA classes.dex no APK"
+            exit 1
+          fi
+          CODIGO=""
+          for dex in "${DEXES[@]}"; do
+            CODIGO+=$'\n'$(unzip -p "$APK" "$dex" | strings)
+          done
+          for marca in com.jarvis.nova.ACAO_VOZ com.jarvis.nova.ACAO_CONVERSA com.jarvis.nova.ACAO_HISTORICO com.jarvis.nova/sistema; do
+            if ! grep -q "$marca" <<<"$CODIGO"; then
+              echo "FALTA no código do APK: $marca"
+              exit 1
+            fi
+          done
+          echo "APK contém atalhos, widget, compartilhamento e canal do sistema."
       - name: Verify APK identity and output
         shell: bash
         run: |

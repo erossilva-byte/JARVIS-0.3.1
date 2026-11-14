@@ -423,3 +423,15 @@ Entrega: `docs/FASE-5-ACEITE.md`.
 - [ ] Compilar o APK no CI e testar atalhos/widget/compartilhar no Poco X7.
 
 Relatório: `docs/relatorios/2026-11-14_042-integracao-android.md`.
+
+### Ajuste 043 — workflow confere o APK e testa a preparação (2026-11-14)
+
+- [x] Simulação do runner gerado pelo Flutter com os dois scripts de preparação: manifesto íntegro.
+- [x] Workflow roda o teste da integração antes do build.
+- [x] Workflow confere, no APK, atalhos, widget, filtro de compartilhamento e canal do sistema.
+- [x] Fallback do aapt2 corrigido para `pipefail`; conferência olha todos os `classes*.dex`.
+- [x] `pubspec.yaml` declara `flutter: ">=3.47.0"` (exigência do `material_ui`).
+- [x] Teste do workflow com cinco mutações; suíte com 2.372 verificações.
+- [ ] Primeira compilação real do APK no CI e teste no Poco X7.
+
+Relatório: `docs/relatorios/2026-11-14_043-revisao-workflow-apk.md`.

@@ -343,3 +343,5 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Widget da tela inicial | Sim | — | Implementado | `JarvisWidgetProvider.kt` + layout | Fase 5 | Estado vem do app; sem teste no launcher |
 | Receber texto compartilhado | Sim | — | Implementado | filtro `ACTION_SEND` + teste Dart | Fase 5 | — |
 | Compartilhar conversa | Sim | — | Implementado | `SistemaAndroid.compartilhar` + folha do sistema | Seção 3D | Sem teste no aparelho |
+
+| Conferência do APK no CI | Sim | — | Verificado (simulação) | conteúdo do pacote + manifesto + dex | Fase 5 | Compilação real só no CI |
