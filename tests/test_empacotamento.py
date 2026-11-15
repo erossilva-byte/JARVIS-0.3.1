@@ -65,6 +65,11 @@ checks = {
         'python3 tests/test_saf_memoria.py' in pacote.get('scripts', {}).get('test:all', '')
         and (raiz / 'tests' / 'test_saf_memoria.py').is_file()
     ),
+    # As fichas de pessoas são conferidas por privacidade (consentimento e armazenamento seguro).
+    'fichas de pessoas rodam na suíte': (
+        'python3 tests/test_pessoas_privacidade.py' in pacote.get('scripts', {}).get('test:all', '')
+        and (raiz / 'tests' / 'test_pessoas_privacidade.py').is_file()
+    ),
     # A integração com o sistema Android é preparada e testada com runner falso.
     'integração Android roda na suíte': (
         'python3 tests/test_sistema_android.py' in pacote.get('scripts', {}).get('test:all', '')

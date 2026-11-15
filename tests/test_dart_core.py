@@ -40,6 +40,7 @@ CASOS = (
     ("tool/memoria_test.dart", "memória: Markdown, busca, citação e orçamento"),
     ("tool/memoria_sync_test.dart", "sincronização: envio, recebimento, conflito e ausência"),
     ("tool/memoria_conflito_test.dart", "resolução de conflito: escolha e backup preservado"),
+    ("tool/pessoas_test.dart", "pessoas: consentimento, ambiguidade e contexto seguro"),
 )
 
 

@@ -365,3 +365,9 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Resolver conflito escolhendo versão | Sim | — | Verificado | 4 testes, backup preservado | Fase 6 | Sem inspeção visual |
 
 | Revisar e limpar backups de conflito | Sim | — | Verificado | 5 testes, exclusão confirmada | Fase 6 | Sem inspeção visual |
+
+| Fichas de pessoas (local, criptografada) | Sim | — | Verificado | 5 testes + privacidade estática | Fase 7 | Sem aparelho |
+| Consentimento obrigatório (LGPD) | Sim | — | Verificado | teste recusa sem marcar | Fase 7 | — |
+| Ambiguidade de nomes | Sim | — | Verificado | dois "João" não são escolhidos | Fase 7 | — |
+| Contexto de pessoas para a IA | Núcleo | Não | Verificado no núcleo | sem contato/anotação | Fase 7 | Não ligado à conversa |
+| Foto e reconhecimento facial | Não | Não | Não implementado | tela declara ausência | Fase 7 | Fora desta entrega |

@@ -511,3 +511,15 @@ Relatório: `docs/relatorios/2026-11-15_049-resolver-conflitos.md`.
 - [ ] Inspeção visual no aparelho e expurgo automático continuam fora (expurgo não é desejado).
 
 Relatório: `docs/relatorios/2026-11-15_050-backups-de-conflito.md`.
+
+### Ajuste 051 — Fase 7: fichas de pessoas (2026-11-15)
+
+- [x] Ficha local com os campos pedidos; nome e consentimento obrigatórios.
+- [x] Criar, editar, buscar, consultar e excluir com confirmação; nada é inventado.
+- [x] Dois “João” viram ambiguidade; nomes parecidos não são fundidos.
+- [x] Armazenamento seguro no aparelho, 50 fichas / 64 kB, falha informada.
+- [x] Contexto para a IA sem contato, observação, compromisso ou histórico.
+- [x] 1 teste puro, 5 de widget e 1 estático de privacidade; menu abre a tela real.
+- [ ] Foto/reconhecimento facial, histórico automático e uso na conversa continuam fora.
+
+Relatório: `docs/relatorios/2026-11-15_051-fichas-de-pessoas.md`.

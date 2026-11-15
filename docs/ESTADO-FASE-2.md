@@ -27,7 +27,8 @@ Três níveis, sem meio-termo:
 | Provedores de IA | Ordem de preferência (Groq → OpenRouter → …), ausência de credencial, conversa usando o primeiro configurado | `tests/test_openrouter.js` e testes do Flutter |
 | Contrato de conversa | Histórico em ordem cronológica, detecção de repetição pela fala do turno | `tests/test_hermes.js` |
 | Credenciais | Cofre no Android (AES-256-GCM) e no desktop (`safeStorage`, `0o600`, troca atômica), falha fechada | `tests/test_seguranca.js`, `tests/test_secure_keys.py` |
-| Suíte inteira | `npm run test:all` | exit 0, 2.375 verificações, 0 falhas |
+| Fichas de pessoas (Flutter) | Consentimento obrigatório, ambiguidade entre nomes iguais, descrição sem invenção e contexto sem contato/anotação | `tool/pessoas_test.dart`, `test/pessoas_page_test.dart`, `tests/test_pessoas_privacidade.py` |
+| Suíte inteira | `npm run test:all` | exit 0, ver contagem no relatório do ajuste |
 
 ## 2. Só auditado — código existe, mundo real não foi tocado
 
@@ -38,6 +39,7 @@ Três níveis, sem meio-termo:
 | Ponte CADeSIMU | Consistência interna provada; **o programa CADeSIMU nunca foi aberto** e o `.cad` nativo não é gerado nem lido |
 | Ponte Electron (Windows) | Código existe e compila no CI; nunca rodou em Windows |
 | SAF do Android | Mesma situação: existe, nunca exercitado |
+| Criptografia das fichas | Usa `FlutterSecureStorage`; o plugin nunca rodou neste ambiente |
 | IA local | Plugin legado existe; Gemma nunca rodou no aparelho, e não há runtime no Windows |
 | Memória semântica | Busca lexical/hash funciona, a sincronização Flutter ↔ Obsidian existe (SAF) e conflito é resolvido na tela com backup da versão perdedora; não há embedding neural multilíngue |
 | Avatar | É holograma em `CustomPaint`, não malha 3D — declarado como parcial |
