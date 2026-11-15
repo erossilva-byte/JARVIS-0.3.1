@@ -121,7 +121,7 @@ void main() {
     expect(chamadas, contains('esquecerPasta'));
   });
 
-  testWidgets('sincronizar envia nota nova e mostra o resumo', (tester) async {
+  testWidgets('abrir com pasta editável já sincroniza sem tocar em nada', (tester) async {
     final store = await MemoriaStore.abrir();
     final quando = DateTime(2026, 11, 14);
     await store.salvar(NotaMemoria(id: 'a', titulo: 'Nota local', texto: 'conteúdo', criadaEm: quando, atualizadaEm: quando));
@@ -130,13 +130,37 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: MemoriaPage(store: store)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Sincronizar'));
-    await tester.pumpAndSettle();
-
     expect(chamadas, contains('escreverNota'));
     expect(escritos.keys, contains('nota-local.md'));
     expect(store.listar().single.caminho, 'nota-local.md');
-    expect(find.textContaining('1 enviada(s)'), findsOneWidget);
+    expect(find.textContaining('Sincronizado'), findsOneWidget);
+  });
+
+  testWidgets('voltar ao app sincroniza o que mudou na pasta', (tester) async {
+    final store = await MemoriaStore.abrir();
+    respostaPasta = {'uri': 'content://tree/obsidian', 'nome': 'Cofre', 'podeEscrever': true};
+    respostaLeitura = {'notas': []};
+    await tester.pumpWidget(MaterialApp(home: MemoriaPage(store: store)));
+    await tester.pumpAndSettle();
+    expect(store.listar(), isEmpty);
+
+    respostaLeitura = {
+      'notas': [
+        {'nome': 'Nova.md', 'caminho': 'Nova.md', 'conteudo': '---\ntitulo: Nova do Obsidian\n---\nTexto escrito lá.'},
+      ],
+    };
+    for (final estado in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused]) {
+      tester.binding.handleAppLifecycleStateChanged(estado);
+      await tester.pump();
+    }
+    for (final estado in [AppLifecycleState.hidden, AppLifecycleState.inactive, AppLifecycleState.resumed]) {
+      tester.binding.handleAppLifecycleStateChanged(estado);
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+
+    expect(store.listar().map((n) => n.titulo), contains('Nova do Obsidian'));
+    expect(find.textContaining('1 recebida(s)'), findsOneWidget);
   });
 
   testWidgets('pasta só de leitura não deixa sincronizar', (tester) async {

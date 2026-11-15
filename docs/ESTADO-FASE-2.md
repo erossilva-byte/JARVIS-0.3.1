@@ -27,7 +27,7 @@ Três níveis, sem meio-termo:
 | Provedores de IA | Ordem de preferência (Groq → OpenRouter → …), ausência de credencial, conversa usando o primeiro configurado | `tests/test_openrouter.js` e testes do Flutter |
 | Contrato de conversa | Histórico em ordem cronológica, detecção de repetição pela fala do turno | `tests/test_hermes.js` |
 | Credenciais | Cofre no Android (AES-256-GCM) e no desktop (`safeStorage`, `0o600`, troca atômica), falha fechada | `tests/test_seguranca.js`, `tests/test_secure_keys.py` |
-| Suíte inteira | `npm run test:all` | exit 0, 2353 verificações, 0 falhas |
+| Suíte inteira | `npm run test:all` | exit 0, 2.375 verificações, 0 falhas |
 
 ## 2. Só auditado — código existe, mundo real não foi tocado
 
@@ -39,13 +39,15 @@ Três níveis, sem meio-termo:
 | Ponte Electron (Windows) | Código existe e compila no CI; nunca rodou em Windows |
 | SAF do Android | Mesma situação: existe, nunca exercitado |
 | IA local | Plugin legado existe; Gemma nunca rodou no aparelho, e não há runtime no Windows |
-| Memória semântica | Busca lexical/hash funciona; não há embedding neural multilíngue nem sincronização Flutter ↔ Obsidian |
+| Memória semântica | Busca lexical/hash funciona e a sincronização Flutter ↔ Obsidian existe (SAF + conflito preservado); não há embedding neural multilíngue |
 | Avatar | É holograma em `CustomPaint`, não malha 3D — declarado como parcial |
 
 ## 3. Pendente de teste físico (Gate B)
 
 - Instalar o APK no Poco X7 (Android 16/HyperOS) e exercitar: permissão de microfone, tela
   bloqueada, Doze, app removido dos recentes, rearme e reinício.
+- Conectar uma pasta real do Obsidian, sincronizar nos dois sentidos (inclusive ao reabrir) e
+  provocar um conflito para confirmar que nada é sobrescrito.
 - Medir KWS com "Jarvis" em pt-BR, em silêncio e com ruído: falsos positivos, falsos negativos e
   latência. O modelo disponível é **inglês** — não há aprovação automática por ser multilíngue.
 - Validar transcrição on-device pt-BR, inclusive o caso de o pacote offline não estar instalado.

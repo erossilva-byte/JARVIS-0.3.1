@@ -478,3 +478,14 @@ Relatório: `docs/relatorios/2026-11-14_046-cofre-saf.md`.
 - [ ] Compilar e sincronizar num aparelho real; resolução assistida de conflito continua fora.
 
 Relatório: `docs/relatorios/2026-11-15_047-sincronizacao-obsidian.md`.
+
+### Ajuste 048 — Fase 6: sincronização automática e fechamento (2026-11-15)
+
+- [x] Sincroniza ao abrir o app e ao voltar do segundo plano, em silêncio.
+- [x] `resumed` repetido sem saída não dispara sincronização; uma por vez.
+- [x] Conectar pasta já sincroniza; conflito fica sinalizado no cartão, sem diálogo automático.
+- [x] 2 testes de widget com ciclo de vida real; 70 testes no total.
+- [x] Fase 6 fechada no código; resta o ensaio no aparelho (Gate B).
+- [ ] Busca semântica neural e versionamento de nota continuam fora, declarados.
+
+Relatório: `docs/relatorios/2026-11-15_048-sincronizacao-automatica.md`.

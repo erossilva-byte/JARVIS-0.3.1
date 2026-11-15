@@ -359,3 +359,5 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Sincronização com Obsidian (dois sentidos) | Sim | — | Verificado no núcleo | 13 casos + 8 de serviço | Fase 6 | Sem aparelho real |
 | Conflito de sincronização | Preservado | — | Verificado | nada é sobrescrito nem apagado | Fase 6 | Resolução é manual |
 | Escrita na pasta via SAF | Sim | Não | Verificado no código | teste estático + canal simulado | Fase 6 | Não exercitada em aparelho |
+
+| Sincronização automática (abrir/voltar) | Sim | — | Verificado | 2 testes com ciclo de vida | Fase 6 | Sem aparelho |

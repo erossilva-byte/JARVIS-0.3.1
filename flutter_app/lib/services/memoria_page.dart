@@ -11,7 +11,9 @@ import 'sincronizador.dart';
 /// Cofre local: lista, busca lexical explicada, edição e importação de Markdown.
 ///
 /// A tela diz o que é de verdade: nota local, busca por palavra, motivo do resultado e uma
-/// sincronização explícita com a pasta do Obsidian que nunca apaga nota — no pior caso, conflito.
+/// sincronização com a pasta do Obsidian que nunca apaga nota — no pior caso, conflito. Ela roda
+/// sozinha ao abrir o app e ao voltar para ele, em silêncio; o botão continua para o usuário ver o
+/// resultado e resolver conflito.
 class MemoriaPage extends StatefulWidget {
   const MemoriaPage({super.key, required this.store});
 
@@ -21,25 +23,67 @@ class MemoriaPage extends StatefulWidget {
   State<MemoriaPage> createState() => _MemoriaPageState();
 }
 
-class _MemoriaPageState extends State<MemoriaPage> {
+class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
   List<NotaMemoria> notas = const [];
   String busca = '';
   bool carregando = true;
   PastaSaf? pasta;
   bool lendoPasta = false;
   bool sincronizando = false;
+  String? ultimoResumo;
+  int conflitosPendentes = 0;
+  bool _emSegundoPlano = false;
+  bool _autoEmAndamento = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _carregar();
-    _carregarPasta();
+    _abrir();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Voltar ao app sincroniza de novo; só depois de realmente ter saído, para não repetir à toa.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState estado) {
+    if (estado == AppLifecycleState.paused || estado == AppLifecycleState.hidden) {
+      _emSegundoPlano = true;
+      return;
+    }
+    if (estado == AppLifecycleState.resumed && _emSegundoPlano) {
+      _emSegundoPlano = false;
+      _sincronizarAutomatico();
+    }
+  }
+
+  Future<void> _abrir() async {
+    await _carregarPasta();
+    await _sincronizarAutomatico();
   }
 
   Future<void> _carregarPasta() async {
     final resultado = await CofreSaf.pastaAtual();
     if (!mounted) return;
     setState(() => pasta = resultado.valor);
+  }
+
+  /// Sincronização de fundo: sem diálogo nem aviso, só o estado do cartão mudando.
+  Future<void> _sincronizarAutomatico() async {
+    final conectada = pasta;
+    if (!mounted || sincronizando || _autoEmAndamento) return;
+    if (conectada == null || !conectada.podeEscrever) return;
+    _autoEmAndamento = true;
+    try {
+      await _sincronizarPasta(silencioso: true);
+    } finally {
+      _autoEmAndamento = false;
+    }
   }
 
   Future<void> _conectarPasta() async {
@@ -53,6 +97,7 @@ class _MemoriaPageState extends State<MemoriaPage> {
     if (escolhida == null) return; // usuário cancelou
     setState(() => pasta = escolhida);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pasta conectada: ${escolhida.nome}')));
+    await _sincronizarAutomatico();
   }
 
   Future<void> _importarPasta() async {
@@ -83,9 +128,10 @@ class _MemoriaPageState extends State<MemoriaPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pasta importada: ${partes.join(', ')}.')));
   }
 
-  Future<void> _sincronizarPasta() async {
+  Future<void> _sincronizarPasta({bool silencioso = false}) async {
     if (sincronizando || pasta == null) return;
     if (!pasta!.podeEscrever) {
+      if (silencioso) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('A pasta está conectada só para leitura. Conecte de novo e permita editar para enviar notas.')),
       );
@@ -94,13 +140,19 @@ class _MemoriaPageState extends State<MemoriaPage> {
     setState(() => sincronizando = true);
     final resultado = await Sincronizador(store: widget.store, cofre: const CofreSafGateway()).sincronizar();
     if (!mounted) return;
-    setState(() => sincronizando = false);
+    setState(() {
+      sincronizando = false;
+      ultimoResumo = resultado.ok ? resultado.resumo : null;
+      conflitosPendentes = resultado.plano.conflitos.length;
+    });
     await _carregar();
     if (!mounted) return;
     if (!resultado.ok) {
+      if (silencioso) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Não sincronizou: ${resultado.erroGeral}')));
       return;
     }
+    if (silencioso) return;
     if (resultado.plano.conflitos.isNotEmpty) {
       await showDialog<void>(
         context: context,
@@ -323,9 +375,15 @@ class _MemoriaPageState extends State<MemoriaPage> {
                               ? 'Sincronizando nos dois sentidos…'
                               : lendoPasta
                                   ? 'Lendo a pasta…'
-                                  : pasta!.podeEscrever
-                                      ? 'Pasta do Obsidian conectada · permissão guardada pelo sistema'
-                                      : 'Pasta conectada só para leitura · reconecte para enviar',
+                                  : !pasta!.podeEscrever
+                                      ? 'Pasta conectada só para leitura · reconecte para enviar'
+                                      : conflitosPendentes > 0
+                                          ? 'Sincronizado · $conflitosPendentes conflito(s) pendente(s)'
+                                          : ultimoResumo != null
+                                              ? 'Sincronizado · $ultimoResumo'
+                                              : 'Pasta do Obsidian conectada · permissão guardada pelo sistema',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 10, color: muted),
                         ),
                       ],

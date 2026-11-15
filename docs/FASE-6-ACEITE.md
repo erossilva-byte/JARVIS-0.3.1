@@ -1,8 +1,9 @@
 # Fase 6 — memória e Obsidian (entrega para aprovação)
 
 **Branch:** `work/1.48.0-fase2-consolidacao`
-**Estado:** núcleo entregue e verificado no que este ambiente permite. Falta o cofre via SAF e a
-sincronização bidirecional real com o Obsidian, que dependem de aparelho e de seletor de pasta.
+**Estado:** entregue no código e verificado no que este ambiente permite — cofre, busca, citação,
+SAF, escrita na pasta e sincronização nos dois sentidos, automática ao abrir e ao voltar. Falta o
+ensaio no aparelho (Gate B); busca neural e versionamento de nota seguem fora, declarados.
 
 ## O que existe de verdade
 
@@ -22,6 +23,7 @@ sincronização bidirecional real com o Obsidian, que dependem de aparelho e de 
 | 12 | Cofre via SAF (pasta do Obsidian no Android) | **Atendido no código** | `ACTION_OPEN_DOCUMENT_TREE` + permissão durável + leitura `.md`; teste estático e de widget |
 | 13 | Sincronização bidirecional com Obsidian | **Atendido no código** | envio/recebimento por hash do corpo, escrita via SAF, conflito preservado; 13 casos puros + 8 de serviço |
 | 14 | Versionamento de nota e restauração | **Não entregue** | o legado tem; a interface ainda não |
+| 15 | Sincronização automática ao abrir e ao voltar | **Atendido no código** | observador de ciclo de vida + silenciosa; 2 testes de widget com ciclo de vida real; conflito só sinalizado |
 
 ## Como a busca funciona
 
@@ -43,24 +45,33 @@ sincronização bidirecional real com o Obsidian, que dependem de aparelho e de 
   motivo do resultado fica visível justamente para isso não parecer magia.
 - No Android a pasta do Obsidian pode ser conectada com permissão do sistema (SAF) e importada
   quantas vezes quiser. Fora do Android, a importação é colar Markdown.
-- A sincronização é uma ação explícita (“Sincronizar”), não um observador em tempo real; conflito
-  nunca é sobrescrito e nota apagada na pasta continua no aparelho até o usuário decidir.
+- A sincronização roda sozinha ao abrir o app e ao voltar para ele, em silêncio, e também pelo
+  botão “Sincronizar”. Não há observador em tempo real com a tela aberta.
+- Conflito nunca é sobrescrito: fica só sinalizado no cartão até o usuário abrir a lista. Nota
+  apagada na pasta continua no aparelho até o usuário decidir.
 - Sem apagar nota alheia: conflito de título com texto diferente é reportado e preservado.
-- Nada de sincronização automática: quem move arquivo hoje é o usuário.
 
 ## Verificação
 
 ```
-dart run tool/memoria_test.dart   → OK (Markdown, importação, busca, motivo, orçamento, envio, JSON)
-flutter analyze                   → No issues found!
-flutter test                      → 53 testes, All tests passed!
-npm run verificar                 → 4 de 4 etapas (ver relatório 045)
+dart run tool/memoria_test.dart        → OK (Markdown, importação, busca, motivo, orçamento, envio)
+dart run tool/memoria_sync_test.dart   → OK (13 casos: envio, recebimento, conflito, ausência)
+flutter analyze                        → No issues found!
+flutter test                           → 70 testes, All tests passed!
+npm run verificar                      → 4 de 4 etapas, 2.375 verificações
 ```
 
-## Como aprovar
+## Como encerrar
 
-- Aprovar a Fase 6 como **parcial**, com SAF e sincronização registrados como pendência 7B; ou
-- manter a fase aberta até existir cofre em pasta real e sincronização testada.
+A fase está **fechada no código**: o que dependia de SAF e de sincronização foi entregue e tem
+teste. O que resta não é ajuste de código, é ensaio no aparelho (Gate B):
 
-Nenhuma das opções dispensa rodar no aparelho: importar um cofre real e conferir a citação numa
-conversa de verdade ainda é a prova que falta.
+- conectar uma pasta real do Obsidian no Poco X7, aceitar edição e ver a nota local chegar ao
+  cofre, e a nota do cofre chegar ao aparelho, inclusive ao reabrir o app;
+- provocar um conflito de propósito (editar o mesmo texto dos dois lados) e confirmar que nada é
+  sobrescrito e que o aviso aparece no cartão;
+- conferir a citação de uma nota importada numa conversa de verdade, quando houver chave de
+  provedor.
+
+Fora do escopo desta fase, declarados: busca semântica neural (item 11) e versionamento de nota
+(item 14).
