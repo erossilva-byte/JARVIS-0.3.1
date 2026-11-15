@@ -30,6 +30,7 @@ Três níveis, sem meio-termo:
 | Fichas de pessoas (Flutter) | Consentimento obrigatório, ambiguidade entre nomes iguais, descrição sem invenção, bloco seguro enviado à conversa e ausência explícita | `tool/pessoas_test.dart`, `tool/pessoas_conversa_test.dart`, `test/pessoas_page_test.dart`, `tests/test_pessoas_privacidade.py` |
 | Transparência das fichas | A resposta guarda o bloco literal enviado e a interface o mostra ao toque, com o nome usado ou a ausência | `test/conversa_pessoas_test.dart`, `tool/pessoas_conversa_test.dart` |
 | Personalidade e humor | Três níveis viram prompt; assunto sensível zera o humor; a escolha é lida antes de cada envio | `tool/personalidade_test.dart`, `test/personalidade_page_test.dart`, `tests/test_personalidade_flutter.py` |
+| Visão de imagem (contrato) | Limite, formatos, consentimento, requisição multimodal e proibição de reconhecimento facial | `tool/visao_test.dart`, `test/visao_page_test.dart`, `tests/test_visao_flutter.py` |
 | Suíte inteira | `npm run test:all` | exit 0, ver contagem no relatório do ajuste |
 
 ## 2. Só auditado — código existe, mundo real não foi tocado
@@ -37,7 +38,7 @@ Três níveis, sem meio-termo:
 | Item | O que falta |
 |---|---|
 | Catálogo Flutter | 1 módulo implementado, 3 parciais, 16 não migrados, 1 fora de escopo (`docs/MATRIZ-CAPACIDADES-FLUTTER.md`) |
-| Visão e OCR | Tratamento dos dados está provado; **nenhuma imagem real passou por um modelo de visão** |
+| Visão e OCR | O Flutter agora envia uma imagem escolhida, com consentimento e sem rosto; **nenhuma imagem real passou por um modelo de visão** e câmera/galeria não foram exercitadas |
 | Ponte CADeSIMU | Consistência interna provada; **o programa CADeSIMU nunca foi aberto** e o `.cad` nativo não é gerado nem lido |
 | Ponte Electron (Windows) | Código existe e compila no CI; nunca rodou em Windows |
 | SAF do Android | Mesma situação: existe, nunca exercitado |

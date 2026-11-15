@@ -20,6 +20,7 @@ import 'services/personalidade_store.dart';
 import 'services/pessoas_store.dart';
 import 'services/sistema_android.dart';
 import 'services/voice_conversation_page.dart';
+import 'services/visao_page.dart';
 import 'services/voz_tela_cheia_page.dart';
 
 // Interface clássica restaurada: HUD central, barra superior, painel lateral,
@@ -219,6 +220,10 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     }
     if (name == 'Personalização') {
       unawaited(_abrirPersonalidade());
+      return;
+    }
+    if (name == 'Visão e OCR') {
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const VisaoPage()));
       return;
     }
     final matches = modules.where((item) => item.name == name);

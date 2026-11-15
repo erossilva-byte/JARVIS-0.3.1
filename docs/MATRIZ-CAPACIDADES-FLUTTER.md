@@ -26,7 +26,7 @@ Critério de estado:
 | 5 | Memória semântica | "Contexto e recuperação de informações." | Nada. O histórico da conversa vive só em memória RAM e morre ao fechar a tela | `voice_conversation_page.dart` (`history`) | Não migrado |
 | 6 | Obsidian | "Vínculo e sincronização com cofre Obsidian." | Nada. A tela de Ajustes descreve o que falta, sem prometer | `pages.dart` (`SettingsPage`) | Não migrado |
 | 7 | Voz e KWS | "Voz, palavra de ativação local e síntese." | Painel de diagnóstico real: ativar, parar, teste de 20 s, estado do plugin e mensagem de indisponibilidade. Bridge `MethodChannel com.jarvis.nova/kws`, só Android | `services/kws_settings_page.dart`, `kws_bridge.dart`, `kws_controller.dart`, `test/kws_controller_test.dart` | **Parcial** (nunca executado em aparelho; modelo é inglês) |
-| 8 | Visão e OCR | "Câmera, tela, imagens e documentos." | Nada | — | Não migrado |
+| 8 | Visão e OCR | "Câmera, tela, imagens e documentos." | Tela real: escolhe imagem da galeria/câmera, exige consentimento, envia a provedor com visão e mostra a análise. Sem OCR local, sem tela e sem reconhecimento facial | `lib/services/visao_page.dart`, `lib/services/visao_service.dart`, `lib/core/visao.dart`, `test/visao_page_test.dart` | **Parcial** (plugin e modelo não exercitados) |
 | 9 | Arquivos | "Leitura, criação, conversão e organização." | Nada | — | Não migrado |
 | 10 | Programação e sandbox | "Assistência de código e execução isolada." | Nada | — | Não migrado |
 | 11 | CADeSIMU e elétrica | "Projetos, circuitos e validação elétrica." | Nada | — | Não migrado |
@@ -41,7 +41,7 @@ Critério de estado:
 | 20 | Backup e restauração | "Cópia e recuperação dos dados." | Nada | — | Não migrado |
 | 21 | Atualizações | "Versões, integridade e atualização." | Nada. O atualizador é `JarvisUpdatePlugin.java`, do app legado | — | Não migrado |
 
-**Placar:** 1 implementado · 3 parciais · 16 não migrados · 1 fora de escopo. Total 21.
+**Placar:** 1 implementado · 4 parciais · 15 não migrados · 1 fora de escopo. Total 21.
 
 O congelamento de escopo é coerente com a Fase 2: o app Flutter ainda não substitui Hermes/Core.
 A conversa dele chama o provedor direto, sem histórico persistente e sem roteamento de

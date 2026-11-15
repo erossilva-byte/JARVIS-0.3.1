@@ -377,3 +377,9 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Personalidade em três níveis | Sim | — | Verificado | 9 grupos puros + 3 de widget | Fase 7 | Sem chave real |
 | Humor suspenso em assunto sensível | Sim | — | Verificado no núcleo | saúde, luto, violência, segurança e dinheiro | Fase 7 | — |
 | Nível de humor no prompt da conversa | Sim | Não | Verificado no código | `estiloDoTurno` antes do envio | Fase 7 | Modelo real não exercitado |
+
+| Visão de imagem (galeria/câmera) | Sim | Não | Verificado no código | 5 testes de widget + contrato puro | Fase 8 | Plugin não exercitado |
+| Consentimento antes de enviar imagem | Sim | — | Verificado | botão exige imagem + autorização | Fase 8 | — |
+| Análise por provedor com visão | Sim | Não | Verificado no contrato | 4 provedores; resposta multimodal | Fase 8 | Sem chave real |
+| Reconhecimento facial | Não | Não | Não implementado | prompt proíbe identificar pessoas | Fase 8 | Modelo pode desobedecer |
+| OCR local / modelo no aparelho | Não | Não | Não implementado | tela declara ausência | Fase 8 | Fora desta entrega |

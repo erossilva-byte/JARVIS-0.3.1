@@ -557,3 +557,16 @@ Relatório: `docs/relatorios/2026-11-15_053-transparencia-das-fichas.md`.
 - [ ] Resposta real do modelo, voz e inspeção visual no aparelho continuam fora.
 
 Relatório: `docs/relatorios/2026-11-15_054-personalidade-e-humor.md`.
+
+### Ajuste 055 — Fase 8: visão de imagem (2026-11-15)
+
+- [x] Escolher imagem da galeria ou câmera; nada é lido em segundo plano.
+- [x] Consentimento explícito e desmarcado ao trocar de imagem; envio só depois da autorização.
+- [x] Limite de 4 MB e formatos JPEG/PNG/WebP; HEIC e arquivo vazio recusados antes do envio.
+- [x] Provedor com visão escolhido por chave configurada; modelo textual não entra.
+- [x] Prompt proíbe identificação de pessoas, reconhecimento facial e atributos sensíveis.
+- [x] Imagem não é guardada no histórico, no cofre ou em preferência.
+- [x] 5 testes de widget, 1 puro e 1 estático; 95 testes no total.
+- [ ] Câmera/galeria no aparelho, chave real e precisão do modelo continuam fora.
+
+Relatório: `docs/relatorios/2026-11-15_055-visao-de-imagem.md`.
