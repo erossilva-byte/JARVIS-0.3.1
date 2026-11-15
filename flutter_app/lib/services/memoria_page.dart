@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../core/memoria.dart';
 import '../core/memoria_busca.dart';
 import '../ui_common.dart';
+import 'backups_page.dart';
 import 'cofre_saf.dart';
 import 'conflitos_page.dart';
 import 'memoria_store.dart';
@@ -186,6 +187,11 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pasta desconectada.')));
   }
 
+  Future<void> _abrirBackups() async {
+    await Navigator.of(context).push<void>(MaterialPageRoute<void>(builder: (_) => BackupsPage(store: widget.store)));
+    if (mounted) await _carregar();
+  }
+
   Future<void> _carregar() async {
     final lista = widget.store.listar();
     if (!mounted) return;
@@ -280,6 +286,15 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
               icon: const Icon(Icons.folder_open_rounded),
             ),
           IconButton(tooltip: 'Importar Markdown', onPressed: _importar, icon: const Icon(Icons.file_download_outlined)),
+          IconButton(
+            tooltip: 'Backups de conflito',
+            onPressed: _abrirBackups,
+            icon: Badge.count(
+              count: notas.where(ehBackupConflito).length,
+              isLabelVisible: notas.any(ehBackupConflito),
+              child: const Icon(Icons.settings_backup_restore_rounded),
+            ),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

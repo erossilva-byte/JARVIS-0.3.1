@@ -40,6 +40,7 @@ NotaMemoria _notaDeBackup({
       importancia: origem.importancia,
       criadaEm: agora,
       atualizadaEm: agora,
+      extras: const {'origem': origemBackupConflito},
     );
 
 /// Monta a resolução de um conflito. Nenhuma versão é descartada: a perdedora vira nota local

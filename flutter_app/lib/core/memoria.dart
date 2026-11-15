@@ -267,6 +267,22 @@ String hashConteudo(String texto) {
   return a.toRadixString(16).padLeft(8, '0') + b.toRadixString(16).padLeft(8, '0');
 }
 
+/// Marca usada nas notas que guardam a versão perdedora de um conflito.
+const origemBackupConflito = 'backup-conflito';
+
+/// Nota criada pela resolução de conflito para não descartar a versão que perdeu.
+///
+/// O id também é conferido porque backups criados antes da marca existir têm só o prefixo.
+bool ehBackupConflito(NotaMemoria nota) =>
+    nota.extras['origem'] == origemBackupConflito || nota.id.startsWith('conflito-');
+
+/// Tira o sufixo que a resolução de conflito acrescenta ao título.
+String tituloSemSufixoBackup(String titulo) {
+  const sufixo = ' (versão do conflito)';
+  final limpo = titulo.trim();
+  return limpo.endsWith(sufixo) ? limpo.substring(0, limpo.length - sufixo.length).trim() : limpo;
+}
+
 String jsonDeNotas(List<NotaMemoria> notas) => jsonEncode(notas.map((n) => n.paraJson()).toList());
 
 List<NotaMemoria> notasDeJson(String? bruto) {

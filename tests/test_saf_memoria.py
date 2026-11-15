@@ -96,6 +96,19 @@ def problemas() -> list[str]:
     elif "salvar(plano.backup)" not in resolvedor.read_text(encoding="utf-8"):
         falhas.append("resolução não salva a versão perdedora como backup")
 
+    backups = RAIZ / "flutter_app" / "lib" / "services" / "backups_page.dart"
+    if not backups.is_file():
+        falhas.append("tela de backups ausente")
+    else:
+        texto_backups = backups.read_text(encoding="utf-8")
+        for rotulo in ("Restaurar como nota", "Apagar backup", "Apagar todos os backups"):
+            if rotulo not in texto_backups:
+                falhas.append(f"tela de backups sem \"{rotulo}\"")
+        if "ehBackupConflito" not in texto_backups:
+            falhas.append("tela de backups não filtra pelas notas de backup")
+        if "store.apagar" not in texto_backups:
+            falhas.append("tela de backups não permite limpar")
+
     # 5. O Dart não inventa sucesso quando não há canal.
     if "MissingPluginException" not in dart:
         falhas.append("cofre Dart não trata ausência do canal")

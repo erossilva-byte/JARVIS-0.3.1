@@ -363,3 +363,5 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Sincronização automática (abrir/voltar) | Sim | — | Verificado | 2 testes com ciclo de vida | Fase 6 | Sem aparelho |
 
 | Resolver conflito escolhendo versão | Sim | — | Verificado | 4 testes, backup preservado | Fase 6 | Sem inspeção visual |
+
+| Revisar e limpar backups de conflito | Sim | — | Verificado | 5 testes, exclusão confirmada | Fase 6 | Sem inspeção visual |

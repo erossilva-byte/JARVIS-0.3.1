@@ -68,6 +68,8 @@ void main() {
     expect(backup.texto, 'texto da pasta');
     expect(backup.caminho, isNull);
     expect(backup.titulo, contains('versão'));
+    expect(ehBackupConflito(backup), isTrue);
+    expect(tituloSemSufixoBackup(backup.titulo), 'Motor');
   });
 
   test('manter a da pasta adota o texto remoto e preserva o local', () async {

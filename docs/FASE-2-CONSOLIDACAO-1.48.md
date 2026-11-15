@@ -500,3 +500,14 @@ Relatório: `docs/relatorios/2026-11-15_048-sincronizacao-automatica.md`.
 - [ ] Ensaio visual no aparelho e gestão de backups continuam fora.
 
 Relatório: `docs/relatorios/2026-11-15_049-resolver-conflitos.md`.
+
+### Ajuste 050 — Fase 6: gestão dos backups de conflito (2026-11-15)
+
+- [x] Tela “Backups de conflito” com atalho e contador na tela de memória.
+- [x] Abrir, restaurar como nota normal, apagar um e apagar todos — sempre com confirmação.
+- [x] Marca `origem: backup-conflito`; backups antigos reconhecidos pelo prefixo do id.
+- [x] Exclusão só no aparelho; a pasta do Obsidian não é alterada.
+- [x] 5 testes de widget; 79 no total.
+- [ ] Inspeção visual no aparelho e expurgo automático continuam fora (expurgo não é desejado).
+
+Relatório: `docs/relatorios/2026-11-15_050-backups-de-conflito.md`.
