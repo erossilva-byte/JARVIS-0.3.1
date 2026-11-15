@@ -20,7 +20,7 @@ no Poco X7.
 | 9 | Modo voz em tela cheia | **Atendido no código** | `VozTelaCheiaPage` + teste |
 | 10 | Persistência após morte do processo | **Atendido** | `ConversaStore` em `shared_preferences`, com rascunho |
 | 11 | Integração com o sistema (atalhos, widget, compartilhar) | **Atendido no código** | atalhos XML, widget com `AppWidgetProvider`, `ACTION_SEND` e canal `com.jarvis.nova/sistema`; compilação só no CI |
-| 12 | Fluidez, inicialização e jank medidos no Poco X7 | **Pendente** | sem aparelho |
+| 12 | Fluidez, inicialização e jank medidos no Poco X7 | **Pendente** | roteiro pronto em `docs/FASE-5-MEDICAO-APARELHO.md`; sem aparelho |
 | 13 | `flutter analyze` e `flutter test` verdes | **Atendido** | 0 problemas de análise; 36 testes aprovados |
 
 ## O que foi entregue nesta fase
@@ -42,7 +42,8 @@ anotar em cada passo, está em `docs/FASE-5-ROTEIRO-APARELHO.md`.
 
 ## O que ainda falta
 
-1. **Medição**: nenhuma métrica de fps, jank ou inicialização no Poco X7 (Gate B).
+1. **Medição**: nenhuma métrica de fps, jank ou inicialização no Poco X7 (Gate B). Comandos e
+   ficha em `docs/FASE-5-MEDICAO-APARELHO.md`; falta rodar no aparelho.
 2. **Compilação nativa**: atalhos, widget e compartilhamento têm código e teste de preparação,
    mas nenhum APK foi compilado aqui (sem Android SDK) nem instalado em aparelho.
 3. **Painel rápido** (Quick Settings) e notificação do serviço ficaram fora; o pedido cobria

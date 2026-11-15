@@ -435,3 +435,11 @@ Relatório: `docs/relatorios/2026-11-14_042-integracao-android.md`.
 - [ ] Primeira compilação real do APK no CI e teste no Poco X7.
 
 Relatório: `docs/relatorios/2026-11-14_043-revisao-workflow-apk.md`.
+
+### Ajuste 044 — medição de abertura, fps e travadas (2026-11-14)
+
+- [x] Roteiro de medição com comandos `adb`, metas provisórias e ficha para preencher.
+- [x] Trecho de cálculo de fps/p95 conferido com amostra sintética (60 fps, p95 17,8 ms).
+- [ ] Rodar no Poco X7: abertura fria/morna, 60 s parado, 60 s de uso e modo voz.
+
+Relatório: `docs/FASE-5-MEDICAO-APARELHO.md`.
