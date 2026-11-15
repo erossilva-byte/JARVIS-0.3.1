@@ -455,3 +455,15 @@ Relatório: `docs/FASE-5-MEDICAO-APARELHO.md`.
 - [ ] Cofre via SAF, sincronização Obsidian e versionamento de nota (pendência 7B).
 
 Aceite: `docs/FASE-6-ACEITE.md`. Relatório: `docs/relatorios/2026-11-14_045-memoria-local.md`.
+
+### Ajuste 046 — Fase 6: pasta do Obsidian via SAF (2026-11-14)
+
+- [x] Canal `com.jarvis.nova/memoria` com escolher, consultar, listar e esquecer pasta.
+- [x] Permissão durável (`takePersistableUriPermission`) reconferida a cada abertura.
+- [x] Leitura recursiva só de `.md`, com limites de notas, profundidade e bytes.
+- [x] Tela: conectar pasta, importar notas, desconectar; importação usa repetição/conflito.
+- [x] 6 testes Dart com canal simulado e verificação estática do Kotlin na suíte.
+- [x] Conferência do APK passou a exigir o canal de memória no dex.
+- [ ] Compilar no CI e abrir o seletor no Poco X7; sincronização bidirecional continua fora.
+
+Relatório: `docs/relatorios/2026-11-14_046-cofre-saf.md`.

@@ -19,7 +19,7 @@ sincronização bidirecional real com o Obsidian, que dependem de aparelho e de 
 | 9 | Uso registrado só nas notas enviadas | **Atendido** | `registrarUso`; teste garante que a data não muda |
 | 10 | Tela de memória com busca, edição, exclusão e importação | **Atendido** | `MemoriaPage` + testes de widget |
 | 11 | Busca semântica neural / paráfrase ampla | **Não entregue** | hoje é lexical determinística; a tela diz isso |
-| 12 | Cofre via SAF (pasta do Obsidian no Android) | **Não entregue** | exige Kotlin e escolha de pasta no aparelho |
+| 12 | Cofre via SAF (pasta do Obsidian no Android) | **Atendido no código** | `ACTION_OPEN_DOCUMENT_TREE` + permissão durável + leitura `.md`; teste estático e de widget |
 | 13 | Sincronização bidirecional com Obsidian | **Não entregue** | depende de SAF/seletor e de resolução de conflito assistida |
 | 14 | Versionamento de nota e restauração | **Não entregue** | o legado tem; a interface ainda não |
 
@@ -41,8 +41,9 @@ sincronização bidirecional real com o Obsidian, que dependem de aparelho e de 
 
 - A busca é por palavra, não por significado: paráfrase distante pode não encontrar a nota. O
   motivo do resultado fica visível justamente para isso não parecer magia.
-- Importar é colar Markdown de uma nota por vez. Ler a pasta do Obsidian direto (SAF) é a
-  pendência 7B.
+- No Android a pasta do Obsidian pode ser conectada com permissão do sistema (SAF) e importada
+  quantas vezes quiser. Fora do Android, a importação é colar Markdown.
+- A importação é uma ação explícita: nada é observado nem sincronizado sozinho.
 - Sem apagar nota alheia: conflito de título com texto diferente é reportado e preservado.
 - Nada de sincronização automática: quem move arquivo hoje é o usuário.
 

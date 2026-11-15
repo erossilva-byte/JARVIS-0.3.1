@@ -60,6 +60,11 @@ checks = {
         'python3 tests/test_workflow_flutter.py' in pacote.get('scripts', {}).get('test:all', '')
         and (raiz / 'tests' / 'test_workflow_flutter.py').is_file()
     ),
+    # O SAF da memória é conferido por leitura estática (permissão durável e limites).
+    'SAF da memória roda na suíte': (
+        'python3 tests/test_saf_memoria.py' in pacote.get('scripts', {}).get('test:all', '')
+        and (raiz / 'tests' / 'test_saf_memoria.py').is_file()
+    ),
     # A integração com o sistema Android é preparada e testada com runner falso.
     'integração Android roda na suíte': (
         'python3 tests/test_sistema_android.py' in pacote.get('scripts', {}).get('test:all', '')

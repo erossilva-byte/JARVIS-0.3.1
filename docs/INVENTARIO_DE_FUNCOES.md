@@ -351,3 +351,7 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Importação Markdown com conflito | Sim | — | Verificado | repetida/conflito em teste | Fase 6 | Colagem, não pasta SAF |
 | Citação na conversa | Sim | — | Verificado no núcleo | `montarMensagens` + `fontes` | Fase 6 | Sem chamada real à IA |
 | Cofre via SAF e sync Obsidian | Não | Não | Não implementado | — | Fase 7B | Exige aparelho e seletor de pasta |
+
+| Cofre via SAF (pasta do Obsidian) | Sim | Não | Verificado no código | permissão durável + teste estático | Fase 6 | Não exercitado em aparelho |
+| Importar pasta conectada | Sim | — | Verificado | 6 testes com canal simulado | Fase 6 | Sem pasta real |
+| Sincronização Obsidian | Não | Não | Não implementado | — | Fase 7B | Ação explícita hoje |

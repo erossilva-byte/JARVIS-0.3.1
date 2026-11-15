@@ -1,7 +1,10 @@
 package com.jarvis.nova
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
+import android.net.Uri
+import android.provider.DocumentsContract
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -23,6 +26,12 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         const val ACAO_CONVERSA = "com.jarvis.nova.ACAO_CONVERSA"
         const val ACAO_HISTORICO = "com.jarvis.nova.ACAO_HISTORICO"
         const val CANAL_SISTEMA = "com.jarvis.nova/sistema"
+        const val CANAL_MEMORIA = "com.jarvis.nova/memoria"
+
+        private const val PREFS_SAF = "jarvis_saf"
+        private const val CHAVE_PASTA = "pasta"
+        private const val LIMITE_NOTAS = 400
+        private const val LIMITE_BYTES = 256 * 1024
 
         private var eventSink: EventChannel.EventSink? = null
         private val pendingEvents = ArrayDeque<Map<String, Any>>()
@@ -51,6 +60,8 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
     private var recognitionInProgress = false
     private var wakeIntentPending = false
     private val requestAudioCode = 47147
+    private val requestPastaCode = 47150
+    private var pendingPasta: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -82,6 +93,186 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
             }
         }
         sistemaCanal = sistema
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CANAL_MEMORIA)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "pastaAtual" -> result.success(pastaAtual())
+                    "escolherPasta" -> escolherPasta(result)
+                    "listarNotas" -> listarNotas(result)
+                    "esquecerPasta" -> {
+                        esquecerPasta()
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    /** Abre o seletor do sistema; a permissão é pedida de forma durável (SAF). */
+    private fun escolherPasta(result: MethodChannel.Result) {
+        if (pendingPasta != null) {
+            result.error("em_andamento", "Já existe uma escolha de pasta em andamento.", null)
+            return
+        }
+        pendingPasta = result
+        val seletor = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }
+        try {
+            startActivityForResult(seletor, requestPastaCode)
+        } catch (erro: Exception) {
+            pendingPasta = null
+            result.error(
+                "sem_seletor",
+                "Este aparelho não abriu o seletor de pasta: ${erro.message ?: erro.javaClass.simpleName}",
+                null
+            )
+        }
+    }
+
+    @Deprecated("FlutterActivity usa onActivityResult para o seletor de pasta do SAF")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != requestPastaCode) return
+        val pendente = pendingPasta ?: return
+        pendingPasta = null
+        val uri = data?.data
+        if (resultCode != Activity.RESULT_OK || uri == null) {
+            pendente.success(null)
+            return
+        }
+        try {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (erro: SecurityException) {
+            pendente.error("sem_permissao", "O sistema não concedeu permissão duradoura para esta pasta.", null)
+            return
+        }
+        prefPasta().edit().putString(CHAVE_PASTA, uri.toString()).apply()
+        pendente.success(mapaPasta(uri))
+    }
+
+    private fun prefPasta() = getSharedPreferences(PREFS_SAF, MODE_PRIVATE)
+
+    /** Só devolve a pasta se a permissão durável continua concedida; senão, esquece. */
+    private fun pastaAtual(): Map<String, Any>? {
+        val salva = prefPasta().getString(CHAVE_PASTA, null) ?: return null
+        val uri = Uri.parse(salva)
+        val permitida = contentResolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission }
+        if (!permitida) {
+            esquecerPasta()
+            return null
+        }
+        return mapaPasta(uri)
+    }
+
+    private fun mapaPasta(uri: Uri): Map<String, Any> {
+        val nome = try {
+            contentResolver.query(uri, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        } catch (_: Exception) {
+            null
+        } ?: uri.lastPathSegment.orEmpty()
+        return mapOf("uri" to uri.toString(), "nome" to nome)
+    }
+
+    private fun esquecerPasta() {
+        val salva = prefPasta().getString(CHAVE_PASTA, null)
+        if (salva != null) {
+            try {
+                contentResolver.releasePersistableUriPermission(Uri.parse(salva), Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: Exception) {
+                // Permissão já revogada pelo sistema: só limpar a preferência.
+            }
+        }
+        prefPasta().edit().remove(CHAVE_PASTA).apply()
+    }
+
+    /** Lê .md da pasta escolhida, com limite de notas, profundidade e tamanho por arquivo. */
+    private fun listarNotas(result: MethodChannel.Result) {
+        val pasta = pastaAtual()
+        if (pasta == null) {
+            result.error("sem_pasta", "Nenhuma pasta do Obsidian conectada.", null)
+            return
+        }
+        val raiz = Uri.parse(pasta["uri"] as String)
+        val notas = mutableListOf<Map<String, Any>>()
+        var ignoradas = 0
+        var truncadas = 0
+
+        fun lerTexto(documento: Uri): String? = try {
+            contentResolver.openInputStream(documento)?.use { entrada ->
+                val saida = java.io.ByteArrayOutputStream()
+                val buffer = ByteArray(8192)
+                var total = 0
+                while (true) {
+                    val lidos = entrada.read(buffer)
+                    if (lidos <= 0) break
+                    total += lidos
+                    if (total > LIMITE_BYTES) return@use null
+                    saida.write(buffer, 0, lidos)
+                }
+                String(saida.toByteArray(), Charsets.UTF_8)
+            }
+        } catch (_: Exception) {
+            null
+        }
+
+        fun visitar(pastaUri: Uri, prefixo: String, profundidade: Int) {
+            if (notas.size >= LIMITE_NOTAS || profundidade > 3) return
+            val idPasta = if (DocumentsContract.isTreeUri(pastaUri)) {
+                DocumentsContract.getTreeDocumentId(pastaUri)
+            } else {
+                DocumentsContract.getDocumentId(pastaUri)
+            }
+            val filhos = DocumentsContract.buildChildDocumentsUriUsingTree(raiz, idPasta)
+            val colunas = arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_MIME_TYPE,
+                DocumentsContract.Document.COLUMN_SIZE,
+            )
+            contentResolver.query(filhos, colunas, null, null, null)?.use { cursor ->
+                while (cursor.moveToNext() && notas.size < LIMITE_NOTAS) {
+                    val id = cursor.getString(0) ?: continue
+                    val nome = cursor.getString(1) ?: continue
+                    val tipo = cursor.getString(2).orEmpty()
+                    if (tipo == DocumentsContract.Document.MIME_TYPE_DIR) {
+                        val caminho = if (prefixo.isEmpty()) nome else "$prefixo/$nome"
+                        visitar(DocumentsContract.buildDocumentUriUsingTree(raiz, id), caminho, profundidade + 1)
+                        continue
+                    }
+                    if (!nome.endsWith(".md", ignoreCase = true)) {
+                        ignoradas++
+                        continue
+                    }
+                    val tamanho = if (cursor.isNull(3)) 0L else cursor.getLong(3)
+                    if (tamanho > LIMITE_BYTES) {
+                        truncadas++
+                        continue
+                    }
+                    val conteudo = lerTexto(DocumentsContract.buildDocumentUriUsingTree(raiz, id))
+                    if (conteudo == null) {
+                        ignoradas++
+                        continue
+                    }
+                    notas.add(mapOf(
+                        "nome" to nome,
+                        "caminho" to (if (prefixo.isEmpty()) nome else "$prefixo/$nome"),
+                        "conteudo" to conteudo,
+                    ))
+                }
+            }
+        }
+
+        try {
+            visitar(raiz, "", 0)
+        } catch (erro: Exception) {
+            result.error("falha_leitura", "Não foi possível ler a pasta: ${erro.message ?: erro.javaClass.simpleName}", null)
+            return
+        }
+        result.success(mapOf("notas" to notas, "ignoradas" to ignoradas, "truncadas" to truncadas))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -335,6 +526,10 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         if (pendingPermissionResult != null) {
             pendingPermissionResult?.error("activity_destroyed", "A tela foi encerrada durante a permissão do microfone.", null)
             pendingPermissionResult = null
+        }
+        if (pendingPasta != null) {
+            pendingPasta?.error("activity_destroyed", "A tela foi encerrada durante a escolha da pasta.", null)
+            pendingPasta = null
         }
         destroySpeechRecognizer()
         super.onDestroy()

@@ -50,7 +50,7 @@ def problemas(texto: str) -> list[str]:
     verificacao = android[android.find("Verify the APK carries"):android.find("Verify APK identity")]
     for marca in ("shortcuts.xml", "jarvis_widget_info.xml", "jarvis_widget.xml",
                   "JarvisWidgetProvider", "android.app.shortcuts", "ACAO_VOZ",
-                  "android.intent.action.SEND", "com.jarvis.nova/sistema"):
+                  "android.intent.action.SEND", "com.jarvis.nova/sistema", "com.jarvis.nova/memoria"):
         if marca not in verificacao:
             achados.append(f"checagem do APK não confere: {marca}")
     if "exit 1" not in verificacao:

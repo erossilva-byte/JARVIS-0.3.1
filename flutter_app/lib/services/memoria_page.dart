@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../core/memoria.dart';
 import '../core/memoria_busca.dart';
 import '../ui_common.dart';
+import 'cofre_saf.dart';
 import 'memoria_store.dart';
 
 /// Cofre local: lista, busca lexical explicada, edição e importação de Markdown.
@@ -23,11 +24,72 @@ class _MemoriaPageState extends State<MemoriaPage> {
   List<NotaMemoria> notas = const [];
   String busca = '';
   bool carregando = true;
+  PastaSaf? pasta;
+  bool lendoPasta = false;
 
   @override
   void initState() {
     super.initState();
     _carregar();
+    _carregarPasta();
+  }
+
+  Future<void> _carregarPasta() async {
+    final resultado = await CofreSaf.pastaAtual();
+    if (!mounted) return;
+    setState(() => pasta = resultado.valor);
+  }
+
+  Future<void> _conectarPasta() async {
+    final resultado = await CofreSaf.escolherPasta();
+    if (!mounted) return;
+    if (!resultado.ok) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(resultado.erro!)));
+      return;
+    }
+    final escolhida = resultado.valor;
+    if (escolhida == null) return; // usuário cancelou
+    setState(() => pasta = escolhida);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pasta conectada: ${escolhida.nome}')));
+  }
+
+  Future<void> _importarPasta() async {
+    if (lendoPasta) return;
+    setState(() => lendoPasta = true);
+    final leitura = await CofreSaf.listarNotas();
+    if (!mounted) return;
+    if (!leitura.ok) {
+      setState(() => lendoPasta = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(leitura.erro!)));
+      return;
+    }
+    final dados = leitura.valor!;
+    final resultado = await widget.store.importar([
+      for (final nota in dados.notas) (nome: nota.caminho, conteudo: nota.conteudo),
+    ]);
+    if (!mounted) return;
+    setState(() => lendoPasta = false);
+    await _carregar();
+    if (!mounted) return;
+    final partes = <String>[
+      '${resultado.adicionadas.length} nova(s)',
+      '${resultado.repetidas} repetida(s)',
+      if (resultado.conflitos.isNotEmpty) '${resultado.conflitos.length} conflito(s) preservado(s)',
+      if (dados.ignoradas > 0) '${dados.ignoradas} arquivo(s) ignorado(s)',
+      if (dados.truncadas > 0) '${dados.truncadas} grande(s) recusado(s)',
+    ];
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pasta importada: ${partes.join(', ')}.')));
+  }
+
+  Future<void> _desconectarPasta() async {
+    final resultado = await CofreSaf.esquecerPasta();
+    if (!mounted) return;
+    if (!resultado.ok) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(resultado.erro!)));
+      return;
+    }
+    setState(() => pasta = null);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pasta desconectada.')));
   }
 
   Future<void> _carregar() async {
@@ -117,6 +179,12 @@ class _MemoriaPageState extends State<MemoriaPage> {
       appBar: AppBar(
         title: const Text('Memória'),
         actions: [
+          if (pasta == null)
+            IconButton(
+              tooltip: 'Conectar pasta do Obsidian',
+              onPressed: _conectarPasta,
+              icon: const Icon(Icons.folder_open_rounded),
+            ),
           IconButton(tooltip: 'Importar Markdown', onPressed: _importar, icon: const Icon(Icons.file_download_outlined)),
         ],
       ),
@@ -142,6 +210,7 @@ class _MemoriaPageState extends State<MemoriaPage> {
                     ),
                   ),
                 ),
+                if (pasta != null) _cartaoPasta(colors),
                 Expanded(
                   child: notas.isEmpty ? _vazio(colors) : busca.trim().isEmpty ? _lista(colors) : _resultados(colors),
                 ),
@@ -161,13 +230,55 @@ class _MemoriaPageState extends State<MemoriaPage> {
               const Text('Nenhuma nota no cofre', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               const Text(
-                'As notas ficam neste aparelho. Você pode criar uma nota ou colar um Markdown exportado do Obsidian. '
-                'A leitura direta de uma pasta do Obsidian (SAF) ainda não está ligada; quando estiver, esta tela vai dizer.',
+                'As notas ficam neste aparelho. Você pode criar uma nota, colar um Markdown exportado do Obsidian '
+                'ou, no Android, conectar a pasta do cofre pela permissão do sistema (SAF) e importar as notas dela.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, height: 1.5),
               ),
               const SizedBox(height: 14),
-              OutlinedButton.icon(onPressed: _importar, icon: const Icon(Icons.file_download_outlined), label: const Text('Importar Markdown')),
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  OutlinedButton.icon(onPressed: _importar, icon: const Icon(Icons.file_download_outlined), label: const Text('Importar Markdown')),
+                  OutlinedButton.icon(onPressed: _conectarPasta, icon: const Icon(Icons.folder_open_rounded), label: const Text('Conectar pasta do Obsidian')),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _cartaoPasta(ColorScheme colors) => Card(
+        margin: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+          child: Row(
+            children: [
+              Icon(Icons.folder_special_rounded, color: colors.primary, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(pasta!.nome, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    Text(
+                      lendoPasta ? 'Lendo a pasta…' : 'Pasta do Obsidian conectada · permissão guardada pelo sistema',
+                      style: const TextStyle(fontSize: 10, color: muted),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: lendoPasta ? null : _importarPasta,
+                child: const Text('Importar notas'),
+              ),
+              IconButton(
+                tooltip: 'Desconectar pasta',
+                onPressed: _desconectarPasta,
+                icon: const Icon(Icons.link_off_rounded, size: 19),
+              ),
             ],
           ),
         ),

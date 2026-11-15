@@ -143,7 +143,7 @@ jobs:
           for dex in "${DEXES[@]}"; do
             CODIGO+=$'\n'$(unzip -p "$APK" "$dex" | strings)
           done
-          for marca in com.jarvis.nova.ACAO_VOZ com.jarvis.nova.ACAO_CONVERSA com.jarvis.nova.ACAO_HISTORICO com.jarvis.nova/sistema; do
+          for marca in com.jarvis.nova.ACAO_VOZ com.jarvis.nova.ACAO_CONVERSA com.jarvis.nova.ACAO_HISTORICO com.jarvis.nova/sistema com.jarvis.nova/memoria; do
             if ! grep -q "$marca" <<<"$CODIGO"; then
               echo "FALTA no código do APK: $marca"
               exit 1
