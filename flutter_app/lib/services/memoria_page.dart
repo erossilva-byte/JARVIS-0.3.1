@@ -5,6 +5,7 @@ import '../core/memoria.dart';
 import '../core/memoria_busca.dart';
 import '../ui_common.dart';
 import 'cofre_saf.dart';
+import 'conflitos_page.dart';
 import 'memoria_store.dart';
 import 'sincronizador.dart';
 
@@ -154,30 +155,19 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
     }
     if (silencioso) return;
     if (resultado.plano.conflitos.isNotEmpty) {
-      await showDialog<void>(
-        context: context,
-        builder: (dialogo) => AlertDialog(
-          title: Text('${resultado.plano.conflitos.length} nota(s) em conflito'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Nada foi apagado nem sobrescrito. Resolva editando um dos lados e sincronizando de novo.'),
-                const SizedBox(height: 10),
-                for (final conflito in resultado.plano.conflitos.take(8))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text('• ${conflito.titulo}: ${conflito.motivo}', style: const TextStyle(fontSize: 12)),
-                  ),
-                if (resultado.plano.conflitos.length > 8) const Text('… e mais.', style: TextStyle(fontSize: 12)),
-              ],
-            ),
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(
+          builder: (_) => ConflitosPage(
+            conflitos: resultado.plano.conflitos,
+            store: widget.store,
+            cofre: const CofreSafGateway(),
           ),
-          actions: [TextButton(onPressed: () => Navigator.pop(dialogo), child: const Text('Entendi'))],
         ),
       );
       if (!mounted) return;
+      // A tela pode ter resolvido parte dos conflitos: relê a pasta e atualiza o cartão sem aviso.
+      await _sincronizarPasta(silencioso: true);
+      return;
     }
     final aviso = resultado.falhas.isEmpty
         ? 'Sincronização: ${resultado.resumo}.'

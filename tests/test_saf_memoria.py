@@ -79,6 +79,23 @@ def problemas() -> list[str]:
         if "conflito" not in texto:
             falhas.append("sincronização sem caminho de conflito")
 
+    pagina = RAIZ / "flutter_app" / "lib" / "services" / "conflitos_page.dart"
+    if not pagina.is_file():
+        falhas.append("tela de conflitos ausente")
+    else:
+        texto_pagina = pagina.read_text(encoding="utf-8")
+        for rotulo in ("Neste aparelho", "Na pasta do Obsidian", "Manter a do aparelho", "Manter a da pasta"):
+            if rotulo not in texto_pagina:
+                falhas.append(f"tela de conflitos sem \"{rotulo}\"")
+        if "ResolvedorConflito" not in texto_pagina:
+            falhas.append("tela de conflitos não aplica a escolha pelo resolvedor")
+
+    resolvedor = RAIZ / "flutter_app" / "lib" / "services" / "resolvedor_conflito.dart"
+    if not resolvedor.is_file():
+        falhas.append("resolvedor de conflito ausente")
+    elif "salvar(plano.backup)" not in resolvedor.read_text(encoding="utf-8"):
+        falhas.append("resolução não salva a versão perdedora como backup")
+
     # 5. O Dart não inventa sucesso quando não há canal.
     if "MissingPluginException" not in dart:
         falhas.append("cofre Dart não trata ausência do canal")

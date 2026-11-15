@@ -489,3 +489,14 @@ Relatório: `docs/relatorios/2026-11-15_047-sincronizacao-obsidian.md`.
 - [ ] Busca semântica neural e versionamento de nota continuam fora, declarados.
 
 Relatório: `docs/relatorios/2026-11-15_048-sincronizacao-automatica.md`.
+
+### Ajuste 049 — Fase 6: tela de resolução de conflito (2026-11-15)
+
+- [x] Tela com as duas versões (aparelho × pasta), texto selecionável, lado a lado quando cabe.
+- [x] Escolha confirmada; perdedora vira nota de backup sem caminho — nada é apagado.
+- [x] Escolher o aparelho grava na pasta antes; falha de escrita não altera nada.
+- [x] Backup com id estável; próxima sincronização o envia como arquivo novo.
+- [x] 1 caso puro (5 verificações), 3 testes de serviço e 1 de widget; 74 no total.
+- [ ] Ensaio visual no aparelho e gestão de backups continuam fora.
+
+Relatório: `docs/relatorios/2026-11-15_049-resolver-conflitos.md`.

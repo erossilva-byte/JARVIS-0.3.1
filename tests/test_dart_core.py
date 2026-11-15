@@ -39,6 +39,7 @@ CASOS = (
     ("tool/conversa_test.dart", "modelo de conversa e título automático"),
     ("tool/memoria_test.dart", "memória: Markdown, busca, citação e orçamento"),
     ("tool/memoria_sync_test.dart", "sincronização: envio, recebimento, conflito e ausência"),
+    ("tool/memoria_conflito_test.dart", "resolução de conflito: escolha e backup preservado"),
 )
 
 

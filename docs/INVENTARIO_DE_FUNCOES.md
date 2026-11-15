@@ -361,3 +361,5 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Escrita na pasta via SAF | Sim | Não | Verificado no código | teste estático + canal simulado | Fase 6 | Não exercitada em aparelho |
 
 | Sincronização automática (abrir/voltar) | Sim | — | Verificado | 2 testes com ciclo de vida | Fase 6 | Sem aparelho |
+
+| Resolver conflito escolhendo versão | Sim | — | Verificado | 4 testes, backup preservado | Fase 6 | Sem inspeção visual |

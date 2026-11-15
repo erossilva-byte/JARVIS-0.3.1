@@ -39,7 +39,7 @@ Três níveis, sem meio-termo:
 | Ponte Electron (Windows) | Código existe e compila no CI; nunca rodou em Windows |
 | SAF do Android | Mesma situação: existe, nunca exercitado |
 | IA local | Plugin legado existe; Gemma nunca rodou no aparelho, e não há runtime no Windows |
-| Memória semântica | Busca lexical/hash funciona e a sincronização Flutter ↔ Obsidian existe (SAF + conflito preservado); não há embedding neural multilíngue |
+| Memória semântica | Busca lexical/hash funciona, a sincronização Flutter ↔ Obsidian existe (SAF) e conflito é resolvido na tela com backup da versão perdedora; não há embedding neural multilíngue |
 | Avatar | É holograma em `CustomPaint`, não malha 3D — declarado como parcial |
 
 ## 3. Pendente de teste físico (Gate B)
