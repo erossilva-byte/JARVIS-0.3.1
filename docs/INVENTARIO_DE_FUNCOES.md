@@ -371,3 +371,5 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Ambiguidade de nomes | Sim | — | Verificado | dois "João" não são escolhidos | Fase 7 | — |
 | Contexto de pessoas para a IA | Sim | Não | Verificado no núcleo | bloco seguro, 9 grupos de teste | Fase 7 | Sem chave real |
 | Foto e reconhecimento facial | Não | Não | Não implementado | tela declara ausência | Fase 7 | Fora desta entrega |
+
+| Transparência das fichas na conversa | Sim | — | Verificado | guarda o bloco literal e mostra a ficha usada; 3 testes de widget | Fase 7 | Sem inspeção visual |

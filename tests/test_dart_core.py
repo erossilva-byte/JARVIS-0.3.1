@@ -41,7 +41,7 @@ CASOS = (
     ("tool/memoria_sync_test.dart", "sincronização: envio, recebimento, conflito e ausência"),
     ("tool/memoria_conflito_test.dart", "resolução de conflito: escolha e backup preservado"),
     ("tool/pessoas_test.dart", "pessoas: consentimento, ambiguidade e contexto seguro"),
-    ("tool/pessoas_conversa_test.dart", "pessoas na conversa: bloco seguro e ausência explícita"),
+    ("tool/pessoas_conversa_test.dart", "pessoas na conversa: bloco seguro, ausência e transparência"),
 )
 
 

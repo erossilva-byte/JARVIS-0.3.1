@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:jarvis_nova/core/conversa.dart';
 import 'package:jarvis_nova/core/memoria_busca.dart';
 import 'package:jarvis_nova/core/pessoas.dart';
 
@@ -94,5 +95,41 @@ void main() {
   final semPessoas = montarMensagens(historico, const ContextoMemoria(texto: '', usados: [], caracteres: 0));
   assert(semPessoas.length == 1, 'montagem antiga mudou');
 
-  stdout.writeln('OK: pessoas na conversa — bloco seguro, ausência explícita e ambiguidade sem palpite');
+  // 10. Contexto estruturado: tipo e nomes acompanham o bloco
+  final estruturado = contextoPessoasParaConsulta([ana, carlos], 'quem é a Ana?');
+  assert(estruturado.tipo == TipoContextoPessoas.detalhe, 'tipo detalhe errado');
+  assert(estruturado.nomes.length == 1 && estruturado.nomes.single == 'Ana', 'nome usado não registrado');
+  final ambiguoStruct = contextoPessoasParaConsulta([ana, anaPaula], 'quem é Ana?');
+  assert(ambiguoStruct.tipo == TipoContextoPessoas.ambiguo && ambiguoStruct.nomes.length == 2, 'ambiguidade não estruturada');
+  final ausenteStruct = contextoPessoasParaConsulta([ana], 'quem é a Maria?');
+  assert(ausenteStruct.tipo == TipoContextoPessoas.ausente && ausenteStruct.nomes.isEmpty, 'ausência não estruturada');
+  final nenhumStruct = contextoPessoasParaConsulta([ana], 'qual a capital da França?');
+  assert(nenhumStruct.tipo == TipoContextoPessoas.nenhum && nenhumStruct.vazio, 'contexto vazio deveria ser nenhum');
+
+  // 11. A conversa guarda e devolve o bloco exato e as fichas citadas
+  final conversa = Conversa(id: 'c1', titulo: 'Teste', criadaEm: DateTime(2026, 11, 15), atualizadaEm: DateTime(2026, 11, 15));
+  conversa.adicionar(MensagemConversa(autor: 'user', texto: 'quem é a Ana?'));
+  conversa.adicionar(MensagemConversa(
+    autor: 'assistant',
+    texto: 'A Ana é sua irmã.',
+    fichas: estruturado.nomes,
+    contextoPessoas: estruturado.bloco,
+  ));
+  final relida = Conversa.deJson(conversa.paraJson());
+  assert(relida != null, 'conversa não voltou do JSON');
+  final volta = relida!;
+  assert(volta.mensagens.last.fichas.single == 'Ana', 'ficha não persistiu');
+  assert(volta.mensagens.last.contextoPessoas == estruturado.bloco, 'bloco enviado não persistiu');
+  final antiga = Conversa.deJson({
+    'id': 'c2',
+    'titulo': 'Antiga',
+    'criadaEm': DateTime(2026, 11, 15).toIso8601String(),
+    'mensagens': [
+      {'autor': 'assistant', 'texto': 'sem contexto'},
+    ],
+  });
+  assert(antiga!.mensagens.single.fichas.isEmpty && antiga.mensagens.single.contextoPessoas.isEmpty,
+      'conversa antiga sem campos novos quebrou');
+
+  stdout.writeln('OK: pessoas na conversa — bloco seguro, ausência explícita, ambiguidade e transparência');
 }

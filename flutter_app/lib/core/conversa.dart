@@ -5,7 +5,13 @@
 library;
 
 class MensagemConversa {
-  const MensagemConversa({required this.autor, required this.texto, this.fontes = const []});
+  const MensagemConversa({
+    required this.autor,
+    required this.texto,
+    this.fontes = const [],
+    this.fichas = const [],
+    this.contextoPessoas = '',
+  });
 
   /// `user` ou `assistant`.
   final String autor;
@@ -14,12 +20,20 @@ class MensagemConversa {
   /// Notas da memória usadas na resposta (Fase 7 preenche; vazio é o normal hoje).
   final List<String> fontes;
 
+  /// Nomes das fichas de pessoas citadas na pergunta, para a interface mostrar o que foi usado.
+  final List<String> fichas;
+
+  /// Bloco de pessoas exatamente como foi enviado ao provedor (vazio quando não houve).
+  final String contextoPessoas;
+
   bool get doUsuario => autor == 'user';
 
   Map<String, Object?> paraJson() => {
         'autor': autor,
         'texto': texto,
         if (fontes.isNotEmpty) 'fontes': fontes,
+        if (fichas.isNotEmpty) 'fichas': fichas,
+        if (contextoPessoas.isNotEmpty) 'contextoPessoas': contextoPessoas,
       };
 
   static MensagemConversa? deJson(Object? bruto) {
@@ -39,6 +53,8 @@ class MensagemConversa {
       autor: autor,
       texto: texto,
       fontes: fontes is List ? fontes.whereType<String>().toList() : const [],
+      fichas: bruto['fichas'] is List ? (bruto['fichas'] as List).whereType<String>().toList() : const [],
+      contextoPessoas: bruto['contextoPessoas'] is String ? bruto['contextoPessoas'] as String : '',
     );
   }
 }

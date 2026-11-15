@@ -28,6 +28,7 @@ Três níveis, sem meio-termo:
 | Contrato de conversa | Histórico em ordem cronológica, detecção de repetição pela fala do turno | `tests/test_hermes.js` |
 | Credenciais | Cofre no Android (AES-256-GCM) e no desktop (`safeStorage`, `0o600`, troca atômica), falha fechada | `tests/test_seguranca.js`, `tests/test_secure_keys.py` |
 | Fichas de pessoas (Flutter) | Consentimento obrigatório, ambiguidade entre nomes iguais, descrição sem invenção, bloco seguro enviado à conversa e ausência explícita | `tool/pessoas_test.dart`, `tool/pessoas_conversa_test.dart`, `test/pessoas_page_test.dart`, `tests/test_pessoas_privacidade.py` |
+| Transparência das fichas | A resposta guarda o bloco literal enviado e a interface o mostra ao toque, com o nome usado ou a ausência | `test/conversa_pessoas_test.dart`, `tool/pessoas_conversa_test.dart` |
 | Suíte inteira | `npm run test:all` | exit 0, ver contagem no relatório do ajuste |
 
 ## 2. Só auditado — código existe, mundo real não foi tocado

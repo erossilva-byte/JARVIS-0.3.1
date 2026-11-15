@@ -69,13 +69,20 @@ def problemas() -> list[str]:
         falhas.append("tela de conversa ausente")
     else:
         texto_conversa = conversa.read_text(encoding="utf-8")
-        if "blocoPessoasParaConsulta" not in texto_conversa:
+        if "contextoPessoasParaConsulta" not in texto_conversa:
             falhas.append("conversa não usa o bloco seguro de pessoas")
-        if "pessoas: contextoPessoa" not in texto_conversa:
+        if "pessoas: contextoPessoa.bloco" not in texto_conversa:
             falhas.append("bloco de pessoas não chega às mensagens do provedor")
+        # 6b. Transparência: a resposta guarda o bloco exato e a interface diz qual ficha foi usada.
+        if "contextoPessoas: contextoPessoa.bloco" not in texto_conversa:
+            falhas.append("resposta não guarda o bloco exato enviado")
+        if "fichas: contextoPessoa.nomes" not in texto_conversa:
+            falhas.append("resposta não registra a ficha usada")
+        if "Ficha usada:" not in texto_conversa or "Fichas: nenhuma correspondência" not in texto_conversa:
+            falhas.append("interface não mostra quando a ficha foi usada (ou quando não houve)")
 
-    inicio_bloco = core.find("String blocoPessoasParaConsulta")
-    fim_bloco = core.find("String contextoPessoas", inicio_bloco)
+    inicio_bloco = core.find("ContextoPessoasConversa contextoPessoasParaConsulta")
+    fim_bloco = core.find("String blocoPessoasParaConsulta", inicio_bloco)
     if inicio_bloco < 0 or fim_bloco < 0:
         falhas.append("blocoPessoasParaConsulta ausente")
     else:

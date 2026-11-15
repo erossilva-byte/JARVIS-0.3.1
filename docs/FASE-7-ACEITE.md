@@ -1,8 +1,8 @@
 # Fase 7 — fichas de pessoas (entrega para aprovação)
 
 **Branch:** `work/1.48.0-fase2-consolidacao`
-**Escopo desta entrega:** apenas a parte de **fichas de pessoas** da Fase 7. Personalidade/humor e
-a integração das fichas na conversa continuam fora, declarados abaixo.
+**Escopo desta entrega:** a parte de **fichas de pessoas** da Fase 7, o uso delas na conversa e a
+transparência do que foi enviado. Personalidade/humor continua fora, declarado abaixo.
 
 ## O que existe de verdade
 
@@ -18,6 +18,7 @@ a integração das fichas na conversa continuam fora, declarados abaixo.
 | 8 | Foto de referência e reconhecimento facial local | **Não entregue** | exige câmera/modelo local; a tela declara a ausência |
 | 9 | Histórico automático de interações e compromissos | **Não entregue** | o histórico é escrito pelo usuário; nada é deduzido de conversa |
 | 10 | Fichas usadas na conversa (“quem é essa pessoa?”) | **Atendido no código** | bloco seguro enviado como mensagem de sistema; nome ausente instrui dizer que não encontrou |
+| 10b | Ver na conversa qual ficha foi usada e o bloco exato enviado | **Atendido no código** | bolha mostra “Ficha usada: Ana” (ou “Fichas: nenhuma correspondência”) e abre o texto literal enviado; 3 testes de widget |
 | 11 | Ensaio no aparelho | **Pendente** | sem Android SDK aqui; armazenamento seguro e resposta real da IA não foram exercitados |
 
 ## Privacidade, sem promessa vazia
@@ -32,8 +33,9 @@ a integração das fichas na conversa continuam fora, declarados abaixo.
 
 ```
 dart run tool/pessoas_test.dart              → OK (validação, ambiguidade, descrição, contexto)
-dart run tool/pessoas_conversa_test.dart      → OK (bloco seguro e ausência explícita)
+dart run tool/pessoas_conversa_test.dart      → OK (bloco seguro, ausência, ambiguidade e persistência do bloco)
 flutter test test/pessoas_page_test.dart     → 5 testes, All tests passed!
+flutter test test/conversa_pessoas_test.dart → 3 testes, All tests passed!
 python3 tests/test_pessoas_privacidade.py    → OK (estático)
 flutter analyze                              → No issues found!
 npm run verificar                            → ver relatório do ajuste
@@ -44,8 +46,10 @@ npm run verificar                            → ver relatório do ajuste
 - Sem aparelho: a tela não foi inspecionada visualmente e a criptografia real do
   `FlutterSecureStorage` só se confirma no Android/CI.
 - Foto, reconhecimento facial e histórico automático não existem — e o app não finge que existem.
-- A conversa agora envia o bloco seguro quando a pergunta cita uma pessoa ou pergunta por ela.
-  Contato, anotação, compromisso e histórico continuam fora; se a pergunta pedir isso, a instrução
-  manda dizer que não encontrou.
+- A conversa envia o bloco seguro quando a pergunta cita uma pessoa ou pergunta por ela, e a bolha
+  registra o bloco **literal** que foi enviado. Contato, anotação, compromisso e histórico continuam
+  fora; se a pergunta pedir isso, a instrução manda dizer que não encontrou.
+- A transparência foi provada por widget test, mas a bolha **não foi vista em tela**: sem aparelho,
+  o layout do bloco expansível em telas estreitas continua pendente.
 - Nenhuma chamada real à IA foi feita: sem chave de provedor, o que está provado é o bloco e a
   montagem das mensagens, não a resposta do modelo.

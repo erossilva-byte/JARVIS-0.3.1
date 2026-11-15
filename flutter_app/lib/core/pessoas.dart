@@ -239,14 +239,32 @@ String? ultimaInteracao(Pessoa pessoa) {
   return linhas.isEmpty ? null : linhas.last;
 }
 
-/// Bloco seguro para a conversa, montado a partir da pergunta.
+enum TipoContextoPessoas { nenhum, detalhe, ambiguo, ausente }
+
+/// Resultado do bloco de pessoas: o texto exato enviado e quem foi citado.
+class ContextoPessoasConversa {
+  const ContextoPessoasConversa({required this.bloco, required this.nomes, required this.tipo});
+
+  const ContextoPessoasConversa.nenhum()
+      : bloco = '',
+        nomes = const [],
+        tipo = TipoContextoPessoas.nenhum;
+
+  final String bloco;
+  final List<String> nomes;
+  final TipoContextoPessoas tipo;
+
+  bool get vazio => bloco.isEmpty;
+}
+
+/// Monta o bloco seguro e diz o que ele representa (ficha única, ambiguidade, ausência ou nada).
 ///
 /// Só entram nome, apelido, relação e preferências. Contato, anotações, compromissos e histórico
 /// nunca são enviados. Quando não há ficha, o bloco manda dizer que não encontrou em vez de
-/// deixar a IA completar com invenção. Pergunta que não é sobre pessoa devolve string vazia.
-String blocoPessoasParaConsulta(List<Pessoa> pessoas, String consulta) {
+/// deixar a IA completar com invenção. Pergunta que não é sobre pessoa devolve bloco vazio.
+ContextoPessoasConversa contextoPessoasParaConsulta(List<Pessoa> pessoas, String consulta) {
   final pergunta = ' ${normalizar(consulta)} ';
-  if (pergunta.trim().isEmpty) return '';
+  if (pergunta.trim().isEmpty) return const ContextoPessoasConversa.nenhum();
 
   bool citado(String termo) {
     final alvo = normalizar(termo);
@@ -275,16 +293,24 @@ String blocoPessoasParaConsulta(List<Pessoa> pessoas, String consulta) {
     'ultima conversa',
   ];
   final falaDePessoa = citadas.isNotEmpty || pistas.any(pergunta.contains) || pergunta.contains(' pessoa ');
-  if (!falaDePessoa) return '';
+  if (!falaDePessoa) return const ContextoPessoasConversa.nenhum();
 
   if (citadas.isEmpty) {
-    return 'FICHAS DE PESSOAS — nenhuma ficha corresponde ao nome perguntado. Diga que não encontrou; '
-        'não invente dados nem atribua informações a outra pessoa.';
+    return const ContextoPessoasConversa(
+      bloco: 'FICHAS DE PESSOAS — nenhuma ficha corresponde ao nome perguntado. Diga que não encontrou; '
+          'não invente dados nem atribua informações a outra pessoa.',
+      nomes: [],
+      tipo: TipoContextoPessoas.ausente,
+    );
   }
   if (citadas.length > 1) {
-    final nomes = citadas.map((p) => p.nome).join(', ');
-    return 'FICHAS DE PESSOAS — mais de uma ficha corresponde: $nomes. Pergunte qual delas; '
-        'não escolha sozinho e não invente.';
+    final nomes = citadas.map((p) => p.nome).toList();
+    return ContextoPessoasConversa(
+      bloco: 'FICHAS DE PESSOAS — mais de uma ficha corresponde: ${nomes.join(', ')}. Pergunte qual delas; '
+          'não escolha sozinho e não invente.',
+      nomes: nomes,
+      tipo: TipoContextoPessoas.ambiguo,
+    );
   }
 
   final pessoa = citadas.single;
@@ -298,8 +324,16 @@ String blocoPessoasParaConsulta(List<Pessoa> pessoas, String consulta) {
     'Contato, anotações, compromissos e histórico não estão disponíveis para envio. Se a pergunta '
         'pedir algo que não está acima, diga que não encontrou — não invente.',
   ];
-  return linhas.join('\n');
+  return ContextoPessoasConversa(
+    bloco: linhas.join('\n'),
+    nomes: [pessoa.nome],
+    tipo: TipoContextoPessoas.detalhe,
+  );
 }
+
+/// Compatibilidade: texto puro do bloco (usado pelos testes e por quem só precisa do conteúdo).
+String blocoPessoasParaConsulta(List<Pessoa> pessoas, String consulta) =>
+    contextoPessoasParaConsulta(pessoas, consulta).bloco;
 
 /// Contexto compacto para a IA: nomes, apelidos, relação e preferências.
 ///

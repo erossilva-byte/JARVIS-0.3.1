@@ -48,6 +48,9 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   /// Texto parcial da resposta em streaming, já agrupado pelo buffer.
   String parcial = '';
   StreamBuffer? _buffer;
+
+  /// Bloco de pessoas da requisição em andamento, para anexar à resposta (inclusive se parar).
+  ContextoPessoasConversa _contextoPessoaAtual = const ContextoPessoasConversa.nenhum();
   StreamSubscription<String>? _assinatura;
 
   @override
@@ -163,9 +166,10 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       // Falha do armazenamento seguro não impede a conversa: segue sem fichas.
       listaPessoas = const <Pessoa>[];
     }
-    final contextoPessoa = blocoPessoasParaConsulta(listaPessoas, texto);
+    final contextoPessoa = contextoPessoasParaConsulta(listaPessoas, texto);
+    _contextoPessoaAtual = contextoPessoa;
     _assinatura = service
-        .streamComplete(escolhido.id, montarMensagens(historico, contextoMemoria, pessoas: contextoPessoa))
+        .streamComplete(escolhido.id, montarMensagens(historico, contextoMemoria, pessoas: contextoPessoa.bloco))
         .listen(
       buffer.adicionar,
       cancelOnError: true,
@@ -174,6 +178,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
         setState(() {
           enviando = false;
           parcial = '';
+          _contextoPessoaAtual = const ContextoPessoasConversa.nenhum();
           erro = e.toString().replaceFirst('Bad state: ', '');
         });
       },
@@ -192,6 +197,8 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
               autor: 'assistant',
               texto: recebido,
               fontes: contextoMemoria.usados.map((nota) => nota.titulo).toList(),
+              fichas: contextoPessoa.nomes,
+              contextoPessoas: contextoPessoa.bloco,
             ));
           }
         });
@@ -213,8 +220,14 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     setState(() {
       enviando = false;
       if (recebido.trim().isNotEmpty) {
-        conversa.adicionar(MensagemConversa(autor: 'assistant', texto: recebido));
+        conversa.adicionar(MensagemConversa(
+          autor: 'assistant',
+          texto: recebido,
+          fichas: _contextoPessoaAtual.nomes,
+          contextoPessoas: _contextoPessoaAtual.bloco,
+        ));
       }
+      _contextoPessoaAtual = const ContextoPessoasConversa.nenhum();
       parcial = '';
       aviso = recebido.trim().isEmpty ? 'Geração interrompida.' : 'Geração interrompida; o texto recebido foi mantido.';
     });
@@ -456,6 +469,44 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(texto, style: const TextStyle(fontSize: 13, height: 1.45)),
+            if (mensagem.contextoPessoas.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: Material(
+                  color: Colors.transparent,
+                  child: ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsets.only(top: 2),
+                    expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                    iconColor: const Color(0xFF55DFFF),
+                    collapsedIconColor: const Color(0xFF55DFFF),
+                    title: Text(
+                      mensagem.fichas.isEmpty
+                          ? 'Fichas: nenhuma correspondência'
+                          : mensagem.fichas.length == 1
+                              ? 'Ficha usada: ${mensagem.fichas.single}'
+                              : 'Fichas citadas: ${mensagem.fichas.join(', ')}',
+                      style: const TextStyle(color: Color(0xFF55DFFF), fontSize: 10),
+                    ),
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: .18),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: SelectableText(
+                          mensagem.contextoPessoas,
+                          style: const TextStyle(fontSize: 10.5, height: 1.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             if (showFontes) ...[
               const SizedBox(height: 6),
               Text('O que lembrei: ${mensagem.fontes.join(', ')}', style: const TextStyle(color: Color(0xFF55DFFF), fontSize: 10)),

@@ -534,3 +534,14 @@ Relatório: `docs/relatorios/2026-11-15_051-fichas-de-pessoas.md`.
 - [ ] Resposta real do modelo e bloco no aparelho continuam dependentes de chave/CI.
 
 Relatório: `docs/relatorios/2026-11-15_052-pessoas-na-conversa.md`.
+
+### Ajuste 053 — Fase 7: transparência das fichas na conversa (2026-11-15)
+
+- [x] Cada resposta guarda o bloco de pessoas **exatamente** como foi enviado e os nomes citados.
+- [x] A bolha mostra “Ficha usada: Ana”, “Fichas citadas: …” ou “Fichas: nenhuma correspondência”.
+- [x] O bloco abre por toque e aparece literal, sem resumo — é o mesmo texto que o provedor recebeu.
+- [x] Bloco e fichas sobrevivem a salvar/reabrir a conversa; conversa antiga sem esses campos continua válida.
+- [x] 3 testes de widget, 11 grupos puros e estático ampliado; 87 testes no total.
+- [ ] Inspeção visual da bolha em tela estreita e resposta real do modelo continuam fora.
+
+Relatório: `docs/relatorios/2026-11-15_053-transparencia-das-fichas.md`.
