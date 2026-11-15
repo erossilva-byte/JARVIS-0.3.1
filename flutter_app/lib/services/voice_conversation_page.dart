@@ -5,12 +5,14 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/conversa.dart';
 import '../core/memoria_busca.dart';
+import '../core/personalidade.dart';
 import '../core/pessoas.dart';
 import '../core/stream_buffer.dart';
 import '../ui_common.dart';
 import 'conversa_store.dart';
 import 'historico_page.dart';
 import 'memoria_store.dart';
+import 'personalidade_store.dart';
 import 'pessoas_store.dart';
 import 'provider_service.dart';
 import 'sistema_android.dart';
@@ -38,6 +40,8 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   ConversaStore? store;
   MemoriaStore? memoria;
   PessoasStore? pessoas;
+  Personalidade _personalidade = const Personalidade();
+  final List<String> _angulosRecentes = [];
   bool enviando = false;
   String? erro;
   String? aviso;
@@ -168,8 +172,32 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     }
     final contextoPessoa = contextoPessoasParaConsulta(listaPessoas, texto);
     _contextoPessoaAtual = contextoPessoa;
+    try {
+      _personalidade = (await PersonalidadeStore.abrir()).carregar();
+    } catch (_) {
+      // Preferência indisponível não impede conversar; fica o padrão equilibrado.
+      _personalidade = const Personalidade();
+    }
+    final estilo = estiloDoTurno(
+      _personalidade,
+      texto,
+      recentes: _angulosRecentes,
+      semente: conversa.mensagens.length,
+    );
+    if (estilo.angulo != null) {
+      _angulosRecentes.add(estilo.angulo!);
+      if (_angulosRecentes.length > 8) _angulosRecentes.removeAt(0);
+    }
     _assinatura = service
-        .streamComplete(escolhido.id, montarMensagens(historico, contextoMemoria, pessoas: contextoPessoa.bloco))
+        .streamComplete(
+          escolhido.id,
+          montarMensagens(
+            historico,
+            contextoMemoria,
+            pessoas: contextoPessoa.bloco,
+            personalidade: estilo.prompt,
+          ),
+        )
         .listen(
       buffer.adicionar,
       cancelOnError: true,

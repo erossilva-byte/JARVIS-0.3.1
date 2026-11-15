@@ -42,6 +42,7 @@ CASOS = (
     ("tool/memoria_conflito_test.dart", "resolução de conflito: escolha e backup preservado"),
     ("tool/pessoas_test.dart", "pessoas: consentimento, ambiguidade e contexto seguro"),
     ("tool/pessoas_conversa_test.dart", "pessoas na conversa: bloco seguro, ausência e transparência"),
+    ("tool/personalidade_test.dart", "personalidade: níveis, tom sensível, pressa e prompt"),
 )
 
 

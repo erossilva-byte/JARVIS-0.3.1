@@ -545,3 +545,15 @@ Relatório: `docs/relatorios/2026-11-15_052-pessoas-na-conversa.md`.
 - [ ] Inspeção visual da bolha em tela estreita e resposta real do modelo continuam fora.
 
 Relatório: `docs/relatorios/2026-11-15_053-transparencia-das-fichas.md`.
+
+### Ajuste 054 — Fase 7: personalidade e humor (2026-11-15)
+
+- [x] Três níveis reais (Discreto, Equilibrado, Avançado) com prévia e gravação local.
+- [x] Regras no prompt: informação antes da graça, piada com a situação, nunca com a pessoa.
+- [x] Assunto sensível (saúde, luto, violência, segurança, dinheiro perdido) zera o humor.
+- [x] Pressa encurta a resposta e não recebe ângulo de humor no prompt.
+- [x] Estilo entra como primeira mensagem de sistema, lido antes de cada envio.
+- [x] 9 grupos puros, 3 testes de widget e estático; 90 testes no total.
+- [ ] Resposta real do modelo, voz e inspeção visual no aparelho continuam fora.
+
+Relatório: `docs/relatorios/2026-11-15_054-personalidade-e-humor.md`.

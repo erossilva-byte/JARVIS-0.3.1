@@ -257,8 +257,11 @@ List<Map<String, String>> montarMensagens(
   List<Map<String, String>> historico,
   ContextoMemoria contexto, {
   String? pessoas,
+  String? personalidade,
 }) =>
     [
+      if (personalidade != null && personalidade.trim().isNotEmpty)
+        {'role': 'system', 'content': personalidade},
       if (!contexto.vazio) {'role': 'system', 'content': '$instrucaoMemoria\n\n${contexto.texto}'},
       if (pessoas != null && pessoas.trim().isNotEmpty) {'role': 'system', 'content': pessoas},
       ...historico,

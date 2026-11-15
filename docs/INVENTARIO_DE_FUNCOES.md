@@ -373,3 +373,7 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Foto e reconhecimento facial | Não | Não | Não implementado | tela declara ausência | Fase 7 | Fora desta entrega |
 
 | Transparência das fichas na conversa | Sim | — | Verificado | guarda o bloco literal e mostra a ficha usada; 3 testes de widget | Fase 7 | Sem inspeção visual |
+
+| Personalidade em três níveis | Sim | — | Verificado | 9 grupos puros + 3 de widget | Fase 7 | Sem chave real |
+| Humor suspenso em assunto sensível | Sim | — | Verificado no núcleo | saúde, luto, violência, segurança e dinheiro | Fase 7 | — |
+| Nível de humor no prompt da conversa | Sim | Não | Verificado no código | `estiloDoTurno` antes do envio | Fase 7 | Modelo real não exercitado |
