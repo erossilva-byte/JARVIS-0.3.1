@@ -369,5 +369,5 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Fichas de pessoas (local, criptografada) | Sim | — | Verificado | 5 testes + privacidade estática | Fase 7 | Sem aparelho |
 | Consentimento obrigatório (LGPD) | Sim | — | Verificado | teste recusa sem marcar | Fase 7 | — |
 | Ambiguidade de nomes | Sim | — | Verificado | dois "João" não são escolhidos | Fase 7 | — |
-| Contexto de pessoas para a IA | Núcleo | Não | Verificado no núcleo | sem contato/anotação | Fase 7 | Não ligado à conversa |
+| Contexto de pessoas para a IA | Sim | Não | Verificado no núcleo | bloco seguro, 9 grupos de teste | Fase 7 | Sem chave real |
 | Foto e reconhecimento facial | Não | Não | Não implementado | tela declara ausência | Fase 7 | Fora desta entrega |

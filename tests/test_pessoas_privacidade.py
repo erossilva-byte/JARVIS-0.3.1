@@ -63,7 +63,32 @@ def problemas() -> list[str]:
     if "Excluir esta ficha?" not in pagina:
         falhas.append("exclusão da ficha sem confirmação")
 
-    # 6. O módulo do menu abre as fichas, não um placeholder.
+    # 6. A conversa usa o bloco seguro e o bloco não carrega campo sensível.
+    conversa = RAIZ / "flutter_app" / "lib" / "services" / "voice_conversation_page.dart"
+    if not conversa.is_file():
+        falhas.append("tela de conversa ausente")
+    else:
+        texto_conversa = conversa.read_text(encoding="utf-8")
+        if "blocoPessoasParaConsulta" not in texto_conversa:
+            falhas.append("conversa não usa o bloco seguro de pessoas")
+        if "pessoas: contextoPessoa" not in texto_conversa:
+            falhas.append("bloco de pessoas não chega às mensagens do provedor")
+
+    inicio_bloco = core.find("String blocoPessoasParaConsulta")
+    fim_bloco = core.find("String contextoPessoas", inicio_bloco)
+    if inicio_bloco < 0 or fim_bloco < 0:
+        falhas.append("blocoPessoasParaConsulta ausente")
+    else:
+        trecho_bloco = core[inicio_bloco:fim_bloco]
+        for campo in (".contatos", ".observacoes", ".compromissos", ".historico"):
+            if campo in trecho_bloco:
+                falhas.append(f"bloco da conversa inclui {campo}")
+        if "não invente" not in trecho_bloco:
+            falhas.append("bloco da conversa sem instrução contra invenção")
+        if "nenhuma ficha" not in trecho_bloco:
+            falhas.append("bloco da conversa não cobre nome ausente")
+
+    # 7. O módulo do menu abre as fichas, não um placeholder.
     if "Pessoas e contexto" not in home or "PessoasPage" not in home:
         falhas.append("menu de Pessoas não abre a tela de fichas")
 

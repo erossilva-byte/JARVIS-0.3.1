@@ -239,6 +239,68 @@ String? ultimaInteracao(Pessoa pessoa) {
   return linhas.isEmpty ? null : linhas.last;
 }
 
+/// Bloco seguro para a conversa, montado a partir da pergunta.
+///
+/// Só entram nome, apelido, relação e preferências. Contato, anotações, compromissos e histórico
+/// nunca são enviados. Quando não há ficha, o bloco manda dizer que não encontrou em vez de
+/// deixar a IA completar com invenção. Pergunta que não é sobre pessoa devolve string vazia.
+String blocoPessoasParaConsulta(List<Pessoa> pessoas, String consulta) {
+  final pergunta = ' ${normalizar(consulta)} ';
+  if (pergunta.trim().isEmpty) return '';
+
+  bool citado(String termo) {
+    final alvo = normalizar(termo);
+    return alvo.length >= 2 && pergunta.contains(' $alvo ');
+  }
+
+  var citadas = pessoas.where((p) => citado(p.nome)).toList();
+  if (citadas.isNotEmpty) {
+    // Nome completo vence primeiro nome: "Ana Paula" não vira ambiguidade com "Ana".
+    final maior = citadas.map((p) => normalizar(p.nome).length).reduce((a, b) => a > b ? a : b);
+    citadas = citadas.where((p) => normalizar(p.nome).length == maior).toList();
+  } else {
+    citadas = pessoas.where((p) => citado(p.apelido) || citado(p.nome.split(' ').first)).toList();
+  }
+
+  const pistas = [
+    'quem e',
+    'quem sao',
+    'ficha',
+    'fichas',
+    'sobre a',
+    'sobre o',
+    'o que sabe',
+    'o que voce sabe',
+    'ultima interacao',
+    'ultima conversa',
+  ];
+  final falaDePessoa = citadas.isNotEmpty || pistas.any(pergunta.contains) || pergunta.contains(' pessoa ');
+  if (!falaDePessoa) return '';
+
+  if (citadas.isEmpty) {
+    return 'FICHAS DE PESSOAS — nenhuma ficha corresponde ao nome perguntado. Diga que não encontrou; '
+        'não invente dados nem atribua informações a outra pessoa.';
+  }
+  if (citadas.length > 1) {
+    final nomes = citadas.map((p) => p.nome).join(', ');
+    return 'FICHAS DE PESSOAS — mais de uma ficha corresponde: $nomes. Pergunte qual delas; '
+        'não escolha sozinho e não invente.';
+  }
+
+  final pessoa = citadas.single;
+  final linhas = <String>[
+    'FICHA DE PESSOA — dados fornecidos pelo próprio usuário; use apenas o que está aqui.',
+    '- Nome: ${pessoa.nome}',
+    if (pessoa.apelido.isNotEmpty) '- Apelido: ${pessoa.apelido}',
+    if (pessoa.relacao.isNotEmpty) '- Relação: ${pessoa.relacao}',
+    if (pessoa.preferencias.isNotEmpty) '- Preferências: ${pessoa.preferencias}',
+    '',
+    'Contato, anotações, compromissos e histórico não estão disponíveis para envio. Se a pergunta '
+        'pedir algo que não está acima, diga que não encontrou — não invente.',
+  ];
+  return linhas.join('\n');
+}
+
 /// Contexto compacto para a IA: nomes, apelidos, relação e preferências.
 ///
 /// Contato, observações, compromissos e histórico **não** entram: são dados sensíveis que o

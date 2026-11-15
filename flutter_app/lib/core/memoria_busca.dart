@@ -255,10 +255,12 @@ const instrucaoMemoria = 'Notas do cofre local relevantes para este pedido. Use 
 /// histórico. Sem contexto, devolve o histórico intacto.
 List<Map<String, String>> montarMensagens(
   List<Map<String, String>> historico,
-  ContextoMemoria contexto,
-) =>
+  ContextoMemoria contexto, {
+  String? pessoas,
+}) =>
     [
       if (!contexto.vazio) {'role': 'system', 'content': '$instrucaoMemoria\n\n${contexto.texto}'},
+      if (pessoas != null && pessoas.trim().isNotEmpty) {'role': 'system', 'content': pessoas},
       ...historico,
     ];
 

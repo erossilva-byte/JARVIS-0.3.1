@@ -5,11 +5,13 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/conversa.dart';
 import '../core/memoria_busca.dart';
+import '../core/pessoas.dart';
 import '../core/stream_buffer.dart';
 import '../ui_common.dart';
 import 'conversa_store.dart';
 import 'historico_page.dart';
 import 'memoria_store.dart';
+import 'pessoas_store.dart';
 import 'provider_service.dart';
 import 'sistema_android.dart';
 import 'voz_tela_cheia_page.dart';
@@ -35,6 +37,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
 
   ConversaStore? store;
   MemoriaStore? memoria;
+  PessoasStore? pessoas;
   bool enviando = false;
   String? erro;
   String? aviso;
@@ -72,6 +75,11 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       memoria = await MemoriaStore.abrir();
     } catch (_) {
       memoria = null;
+    }
+    try {
+      pessoas = await PessoasStore.abrir();
+    } catch (_) {
+      pessoas = null;
     }
   }
 
@@ -146,8 +154,18 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     // Só entra o que a busca considerou relevante; sem resultado, nenhuma nota é enviada.
     final contextoMemoria = memoria?.contexto(texto) ??
         const ContextoMemoria(texto: '', usados: [], caracteres: 0);
+    // Só o bloco seguro de pessoas (sem contato, anotação, compromisso ou histórico). Se não há
+    // ficha para o nome perguntado, o próprio bloco instrui a IA a dizer que não encontrou.
+    var listaPessoas = const <Pessoa>[];
+    try {
+      if (pessoas != null) listaPessoas = await pessoas!.listar();
+    } catch (_) {
+      // Falha do armazenamento seguro não impede a conversa: segue sem fichas.
+      listaPessoas = const <Pessoa>[];
+    }
+    final contextoPessoa = blocoPessoasParaConsulta(listaPessoas, texto);
     _assinatura = service
-        .streamComplete(escolhido.id, montarMensagens(historico, contextoMemoria))
+        .streamComplete(escolhido.id, montarMensagens(historico, contextoMemoria, pessoas: contextoPessoa))
         .listen(
       buffer.adicionar,
       cancelOnError: true,

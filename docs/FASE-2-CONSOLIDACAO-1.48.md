@@ -523,3 +523,14 @@ Relatório: `docs/relatorios/2026-11-15_050-backups-de-conflito.md`.
 - [ ] Foto/reconhecimento facial, histórico automático e uso na conversa continuam fora.
 
 Relatório: `docs/relatorios/2026-11-15_051-fichas-de-pessoas.md`.
+
+### Ajuste 052 — Fase 7: pessoas na conversa (2026-11-15)
+
+- [x] Pergunta que cita pessoa envia bloco seguro como mensagem de sistema.
+- [x] Bloco só com nome, apelido, relação e preferências; contato/anotação/compromisso/histórico fora.
+- [x] Nome ausente instrui “diga que não encontrou; não invente”.
+- [x] Ambiguidade manda perguntar qual; nome completo vence primeiro nome.
+- [x] 9 grupos de teste puro e verificação estática do envio; conversa sem chave real segue não provada.
+- [ ] Resposta real do modelo e bloco no aparelho continuam dependentes de chave/CI.
+
+Relatório: `docs/relatorios/2026-11-15_052-pessoas-na-conversa.md`.
