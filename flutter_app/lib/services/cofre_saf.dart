@@ -3,17 +3,24 @@ import 'package:flutter/services.dart';
 
 /// Pasta do sistema escolhida pelo usuário (SAF no Android).
 class PastaSaf {
-  const PastaSaf({required this.uri, required this.nome});
+  const PastaSaf({required this.uri, required this.nome, this.podeEscrever = false});
 
   final String uri;
   final String nome;
+
+  /// Falso quando o sistema/provedor só concedeu leitura: importa, mas não envia.
+  final bool podeEscrever;
 
   static PastaSaf? deMapa(Object? dados) {
     if (dados is! Map) return null;
     final uri = dados['uri'];
     final nome = dados['nome'];
     if (uri is! String || uri.isEmpty) return null;
-    return PastaSaf(uri: uri, nome: nome is String && nome.trim().isNotEmpty ? nome.trim() : 'Pasta do Obsidian');
+    return PastaSaf(
+      uri: uri,
+      nome: nome is String && nome.trim().isNotEmpty ? nome.trim() : 'Pasta do Obsidian',
+      podeEscrever: dados['podeEscrever'] == true,
+    );
   }
 }
 
@@ -124,6 +131,25 @@ class CofreSaf {
       return const ResultadoSaf.falha(mensagemIndisponivel);
     } on PlatformException catch (erro) {
       return ResultadoSaf.falha(erro.message ?? 'Não foi possível ler a pasta do Obsidian.');
+    }
+  }
+
+  /// Grava uma nota na pasta. O Kotlin cria subpastas e o arquivo quando ainda não existem.
+  static Future<ResultadoSaf<bool>> escreverNota({required String caminho, required String conteudo}) async {
+    if (!disponivel) return const ResultadoSaf.falha(mensagemIndisponivel);
+    try {
+      final resposta = await canal.invokeMethod<Object?>('escreverNota', {
+        'caminho': caminho,
+        'conteudo': conteudo,
+      });
+      if (resposta is! Map || resposta['caminho'] is! String) {
+        return const ResultadoSaf.falha('A pasta não confirmou a gravação; a nota ficou só no aparelho.');
+      }
+      return const ResultadoSaf.ok(true);
+    } on MissingPluginException {
+      return const ResultadoSaf.falha(mensagemIndisponivel);
+    } on PlatformException catch (erro) {
+      return ResultadoSaf.falha(erro.message ?? 'Não foi possível gravar $caminho na pasta.');
     }
   }
 

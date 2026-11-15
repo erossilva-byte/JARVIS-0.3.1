@@ -467,3 +467,14 @@ Aceite: `docs/FASE-6-ACEITE.md`. Relatório: `docs/relatorios/2026-11-14_045-mem
 - [ ] Compilar no CI e abrir o seletor no Poco X7; sincronização bidirecional continua fora.
 
 Relatório: `docs/relatorios/2026-11-14_046-cofre-saf.md`.
+
+### Ajuste 047 — Fase 6: sincronização nos dois sentidos (2026-11-15)
+
+- [x] Núcleo puro decide enviar, receber, adotar caminho ou conflitar pelo hash do corpo.
+- [x] Escrita na pasta via SAF (`openOutputStream` truncando, `createDocument` para novo e subpastas).
+- [x] Permissão de escrita pedida; pasta só de leitura fica visível e sem botão ativo.
+- [x] Nenhuma ação de apagar: conflito preserva os dois lados; arquivo sumido vira “só neste aparelho”.
+- [x] 13 casos puros, 8 testes de serviço com cofre falso e 2 de widget; 69 testes no total.
+- [ ] Compilar e sincronizar num aparelho real; resolução assistida de conflito continua fora.
+
+Relatório: `docs/relatorios/2026-11-15_047-sincronizacao-obsidian.md`.

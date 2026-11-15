@@ -38,6 +38,7 @@ CASOS = (
     ("tool/sse_test.dart", "parser SSE do streaming"),
     ("tool/conversa_test.dart", "modelo de conversa e título automático"),
     ("tool/memoria_test.dart", "memória: Markdown, busca, citação e orçamento"),
+    ("tool/memoria_sync_test.dart", "sincronização: envio, recebimento, conflito e ausência"),
 )
 
 

@@ -100,6 +100,11 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                     "pastaAtual" -> result.success(pastaAtual())
                     "escolherPasta" -> escolherPasta(result)
                     "listarNotas" -> listarNotas(result)
+                    "escreverNota" -> {
+                        val caminho = call.argument<String>("caminho").orEmpty()
+                        val conteudo = call.argument<String>("conteudo").orEmpty()
+                        escreverNota(caminho, conteudo, result)
+                    }
                     "esquecerPasta" -> {
                         esquecerPasta()
                         result.success(true)
@@ -117,7 +122,11 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         }
         pendingPasta = result
         val seletor = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+            addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+            )
         }
         try {
             startActivityForResult(seletor, requestPastaCode)
@@ -143,10 +152,18 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
             return
         }
         try {
-            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
         } catch (erro: SecurityException) {
-            pendente.error("sem_permissao", "O sistema não concedeu permissão duradoura para esta pasta.", null)
-            return
+            // Alguns provedores só concedem leitura: a pasta serve para importar, não para enviar.
+            try {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (erroLeitura: SecurityException) {
+                pendente.error("sem_permissao", "O sistema não concedeu permissão duradoura para esta pasta.", null)
+                return
+            }
         }
         prefPasta().edit().putString(CHAVE_PASTA, uri.toString()).apply()
         pendente.success(mapaPasta(uri))
@@ -174,7 +191,12 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         } catch (_: Exception) {
             null
         } ?: uri.lastPathSegment.orEmpty()
-        return mapOf("uri" to uri.toString(), "nome" to nome)
+        val permissao = contentResolver.persistedUriPermissions.firstOrNull { it.uri == uri }
+        return mapOf(
+            "uri" to uri.toString(),
+            "nome" to nome,
+            "podeEscrever" to (permissao?.isWritePermission == true),
+        )
     }
 
     private fun esquecerPasta() {
@@ -187,6 +209,86 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
             }
         }
         prefPasta().edit().remove(CHAVE_PASTA).apply()
+    }
+
+    /** Escreve uma nota na pasta, criando subpastas e o arquivo quando necessário. */
+    private fun escreverNota(caminho: String, conteudo: String, result: MethodChannel.Result) {
+        val pasta = pastaAtual()
+        if (pasta == null) {
+            result.error("sem_pasta", "Nenhuma pasta do Obsidian conectada.", null)
+            return
+        }
+        if (pasta["podeEscrever"] != true) {
+            result.error(
+                "sem_escrita",
+                "A pasta foi conectada somente para leitura. Conecte de novo e permita editar para enviar notas.",
+                null
+            )
+            return
+        }
+        val partes = caminho.replace('\\', '/').split('/').filter { it.isNotBlank() }
+        if (partes.isEmpty() || !partes.last().endsWith(".md", ignoreCase = true)) {
+            result.error("caminho_invalido", "O destino precisa ser um arquivo .md.", null)
+            return
+        }
+        val raiz = Uri.parse(pasta["uri"] as String)
+        try {
+            var paiId = DocumentsContract.getTreeDocumentId(raiz)
+            for (nomePasta in partes.dropLast(1)) {
+                val existente = procurarFilho(raiz, paiId, nomePasta, DocumentsContract.Document.MIME_TYPE_DIR)
+                paiId = existente?.first ?: (
+                    DocumentsContract.createDocument(
+                        contentResolver,
+                        DocumentsContract.buildDocumentUriUsingTree(raiz, paiId),
+                        DocumentsContract.Document.MIME_TYPE_DIR,
+                        nomePasta
+                    ) ?: throw IllegalStateException("Não foi possível criar a pasta $nomePasta")
+                    ).let { DocumentsContract.getDocumentId(it) }
+            }
+            val nomeArquivo = partes.last()
+            val existente = procurarFilho(raiz, paiId, nomeArquivo, null)
+            val alvo = if (existente != null) {
+                DocumentsContract.buildDocumentUriUsingTree(raiz, existente.first)
+            } else {
+                DocumentsContract.createDocument(
+                    contentResolver,
+                    DocumentsContract.buildDocumentUriUsingTree(raiz, paiId),
+                    "text/markdown",
+                    nomeArquivo
+                ) ?: throw IllegalStateException("Não foi possível criar $nomeArquivo")
+            }
+            contentResolver.openOutputStream(alvo, "wt")?.use { saida ->
+                saida.write(conteudo.toByteArray(Charsets.UTF_8))
+                saida.flush()
+            } ?: throw IllegalStateException("Não foi possível abrir $nomeArquivo para escrita")
+            result.success(mapOf("caminho" to caminho, "criado" to (existente == null)))
+        } catch (erro: Exception) {
+            result.error(
+                "falha_escrita",
+                "Não foi possível gravar $caminho: ${erro.message ?: erro.javaClass.simpleName}",
+                null
+            )
+        }
+    }
+
+    /** Procura um filho pelo nome (e tipo, quando informado) e devolve id + mime. */
+    private fun procurarFilho(raiz: Uri, paiId: String, nome: String, tipo: String?): Pair<String, String>? {
+        val filhos = DocumentsContract.buildChildDocumentsUriUsingTree(raiz, paiId)
+        val colunas = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE,
+        )
+        contentResolver.query(filhos, colunas, null, null, null)?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val nomeFilho = cursor.getString(1) ?: continue
+                val mime = cursor.getString(2).orEmpty()
+                if (nomeFilho.equals(nome, ignoreCase = true) && (tipo == null || mime == tipo)) {
+                    return cursor.getString(0) to mime
+                }
+            }
+        }
+        return null
     }
 
     /** Lê .md da pasta escolhida, com limite de notas, profundidade e tamanho por arquivo. */

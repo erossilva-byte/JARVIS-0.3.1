@@ -6,11 +6,12 @@ import '../core/memoria_busca.dart';
 import '../ui_common.dart';
 import 'cofre_saf.dart';
 import 'memoria_store.dart';
+import 'sincronizador.dart';
 
 /// Cofre local: lista, busca lexical explicada, edição e importação de Markdown.
 ///
-/// A tela diz o que é de verdade: não há sincronização com o Obsidian nem embeddings neurais
-/// nesta etapa. O que existe é nota local, busca por palavra e motivo do resultado.
+/// A tela diz o que é de verdade: nota local, busca por palavra, motivo do resultado e uma
+/// sincronização explícita com a pasta do Obsidian que nunca apaga nota — no pior caso, conflito.
 class MemoriaPage extends StatefulWidget {
   const MemoriaPage({super.key, required this.store});
 
@@ -26,6 +27,7 @@ class _MemoriaPageState extends State<MemoriaPage> {
   bool carregando = true;
   PastaSaf? pasta;
   bool lendoPasta = false;
+  bool sincronizando = false;
 
   @override
   void initState() {
@@ -79,6 +81,56 @@ class _MemoriaPageState extends State<MemoriaPage> {
       if (dados.truncadas > 0) '${dados.truncadas} grande(s) recusado(s)',
     ];
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pasta importada: ${partes.join(', ')}.')));
+  }
+
+  Future<void> _sincronizarPasta() async {
+    if (sincronizando || pasta == null) return;
+    if (!pasta!.podeEscrever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A pasta está conectada só para leitura. Conecte de novo e permita editar para enviar notas.')),
+      );
+      return;
+    }
+    setState(() => sincronizando = true);
+    final resultado = await Sincronizador(store: widget.store, cofre: const CofreSafGateway()).sincronizar();
+    if (!mounted) return;
+    setState(() => sincronizando = false);
+    await _carregar();
+    if (!mounted) return;
+    if (!resultado.ok) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Não sincronizou: ${resultado.erroGeral}')));
+      return;
+    }
+    if (resultado.plano.conflitos.isNotEmpty) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogo) => AlertDialog(
+          title: Text('${resultado.plano.conflitos.length} nota(s) em conflito'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Nada foi apagado nem sobrescrito. Resolva editando um dos lados e sincronizando de novo.'),
+                const SizedBox(height: 10),
+                for (final conflito in resultado.plano.conflitos.take(8))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text('• ${conflito.titulo}: ${conflito.motivo}', style: const TextStyle(fontSize: 12)),
+                  ),
+                if (resultado.plano.conflitos.length > 8) const Text('… e mais.', style: TextStyle(fontSize: 12)),
+              ],
+            ),
+          ),
+          actions: [TextButton(onPressed: () => Navigator.pop(dialogo), child: const Text('Entendi'))],
+        ),
+      );
+      if (!mounted) return;
+    }
+    final aviso = resultado.falhas.isEmpty
+        ? 'Sincronização: ${resultado.resumo}.'
+        : 'Sincronização parcial: ${resultado.resumo}. Primeira falha: ${resultado.falhas.first}';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aviso)));
   }
 
   Future<void> _desconectarPasta() async {
@@ -253,31 +305,56 @@ class _MemoriaPageState extends State<MemoriaPage> {
   Widget _cartaoPasta(ColorScheme colors) => Card(
         margin: const EdgeInsets.fromLTRB(12, 6, 12, 4),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.folder_special_rounded, color: colors.primary, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                children: [
+                  Icon(Icons.folder_special_rounded, color: colors.primary, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(pasta!.nome, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text(
+                          sincronizando
+                              ? 'Sincronizando nos dois sentidos…'
+                              : lendoPasta
+                                  ? 'Lendo a pasta…'
+                                  : pasta!.podeEscrever
+                                      ? 'Pasta do Obsidian conectada · permissão guardada pelo sistema'
+                                      : 'Pasta conectada só para leitura · reconecte para enviar',
+                          style: const TextStyle(fontSize: 10, color: muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Desconectar pasta',
+                    onPressed: sincronizando ? null : _desconectarPasta,
+                    icon: const Icon(Icons.link_off_rounded, size: 19),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
-                    Text(pasta!.nome, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    Text(
-                      lendoPasta ? 'Lendo a pasta…' : 'Pasta do Obsidian conectada · permissão guardada pelo sistema',
-                      style: const TextStyle(fontSize: 10, color: muted),
+                    FilledButton.tonalIcon(
+                      onPressed: sincronizando || lendoPasta || !pasta!.podeEscrever ? null : _sincronizarPasta,
+                      icon: const Icon(Icons.sync_rounded, size: 18),
+                      label: Text(sincronizando ? 'Sincronizando…' : 'Sincronizar'),
+                    ),
+                    TextButton(
+                      onPressed: sincronizando || lendoPasta ? null : _importarPasta,
+                      child: const Text('Importar notas'),
                     ),
                   ],
                 ),
-              ),
-              TextButton(
-                onPressed: lendoPasta ? null : _importarPasta,
-                child: const Text('Importar notas'),
-              ),
-              IconButton(
-                tooltip: 'Desconectar pasta',
-                onPressed: _desconectarPasta,
-                icon: const Icon(Icons.link_off_rounded, size: 19),
               ),
             ],
           ),

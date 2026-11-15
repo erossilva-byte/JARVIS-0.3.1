@@ -5,8 +5,8 @@ import '../core/memoria_busca.dart';
 
 /// Cofre local de notas: persistência em `shared_preferences` e busca lexical.
 ///
-/// Não há leitura de pasta do Obsidian aqui (isso exige SAF no Android e seletor no Windows);
-/// a importação é feita colando Markdown. O app não finge sincronização que não existe.
+/// A pasta do Obsidian fica em `CofreSaf` (Android): aqui só há nota local e busca. Importar é
+/// colar Markdown ou importar a pasta; sincronizar é uma ação explícita da tela de memória.
 class MemoriaStore {
   MemoriaStore(this._prefs);
 

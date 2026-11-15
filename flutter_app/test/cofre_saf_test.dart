@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jarvis_nova/core/memoria.dart';
 import 'package:jarvis_nova/services/cofre_saf.dart';
 import 'package:jarvis_nova/services/memoria_page.dart';
 import 'package:jarvis_nova/services/memoria_store.dart';
@@ -13,9 +14,11 @@ void main() {
   Object? respostaPasta;
   Object? respostaLeitura;
   final chamadas = <String>[];
+  final escritos = <String, String>{};
 
   setUp(() {
     chamadas.clear();
+    escritos.clear();
     respostaPasta = null;
     respostaLeitura = null;
     SharedPreferences.setMockInitialValues({});
@@ -27,6 +30,10 @@ void main() {
           return respostaPasta;
         case 'listarNotas':
           return respostaLeitura;
+        case 'escreverNota':
+          final dados = (chamada.arguments as Map).cast<String, Object?>();
+          escritos[dados['caminho']! as String] = dados['conteudo']! as String;
+          return {'caminho': dados['caminho'], 'criado': true};
         case 'esquecerPasta':
           return true;
       }
@@ -112,6 +119,36 @@ void main() {
 
     expect(find.text('Meu cofre'), findsNothing);
     expect(chamadas, contains('esquecerPasta'));
+  });
+
+  testWidgets('sincronizar envia nota nova e mostra o resumo', (tester) async {
+    final store = await MemoriaStore.abrir();
+    final quando = DateTime(2026, 11, 14);
+    await store.salvar(NotaMemoria(id: 'a', titulo: 'Nota local', texto: 'conteúdo', criadaEm: quando, atualizadaEm: quando));
+    respostaPasta = {'uri': 'content://tree/obsidian', 'nome': 'Cofre', 'podeEscrever': true};
+    respostaLeitura = {'notas': []};
+    await tester.pumpWidget(MaterialApp(home: MemoriaPage(store: store)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Sincronizar'));
+    await tester.pumpAndSettle();
+
+    expect(chamadas, contains('escreverNota'));
+    expect(escritos.keys, contains('nota-local.md'));
+    expect(store.listar().single.caminho, 'nota-local.md');
+    expect(find.textContaining('1 enviada(s)'), findsOneWidget);
+  });
+
+  testWidgets('pasta só de leitura não deixa sincronizar', (tester) async {
+    final store = await MemoriaStore.abrir();
+    respostaPasta = {'uri': 'content://tree/obsidian', 'nome': 'Cofre', 'podeEscrever': false};
+    await tester.pumpWidget(MaterialApp(home: MemoriaPage(store: store)));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('só para leitura'), findsOneWidget);
+    final botao = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Sincronizar'));
+    expect(botao.onPressed, isNull);
+    expect(chamadas, isNot(contains('escreverNota')));
   });
 
   testWidgets('fora do Android a tela explica em vez de falhar calada', (tester) async {

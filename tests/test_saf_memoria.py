@@ -55,12 +55,36 @@ def problemas() -> list[str]:
     if "openInputStream" not in kotlin:
         falhas.append("leitura não abre o conteúdo pelo SAF")
 
+    # 4. Escrita pela pasta, sem apagar nada de ninguém.
+    if "FLAG_GRANT_WRITE_URI_PERMISSION" not in kotlin:
+        falhas.append("seletor não pede permissão de escrita")
+    if "escreverNota" not in kotlin or "openOutputStream" not in kotlin:
+        falhas.append("gravação de nota não usa o fluxo do SAF")
+    if "createDocument" not in kotlin:
+        falhas.append("nota nova não é criada via SAF")
+    if "deleteDocument" in kotlin:
+        falhas.append("integração tenta apagar arquivo do cofre do usuário")
+    if "podeEscrever" not in kotlin:
+        falhas.append("pasta sem escrita não é sinalizada")
+
+    sinc = RAIZ / "flutter_app" / "lib" / "core" / "memoria_sync.dart"
+    if not sinc.is_file():
+        falhas.append("núcleo de sincronização ausente")
+    else:
+        texto = sinc.read_text(encoding="utf-8")
+        if "planejarSincronizacao" not in texto:
+            falhas.append("núcleo de sincronização sem planejamento")
+        if "apagar(" in texto:
+            falhas.append("sincronização apaga nota local em vez de preservar conflito")
+        if "conflito" not in texto:
+            falhas.append("sincronização sem caminho de conflito")
+
     # 5. O Dart não inventa sucesso quando não há canal.
     if "MissingPluginException" not in dart:
         falhas.append("cofre Dart não trata ausência do canal")
     if "takePersistableUriPermission(" in dart:
         falhas.append("Dart tentando fazer papel do Kotlin")
-    if "pastaAtual" not in dart or "escolherPasta" not in dart or "listarNotas" not in dart:
+    if "pastaAtual" not in dart or "escolherPasta" not in dart or "listarNotas" not in dart or "escreverNota" not in dart:
         falhas.append("métodos do canal não expostos no Dart")
 
     # 6. O template do app é copiado pelo script e referencia o mesmo pacote.
@@ -76,7 +100,7 @@ def main() -> int:
             print(f"FALHOU: {falha}")
         print(f"SAF da memória: {len(falhas)} problema(s).")
         return 1
-    print("OK: SAF da memória — seletor, permissão durável, limites, filtro .md e canal único")
+    print("OK: SAF da memória — seletor, permissão durável, leitura, escrita sem apagar e canal único")
     return 0
 
 

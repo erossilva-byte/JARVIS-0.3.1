@@ -27,6 +27,8 @@ class NotaMemoria {
     required this.criadaEm,
     required this.atualizadaEm,
     this.usos = 0,
+    this.caminho,
+    this.hashSincronizado,
     Map<String, String>? extras,
   })  : tags = List<String>.unmodifiable(tags ?? const <String>[]),
         extras = Map<String, String>.unmodifiable(extras ?? const <String, String>{});
@@ -42,6 +44,13 @@ class NotaMemoria {
   final DateTime criadaEm;
   final DateTime atualizadaEm;
   final int usos;
+
+  /// Caminho relativo na pasta do Obsidian, quando a nota veio de lá ou já foi enviada.
+  final String? caminho;
+
+  /// Hash do conteúdo na última sincronização; é o que permite saber quem mudou.
+  final String? hashSincronizado;
+
   final Map<String, String> extras;
 
   NotaMemoria copiarCom({
@@ -52,6 +61,8 @@ class NotaMemoria {
     int? importancia,
     DateTime? atualizadaEm,
     int? usos,
+    String? caminho,
+    String? hashSincronizado,
   }) =>
       NotaMemoria(
         id: id,
@@ -63,6 +74,8 @@ class NotaMemoria {
         criadaEm: criadaEm,
         atualizadaEm: atualizadaEm ?? this.atualizadaEm,
         usos: usos ?? this.usos,
+        caminho: caminho ?? this.caminho,
+        hashSincronizado: hashSincronizado ?? this.hashSincronizado,
         extras: extras,
       );
 
@@ -76,6 +89,8 @@ class NotaMemoria {
         'criadaEm': criadaEm.toIso8601String(),
         'atualizadaEm': atualizadaEm.toIso8601String(),
         'usos': usos,
+        'caminho': caminho,
+        'hashSincronizado': hashSincronizado,
         'extras': extras,
       };
 
@@ -103,6 +118,10 @@ class NotaMemoria {
       criadaEm: lerData(dados['criadaEm'], agora),
       atualizadaEm: lerData(dados['atualizadaEm'], agora),
       usos: dados['usos'] is int ? (dados['usos'] as int).clamp(0, 100000) : 0,
+      caminho: dados['caminho'] is String && (dados['caminho'] as String).trim().isNotEmpty
+          ? (dados['caminho'] as String).trim()
+          : null,
+      hashSincronizado: dados['hashSincronizado'] is String ? dados['hashSincronizado'] as String : null,
       extras: extras is Map ? extras.map((chave, valor) => MapEntry('$chave', '$valor')) : const {},
     );
   }
@@ -231,6 +250,21 @@ ImportacaoMemoria importarMarkdowns(
     porTitulo[chave] = nota;
   }
   return resultado;
+}
+
+/// Identificador estável do conteúdo, só para detectar mudança.
+///
+/// Não é hash criptográfico: dois acumuladores FNV-1a de 32 bits formam 64 bits, suficiente para
+/// dizer “mudou ou não mudou” sem trazer dependência. Conteúdo igual é sempre conferido à parte
+/// quando a decisão importa.
+String hashConteudo(String texto) {
+  var a = 0x811c9dc5;
+  var b = 0x9e3779b9;
+  for (final unidade in texto.codeUnits) {
+    a = ((a ^ unidade) * 0x01000193) & 0xffffffff;
+    b = ((b ^ (unidade + 0x9e37)) * 0x85ebca6b) & 0xffffffff;
+  }
+  return a.toRadixString(16).padLeft(8, '0') + b.toRadixString(16).padLeft(8, '0');
 }
 
 String jsonDeNotas(List<NotaMemoria> notas) => jsonEncode(notas.map((n) => n.paraJson()).toList());

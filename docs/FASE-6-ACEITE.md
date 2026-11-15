@@ -20,7 +20,7 @@ sincronização bidirecional real com o Obsidian, que dependem de aparelho e de 
 | 10 | Tela de memória com busca, edição, exclusão e importação | **Atendido** | `MemoriaPage` + testes de widget |
 | 11 | Busca semântica neural / paráfrase ampla | **Não entregue** | hoje é lexical determinística; a tela diz isso |
 | 12 | Cofre via SAF (pasta do Obsidian no Android) | **Atendido no código** | `ACTION_OPEN_DOCUMENT_TREE` + permissão durável + leitura `.md`; teste estático e de widget |
-| 13 | Sincronização bidirecional com Obsidian | **Não entregue** | depende de SAF/seletor e de resolução de conflito assistida |
+| 13 | Sincronização bidirecional com Obsidian | **Atendido no código** | envio/recebimento por hash do corpo, escrita via SAF, conflito preservado; 13 casos puros + 8 de serviço |
 | 14 | Versionamento de nota e restauração | **Não entregue** | o legado tem; a interface ainda não |
 
 ## Como a busca funciona
@@ -43,7 +43,8 @@ sincronização bidirecional real com o Obsidian, que dependem de aparelho e de 
   motivo do resultado fica visível justamente para isso não parecer magia.
 - No Android a pasta do Obsidian pode ser conectada com permissão do sistema (SAF) e importada
   quantas vezes quiser. Fora do Android, a importação é colar Markdown.
-- A importação é uma ação explícita: nada é observado nem sincronizado sozinho.
+- A sincronização é uma ação explícita (“Sincronizar”), não um observador em tempo real; conflito
+  nunca é sobrescrito e nota apagada na pasta continua no aparelho até o usuário decidir.
 - Sem apagar nota alheia: conflito de título com texto diferente é reportado e preservado.
 - Nada de sincronização automática: quem move arquivo hoje é o usuário.
 
