@@ -9,6 +9,7 @@ import 'systems_view.dart';
 import 'ui_common.dart';
 import 'services/kws_bridge.dart';
 import 'services/kws_controller.dart';
+import 'services/arquivos_page.dart';
 import 'services/conversa_store.dart';
 import 'services/historico_page.dart';
 import 'services/kws_settings_page.dart';
@@ -224,6 +225,10 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     }
     if (name == 'Visão e OCR') {
       Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const VisaoPage()));
+      return;
+    }
+    if (name == 'Arquivos') {
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ArquivosPage()));
       return;
     }
     final matches = modules.where((item) => item.name == name);

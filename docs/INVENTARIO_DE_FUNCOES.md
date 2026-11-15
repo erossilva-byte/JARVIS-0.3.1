@@ -383,3 +383,9 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Análise por provedor com visão | Sim | Não | Verificado no contrato | 4 provedores; resposta multimodal | Fase 8 | Sem chave real |
 | Reconhecimento facial | Não | Não | Não implementado | prompt proíbe identificar pessoas | Fase 8 | Modelo pode desobedecer |
 | OCR local / modelo no aparelho | Não | Não | Não implementado | tela declara ausência | Fase 8 | Fora desta entrega |
+
+| Arquivos de texto na pasta privada | Sim | Não | Verificado | 8 testes de widget + pasta real | Fase 9 | Plugin não exercitado |
+| Caminho confinado e nome seguro | Sim | — | Verificado no núcleo | `../`, barra e absoluto externo recusados | Fase 9 | — |
+| Limite de 200 arquivos / 512 kB | Sim | — | Verificado no núcleo | medido em bytes UTF-8 | Fase 9 | — |
+| Sandbox de execução de código | Não | Não | Não implementado | tela declara ausência | Fase 9 | Dart não isola SO |
+| Pasta externa via SAF | Não | Não | Não implementado | — | Fase 9 | Exige seletor e permissão |

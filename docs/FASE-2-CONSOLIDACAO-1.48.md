@@ -570,3 +570,15 @@ Relatório: `docs/relatorios/2026-11-15_054-personalidade-e-humor.md`.
 - [ ] Câmera/galeria no aparelho, chave real e precisão do modelo continuam fora.
 
 Relatório: `docs/relatorios/2026-11-15_055-visao-de-imagem.md`.
+
+### Ajuste 056 — Fase 9: arquivos de texto (2026-11-15)
+
+- [x] Pasta privada do app com criar, ler, editar, renomear e apagar `.txt`.
+- [x] Nome validado e caminho confinado; `../`, barra e caminho absoluto externo recusados.
+- [x] Limites de 200 arquivos e 512 kB por texto, medidos em bytes.
+- [x] Aviso ao sair com texto não salvo; erro de escrita informado na tela.
+- [x] Sem acesso a pasta externa e sem rede; a tela declara o recorte.
+- [x] 8 testes de widget, 1 puro com pasta real e 1 estático; 103 testes no total.
+- [ ] Sandbox de código, SAF e inspeção no aparelho continuam pendentes.
+
+Relatório: `docs/relatorios/2026-11-15_056-arquivos-de-texto.md`.

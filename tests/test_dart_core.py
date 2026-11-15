@@ -44,6 +44,7 @@ CASOS = (
     ("tool/pessoas_conversa_test.dart", "pessoas na conversa: bloco seguro, ausência e transparência"),
     ("tool/personalidade_test.dart", "personalidade: níveis, tom sensível, pressa e prompt"),
     ("tool/visao_test.dart", "visão: limite, prompt sem rosto, pedido multimodal e resposta"),
+    ("tool/arquivos_test.dart", "arquivos: nome seguro, caminho confinado e operações reais"),
 )
 
 
