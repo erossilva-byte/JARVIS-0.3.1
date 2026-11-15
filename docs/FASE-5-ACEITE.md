@@ -35,6 +35,11 @@ no Poco X7.
   “tentar de novo”.
 - Testes Dart puros na suíte local e no workflow nativo.
 
+## Verificação no aparelho
+
+O roteiro para instalar o APK do CI e conferir atalhos, widget e compartilhamento, com o que
+anotar em cada passo, está em `docs/FASE-5-ROTEIRO-APARELHO.md`.
+
 ## O que ainda falta
 
 1. **Medição**: nenhuma métrica de fps, jank ou inicialização no Poco X7 (Gate B).
