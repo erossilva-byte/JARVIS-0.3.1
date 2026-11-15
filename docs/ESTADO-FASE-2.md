@@ -32,6 +32,7 @@ Três níveis, sem meio-termo:
 | Personalidade e humor | Três níveis viram prompt; assunto sensível zera o humor; a escolha é lida antes de cada envio | `tool/personalidade_test.dart`, `test/personalidade_page_test.dart`, `tests/test_personalidade_flutter.py` |
 | Visão de imagem (contrato) | Limite, formatos, consentimento, requisição multimodal e proibição de reconhecimento facial | `tool/visao_test.dart`, `test/visao_page_test.dart`, `tests/test_visao_flutter.py` |
 | Arquivos de texto | Pasta privada com criar/ler/editar/renomear/apagar, caminho confinado e limites | `tool/arquivos_test.dart`, `test/arquivos_page_test.dart`, `tests/test_arquivos_flutter.py` |
+| Sandbox de código no Flutter | **Não existe**; catálogo, gaveta e tela declaram a ausência e um teste impede a promessa de voltar | `test/programacao_sem_execucao_test.dart`, `tests/test_arquivos_flutter.py` |
 | Suíte inteira | `npm run test:all` | exit 0, ver contagem no relatório do ajuste |
 
 ## 2. Só auditado — código existe, mundo real não foi tocado

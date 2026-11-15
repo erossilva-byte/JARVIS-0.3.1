@@ -43,7 +43,7 @@ class JarvisDrawer extends StatelessWidget {
         _item(Icons.visibility_rounded, 'Visão', () { Navigator.pop(context); onModule('Visão e OCR'); }),
         _item(Icons.checklist_rounded, 'Tarefas', () { Navigator.pop(context); onModule('Tarefas e rotinas'); }),
         _item(Icons.people_alt_rounded, 'Pessoas', () { Navigator.pop(context); onModule('Pessoas e contexto'); }),
-        _item(Icons.terminal_rounded, 'Dev. Arquivos', () { Navigator.pop(context); onModule('Programação e sandbox'); }),
+        _item(Icons.terminal_rounded, 'Código sem execução', () { Navigator.pop(context); onModule('Programação (sem execução)'); }),
         _item(Icons.bolt_rounded, 'Rotinas', () { Navigator.pop(context); onModule('Tarefas e rotinas'); }),
         _item(Icons.phone_android_rounded, 'Celular', () { Navigator.pop(context); onModule('Android e dispositivos'); }),
         _item(Icons.account_tree_rounded, 'Memória', () { Navigator.pop(context); onModule('Memória semântica'); }),

@@ -17,7 +17,7 @@ anunciada em lugar nenhum. Esta é uma entrega parcial da Fase 9, não a fase in
 | 6 | Sem acesso a Downloads, Obsidian ou pasta escolhida | **Atendido no código** | só a pasta privada; tela declara; teste estático |
 | 7 | Sem envio para a rede | **Atendido no código** | nenhum `http`/socket; tela declara |
 | 8 | Aviso ao sair com texto não salvo | **Atendido** | diálogo “Descartar alterações?”; teste de widget |
-| 9 | Sandbox de execução de código | **Não entregue** | Dart não oferece isolamento de SO; a tela declara a ausência |
+| 9 | Sandbox de execução de código | **Não entregue, e a promessa foi removida** | Dart não oferece isolamento de SO; catálogo, gaveta e tela declaram a ausência |
 | 10 | Pasta externa via SAF / Downloads | **Não entregue** | exigiria seletor de pasta e permissão durável; fica para outra entrega |
 | 11 | Pasta e arquivos no Poco X7 | **Pendente** | `path_provider` nunca rodou neste ambiente |
 
@@ -35,7 +35,7 @@ código continua pendente e declarado.
 dart run tool/arquivos_test.dart           → OK (pasta temporária real)
 flutter test test/arquivos_page_test.dart  → 8 testes, All tests passed!
 python3 tests/test_arquivos_flutter.py     → OK (estático)
-flutter test                               → 103 testes, All tests passed!
+flutter test                               → 107 testes, All tests passed!
 flutter analyze                            → No issues found!
 npm run verificar                          → 4 de 4 etapas, 2.380 verificações
 ```
@@ -48,3 +48,10 @@ npm run verificar                          → 4 de 4 etapas, 2.380 verificaçõ
 - Não há lixeira: apagar remove na hora, com confirmação.
 - Não há backup, sincronização nem exportação; os arquivos ficam só neste aparelho.
 - A tela não foi inspecionada visualmente; os testes cobrem o comportamento, não o layout.
+
+## Correção de promessa (ajuste 057)
+
+O catálogo dizia “Assistência de código e execução isolada”. Foi corrigido para **“Programação (sem
+execução)”**, a gaveta para **“Código sem execução”** e a tela do módulo passou a dizer **“Execução
+de código não disponível”**, explicando que não há sandbox, terminal ou permissão para rodar
+programas. Um teste de widget e a verificação estática impedem a frase antiga de voltar.

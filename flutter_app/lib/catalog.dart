@@ -14,7 +14,7 @@ const modules=<JarvisModule>[
  JarvisModule('Voz e KWS','Interação',Icons.graphic_eq_rounded,'Voz, palavra de ativação local e síntese.'),
  JarvisModule('Visão e OCR','Interação',Icons.visibility_rounded,'Câmera, tela, imagens e documentos.'),
  JarvisModule('Arquivos','Produtividade',Icons.folder_copy_rounded,'Leitura, criação, conversão e organização.'),
- JarvisModule('Programação e sandbox','Produtividade',Icons.terminal_rounded,'Assistência de código e execução isolada.'),
+ JarvisModule('Programação (sem execução)','Produtividade',Icons.terminal_rounded,'Assistência de código; sandbox e execução não disponíveis.'),
  JarvisModule('CADeSIMU e elétrica','Engenharia',Icons.electrical_services_rounded,'Projetos, circuitos e validação elétrica.'),
  JarvisModule('Avatar 3D','Interface',Icons.view_in_ar_rounded,'Avatar e representação visual do assistente.'),
  JarvisModule('Pessoas e contexto','Contexto',Icons.people_alt_rounded,'Perfis e contexto configurável.'),

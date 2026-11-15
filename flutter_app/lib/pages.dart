@@ -11,12 +11,20 @@ class ModulePage extends StatelessWidget{
   Container(height:145,decoration:BoxDecoration(borderRadius:BorderRadius.circular(22),gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[cyan.withValues(alpha: .15),const Color(0xFF368BFF).withValues(alpha: .06),panel]),border:Border.all(color:cyan.withValues(alpha: .18))),child:Icon(module.icon,color:cyan,size:58)),
   const SizedBox(height:22),Eyebrow(module.group.toUpperCase()),const SizedBox(height:7),Text(module.name,style:const TextStyle(fontSize:27,fontWeight:FontWeight.w300)),
   const SizedBox(height:9),Text(module.description,style:const TextStyle(color:muted,height:1.5)),const SizedBox(height:22),
-  Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:const Color(0xFF211A10),borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFFFC66D).withValues(alpha: .22))),child:const Row(children:[
-   Icon(Icons.pending_outlined,color:Color(0xFFFFC66D)),SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-    Text('Integração em auditoria',style:TextStyle(color:Color(0xFFFFC66D),fontWeight:FontWeight.w600)),SizedBox(height:4),
-    Text('A presença no catálogo não comprova que o serviço esteja conectado ou operacional nesta interface.',style:TextStyle(color:muted,fontSize:11,height:1.4)),
+  if(module.name=='Programação (sem execução)')
+   Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:const Color(0xFF211A10),borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFFFC66D).withValues(alpha: .22))),child:const Row(children:[
+    Icon(Icons.block_rounded,color:Color(0xFFFFC66D)),SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Text('Execução de código não disponível',style:TextStyle(color:Color(0xFFFFC66D),fontWeight:FontWeight.w600)),SizedBox(height:4),
+     Text('Não há sandbox, terminal ou permissão para rodar programas. Esta interface não executa código; os arquivos de texto ficam em Arquivos, na pasta isolada do app.',style:TextStyle(color:muted,fontSize:11,height:1.4)),
+    ])),
+   ]))
+  else
+   Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:const Color(0xFF211A10),borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFFFC66D).withValues(alpha: .22))),child:const Row(children:[
+    Icon(Icons.pending_outlined,color:Color(0xFFFFC66D)),SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Text('Integração em auditoria',style:TextStyle(color:Color(0xFFFFC66D),fontWeight:FontWeight.w600)),SizedBox(height:4),
+     Text('A presença no catálogo não comprova que o serviço esteja conectado ou operacional nesta interface.',style:TextStyle(color:muted,fontSize:11,height:1.4)),
+    ])),
    ])),
-  ])),
  ]));
 }
 class SettingsPage extends StatelessWidget{

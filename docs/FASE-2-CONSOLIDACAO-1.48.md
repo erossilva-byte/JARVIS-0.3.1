@@ -582,3 +582,14 @@ Relatório: `docs/relatorios/2026-11-15_055-visao-de-imagem.md`.
 - [ ] Sandbox de código, SAF e inspeção no aparelho continuam pendentes.
 
 Relatório: `docs/relatorios/2026-11-15_056-arquivos-de-texto.md`.
+
+### Ajuste 057 — remover a promessa de execução isolada (2026-11-15)
+
+- [x] Catálogo: “Programação (sem execução)”, com descrição que declara a ausência.
+- [x] Gaveta: “Código sem execução” em vez de “Dev. Arquivos”.
+- [x] Tela do módulo: “Execução de código não disponível” e explicação do que não existe.
+- [x] Outros módulos mantêm o aviso genérico de integração em auditoria.
+- [x] 4 testes de widget e estático impedem a promessa antiga de voltar; 107 no total.
+- [ ] O sandbox de código continua fora do escopo, conforme a análise registrada.
+
+Relatório: `docs/relatorios/2026-11-15_057-sem-promessa-de-sandbox.md`.

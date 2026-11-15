@@ -389,3 +389,5 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Limite de 200 arquivos / 512 kB | Sim | — | Verificado no núcleo | medido em bytes UTF-8 | Fase 9 | — |
 | Sandbox de execução de código | Não | Não | Não implementado | tela declara ausência | Fase 9 | Dart não isola SO |
 | Pasta externa via SAF | Não | Não | Não implementado | — | Fase 9 | Exige seletor e permissão |
+
+| Promessa de execução isolada | Removida | — | Verificada | catálogo, gaveta e tela declaram ausência; 4 testes | Fase 9 | Sem sandbox |

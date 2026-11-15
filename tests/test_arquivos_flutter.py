@@ -16,6 +16,9 @@ SANDBOX = RAIZ / "flutter_app" / "lib" / "services" / "arquivo_sandbox.dart"
 PAGINA = RAIZ / "flutter_app" / "lib" / "services" / "arquivos_page.dart"
 HOME = RAIZ / "flutter_app" / "lib" / "home_screen.dart"
 PUBSPEC = RAIZ / "flutter_app" / "pubspec.yaml"
+CATALOGO = RAIZ / "flutter_app" / "lib" / "catalog.dart"
+PAGES = RAIZ / "flutter_app" / "lib" / "pages.dart"
+DRAWER = RAIZ / "flutter_app" / "lib" / "drawer.dart"
 
 
 def problemas() -> list[str]:
@@ -73,6 +76,21 @@ def problemas() -> list[str]:
         falhas.append("teste estático de arquivos fora da suíte")
     if "arquivos_test.dart" not in (RAIZ / "tests" / "test_dart_core.py").read_text(encoding="utf-8"):
         falhas.append("teste puro de arquivos fora do núcleo Dart")
+
+    # 6. Nem o catálogo nem a tela prometem execução isolada.
+    catalogo = CATALOGO.read_text(encoding="utf-8")
+    pages = PAGES.read_text(encoding="utf-8")
+    drawer = DRAWER.read_text(encoding="utf-8")
+    if "Assistência de código e execução isolada" in catalogo:
+        falhas.append("catálogo ainda promete execução isolada")
+    if "sandbox e execução não disponíveis" not in catalogo:
+        falhas.append("catálogo não declara a ausência de execução")
+    if "Execução de código não disponível" not in pages:
+        falhas.append("tela do módulo não declara a ausência de execução")
+    if "Não há sandbox, terminal" not in pages:
+        falhas.append("tela do módulo não explica a ausência")
+    if "Código sem execução" not in drawer:
+        falhas.append("gaveta ainda rotula o módulo como sandbox")
 
     return falhas
 
