@@ -15,7 +15,7 @@ no Poco X7.
 | 4 | App usável por texto sem permissão, rede ou modelo | **Atendido no código** | conversa abre mesmo sem provedor configurado e explica o motivo |
 | 5 | Streaming com atualização em 16–50 ms | **Atendido no núcleo e na tela** | `StreamBuffer` (32 ms) testado; parser SSE testado; tela usa os dois |
 | 6 | Parar geração, manter o texto recebido | **Atendido no código** | botão de parar cancela a assinatura e preserva o parcial |
-| 7 | Citação das notas usadas | **Preparado, sem fonte ainda** | campo `fontes` na mensagem; a memória da Fase 7 é quem vai preencher |
+| 7 | Citação das notas usadas | **Atendido no código** | memória local da Fase 6 preenche `fontes`; cofre via SAF ainda pendente |
 | 8 | Histórico de conversas com busca e fixar | **Atendido** | `HistoricoPage` + testes de widget |
 | 9 | Modo voz em tela cheia | **Atendido no código** | `VozTelaCheiaPage` + teste |
 | 10 | Persistência após morte do processo | **Atendido** | `ConversaStore` em `shared_preferences`, com rascunho |
@@ -48,8 +48,8 @@ anotar em cada passo, está em `docs/FASE-5-ROTEIRO-APARELHO.md`.
    mas nenhum APK foi compilado aqui (sem Android SDK) nem instalado em aparelho.
 3. **Painel rápido** (Quick Settings) e notificação do serviço ficaram fora; o pedido cobria
    atalhos, widget e compartilhar.
-3. **Citação de notas**: o campo existe e a tela mostra “O que lembrei”; quem preenche é a
-   memória da Fase 7.
+3. **Citação de notas**: o campo é preenchido pelo cofre local (Fase 6); ler a pasta real do
+   Obsidian continua pendente.
 4. **Migração de dependência**: a interface passou a usar `material_ui` (exigido pelo Flutter
    3.47+); o CI com `stable` já resolve, versões anteriores não.
 

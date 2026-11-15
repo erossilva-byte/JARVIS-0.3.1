@@ -93,6 +93,7 @@ jobs:
       - run: flutter analyze
       - run: flutter test
       - run: dart run tool/stream_buffer_test.dart
+      - run: dart run tool/memoria_test.dart
       - name: Build debug APK
         run: flutter build apk --debug
       - name: Verify the APK carries shortcuts, widget and share target
@@ -179,6 +180,7 @@ jobs:
       - run: flutter analyze
       - run: flutter test
       - run: dart run tool/stream_buffer_test.dart
+      - run: dart run tool/memoria_test.dart
       - run: flutter build windows
       - name: Publish Windows build artifact
         uses: actions/upload-artifact@v4

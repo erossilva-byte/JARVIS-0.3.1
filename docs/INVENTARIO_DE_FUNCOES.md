@@ -345,3 +345,9 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Compartilhar conversa | Sim | — | Implementado | `SistemaAndroid.compartilhar` + folha do sistema | Seção 3D | Sem teste no aparelho |
 
 | Conferência do APK no CI | Sim | — | Verificado (simulação) | conteúdo do pacote + manifesto + dex | Fase 5 | Compilação real só no CI |
+
+| Cofre local de notas | Sim | — | Verificado | `core/memoria.dart` + `memoria_store.dart` | Fase 6 | Sem cofre real grande |
+| Busca lexical com motivo | Sim | — | Verificado | 11 blocos em `tool/memoria_test.dart` | Fase 6 | Não é busca neural |
+| Importação Markdown com conflito | Sim | — | Verificado | repetida/conflito em teste | Fase 6 | Colagem, não pasta SAF |
+| Citação na conversa | Sim | — | Verificado no núcleo | `montarMensagens` + `fontes` | Fase 6 | Sem chamada real à IA |
+| Cofre via SAF e sync Obsidian | Não | Não | Não implementado | — | Fase 7B | Exige aparelho e seletor de pasta |

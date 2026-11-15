@@ -4,10 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../core/conversa.dart';
+import '../core/memoria_busca.dart';
 import '../core/stream_buffer.dart';
 import '../ui_common.dart';
 import 'conversa_store.dart';
 import 'historico_page.dart';
+import 'memoria_store.dart';
 import 'provider_service.dart';
 import 'sistema_android.dart';
 import 'voz_tela_cheia_page.dart';
@@ -32,6 +34,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   late Conversa conversa;
 
   ConversaStore? store;
+  MemoriaStore? memoria;
   bool enviando = false;
   String? erro;
   String? aviso;
@@ -64,6 +67,11 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     } catch (_) {
       // Sem armazenamento disponível (teste ou plataforma sem plugin), a tela segue em memória.
       store = null;
+    }
+    try {
+      memoria = await MemoriaStore.abrir();
+    } catch (_) {
+      memoria = null;
     }
   }
 
@@ -135,8 +143,11 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     final historico = conversa.mensagens
         .map((m) => {'role': m.autor, 'content': m.texto})
         .toList();
+    // Só entra o que a busca considerou relevante; sem resultado, nenhuma nota é enviada.
+    final contextoMemoria = memoria?.contexto(texto) ??
+        const ContextoMemoria(texto: '', usados: [], caracteres: 0);
     _assinatura = service
-        .streamComplete(escolhido.id, historico)
+        .streamComplete(escolhido.id, montarMensagens(historico, contextoMemoria))
         .listen(
       buffer.adicionar,
       cancelOnError: true,
@@ -159,10 +170,15 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
           if (recebido.trim().isEmpty) {
             erro = 'O provedor encerrou a resposta sem texto. Tente novamente.';
           } else {
-            conversa.adicionar(MensagemConversa(autor: 'assistant', texto: recebido));
+            conversa.adicionar(MensagemConversa(
+              autor: 'assistant',
+              texto: recebido,
+              fontes: contextoMemoria.usados.map((nota) => nota.titulo).toList(),
+            ));
           }
         });
         unawaited(_persistir());
+        unawaited(memoria?.registrarUso(contextoMemoria.usados.map((nota) => nota.id)) ?? Future<void>.value());
       },
     );
   }

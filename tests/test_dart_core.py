@@ -26,10 +26,19 @@ def localizar_dart() -> str | None:
     if sdk:
         candidatos.append(Path(sdk) / "bin" / "dart")
     candidatos.append(Path("/tmp/dart-sdk/bin/dart"))
+    candidatos.append(Path("/tmp/flutter/bin/dart"))
     for caminho in candidatos:
         if caminho.is_file():
             return str(caminho)
     return None
+
+
+CASOS = (
+    ("tool/stream_buffer_test.dart", "agrupamento de tokens (32 ms)"),
+    ("tool/sse_test.dart", "parser SSE do streaming"),
+    ("tool/conversa_test.dart", "modelo de conversa e título automático"),
+    ("tool/memoria_test.dart", "memória: Markdown, busca, citação e orçamento"),
+)
 
 
 def main() -> int:
@@ -37,33 +46,21 @@ def main() -> int:
     if dart is None:
         print("AVISO: Dart não encontrado — testes puros do núcleo não rodaram.")
         return 0
-    r = subprocess.run(
-        [dart, "run", "tool/stream_buffer_test.dart"],
-        cwd=RAIZ / "flutter_app",
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-    if r.returncode != 0:
-        print((r.stdout or "") + (r.stderr or ""))
-        print("FALHOU: teste puro do núcleo Dart.")
-        return 1
-    sse = subprocess.run(
-        [dart, "run", "tool/sse_test.dart"],
-        cwd=RAIZ / "flutter_app",
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-    if sse.returncode != 0:
-        print((sse.stdout or "") + (sse.stderr or ""))
-        print("FALHOU: parser SSE do streaming.")
-        return 1
-    print("OK: núcleo Dart — agrupamento de tokens (32 ms) e parser SSE")
+    for caminho, rotulo in CASOS:
+        r = subprocess.run(
+            [dart, "run", caminho],
+            cwd=RAIZ / "flutter_app",
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if r.returncode != 0:
+            print((r.stdout or "") + (r.stderr or ""))
+            print(f"FALHOU: {rotulo}.")
+            return 1
+    print("OK: núcleo Dart — " + "; ".join(rotulo for _, rotulo in CASOS))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

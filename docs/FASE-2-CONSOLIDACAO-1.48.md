@@ -443,3 +443,15 @@ Relatório: `docs/relatorios/2026-11-14_043-revisao-workflow-apk.md`.
 - [ ] Rodar no Poco X7: abertura fria/morna, 60 s parado, 60 s de uso e modo voz.
 
 Relatório: `docs/FASE-5-MEDICAO-APARELHO.md`.
+
+### Ajuste 045 — Fase 6: memória local e citação (2026-11-14)
+
+- [x] Cofre local de notas com Markdown, frontmatter e chaves desconhecidas preservadas.
+- [x] Importação com repetição e conflito sem sobrescrita.
+- [x] Busca lexical determinística com motivo, orçamento e corte relativo.
+- [x] Notas relevantes entram no envio como sistema; `fontes` mostra “O que lembrei”.
+- [x] Tela de memória: lista, busca, editor, exclusão, cópia e importação de Markdown.
+- [x] 10 testes novos (cofre + widget), análise limpa, suíte 4 de 4.
+- [ ] Cofre via SAF, sincronização Obsidian e versionamento de nota (pendência 7B).
+
+Aceite: `docs/FASE-6-ACEITE.md`. Relatório: `docs/relatorios/2026-11-14_045-memoria-local.md`.

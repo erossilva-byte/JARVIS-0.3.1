@@ -12,6 +12,8 @@ import 'services/kws_controller.dart';
 import 'services/conversa_store.dart';
 import 'services/historico_page.dart';
 import 'services/kws_settings_page.dart';
+import 'services/memoria_page.dart';
+import 'services/memoria_store.dart';
 import 'services/sistema_android.dart';
 import 'services/voice_conversation_page.dart';
 import 'services/voz_tela_cheia_page.dart';
@@ -110,6 +112,19 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     }
   }
 
+  Future<void> _abrirMemoria() async {
+    try {
+      final store = await MemoriaStore.abrir();
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => MemoriaPage(store: store)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('O cofre local não está disponível neste aparelho.')),
+      );
+    }
+  }
+
   Future<void> _abrirHistorico() async {
     try {
       final store = await ConversaStore.abrir();
@@ -162,6 +177,10 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
   }
 
   void _openModule(String name) {
+    if (name == 'Memória semântica') {
+      unawaited(_abrirMemoria());
+      return;
+    }
     final matches = modules.where((item) => item.name == name);
     if (matches.isEmpty) { return; }
     final module = matches.first;
