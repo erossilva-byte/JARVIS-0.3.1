@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "meta": {
+    "id": "0f3c9a52-7f5e-4c1a-9b7d-2a6c1e4d8b11",
+    "titulo": "Partida direta com selo — exemplo golden",
+    "autor": "Jarvis",
+    "criado": "2026-11-17T10:00:00-03:00",
+    "atualizado": "2026-11-17T10:00:00-03:00",
+    "tensaoComando": { "valor": 220, "tipo": "CA", "fases": 1 },
+    "tensaoPotencia": { "valor": 380, "tipo": "CA", "fases": 3 },
+    "frequencia": 60,
+    "normaSimbolos": "IEC 60617"
+  },
+  "sheets": [
+    {
+      "id": "s1",
+      "titulo": "Comando + Potência",
+      "camadas": ["comando", "potencia", "anotacoes"],
+      "alimentacao": {
+        "comando":  { "fase": "c-l1:L",  "neutro": "c-l1:N" },
+        "potencia": { "fases": ["c-f1:L1", "c-f1:L2", "c-f1:L3"] }
+      },
+      "components": [
+        { "id": "c-f1",  "type": "fuse",       "ref": "F1",  "pos": { "x": 40,  "y": 40  }, "rot": 0, "camada": "potencia", "params": { "in": 16, "curva": "gG" } },
+        { "id": "c-ft1", "type": "overload",   "ref": "FT1", "pos": { "x": 40,  "y": 100 }, "rot": 0, "camada": "potencia", "params": { "in": 12, "classe": 10 } },
+        { "id": "c-km1p","type": "contactor_power", "ref": "KM1", "pos": { "x": 40, "y": 160 }, "rot": 0, "camada": "potencia", "params": { "in": 12 } },
+        { "id": "c-m1",  "type": "motor3p",    "ref": "M1",  "pos": { "x": 40,  "y": 240 }, "rot": 0, "camada": "potencia", "params": { "potenciaCv": 7.5, "in": 11.5, "ipIn": 7.0 } },
+
+        { "id": "c-l1",  "type": "fonte_comando","ref": "ALIM","pos": { "x": 380, "y": 20 }, "rot": 0, "camada": "comando", "params": { "tensao": 220 } },
+        { "id": "c-s0",  "type": "fuse",       "ref": "F2",  "pos": { "x": 200, "y": 40  }, "rot": 0, "camada": "comando", "params": { "in": 2, "curva": "gG" } },
+        { "id": "c-s1",  "type": "pushbutton_nc","ref": "S1", "pos": { "x": 200, "y": 90  }, "rot": 0, "camada": "comando", "params": { "rotulo": "PARADA" } },
+        { "id": "c-s2",  "type": "pushbutton_no","ref": "S2", "pos": { "x": 200, "y": 140 }, "rot": 0, "camada": "comando", "params": { "rotulo": "LIGA" } },
+        { "id": "c-ft1c","type": "contact_nc", "ref": "FT1", "pos": { "x": 200, "y": 190 }, "rot": 0, "camada": "comando", "params": { "pai": "c-ft1" } },
+        { "id": "c-km1", "type": "coil",       "ref": "KM1", "pos": { "x": 200, "y": 260 }, "rot": 0, "camada": "comando", "params": { "tensao": 220, "pickupMs": 15, "dropoutMs": 8 } },
+        { "id": "c-km1s","type": "contact_no", "ref": "KM1", "pos": { "x": 260, "y": 140 }, "rot": 0, "camada": "comando", "params": { "pai": "c-km1", "funcao": "selo" } },
+        { "id": "c-h1",  "type": "lamp",       "ref": "H1",  "pos": { "x": 320, "y": 300 }, "rot": 0, "camada": "comando", "params": { "tensao": 220, "potenciaW": 3 } }
+      ],
+      "wires": [
+        { "id": "w01", "net": "L1",       "from": "c-f1:T1",   "to": "c-ft1:L1",    "number": 1 },
+        { "id": "w02", "net": "L2",       "from": "c-f1:T2",   "to": "c-ft1:L2",    "number": 2 },
+        { "id": "w03", "net": "L3",       "from": "c-f1:T3",   "to": "c-ft1:L3",    "number": 3 },
+        { "id": "w04", "net": "T1",       "from": "c-ft1:T1",  "to": "c-km1p:L1",   "number": 4 },
+        { "id": "w05", "net": "T2",       "from": "c-ft1:T2",  "to": "c-km1p:L2",   "number": 5 },
+        { "id": "w06", "net": "T3",       "from": "c-ft1:T3",  "to": "c-km1p:L3",   "number": 6 },
+        { "id": "w07", "net": "U",        "from": "c-km1p:T1", "to": "c-m1:U",      "number": 7 },
+        { "id": "w08", "net": "V",        "from": "c-km1p:T2", "to": "c-m1:V",      "number": 8 },
+        { "id": "w09", "net": "W",        "from": "c-km1p:T3", "to": "c-m1:W",      "number": 9 },
+
+        { "id": "w10", "net": "CF",       "from": "c-l1:L",    "to": "c-s0:L",      "number": 10 },
+        { "id": "w19", "net": "CF",       "from": "c-s0:T",    "to": "c-s1:11",     "number": 19 },
+        { "id": "w11", "net": "C1",       "from": "c-s1:12",   "to": "c-s2:13",     "number": 11 },
+        { "id": "w12", "net": "C2",       "from": "c-s2:14",   "to": "c-ft1c:21",   "number": 12 },
+        { "id": "w13", "net": "C3",       "from": "c-ft1c:22", "to": "c-km1:A1",    "number": 13 },
+        { "id": "w14", "net": "C3",       "from": "c-km1s:13", "to": "c-s2:13",     "number": 14 },
+        { "id": "w15", "net": "C2",       "from": "c-km1s:14", "to": "c-s2:14",     "number": 15 },
+        { "id": "w16", "net": "N",        "from": "c-km1:A2",  "to": "c-h1:N",      "number": 16 },
+        { "id": "w17", "net": "N",        "from": "c-l1:N",    "to": "c-h1:N",      "number": 17 },
+        { "id": "w18", "net": "C3",       "from": "c-km1:A1",  "to": "c-h1:A1",     "number": 18 }
+      ],
+      "junctions": [
+        { "id": "j1", "net": "C3", "pos": { "x": 200, "y": 130 } },
+        { "id": "j2", "net": "C2", "pos": { "x": 200, "y": 160 } },
+        { "id": "j3", "net": "N",  "pos": { "x": 360, "y": 320 } }
+      ],
+      "notes": [
+        "Circuito de referência para os testes da Fase 10.",
+        "O campo 'net' dos fios é rótulo sugerido, não fonte de verdade: a conectividade vem dos terminais.",
+        "S2 fecha o circuito; KM1 pickup em 15 ms e o contato 13-14 sela o ramo.",
+        "S1 (NF) desenergiza o comando. Sem S1, o ERC aponta E005.",
+        "H1 fica em paralelo com a bobina KM1: sinaliza comando energizado.",
+        "ALIM é a fonte do comando (L/N); F2 é unipolar com pinos L/T, nunca L/N.",
+        "As coordenadas deste exemplo são de desenho antigo (espaçamento 40 px); a rota é recalculada pelos pinos. Ver docs/relatorios/2026-11-17_001_simulador_fase10.md."
+      ]
+    }
+  ],
+  "plc": null,
+  "verification": {
+    "erc": null,
+    "simulation": null,
+    "estado": "não verificado",
+    "observacao": "Este arquivo é um exemplo do schema; rode ERC e simulação para que ele receba selo."
+  }
+}
