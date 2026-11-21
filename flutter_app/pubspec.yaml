@@ -1,7 +1,7 @@
 name: jarvis_nova
 description: Interface nativa Flutter do J.A.R.V.I.S. Nova.
 publish_to: none
-version: 1.78.0+17800
+version: 1.79.0+17900
 environment:
   sdk: ">=3.4.0 <4.0.0"
   flutter: ">=3.47.0"

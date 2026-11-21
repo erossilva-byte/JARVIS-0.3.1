@@ -176,7 +176,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     if (!mounted) return;
     if (selecionado == null) {
       setState(() => erro =
-          'Nenhum provedor configurado. Configure o Groq ou outro provedor antes de enviar.');
+          'Nenhum provedor configurado. Configure o Groq, outro provedor ou ative o Zero-Key antes de enviar.');
       return;
     }
     final escolhido = selecionado;

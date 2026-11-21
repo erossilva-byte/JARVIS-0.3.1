@@ -64,7 +64,8 @@ class PonteIaFundo {
     if (escolhido == null) {
       throw PlatformException(
           code: 'sem_provedor',
-          message: 'Nenhum provedor de IA está configurado.');
+          message: 'Nenhum provedor de IA está configurado. Cadastre uma chave '
+              'ou ative o Zero-Key em Provedores de IA.');
     }
     var personalidade = const Personalidade();
     try {

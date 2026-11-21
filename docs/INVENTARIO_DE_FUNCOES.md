@@ -713,3 +713,19 @@ obriga todos os usuários a desinstalar para receber versões futuras.
 Limite honesto: a instalação por cima só funciona com a mesma chave de
 assinatura do APK instalado; o APK da esteira é arm64 e nada disso foi testado em
 aparelho físico.
+
+## Provedor sem chave (Zero-Key) — ajuste 093 (2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Provedor sem chave | lista de provedores | fala com o endpoint Classic da Pollinations, compatível com OpenAI | `provedorSemChave`, `aiProviders` |
+| Consentimento | interruptor “Usar sem chave” | liga/desliga o envio ao serviço público; desligado por padrão | `zero_key_store.dart`, `ProviderSettingsPage._alternarZeroKey` |
+| Chamada anônima | Zero-Key ligado | nenhum cabeçalho `Authorization`, nenhuma chave gravada | `ProviderService._cabecalhos` |
+| Prioridade | ordem de `aiProviders` | Zero-Key é o último: só responde se nenhum provedor com chave responder | `streamComplete`, `firstConfiguredProvider` |
+| Limite do serviço público | HTTP 402/429/503 | explica o limite (≈1 resposta a cada 45 s por IP) em vez de culpar a rede | `_mensagemHttp` |
+| Recusa de chave | salvar/remover chave no Zero-Key | recusa com explicação, sem gravar nada | `saveKey`, `removeKey` |
+| Estado sem provedor | conversa, resumo tático e segundo plano | a mensagem cita o Zero-Key como opção | `voice_conversation_page.dart`, `resumo_ia_service.dart`, `ponte_ia_fundo.dart` |
+
+Limite honesto: o serviço público é anônimo por IP, tem cota compartilhada e pode
+mudar ou sair do ar sem aviso; o endpoint foi medido uma vez (resposta 200 sem
+chave em 2026-11-21) e nada foi testado em aparelho físico.

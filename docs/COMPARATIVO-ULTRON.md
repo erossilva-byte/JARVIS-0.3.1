@@ -45,7 +45,7 @@ limite), **Falta** (não existe), **Não se aplica** (decisão do projeto).
 | U.L.T.R.O.N. | J.A.R.V.I.S. Nova | Situação |
 |---|---|---|
 | Vários provedores com failover | `provider_service.dart`, 12 agentes | **Tem** |
-| Provedor sem chave (Zero-Key) | exige chave do usuário | **Falta** |
+| Provedor sem chave (Zero-Key) | `zero_key_store.dart`, `ProviderService` | **Novo no ajuste 093** (opcional, desligado por padrão; limite de ~1 resposta/45 s por IP) |
 | Descobrir modelos (`/models`) | seleção manual de modelo | **Falta** |
 | IA local no aparelho | Gemma 3 1B opcional (~529 MB) | **Parcial** (não usado por padrão) |
 | Visão multimodal com consentimento | `visao_page.dart` | **Tem** |
@@ -81,7 +81,10 @@ de **conveniência de mensagens** e **automação**:
 3. ~~skills em Markdown (`Skills/*.md`) reaproveitando o cofre SAF~~ — feito no ajuste 086;
 4. ~~flip-to-shush e modo noturno (sensores e brilho)~~ — feito no ajuste 087;
 5. ~~perfis de timbre de voz na tela~~ — feito no ajuste 088;
-6. ~~Duress PIN~~ — feito no ajuste 090 no formato de modo de visita; resta a atualização OTA, que exige decisão de escopo antes.
+6. ~~Duress PIN~~ — feito no ajuste 090 no formato de modo de visita;
+7. ~~atualização OTA com SHA-256~~ — feito no ajuste 092;
+8. ~~provedor sem chave~~ — feito no ajuste 093 como opção explícita, desligada
+   por padrão e com o limite do serviço público declarado.
 
 Nada nesta lista foi medido em aparelho físico neste repositório; a coluna
 “Tem” significa “existe no código com teste”, não “funciona no seu celular”.

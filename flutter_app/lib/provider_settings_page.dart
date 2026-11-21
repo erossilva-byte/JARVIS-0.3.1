@@ -3,14 +3,18 @@ import 'services/provider_service.dart';
 import 'ui_common.dart';
 
 class ProviderSettingsPage extends StatefulWidget {
-  const ProviderSettingsPage({super.key});
+  const ProviderSettingsPage({super.key, this.service});
+
+  /// Injetável para teste; em produção usa o cofre seguro do aparelho.
+  final ProviderService? service;
+
   @override
   State<ProviderSettingsPage> createState() => _ProviderSettingsPageState();
 }
 
 class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
   late final ProviderService service =
-      ProviderService(secrets: PlatformSecretStore());
+      widget.service ?? ProviderService(secrets: PlatformSecretStore());
   final Map<String, TextEditingController> fields = {};
   final Map<String, bool> configured = {};
   final Map<String, String> messages = {};
@@ -88,6 +92,29 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
     }
   }
 
+  Future<void> _alternarZeroKey(AiProvider p, bool ativo) async {
+    setState(() => busy.add(p.id));
+    try {
+      await service.definirZeroKey(ativo);
+      if (!mounted) return;
+      setState(() {
+        configured[p.id] = ativo;
+        messages[p.id] = ativo
+            ? 'Zero-Key ativado: só é usado quando nenhum provedor com chave responde.'
+            : 'Zero-Key desligado: nenhuma pergunta sai do aparelho sem uma chave sua.';
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => messages[p.id] =
+            'Não foi possível guardar essa escolha no aparelho.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => busy.remove(p.id));
+      }
+    }
+  }
+
   Future<void> _remove(AiProvider p) async {
     setState(() => busy.add(p.id));
     try {
@@ -128,7 +155,7 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
           const Eyebrow('PRIORIDADE DE ROTEAMENTO'),
           const SizedBox(height: 7),
           const Text(
-              'Groq é o provedor principal. Os demais ficam disponíveis como alternativas configuradas individualmente.',
+              'Groq é o provedor principal. Os demais ficam disponíveis como alternativas configuradas individualmente. O Zero-Key fica por último: só responde quando nenhum provedor com chave está disponível.',
               style: TextStyle(color: muted, fontSize: 11, height: 1.5)),
           const SizedBox(height: 14),
           for (final provider in aiProviders) ...[
@@ -166,40 +193,61 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
                       Text('Modelo de teste: ${provider.model}',
                           style: const TextStyle(fontSize: 9, color: muted)),
                       const SizedBox(height: 10),
-                      TextField(
-                          controller: fields[provider.id],
-                          obscureText: true,
-                          autocorrect: false,
-                          enableSuggestions: false,
-                          decoration: InputDecoration(
-                              hintText: 'Cole a chave de API',
-                              hintStyle: const TextStyle(fontSize: 11),
-                              filled: true,
-                              fillColor: bg,
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide.none),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 11))),
-                      const SizedBox(height: 10),
+                      if (provider.semChave) ...[
+                        Row(children: [
+                          const Expanded(
+                              child: Text('Usar sem chave (serviço público)',
+                                  style: TextStyle(fontSize: 11))),
+                          Switch(
+                              key: const ValueKey('zerokey-ativar'),
+                              value: configured[provider.id] == true,
+                              onChanged: busy.contains(provider.id)
+                                  ? null
+                                  : (valor) => _alternarZeroKey(provider, valor)),
+                        ]),
+                        const Text(
+                            'A pergunta e o histórico recente da conversa saem do aparelho para um serviço público, sem cadastro e identificados apenas pelo IP. O limite é de cerca de uma resposta a cada 45 segundos e pode falhar. Sem este botão ligado, nada sai sem uma chave sua.',
+                            style: TextStyle(
+                                fontSize: 10, height: 1.45, color: muted)),
+                        const SizedBox(height: 10),
+                      ] else ...[
+                        TextField(
+                            controller: fields[provider.id],
+                            obscureText: true,
+                            autocorrect: false,
+                            enableSuggestions: false,
+                            decoration: InputDecoration(
+                                hintText: 'Cole a chave de API',
+                                hintStyle: const TextStyle(fontSize: 11),
+                                filled: true,
+                                fillColor: bg,
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide.none),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 11))),
+                        const SizedBox(height: 10),
+                      ],
                       Wrap(spacing: 8, runSpacing: 6, children: [
-                        FilledButton.tonal(
-                            onPressed: busy.contains(provider.id)
-                                ? null
-                                : () => _save(provider),
-                            child: const Text('Salvar chave')),
+                        if (!provider.semChave)
+                          FilledButton.tonal(
+                              onPressed: busy.contains(provider.id)
+                                  ? null
+                                  : () => _save(provider),
+                              child: const Text('Salvar chave')),
                         OutlinedButton(
                             onPressed: busy.contains(provider.id) ||
                                     configured[provider.id] != true
                                 ? null
                                 : () => _test(provider),
                             child: const Text('Testar conexão')),
-                        TextButton(
-                            onPressed: busy.contains(provider.id) ||
-                                    configured[provider.id] != true
-                                ? null
-                                : () => _remove(provider),
-                            child: const Text('Remover')),
+                        if (!provider.semChave)
+                          TextButton(
+                              onPressed: busy.contains(provider.id) ||
+                                      configured[provider.id] != true
+                                  ? null
+                                  : () => _remove(provider),
+                              child: const Text('Remover')),
                       ]),
                       if (messages[provider.id] != null) ...[
                         const SizedBox(height: 7),
@@ -212,7 +260,11 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
                                         messages[provider.id]!
                                             .contains('armazenada') ||
                                         messages[provider.id]!
-                                            .contains('removida')
+                                            .contains('removida') ||
+                                        messages[provider.id]!
+                                            .contains('ativado') ||
+                                        messages[provider.id]!
+                                            .contains('desligado')
                                     ? const Color(0xFF64E6B1)
                                     : const Color(0xFFFFC66D)))
                       ],

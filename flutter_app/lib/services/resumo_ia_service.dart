@@ -47,8 +47,8 @@ class ResumoIaService {
     }
     if (escolhido == null) {
       return ResultadoResumo(
-        erro: 'Nenhum provedor de IA configurado. Cadastre a chave do Groq ou '
-            'de outro provedor para o resumo tático.',
+        erro: 'Nenhum provedor de IA configurado. Cadastre a chave do Groq, '
+            'de outro provedor ou ative o Zero-Key para o resumo tático.',
         resumo: triagemLocal(lista),
       );
     }

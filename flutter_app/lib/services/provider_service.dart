@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../core/sse.dart';
+import 'zero_key_store.dart';
 
 class AiProvider {
   const AiProvider(
@@ -10,11 +11,16 @@ class AiProvider {
       required this.name,
       required this.endpoint,
       required this.model,
-      this.fallbackModels = const []});
+      this.fallbackModels = const [],
+      this.semChave = false});
   final String id;
   final String name;
   final String endpoint;
   final String model;
+
+  /// Não usa chave: fala com um serviço público anônimo. Só entra quando o
+  /// usuário liga o Zero-Key em Provedores de IA (ver [ZeroKeyStore]).
+  final bool semChave;
 
   /// Modelos tentados somente quando o principal responde 404 (modelo retirado
   /// para chaves novas). Nunca troca a chave, apenas o identificador do modelo.
@@ -55,7 +61,22 @@ const aiProviders = <AiProvider>[
         'gemini-2.5-flash',
         'gemini-flash-latest'
       ]),
+  provedorSemChave,
 ];
+
+/// Provedor sem chave (Zero-Key).
+///
+/// Endpoint Classic aberto da Pollinations, compatível com OpenAI: responde
+/// sem cadastro e sem cabeçalho `Authorization`, identificando só o IP. O limite
+/// publicado é de uma resposta a cada 45 segundos por IP, sujeito a 402/429/503.
+/// Fica **por último** na prioridade de propósito: nunca passa na frente de um
+/// provedor com chave do usuário.
+const provedorSemChave = AiProvider(
+    id: 'zerokey',
+    name: 'Zero-Key · Pollinations',
+    endpoint: 'https://text.pollinations.ai/openai/chat/completions',
+    model: 'openai-fast',
+    semChave: true);
 
 abstract interface class SecretStore {
   Future<String?> read(String key);
@@ -88,22 +109,38 @@ class ProviderCheck {
 
 /// Falha já traduzida para a interface. Nunca carrega a chave nem o corpo bruto.
 class ProviderException implements Exception {
-  ProviderException(this.message);
+  const ProviderException(this.message);
   final String message;
   @override
   String toString() => message;
 }
 
+const _zerokeyDesligado =
+    'O provedor sem chave está desligado. Ative o Zero-Key em Provedores de IA '
+    'para usar o serviço público anônimo.';
+
 class ProviderService {
-  ProviderService({required SecretStore secrets, http.Client? client})
+  ProviderService(
+      {required SecretStore secrets,
+      http.Client? client,
+      ZeroKeyStore? zeroKey})
       : _secrets = secrets,
-        _client = client ?? http.Client();
+        _client = client ?? http.Client(),
+        _zeroKey = zeroKey ?? PreferencesZeroKey();
 
   final SecretStore _secrets;
   final http.Client _client;
+  final ZeroKeyStore _zeroKey;
 
-  Future<bool> isConfigured(String providerId) async =>
-      (await _secrets.read(providerId))?.isNotEmpty ?? false;
+  Future<bool> isConfigured(String providerId) async {
+    final provider = _provider(providerId);
+    if (provider.semChave) return _zeroKey.ativo();
+    return (await _secrets.read(providerId))?.isNotEmpty ?? false;
+  }
+
+  Future<bool> zeroKeyAtiva() => _zeroKey.ativo();
+
+  Future<void> definirZeroKey(bool ativo) => _zeroKey.definir(ativo);
 
   /// Retorna o primeiro provedor configurado respeitando a prioridade oficial.
   /// A ordem de [aiProviders] mantém Groq como principal e OpenRouter como fallback.
@@ -123,7 +160,11 @@ class ProviderService {
   }
 
   Future<void> saveKey(String providerId, String rawKey) async {
-    _provider(providerId);
+    final provider = _provider(providerId);
+    if (provider.semChave) {
+      throw ArgumentError(
+          'O provedor sem chave não guarda chave. Use a chave do Zero-Key na tela.');
+    }
     final key = rawKey
         .trim()
         .replaceFirst(RegExp(r'^Bearer\s+', caseSensitive: false), '')
@@ -137,17 +178,28 @@ class ProviderService {
   }
 
   Future<void> removeKey(String providerId) async {
-    _provider(providerId);
+    final provider = _provider(providerId);
+    if (provider.semChave) {
+      throw ArgumentError(
+          'O provedor sem chave não tem chave para remover. Desligue o Zero-Key na tela.');
+    }
     await _secrets.delete(providerId);
   }
 
   Future<ProviderCheck> testConnection(String providerId) async {
     final provider = _provider(providerId);
-    final key = await _secrets.read(providerId);
-    if (key == null || key.isEmpty) {
-      return const ProviderCheck(
-          ok: false,
-          message: 'Cadastre a chave deste provedor antes de testar.');
+    String? key;
+    if (provider.semChave) {
+      if (!await _zeroKey.ativo()) {
+        return const ProviderCheck(ok: false, message: _zerokeyDesligado);
+      }
+    } else {
+      key = await _secrets.read(providerId);
+      if (key == null || key.isEmpty) {
+        return const ProviderCheck(
+            ok: false,
+            message: 'Cadastre a chave deste provedor antes de testar.');
+      }
     }
 
     try {
@@ -158,10 +210,7 @@ class ProviderService {
         final response = await _client
             .post(
               Uri.parse(provider.endpoint),
-              headers: {
-                'Authorization': 'Bearer $key',
-                'Content-Type': 'application/json'
-              },
+              headers: _cabecalhos(key),
               body: jsonEncode({
                 'model': modelo,
                 'messages': [
@@ -195,6 +244,13 @@ class ProviderService {
 
       // Não repassa o corpo bruto: alguns gateways ecoam metadados que não devem aparecer na UI.
       final message = switch (status) {
+        402 when provider.semChave =>
+          'O serviço público sem chave está no limite: uma resposta a cada 45 segundos por IP. Aguarde e teste de novo.',
+        429 when provider.semChave =>
+          'O serviço público sem chave está sem cota agora. Tente mais tarde ou cadastre a chave de outro provedor.',
+        401 ||
+        403 when provider.semChave =>
+          'O serviço público sem chave recusou a chamada anônima. Tente novamente mais tarde.',
         401 ||
         403 =>
           'A chave foi recusada. Confira a credencial e as permissões da conta.',
@@ -229,11 +285,7 @@ class ProviderService {
   Future<String> complete(
       String providerId, List<Map<String, String>> messages) async {
     final provider = _provider(providerId);
-    final key = await _secrets.read(providerId);
-    if (key == null || key.isEmpty) {
-      throw ProviderException(
-          'O provedor ${provider.name} não tem chave cadastrada.');
-    }
+    final key = await _chaveDe(provider);
 
     late http.Response response;
     var modelo = provider.model;
@@ -244,10 +296,7 @@ class ProviderService {
         response = await _client
             .post(
               Uri.parse(provider.endpoint),
-              headers: {
-                'Authorization': 'Bearer $key',
-                'Content-Type': 'application/json'
-              },
+              headers: _cabecalhos(key),
               body: jsonEncode(
                   {'model': modelo, 'messages': messages, 'temperature': 0.4}),
             )
@@ -278,8 +327,48 @@ class ProviderService {
     return content.trim();
   }
 
-  String _mensagemHttp(AiProvider provider, int status, [String? modelo]) =>
-      switch (status) {
+  /// Cabeçalhos da chamada. No provedor sem chave não existe `Authorization`:
+  /// o serviço público responde à chamada anônima.
+  Map<String, String> _cabecalhos(String? chave, {bool streaming = false}) => {
+        if (chave != null && chave.isNotEmpty)
+          'Authorization': 'Bearer $chave',
+        'Content-Type': 'application/json',
+        if (streaming) 'Accept': 'text/event-stream',
+      };
+
+  /// Chave a enviar, ou `null` no provedor sem chave (com consentimento).
+  Future<String?> _chaveDe(AiProvider provider) async {
+    if (provider.semChave) {
+      if (!await _zeroKey.ativo()) {
+        throw const ProviderException(_zerokeyDesligado);
+      }
+      return null;
+    }
+    final key = await _secrets.read(provider.id);
+    if (key == null || key.isEmpty) {
+      throw ProviderException(
+          'O provedor ${provider.name} não tem chave cadastrada.');
+    }
+    return key;
+  }
+
+  String _mensagemHttp(AiProvider provider, int status, [String? modelo]) {
+    if (provider.semChave) {
+      return switch (status) {
+        402 =>
+          'O serviço público sem chave está no limite (uma resposta a cada 45 s por IP). Aguarde e tente de novo.',
+        429 =>
+          'O serviço público sem chave está sem cota agora. Tente mais tarde ou use um provedor com chave.',
+        503 =>
+          'O serviço público sem chave está no limite neste momento. Tente em alguns segundos.',
+        404 =>
+          'O modelo ${modelo ?? provider.model} do serviço sem chave não está disponível agora.',
+        >= 500 =>
+          'O serviço público sem chave está instável. Tente novamente mais tarde.',
+        _ => 'O provedor sem chave não concluiu a solicitação (HTTP $status).',
+      };
+    }
+    return switch (status) {
         401 ||
         403 =>
           'A chave do ${provider.name} foi recusada. Confira a credencial em Provedores de IA.',
@@ -291,6 +380,7 @@ class ProviderService {
           'O serviço do ${provider.name} está instável. Tente novamente mais tarde.',
         _ => 'O ${provider.name} não concluiu a solicitação (HTTP $status).',
       };
+  }
 
   /// Resposta em streaming: emite cada fragmento assim que o provedor manda.
   ///
@@ -306,8 +396,13 @@ class ProviderService {
     ];
     Object? ultimoErro;
     for (final provider in ordem) {
-      final key = await _secrets.read(provider.id);
-      if (key == null || key.isEmpty) continue;
+      String? key;
+      if (provider.semChave) {
+        if (!await _zeroKey.ativo()) continue;
+      } else {
+        key = await _secrets.read(provider.id);
+        if (key == null || key.isEmpty) continue;
+      }
       var entregouTexto = false;
       try {
         await for (final texto in _streamProvider(provider, key, messages)) {
@@ -323,13 +418,13 @@ class ProviderService {
       }
     }
     if (ultimoErro != null) throw ultimoErro;
-    throw ProviderException(
-        'Nenhum provedor configurado. Cadastre uma chave em Provedores de IA.');
+    throw const ProviderException(
+        'Nenhum provedor configurado. Cadastre uma chave em Provedores de IA ou ative o Zero-Key.');
   }
 
   Stream<String> _streamProvider(
     AiProvider provider,
-    String key,
+    String? key,
     List<Map<String, String>> messages,
   ) async* {
     late http.StreamedResponse resposta;
@@ -339,11 +434,7 @@ class ProviderService {
       for (var i = 0; i < modelos.length; i++) {
         modelo = modelos[i];
         final requisicao = http.Request('POST', Uri.parse(provider.endpoint))
-          ..headers.addAll({
-            'Authorization': 'Bearer $key',
-            'Content-Type': 'application/json',
-            'Accept': 'text/event-stream',
-          })
+          ..headers.addAll(_cabecalhos(key, streaming: true))
           ..body = jsonEncode({
             'model': modelo,
             'messages': messages,

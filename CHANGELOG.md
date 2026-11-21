@@ -1,3 +1,25 @@
+## 1.79.0 — provedor sem chave (Zero-Key), opcional e desligado por padrão
+
+### O que mudou
+- **Provedor sem chave**: a lista de provedores ganha o `Zero-Key ·
+  Pollinations`, que responde sem cadastro e **sem enviar `Authorization`**. Ele
+  fica por último na prioridade: só é tentado quando nenhum provedor com chave do
+  usuário responde.
+- **Desligado por padrão**: sem um “sim” explícito em Provedores de IA, nada é
+  enviado ao serviço público. A escolha fica nas preferências do aparelho, não no
+  cofre de chaves (não é segredo).
+- **Limite declarado na tela e nas mensagens**: o serviço público aceita cerca de
+  uma resposta a cada 45 segundos por IP. HTTP 402, 429 e 503 viram explicação de
+  limite do serviço, nunca “problema de conexão”.
+- **Não finge ter chave**: salvar ou remover chave no Zero-Key é recusado; o
+  teste de conexão só roda com o consentimento ligado.
+- **Conversa, resumo tático e segundo plano** passam a citar o Zero-Key quando
+  não há nenhum provedor configurado, em vez de mandar só cadastrar chave.
+
+Limite honesto: o endpoint público foi medido uma vez nesta sessão (resposta 200
+sem chave em 2026-11-21); disponibilidade e cota podem mudar sem aviso, e nada foi
+testado em aparelho físico.
+
 ## 1.78.0 — atualização OTA conferida pelo SHA-256
 
 ### O que mudou
