@@ -58,7 +58,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_089-segundo-plano-sem-app-aberto.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.80.0+18000" in pubspec, "versão não atualizada para 1.75.1")
+exigir("version: 1.81.0+18100" in pubspec, "versão não atualizada para 1.75.1")
 exigir("1.75.1" in changelog, "CHANGELOG sem o ajuste 1.75.1")
 exigir("tests/test_fundo_motor.py" in pacote,
        "contrato novo fora de package.json test:all")
@@ -129,11 +129,13 @@ exigir("firstConfiguredProvider()" in ponte_dart,
        "ponte Dart não usa o provedor configurado")
 
 # 7. Nenhuma permissão nova no manifesto.
+# BIND_ACCESSIBILITY_SERVICE não é pedida pelo app: ela aparece só como exigência
+# do serviço dedicado (ajuste 095), e quem a concede é o próprio Android.
 for perigosa in ("WRITE_SETTINGS",
                  "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
                  "FOREGROUND_SERVICE_CAMERA",
                  "BIND_ACCESSIBILITY_SERVICE"):
-    exigir(perigosa not in manifesto,
+    exigir(f'uses-permission android:name="android.permission.{perigosa}"' not in manifesto,
            f"manifesto ganhou permissão nova ({perigosa})")
 
 # 8. Documentação.

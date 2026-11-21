@@ -747,3 +747,21 @@ chave em 2026-11-21) e nada foi testado em aparelho físico.
 Limite honesto: os endereços foram medidos nesta sessão, mas nenhuma chave real
 de cada provedor foi usada e a escolha de modelo não foi testada em aparelho
 físico.
+
+## Acessibilidade de tela — ajuste 095 (2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Ler a tela | “ler a tela”, “o que está na tela” | percorre a janela ativa e lista textos e ações visíveis, até 120 nós | `JarvisAcessibilidade.kt`, `acessibilidade.dart` |
+| Tocar pelo texto | “tocar em Enviar” | procura o texto visível, sobe até o elemento clicável e toca | `JarvisAcessibilidade.tocar` |
+| Rolar a tela | “rolar para baixo/cima” | usa a primeira área rolável visível | `JarvisAcessibilidade.rolar` |
+| Parar | “parar a automação de tela” | interrompe a próxima ação; nada roda em laço | `JarvisAcessibilidade.parar` |
+| Consentimento | interruptor “Ler a tela e tocar por mim” | desligado por padrão; sem ele nenhuma chamada chega ao Android | `acessibilidade_store.dart`, `AcessibilidadePage._alternar` |
+| Serviço do Android | Configurações ▸ Acessibilidade | sem autorização o Android não entrega o conteúdo; a tela mostra o estado real | `JarvisAcessibilidade`, `acessibilidade_service.dart` |
+| Sem senha e sem digitação | leitura e toque | campo de senha some; campo de texto entra como “campo de texto”; não existe ação de digitar | `JarvisAcessibilidade.coletar`, `buscar` |
+| Conversa preservada | pedido ambíguo | “como tocar violão” e “toque de recolher” não viram ação | `InterpretadorTela` |
+| Privacidade | leitura | nada é gravado nem enviado à rede; a lista vive só na resposta | `AcessibilidadeService` |
+
+Limite honesto: o serviço não foi compilado nem executado em aparelho nesta
+sessão; apps protegidos contra captura devolvem pouco ou nada, e a tela diz isso
+em vez de fingir que agiu.

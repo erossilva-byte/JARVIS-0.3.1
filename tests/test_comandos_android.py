@@ -71,10 +71,19 @@ def problemas() -> list[str]:
         falhas.append("alarme pode ser criado sem confirmação")
 
     # 5. Nenhuma permissão proibida ou ampla.
-    for proibido in ("MANAGE_EXTERNAL_STORAGE", "BIND_ACCESSIBILITY_SERVICE",
-                     "SEND_SMS", "CALL_PHONE", "WRITE_SETTINGS"):
+    # A acessibilidade saiu desta lista no ajuste 095, mas só para o serviço
+    # dedicado `JarvisAcessibilidade`; o executor de comandos continua sem ela.
+    for proibido in ("MANAGE_EXTERNAL_STORAGE", "SEND_SMS", "CALL_PHONE",
+                     "WRITE_SETTINGS"):
         if proibido in nativo or proibido in preparo:
             falhas.append(f"permissão proibida nesta etapa: {proibido}")
+    if "BIND_ACCESSIBILITY_SERVICE" in nativo:
+        falhas.append("executor de comandos não pode pedir acessibilidade")
+    if "BIND_ACCESSIBILITY_SERVICE" in preparo:
+        inicio = preparo.find(".JarvisAcessibilidade")
+        bloco = preparo[inicio:inicio + 600] if inicio >= 0 else ""
+        if "BIND_ACCESSIBILITY_SERVICE" not in bloco:
+            falhas.append("acessibilidade declarada fora do serviço dedicado")
 
     # 6. Interface e conversa por texto/voz.
     for termo in ("ComandosAndroidPage", "comando-android-campo", "REGISTRO DE AÇÕES"):

@@ -11,4 +11,5 @@
     <string name="atalho_conversa_longo">Começar uma conversa nova com o Jarvis</string>
     <string name="atalho_historico_curto">Histórico</string>
     <string name="atalho_historico_longo">Abrir o histórico de conversas</string>
+    <string name="jarvis_acessibilidade_descricao">Leitura da tela autorizada por você: o JARVIS lê os textos visíveis, toca num botão pelo texto e rola a tela. Não digita, não lê senhas nem o que você escreveu.</string>
 </resources>

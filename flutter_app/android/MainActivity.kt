@@ -107,6 +107,9 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, "com.jarvis.nova/kws/events")
             .setStreamHandler(this)
         JarvisComandos(this).registrar(flutterEngine)
+        // Automação de tela: só age com o interruptor do app ligado e o serviço
+        // autorizado nas configurações do Android.
+        JarvisAcessibilidadeCanal(this).registrar(flutterEngine)
         JarvisFundoCanal(this).registrar(flutterEngine)
         // Perguntas livres ouvidas em segundo plano são respondidas pelo
         // provedor de IA configurado no app, por esta ponte.

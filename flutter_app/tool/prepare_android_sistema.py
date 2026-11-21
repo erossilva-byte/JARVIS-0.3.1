@@ -198,6 +198,24 @@ RELEASE_ANTIGO = """        release {
             signingConfig = signingConfigs.getByName("debug")
         }"""
 
+# Serviço de acessibilidade de escopo estreito (ajuste 095). Fica sem efeito
+# enquanto o usuário não autoriza nas configurações do Android E liga o
+# interruptor dentro do app. A configuração @xml/jarvis_acessibilidade diz o que
+# ele pode ver: janela ativa, sem teclas e sem gestos.
+SERVICO_ACESSIBILIDADE = """        <service
+            android:name=".JarvisAcessibilidade"
+            android:exported="true"
+            android:label="JARVIS Nova — Ler a tela"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/jarvis_acessibilidade" />
+        </service>
+"""
+
 
 def configurar_assinatura(app: Path) -> None:
     """Liga a chave de release ao build, sem guardar segredo no repositório."""
@@ -263,6 +281,7 @@ def copiar_codigo(app: Path) -> None:
     shutil.copy2(ANDROID / "JarvisSensores.kt", kotlin / "JarvisSensores.kt")
     shutil.copy2(ANDROID / "JarvisTimbre.kt", kotlin / "JarvisTimbre.kt")
     shutil.copy2(ANDROID / "JarvisAtualizacao.kt", kotlin / "JarvisAtualizacao.kt")
+    shutil.copy2(ANDROID / "JarvisAcessibilidade.kt", kotlin / "JarvisAcessibilidade.kt")
 
 
 def garantir_permissoes(texto: str) -> str:
@@ -306,6 +325,12 @@ def ajustar_manifesto(app: Path) -> None:
         if "</application>" not in texto:
             falhar("manifesto sem </application>")
         texto = texto.replace("</application>", RECEPTOR + "    </application>", 1)
+
+    if ".JarvisAcessibilidade" not in texto:
+        if "</application>" not in texto:
+            falhar("manifesto sem </application>")
+        texto = texto.replace(
+            "</application>", SERVICO_ACESSIBILIDADE + "    </application>", 1)
 
     if "fileprovider" not in texto:
         if "</application>" not in texto:
@@ -359,7 +384,8 @@ def verificar(app: Path) -> None:
                  "JarvisFundo.kt", "JarvisFundoCanal.kt", "JarvisEscutaFundo.kt",
                  "JarvisBiometria.kt", "JarvisLocalizacao.kt", "JarvisAparelho.kt",
                  "JarvisNotificacaoListener.kt", "JarvisPonteIa.kt",
-                 "JarvisSensores.kt", "JarvisTimbre.kt", "JarvisAtualizacao.kt"):
+                 "JarvisSensores.kt", "JarvisTimbre.kt", "JarvisAtualizacao.kt",
+                 "JarvisAcessibilidade.kt"):
         if not (kotlin / nome).is_file():
             falhar(f"{nome} não copiado")
     provedores = [n for n in manifesto.iter("provider")
@@ -371,6 +397,18 @@ def verificar(app: Path) -> None:
         falhar("FileProvider sem o caminho do APK baixado (@xml/jarvis_arquivos)")
     if not (app / "src" / "main" / "res" / "xml" / "jarvis_arquivos.xml").is_file():
         falhar("jarvis_arquivos.xml não copiado")
+    servicos_acessibilidade = [n for n in manifesto.iter("service")
+                              if n.get(NS + "name") == ".JarvisAcessibilidade"]
+    if not servicos_acessibilidade:
+        falhar("serviço de acessibilidade não declarado no manifesto")
+    servico_acessibilidade = servicos_acessibilidade[0]
+    if servico_acessibilidade.get(NS + "permission") != "android.permission.BIND_ACCESSIBILITY_SERVICE":
+        falhar("serviço de acessibilidade sem a permissão de vínculo do Android")
+    if not any(m.get(NS + "resource") == "@xml/jarvis_acessibilidade"
+               for m in servico_acessibilidade.iter("meta-data")):
+        falhar("serviço de acessibilidade sem a configuração @xml/jarvis_acessibilidade")
+    if not (app / "src" / "main" / "res" / "xml" / "jarvis_acessibilidade.xml").is_file():
+        falhar("jarvis_acessibilidade.xml não copiado")
     if "android.permission.REQUEST_INSTALL_PACKAGES" not in permissoes:
         falhar("manifesto sem permissão de instalar APK")
     if not any(n.get(NS + "name") == "android.intent.action.TTS_SERVICE"

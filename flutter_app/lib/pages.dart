@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'catalog.dart';
 import 'provider_settings_page.dart';
+import 'services/acessibilidade_page.dart';
 import 'services/aparelho_page.dart';
 import 'services/atualizacao_page.dart';
 import 'services/cadesimu_page.dart';
@@ -63,6 +64,16 @@ class ModulePage extends StatelessWidget {
             ),
             icon: const Icon(Icons.smartphone_rounded),
             label: const Text('Aparelho conectado (mensagens, Spotify, contatos)'),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            key: const ValueKey('abrir-acessibilidade'),
+            onPressed: () => Navigator.of(c).push(
+              MaterialPageRoute<void>(
+                  builder: (_) => const AcessibilidadePage()),
+            ),
+            icon: const Icon(Icons.accessibility_new_rounded),
+            label: const Text('Acessibilidade de tela (ler e tocar)'),
           ),
           const SizedBox(height: 12),
           FilledButton.icon(

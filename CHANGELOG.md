@@ -1,3 +1,25 @@
+## 1.81.0 — acessibilidade de tela com escopo estreito e consentimento
+
+### O que mudou
+- **O JARVIS passa a ler a tela e tocar por você**, com escopo fechado: ler os
+  textos visíveis, tocar num botão pelo texto e rolar a tela. Nada de digitar.
+- **Duas autorizações**: o serviço precisa estar ligado em Configurações ▸
+  Acessibilidade ▸ JARVIS Nova, e o interruptor “Ler a tela e tocar por mim”
+  no app precisa estar ligado. Desligado por padrão, guardado como preferência
+  (`jarvis.acessibilidade.ativo`), não como segredo.
+- **O que ele nunca faz**: não lê campo de senha, não lê o que você escreveu em
+  campos de texto, não usa coordenadas livres, não abre intents arbitrárias,
+  não executa shell, não intercepta teclas nem gestos.
+- **Tela nova** em Android e dispositivos: estado real do serviço, botão para
+  abrir as configurações do Android, campo de comando (“ler a tela”, “tocar em
+  Enviar”, “rolar para baixo”) e a lista do que foi lido.
+- **Conversa não vira ação**: perguntas (“como tocar violão”) e frases como
+  “toque de recolher” continuam indo para a conversa normal.
+
+Limite honesto: nada disto foi compilado nem testado em aparelho nesta sessão.
+Apps de banco e alguns apps de mensagem bloqueiam a leitura da tela; quando isso
+acontece a resposta é “não encontrei”, nunca um “feito” inventado.
+
 ## 1.80.0 — descoberta de modelos (/models) por provedor
 
 ### O que mudou
