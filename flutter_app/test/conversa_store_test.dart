@@ -9,7 +9,8 @@ void main() {
   test('salva, relê e mantém o título automático', () async {
     final store = await ConversaStore.abrir();
     final conversa = Conversa.nova(id: '1', agora: DateTime(2026, 11, 14))
-      ..adicionar(const MensagemConversa(autor: 'user', texto: 'Bom dia, Jarvis'));
+      ..adicionar(
+          const MensagemConversa(autor: 'user', texto: 'Bom dia, Jarvis'));
     await store.salvar(conversa);
 
     final lidas = store.listar();
@@ -22,7 +23,8 @@ void main() {
     final store = await ConversaStore.abrir();
     final antiga = Conversa.nova(id: 'a', agora: DateTime(2026, 11, 1));
     final recente = Conversa.nova(id: 'b', agora: DateTime(2026, 11, 10));
-    final fixada = Conversa.nova(id: 'c', agora: DateTime(2026, 11, 5))..fixada = true;
+    final fixada = Conversa.nova(id: 'c', agora: DateTime(2026, 11, 5))
+      ..fixada = true;
     await store.salvar(antiga);
     await store.salvar(recente);
     await store.salvar(fixada);
@@ -56,7 +58,8 @@ void main() {
   });
 
   test('lista corrompida não derruba a tela', () async {
-    SharedPreferences.setMockInitialValues({ConversaStore.chaveConversas: '{quebrado'});
+    SharedPreferences.setMockInitialValues(
+        {ConversaStore.chaveConversas: '{quebrado'});
     final store = await ConversaStore.abrir();
     expect(store.listar(), isEmpty);
   });

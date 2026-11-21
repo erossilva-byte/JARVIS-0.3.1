@@ -8,6 +8,8 @@ prepare = (ROOT / "preparar_kws.py").read_text(encoding="utf-8")
 release = (ROOT / ".github/workflows/release-apk.yml").read_text(encoding="utf-8")
 app = (ROOT / "app.js").read_text(encoding="utf-8")
 patch = (ROOT / "patch_gradle.py").read_text(encoding="utf-8")
+flutter_service = (ROOT / "flutter_app" / "android" / "KwsForegroundService.kt").read_text(encoding="utf-8")
+flutter_activity = (ROOT / "flutter_app" / "android" / "MainActivity.kt").read_text(encoding="utf-8")
 
 checks = {
     "serviço não usa Android SpeechRecognizer": "createSpeechRecognizer(" not in service and "createOnDeviceSpeechRecognizer(" not in service,
@@ -27,6 +29,15 @@ checks = {
     "release instala tokenizer antes do preparo": "sherpa-onnx==1.13.8" in release and "preparar_kws.py android/app" in release,
     "release exige a classe nativa KWS": "JarvisKwsEngine.java" in release,
     "AAR sherpa é mantido no Gradle": "sherpa-onnx-1.13.8.aar" in patch,
+    "serviço Flutter continua vivo após detectar": "ACTION_REARM" in flutter_service and "START_STICKY" in flutter_service and "scheduleRearme" in flutter_service,
+    "atividade rearma o KWS depois do comando": "retomarKws()" in flutter_activity and "KwsForegroundService.rearm(this)" in flutter_activity,
+    "serviço Flutter usa a sensibilidade escolhida na tela": (
+        "sensibilidadeDe(applicationContext)" in flutter_service
+        and "            sensibilidade,\n" in flutter_service
+        and "\n            75," not in flutter_service
+    ),
+    "aliases brasileiros são gerados no tokenizer": all(p in prepare for p in ("CHARLES", "CHALE", "JAVI", "JAVALI")),
+    "motor também conhece os aliases": all(p in engine for p in ("Charles", "Chale", "Javi", "Javali")),
 }
 for nome, ok in checks.items():
     print(("OK" if ok else "FALHA") + ": " + nome)

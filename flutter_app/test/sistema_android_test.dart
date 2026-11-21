@@ -13,7 +13,8 @@ void main() {
     chamadas.clear();
     respostaPendente = null;
     SistemaAndroid.reiniciarParaTeste();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(canal, (chamada) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(canal, (chamada) async {
       chamadas.add(chamada);
       if (chamada.method == 'intencaoPendente') return respostaPendente;
       return true;
@@ -21,7 +22,8 @@ void main() {
   });
 
   tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(canal, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(canal, null);
     SistemaAndroid.reiniciarParaTeste();
   });
 
@@ -44,9 +46,11 @@ void main() {
     final assinatura = SistemaAndroid.intencoes.listen(recebidas.add);
     await SistemaAndroid.iniciar();
 
-    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
+    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .handlePlatformMessage(
       canal.name,
-      const StandardMethodCodec().encodeMethodCall(const MethodCall('intencao', {
+      const StandardMethodCodec()
+          .encodeMethodCall(const MethodCall('intencao', {
         'acao': 'compartilhar',
         'texto': 'motor 220 V com folga',
       })),
@@ -59,15 +63,18 @@ void main() {
     await assinatura.cancel();
   });
 
-  test('atalho de histórico e de conversa chegam como ações distintas', () async {
+  test('atalho de histórico e de conversa chegam como ações distintas',
+      () async {
     final recebidas = <IntencaoSistema>[];
     final assinatura = SistemaAndroid.intencoes.listen(recebidas.add);
     await SistemaAndroid.iniciar();
 
     for (final acao in ['historico', 'conversa']) {
-      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .handlePlatformMessage(
         canal.name,
-        const StandardMethodCodec().encodeMethodCall(MethodCall('intencao', {'acao': acao, 'texto': ''})),
+        const StandardMethodCodec().encodeMethodCall(
+            MethodCall('intencao', {'acao': acao, 'texto': ''})),
         (_) {},
       );
     }
@@ -113,9 +120,11 @@ void main() {
     final assinatura = SistemaAndroid.intencoes.listen(recebidas.add);
     await SistemaAndroid.iniciar();
 
-    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
+    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .handlePlatformMessage(
       canal.name,
-      const StandardMethodCodec().encodeMethodCall(const MethodCall('intencao', {'acao': ''})),
+      const StandardMethodCodec()
+          .encodeMethodCall(const MethodCall('intencao', {'acao': ''})),
       (_) {},
     );
     await Future<void>.delayed(Duration.zero);

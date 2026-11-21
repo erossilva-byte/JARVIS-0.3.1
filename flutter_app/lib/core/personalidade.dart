@@ -21,9 +21,12 @@ extension NivelHumorDados on NivelHumor {
       };
 
   String get descricao => switch (this) {
-        NivelHumor.discreto => 'Cordial, elegante e direto. Sem piadas, ironia ou sarcasmo.',
-        NivelHumor.equilibrado => 'Ironia fina de vez em quando, sempre depois da informação.',
-        NivelHumor.avancado => 'Sarcasmo seco e deboche leve com frequência — nunca em assunto sensível.',
+        NivelHumor.discreto =>
+          'Cordial, elegante e direto. Sem piadas, ironia ou sarcasmo.',
+        NivelHumor.equilibrado =>
+          'Ironia fina de vez em quando, sempre depois da informação.',
+        NivelHumor.avancado =>
+          'Sarcasmo seco e deboche leve com frequência — nunca em assunto sensível.',
       };
 }
 
@@ -55,11 +58,28 @@ class Personalidade {
 enum TomDoTurno { comum, comPressa, sensivel }
 
 const _mapaAcentos = <String, String>{
-  'á': 'a', 'à': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a',
-  'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
-  'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
-  'ó': 'o', 'ò': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
-  'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+  'á': 'a',
+  'à': 'a',
+  'â': 'a',
+  'ã': 'a',
+  'ä': 'a',
+  'é': 'e',
+  'è': 'e',
+  'ê': 'e',
+  'ë': 'e',
+  'í': 'i',
+  'ì': 'i',
+  'î': 'i',
+  'ï': 'i',
+  'ó': 'o',
+  'ò': 'o',
+  'ô': 'o',
+  'õ': 'o',
+  'ö': 'o',
+  'ú': 'u',
+  'ù': 'u',
+  'û': 'u',
+  'ü': 'u',
   'ç': 'c',
 };
 
@@ -75,16 +95,51 @@ bool _contem(String texto, String termo) => RegExp(
 
 /// Assunto em que o humor é suspenso por completo, mesmo no nível Avançado.
 const termosSensiveis = <String>[
-  'emergencia', 'socorro', 'acidente', 'infarto', 'avc', 'dor no peito', 'sangramento',
-  'sangrando', 'suicidio', 'morreu', 'morte', 'luto', 'faleceu', 'estupro', 'assedio',
-  'violencia', 'ameaca', 'golpe', 'fraude', 'perdi o dinheiro', 'perdi meu dinheiro',
-  'perdi o emprego', 'demitido', 'cancer', 'diagnostico', 'hospital', 'medicamento',
-  'ansiedade', 'depressao', 'deprimido', 'cirurgia', 'utc',
+  'emergencia',
+  'socorro',
+  'acidente',
+  'infarto',
+  'avc',
+  'dor no peito',
+  'sangramento',
+  'sangrando',
+  'suicidio',
+  'morreu',
+  'morte',
+  'luto',
+  'faleceu',
+  'estupro',
+  'assedio',
+  'violencia',
+  'ameaca',
+  'golpe',
+  'fraude',
+  'perdi o dinheiro',
+  'perdi meu dinheiro',
+  'perdi o emprego',
+  'demitido',
+  'cancer',
+  'diagnostico',
+  'hospital',
+  'medicamento',
+  'ansiedade',
+  'depressao',
+  'deprimido',
+  'cirurgia',
+  'utc',
 ];
 
 const _termosPressa = <String>[
-  'pressa', 'urgente', 'urgencia', 'rapido', 'depressa', 'correndo', 'prazo',
-  'agora mesmo', 'o mais rapido', 'em cinco minutos',
+  'pressa',
+  'urgente',
+  'urgencia',
+  'rapido',
+  'depressa',
+  'correndo',
+  'prazo',
+  'agora mesmo',
+  'o mais rapido',
+  'em cinco minutos',
 ];
 
 TomDoTurno tomDoTurno(String texto) {
@@ -126,15 +181,25 @@ const _banco = <String, List<String>>{
 };
 
 String _temaDe(String texto) {
-  if (RegExp(r'^(bom dia|boa tarde|boa noite|ola|oi|e ai|tudo bem)').hasMatch(texto)) return 'saudacao';
-  if (_contem(texto, 'obrigado') || _contem(texto, 'obrigada') || _contem(texto, 'valeu')) {
+  if (RegExp(r'^(bom dia|boa tarde|boa noite|ola|oi|e ai|tudo bem)')
+      .hasMatch(texto)) {
+    return 'saudacao';
+  }
+  if (_contem(texto, 'obrigado') ||
+      _contem(texto, 'obrigada') ||
+      _contem(texto, 'valeu')) {
     return 'agradecimento';
   }
-  if (RegExp(r'(arquivo|pdf|docx|xlsx|zip|planilha|documento)').hasMatch(texto)) return 'arquivo';
-  if (RegExp(r'(codigo|programa|funcao|classe|java|python|javascript|compil|refator)').hasMatch(texto)) {
+  if (RegExp(r'(arquivo|pdf|docx|xlsx|zip|planilha|documento)').hasMatch(texto)) {
+    return 'arquivo';
+  }
+  if (RegExp(
+          r'(codigo|programa|funcao|classe|java|python|javascript|compil|refator)')
+      .hasMatch(texto)) {
     return 'codigo';
   }
-  if (RegExp(r'(bug|erro|falha|lento|travou|travando|nao funciona|parou|crash)').hasMatch(texto)) {
+  if (RegExp(r'(bug|erro|falha|lento|travou|travando|nao funciona|parou|crash)')
+      .hasMatch(texto)) {
     return 'bug';
   }
   return 'geral';
@@ -162,7 +227,10 @@ String? sugerirAngulo(
   if (!personalidade.humorLigado || texto.trim().isEmpty) return null;
   final normalizado = _semAcento(texto);
   if (tomDoTurno(texto) == TomDoTurno.sensivel) return null;
-  final lista = [...(_banco[_temaDe(normalizado)] ?? const <String>[]), ..._banco['geral']!];
+  final lista = [
+    ...(_banco[_temaDe(normalizado)] ?? const <String>[]),
+    ..._banco['geral']!
+  ];
   final inicio = _hash('$normalizado|$semente') % lista.length;
   for (var i = 0; i < lista.length; i++) {
     final linha = lista[(inicio + i) % lista.length];
@@ -233,7 +301,8 @@ EstiloDoTurno estiloDoTurno(
     );
   }
 
-  final angulo = sugerirAngulo(personalidade, texto, recentes: recentes, semente: semente);
+  final angulo =
+      sugerirAngulo(personalidade, texto, recentes: recentes, semente: semente);
   if (angulo != null && tom == TomDoTurno.comum) {
     regras.write(
       ' Ângulo de humor possível para este turno (adapte ao contexto; não copie literalmente e '

@@ -11,6 +11,7 @@ class MensagemConversa {
     this.fontes = const [],
     this.fichas = const [],
     this.contextoPessoas = '',
+    this.habilidades = const [],
   });
 
   /// `user` ou `assistant`.
@@ -26,6 +27,9 @@ class MensagemConversa {
   /// Bloco de pessoas exatamente como foi enviado ao provedor (vazio quando não houve).
   final String contextoPessoas;
 
+  /// Nomes das habilidades em Markdown usadas nesta resposta.
+  final List<String> habilidades;
+
   bool get doUsuario => autor == 'user';
 
   Map<String, Object?> paraJson() => {
@@ -34,6 +38,7 @@ class MensagemConversa {
         if (fontes.isNotEmpty) 'fontes': fontes,
         if (fichas.isNotEmpty) 'fichas': fichas,
         if (contextoPessoas.isNotEmpty) 'contextoPessoas': contextoPessoas,
+        if (habilidades.isNotEmpty) 'habilidades': habilidades,
       };
 
   static MensagemConversa? deJson(Object? bruto) {
@@ -53,8 +58,15 @@ class MensagemConversa {
       autor: autor,
       texto: texto,
       fontes: fontes is List ? fontes.whereType<String>().toList() : const [],
-      fichas: bruto['fichas'] is List ? (bruto['fichas'] as List).whereType<String>().toList() : const [],
-      contextoPessoas: bruto['contextoPessoas'] is String ? bruto['contextoPessoas'] as String : '',
+      fichas: bruto['fichas'] is List
+          ? (bruto['fichas'] as List).whereType<String>().toList()
+          : const [],
+      contextoPessoas: bruto['contextoPessoas'] is String
+          ? bruto['contextoPessoas'] as String
+          : '',
+      habilidades: bruto['habilidades'] is List
+          ? (bruto['habilidades'] as List).whereType<String>().toList()
+          : const [],
     );
   }
 }
@@ -79,7 +91,8 @@ class Conversa {
   static const tituloPadrao = 'Nova conversa';
   static const _limiteTitulo = 48;
 
-  factory Conversa.nova({required String id, required DateTime agora}) => Conversa(
+  factory Conversa.nova({required String id, required DateTime agora}) =>
+      Conversa(
         id: id,
         titulo: tituloPadrao,
         criadaEm: agora,
@@ -90,7 +103,8 @@ class Conversa {
   void adicionar(MensagemConversa mensagem, {DateTime? agora}) {
     mensagens.add(mensagem);
     atualizadaEm = agora ?? DateTime.now();
-    if (mensagem.doUsuario && (titulo == tituloPadrao || titulo.trim().isEmpty)) {
+    if (mensagem.doUsuario &&
+        (titulo == tituloPadrao || titulo.trim().isEmpty)) {
       titulo = tituloDe(mensagem.texto);
     }
   }
@@ -131,16 +145,22 @@ class Conversa {
     if (criada == null) {
       return null;
     }
-    final atualizada = DateTime.tryParse(bruto['atualizadaEm'] as String? ?? '') ?? criada;
+    final atualizada =
+        DateTime.tryParse(bruto['atualizadaEm'] as String? ?? '') ?? criada;
     final mensagens = bruto['mensagens'];
     return Conversa(
       id: id,
-      titulo: (bruto['titulo'] as String?)?.trim().isNotEmpty == true ? bruto['titulo'] as String : tituloPadrao,
+      titulo: (bruto['titulo'] as String?)?.trim().isNotEmpty == true
+          ? bruto['titulo'] as String
+          : tituloPadrao,
       criadaEm: criada,
       atualizadaEm: atualizada,
       fixada: bruto['fixada'] == true,
       mensagens: mensagens is List
-          ? mensagens.map(MensagemConversa.deJson).whereType<MensagemConversa>().toList()
+          ? mensagens
+              .map(MensagemConversa.deJson)
+              .whereType<MensagemConversa>()
+              .toList()
           : <MensagemConversa>[],
     );
   }

@@ -60,7 +60,10 @@ class _PersonalidadePageState extends State<PersonalidadePage> {
             tooltip: 'Salvar personalidade',
             onPressed: salvando ? null : _salvar,
             icon: salvando
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.check_rounded),
           ),
         ],
@@ -68,7 +71,8 @@ class _PersonalidadePageState extends State<PersonalidadePage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('COMO O J.A.R.V.I.S. FALA', style: TextStyle(color: cyan, fontSize: 10, letterSpacing: 2)),
+          const Text('COMO O J.A.R.V.I.S. FALA',
+              style: TextStyle(color: cyan, fontSize: 10, letterSpacing: 2)),
           const SizedBox(height: 8),
           const Text(
             'O nível vale para as respostas na conversa, digitada ou aberta pela voz. A informação '
@@ -76,8 +80,7 @@ class _PersonalidadePageState extends State<PersonalidadePage> {
             style: TextStyle(color: muted, fontSize: 12, height: 1.45),
           ),
           const SizedBox(height: 14),
-          for (final opcao in NivelHumor.values)
-            _cartao(opcao, colors),
+          for (final opcao in NivelHumor.values) _cartao(opcao, colors),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(14),
@@ -88,13 +91,17 @@ class _PersonalidadePageState extends State<PersonalidadePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Prévia — ${nivel.rotulo}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                Text('Prévia — ${nivel.rotulo}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 13)),
                 const SizedBox(height: 8),
-                Text(_exemplo, style: const TextStyle(fontSize: 13, height: 1.45)),
+                Text(_exemplo,
+                    style: const TextStyle(fontSize: 13, height: 1.45)),
                 const SizedBox(height: 10),
                 const Text(
                   'Em emergência, saúde, luto, violência, segurança ou dinheiro perdido, o humor é suspenso por completo, qualquer que seja o nível.',
-                  style: TextStyle(color: Color(0xFFFFC66D), fontSize: 11, height: 1.4),
+                  style: TextStyle(
+                      color: Color(0xFFFFC66D), fontSize: 11, height: 1.4),
                 ),
               ],
             ),
@@ -115,7 +122,9 @@ class _PersonalidadePageState extends State<PersonalidadePage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: selecionado ? const Color(0xFF123047) : colors.surfaceContainerHighest.withValues(alpha: .25),
+        color: selecionado
+            ? const Color(0xFF123047)
+            : colors.surfaceContainerHighest.withValues(alpha: .25),
         borderRadius: BorderRadius.circular(13),
         child: InkWell(
           key: ValueKey('nivel-${opcao.name}'),
@@ -127,7 +136,9 @@ class _PersonalidadePageState extends State<PersonalidadePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  selecionado ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                  selecionado
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
                   color: selecionado ? cyan : muted,
                   size: 20,
                 ),
@@ -136,9 +147,13 @@ class _PersonalidadePageState extends State<PersonalidadePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(opcao.rotulo, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                      Text(opcao.rotulo,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 13)),
                       const SizedBox(height: 4),
-                      Text(opcao.descricao, style: const TextStyle(color: muted, fontSize: 11.5, height: 1.4)),
+                      Text(opcao.descricao,
+                          style: const TextStyle(
+                              color: muted, fontSize: 11.5, height: 1.4)),
                     ],
                   ),
                 ),

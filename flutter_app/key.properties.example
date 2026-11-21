@@ -1,0 +1,12 @@
+# Modelo do key.properties — NÃO preencha este arquivo no repositório.
+#
+# Copie para uma pasta fora do projeto ou copie este exemplo para
+# ~/.jarvis/key.properties, e aponte JARVIS_KEY_PROPERTIES para ele.
+# Guia completo: docs/GUIA-ASSINATURA-RELEASE.md
+storeFile=/caminho/absoluto/fora/do/repositorio/jarvis-release.jks
+storePassword=COLOQUE_A_SENHA_DO_KEYSTORE
+keyAlias=jarvis
+keyPassword=COLOQUE_A_SENHA_DA_CHAVE
+# Opcional: impressão digital do certificado, conferida por
+# tool/verificar_assinatura.py --exigir-release
+certificadoSha256=

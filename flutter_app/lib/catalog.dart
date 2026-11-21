@@ -1,30 +1,72 @@
 import 'package:material_ui/material_ui.dart';
 
-class JarvisModule{
- const JarvisModule(this.name,this.group,this.icon,this.description);
- final String name,group,description;final IconData icon;
+class JarvisModule {
+  const JarvisModule(this.name, this.group, this.icon, this.description);
+  final String name, group, description;
+  final IconData icon;
 }
-const modules=<JarvisModule>[
- JarvisModule('Hermes Agent','Inteligência',Icons.hub_rounded,'Orquestração e execução de agentes.'),
- JarvisModule('Provedores de IA','Inteligência',Icons.psychology_rounded,'Groq, Gemini, Cerebras, Mistral e OpenRouter.'),
- JarvisModule('Modelos locais','Inteligência',Icons.memory_rounded,'Modelos locais e operação offline.'),
- JarvisModule('Agentes especializados','Inteligência',Icons.smart_toy_rounded,'Agentes por domínio e ferramentas.'),
- JarvisModule('Memória semântica','Conhecimento',Icons.account_tree_rounded,'Contexto e recuperação de informações.'),
- JarvisModule('Obsidian','Conhecimento',Icons.auto_stories_rounded,'Vínculo e sincronização com cofre Obsidian.'),
- JarvisModule('Voz e KWS','Interação',Icons.graphic_eq_rounded,'Voz, palavra de ativação local e síntese.'),
- JarvisModule('Visão e OCR','Interação',Icons.visibility_rounded,'Câmera, tela, imagens e documentos.'),
- JarvisModule('Arquivos','Produtividade',Icons.folder_copy_rounded,'Leitura, criação, conversão e organização.'),
- JarvisModule('Programação (sem execução)','Produtividade',Icons.terminal_rounded,'Assistência de código; sandbox e execução não disponíveis.'),
- JarvisModule('CADeSIMU e elétrica','Engenharia',Icons.electrical_services_rounded,'Projetos, circuitos e validação elétrica.'),
- JarvisModule('Avatar 3D','Interface',Icons.view_in_ar_rounded,'Avatar e representação visual do assistente.'),
- JarvisModule('Pessoas e contexto','Contexto',Icons.people_alt_rounded,'Perfis e contexto configurável.'),
- JarvisModule('Tarefas e rotinas','Produtividade',Icons.checklist_rounded,'Tarefas persistentes e automações.'),
- JarvisModule('Segurança e privacidade','Sistema',Icons.shield_rounded,'PIN, biometria e permissões suportadas.'),
- JarvisModule('Android e dispositivos','Sistema',Icons.phone_android_rounded,'Estado do dispositivo e recursos Android.'),
- JarvisModule('Pareamento Windows','Conectividade',Icons.devices_rounded,'Vínculo seguro entre celular e computador.'),
- JarvisModule('Controle do Windows','Conectividade',Icons.desktop_windows_rounded,'Ações autorizadas no computador.'),
- JarvisModule('ESP32 e Home Assistant','Conectividade',Icons.sensors_rounded,'Integração residencial e dispositivos.'),
- JarvisModule('Backup e restauração','Sistema',Icons.backup_rounded,'Cópia e recuperação dos dados.'),
- JarvisModule('Atualizações','Sistema',Icons.system_update_alt_rounded,'Versões, integridade e atualização.'),
- JarvisModule('Personalização','Sistema',Icons.palette_rounded,'Tratamento, humor, voz e preferências.'),
+
+const modules = <JarvisModule>[
+  JarvisModule('Hermes Agent', 'Inteligência', Icons.hub_rounded,
+      'Orquestração e execução de agentes.'),
+  JarvisModule('Provedores de IA', 'Inteligência', Icons.psychology_rounded,
+      'Groq, Gemini, Cerebras, Mistral e OpenRouter.'),
+  JarvisModule('Modelos locais', 'Inteligência', Icons.memory_rounded,
+      'Modelos locais e operação offline.'),
+  JarvisModule('Agentes especializados', 'Inteligência',
+      Icons.smart_toy_rounded, 'Agentes por domínio e ferramentas.'),
+  JarvisModule('Memória semântica', 'Conhecimento', Icons.account_tree_rounded,
+      'Contexto e recuperação de informações.'),
+  JarvisModule('Obsidian', 'Conhecimento', Icons.auto_stories_rounded,
+      'Vínculo e sincronização com cofre Obsidian.'),
+  JarvisModule(
+      'Habilidades em Markdown',
+      'Conhecimento',
+      Icons.school_outlined,
+      'Procedimentos em Skills/*.md que o JARVIS carrega do aparelho.'),
+  JarvisModule('Voz e KWS', 'Interação', Icons.graphic_eq_rounded,
+      'Voz, palavra de ativação local e síntese.'),
+  JarvisModule('Visão e OCR', 'Interação', Icons.visibility_rounded,
+      'Câmera, tela, imagens e documentos.'),
+  JarvisModule('Arquivos', 'Produtividade', Icons.folder_copy_rounded,
+      'Leitura, criação, conversão e organização.'),
+  JarvisModule(
+      'Programação (sem execução)',
+      'Produtividade',
+      Icons.terminal_rounded,
+      'Assistência de código; sandbox e execução não disponíveis.'),
+  JarvisModule(
+      'CADeSIMU e elétrica',
+      'Engenharia',
+      Icons.electrical_services_rounded,
+      'Projetos, circuitos e validação elétrica.'),
+  JarvisModule('Avatar 3D', 'Interface', Icons.view_in_ar_rounded,
+      'Avatar e representação visual do assistente.'),
+  JarvisModule('Perfis de timbre', 'Interface', Icons.record_voice_over_rounded,
+      'Voz grave, natural ou ágil, gravada no aparelho.'),
+  JarvisModule(
+      'Gestos e modo noturno',
+      'Interface',
+      Icons.screen_rotation_alt_rounded,
+      'Virar o celular para calar e brilho baixo com voz suave.'),
+  JarvisModule('Pessoas e contexto', 'Contexto', Icons.people_alt_rounded,
+      'Perfis e contexto configurável.'),
+  JarvisModule('Tarefas e rotinas', 'Produtividade', Icons.checklist_rounded,
+      'Tarefas persistentes e automações.'),
+  JarvisModule('Segurança e privacidade', 'Sistema', Icons.shield_rounded,
+      'PIN, biometria e permissões suportadas.'),
+  JarvisModule('Android e dispositivos', 'Sistema', Icons.phone_android_rounded,
+      'Estado do dispositivo e recursos Android.'),
+  JarvisModule('Pareamento Windows', 'Conectividade', Icons.devices_rounded,
+      'Vínculo seguro entre celular e computador.'),
+  JarvisModule('Controle do Windows', 'Conectividade',
+      Icons.desktop_windows_rounded, 'Ações autorizadas no computador.'),
+  JarvisModule('ESP32 e Home Assistant', 'Conectividade', Icons.sensors_rounded,
+      'Integração residencial e dispositivos.'),
+  JarvisModule('Backup e restauração', 'Sistema', Icons.backup_rounded,
+      'Cópia e recuperação dos dados.'),
+  JarvisModule('Atualizações', 'Sistema', Icons.system_update_alt_rounded,
+      'Versões, integridade e atualização.'),
+  JarvisModule('Personalização', 'Sistema', Icons.palette_rounded,
+      'Tratamento, humor, voz e preferências.'),
 ];

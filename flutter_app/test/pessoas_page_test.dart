@@ -36,10 +36,13 @@ void main() {
 
   setUp(() {
     armazenamento = ArmazenamentoFalso();
-    store = PessoasStore(armazenamento, agora: () => DateTime(2026, 11, 15, 10));
+    store =
+        PessoasStore(armazenamento, agora: () => DateTime(2026, 11, 15, 10));
   });
 
-  test('salvar exige nome e consentimento, grava no armazenamento seguro e não inventa campo', () async {
+  test(
+      'salvar exige nome e consentimento, grava no armazenamento seguro e não inventa campo',
+      () async {
     final semConsentimento = await store.salvar(Pessoa(
       id: '',
       nome: 'Ana',
@@ -80,7 +83,9 @@ void main() {
     expect(await store.listar(), isEmpty);
   });
 
-  testWidgets('cria ficha, exige consentimento e mostra relação como não informada', (tester) async {
+  testWidgets(
+      'cria ficha, exige consentimento e mostra relação como não informada',
+      (tester) async {
     await tester.pumpWidget(MaterialApp(home: PessoasPage(store: store)));
     await tester.pumpAndSettle();
     expect(find.text('Nenhuma ficha ainda'), findsOneWidget);
@@ -91,7 +96,8 @@ void main() {
     await tester.tap(find.byTooltip('Salvar ficha'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Confirme que você tem o consentimento'), findsOneWidget);
+    expect(find.textContaining('Confirme que você tem o consentimento'),
+        findsOneWidget);
     expect(await store.listar(), isEmpty);
 
     await _rolarAte(tester, find.byType(Checkbox));
@@ -106,8 +112,18 @@ void main() {
   });
 
   testWidgets('edita, busca e exclui a ficha por inteiro', (tester) async {
-    await store.salvar(Pessoa(id: '', nome: 'Ana', consentimento: true, criadaEm: DateTime(2026), atualizadaEm: DateTime(2026)));
-    await store.salvar(Pessoa(id: '', nome: 'Carlos', consentimento: true, criadaEm: DateTime(2026), atualizadaEm: DateTime(2026)));
+    await store.salvar(Pessoa(
+        id: '',
+        nome: 'Ana',
+        consentimento: true,
+        criadaEm: DateTime(2026),
+        atualizadaEm: DateTime(2026)));
+    await store.salvar(Pessoa(
+        id: '',
+        nome: 'Carlos',
+        consentimento: true,
+        criadaEm: DateTime(2026),
+        atualizadaEm: DateTime(2026)));
     await tester.pumpWidget(MaterialApp(home: PessoasPage(store: store)));
     await tester.pumpAndSettle();
 
@@ -122,7 +138,8 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, 'Relação'), 'irmã');
     await tester.tap(find.byTooltip('Salvar ficha'));
     await tester.pumpAndSettle();
-    expect((await store.listar()).firstWhere((p) => p.nome == 'Ana').relacao, 'irmã');
+    expect((await store.listar()).firstWhere((p) => p.nome == 'Ana').relacao,
+        'irmã');
 
     await tester.tap(find.text('Ana').first);
     await tester.pumpAndSettle();
@@ -136,7 +153,8 @@ void main() {
     expect(restantes.map((p) => p.nome), ['Carlos']);
   });
 
-  testWidgets('consultar uma ficha mostra só o que foi preenchido', (tester) async {
+  testWidgets('consultar uma ficha mostra só o que foi preenchido',
+      (tester) async {
     await store.salvar(Pessoa(
       id: '',
       nome: 'Ana',

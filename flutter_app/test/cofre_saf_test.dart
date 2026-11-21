@@ -22,7 +22,8 @@ void main() {
     respostaPasta = null;
     respostaLeitura = null;
     SharedPreferences.setMockInitialValues({});
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(canal, (chamada) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(canal, (chamada) async {
       chamadas.add(chamada.method);
       switch (chamada.method) {
         case 'pastaAtual':
@@ -42,7 +43,8 @@ void main() {
   });
 
   tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(canal, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(canal, null);
   });
 
   test('pasta ausente é ok com valor nulo, não erro', () async {
@@ -61,7 +63,11 @@ void main() {
   test('leitura ignora nota sem nome e conta ignoradas/truncadas', () async {
     respostaLeitura = {
       'notas': [
-        {'nome': 'Motor.md', 'caminho': 'Oficina/Motor.md', 'conteudo': '# Motor'},
+        {
+          'nome': 'Motor.md',
+          'caminho': 'Oficina/Motor.md',
+          'conteudo': '# Motor'
+        },
         {'conteudo': 'sem nome'},
       ],
       'ignoradas': 2,
@@ -80,7 +86,11 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: MemoriaPage(store: store)));
     await tester.pumpAndSettle();
 
-    respostaPasta = {'uri': 'content://com.android.externalstorage.documents/tree/primary%3AObsidian', 'nome': 'Obsidian'};
+    respostaPasta = {
+      'uri':
+          'content://com.android.externalstorage.documents/tree/primary%3AObsidian',
+      'nome': 'Obsidian'
+    };
     await tester.tap(find.text('Conectar pasta do Obsidian'));
     await tester.pumpAndSettle();
 
@@ -89,8 +99,17 @@ void main() {
 
     respostaLeitura = {
       'notas': [
-        {'nome': 'Motor.md', 'caminho': 'Oficina/Motor.md', 'conteudo': '---\ntitulo: Motor da bancada\n---\nLigação em estrela-triângulo.'},
-        {'nome': 'Receita.md', 'caminho': 'Cozinha/Receita.md', 'conteudo': '---\ntitulo: Receita\n---\nBolo de cenoura.'},
+        {
+          'nome': 'Motor.md',
+          'caminho': 'Oficina/Motor.md',
+          'conteudo':
+              '---\ntitulo: Motor da bancada\n---\nLigação em estrela-triângulo.'
+        },
+        {
+          'nome': 'Receita.md',
+          'caminho': 'Cozinha/Receita.md',
+          'conteudo': '---\ntitulo: Receita\n---\nBolo de cenoura.'
+        },
       ],
       'ignoradas': 1,
       'truncadas': 0,
@@ -121,11 +140,21 @@ void main() {
     expect(chamadas, contains('esquecerPasta'));
   });
 
-  testWidgets('abrir com pasta editável já sincroniza sem tocar em nada', (tester) async {
+  testWidgets('abrir com pasta editável já sincroniza sem tocar em nada',
+      (tester) async {
     final store = await MemoriaStore.abrir();
     final quando = DateTime(2026, 11, 14);
-    await store.salvar(NotaMemoria(id: 'a', titulo: 'Nota local', texto: 'conteúdo', criadaEm: quando, atualizadaEm: quando));
-    respostaPasta = {'uri': 'content://tree/obsidian', 'nome': 'Cofre', 'podeEscrever': true};
+    await store.salvar(NotaMemoria(
+        id: 'a',
+        titulo: 'Nota local',
+        texto: 'conteúdo',
+        criadaEm: quando,
+        atualizadaEm: quando));
+    respostaPasta = {
+      'uri': 'content://tree/obsidian',
+      'nome': 'Cofre',
+      'podeEscrever': true
+    };
     respostaLeitura = {'notas': []};
     await tester.pumpWidget(MaterialApp(home: MemoriaPage(store: store)));
     await tester.pumpAndSettle();
@@ -138,7 +167,11 @@ void main() {
 
   testWidgets('voltar ao app sincroniza o que mudou na pasta', (tester) async {
     final store = await MemoriaStore.abrir();
-    respostaPasta = {'uri': 'content://tree/obsidian', 'nome': 'Cofre', 'podeEscrever': true};
+    respostaPasta = {
+      'uri': 'content://tree/obsidian',
+      'nome': 'Cofre',
+      'podeEscrever': true
+    };
     respostaLeitura = {'notas': []};
     await tester.pumpWidget(MaterialApp(home: MemoriaPage(store: store)));
     await tester.pumpAndSettle();
@@ -146,14 +179,26 @@ void main() {
 
     respostaLeitura = {
       'notas': [
-        {'nome': 'Nova.md', 'caminho': 'Nova.md', 'conteudo': '---\ntitulo: Nova do Obsidian\n---\nTexto escrito lá.'},
+        {
+          'nome': 'Nova.md',
+          'caminho': 'Nova.md',
+          'conteudo': '---\ntitulo: Nova do Obsidian\n---\nTexto escrito lá.'
+        },
       ],
     };
-    for (final estado in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused]) {
+    for (final estado in [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused
+    ]) {
       tester.binding.handleAppLifecycleStateChanged(estado);
       await tester.pump();
     }
-    for (final estado in [AppLifecycleState.hidden, AppLifecycleState.inactive, AppLifecycleState.resumed]) {
+    for (final estado in [
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed
+    ]) {
       tester.binding.handleAppLifecycleStateChanged(estado);
       await tester.pump();
     }
@@ -165,17 +210,23 @@ void main() {
 
   testWidgets('pasta só de leitura não deixa sincronizar', (tester) async {
     final store = await MemoriaStore.abrir();
-    respostaPasta = {'uri': 'content://tree/obsidian', 'nome': 'Cofre', 'podeEscrever': false};
+    respostaPasta = {
+      'uri': 'content://tree/obsidian',
+      'nome': 'Cofre',
+      'podeEscrever': false
+    };
     await tester.pumpWidget(MaterialApp(home: MemoriaPage(store: store)));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('só para leitura'), findsOneWidget);
-    final botao = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Sincronizar'));
+    final botao = tester
+        .widget<FilledButton>(find.widgetWithText(FilledButton, 'Sincronizar'));
     expect(botao.onPressed, isNull);
     expect(chamadas, isNot(contains('escreverNota')));
   });
 
-  testWidgets('fora do Android a tela explica em vez de falhar calada', (tester) async {
+  testWidgets('fora do Android a tela explica em vez de falhar calada',
+      (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     final store = await MemoriaStore.abrir();
     await tester.pumpWidget(MaterialApp(home: MemoriaPage(store: store)));

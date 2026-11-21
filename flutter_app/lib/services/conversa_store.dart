@@ -16,7 +16,8 @@ class ConversaStore {
 
   final SharedPreferences _prefs;
 
-  static Future<ConversaStore> abrir() async => ConversaStore(await SharedPreferences.getInstance());
+  static Future<ConversaStore> abrir() async =>
+      ConversaStore(await SharedPreferences.getInstance());
 
   List<Conversa> listar() {
     final bruto = _prefs.getString(chaveConversas);
@@ -83,6 +84,6 @@ class ConversaStore {
 
   Future<void> limparRascunho() => _prefs.remove(chaveRascunho);
 
-  Future<void> _gravar(List<Conversa> lista) =>
-      _prefs.setString(chaveConversas, jsonEncode(lista.map((c) => c.paraJson()).toList()));
+  Future<void> _gravar(List<Conversa> lista) => _prefs.setString(
+      chaveConversas, jsonEncode(lista.map((c) => c.paraJson()).toList()));
 }

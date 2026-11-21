@@ -5,7 +5,8 @@ import 'package:jarvis_nova/pages.dart';
 import 'package:material_ui/material_ui.dart';
 
 void main() {
-  final programacao = modules.firstWhere((m) => m.name == 'Programação (sem execução)');
+  final programacao =
+      modules.firstWhere((m) => m.name == 'Programação (sem execução)');
 
   test('o catálogo não promete execução isolada', () {
     expect(programacao.description, contains('não disponíveis'));
@@ -22,7 +23,8 @@ void main() {
     expect(find.text('Integração em auditoria'), findsNothing);
   });
 
-  testWidgets('os outros módulos continuam com o aviso genérico', (tester) async {
+  testWidgets('os outros módulos continuam com o aviso genérico',
+      (tester) async {
     final outro = modules.firstWhere((m) => m.name == 'Hermes Agent');
     await tester.pumpWidget(MaterialApp(home: ModulePage(module: outro)));
     await tester.pumpAndSettle();

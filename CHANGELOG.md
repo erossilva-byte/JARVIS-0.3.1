@@ -1,3 +1,863 @@
+## 1.77.0 — assinatura de release permanente
+
+### O que mudou
+- **Build de release assina com a chave do projeto**, lida de `key.properties`
+  (fora do repositório). O arquivo pode ficar em `~/.jarvis/key.properties`,
+  `flutter_app/android/key.properties` ou no caminho apontado por
+  `JARVIS_KEY_PROPERTIES`.
+- **Sem chave, o build de release para** com uma mensagem clara. Antes ele saía
+  assinado em debug, com chave diferente a cada máquina — e o Android recusava
+  instalar a versão seguinte por cima.
+- **Aceita também as propriedades `-P` do Gradle** (`storeFile`,
+  `storePassword`, `keyAlias`, `keyPassword`), que é como o CI entrega os secrets
+  já usados pelo build antigo (`JARVIS_KEYSTORE_B64` e companhia).
+- **`tool/verificar_assinatura.py`** mostra o certificado e o SHA-256 do APK,
+  compara com `certificadoSha256` e reprova release assinado em debug.
+- **Guia novo** `docs/GUIA-ASSINATURA-RELEASE.md`: gerar a chave com `keytool`,
+  backup, primeira instalação (uma desinstalação obrigatória por causa dos APKs
+  antigos), conferência e secrets do CI. O `.gitignore` passa a recusar
+  `key.properties`, `*.jks` e `*.keystore`.
+- **Esteira de release no GitHub Actions** (`flutter-release-apk.yml`): disparo
+  manual, compila o APK arm64, decodifica o keystore dos secrets para
+  `$RUNNER_TEMP`, monta o `key.properties` temporário, confere o certificado com
+  `tool/verificar_assinatura.py --exigir-release` e publica APK + SHA-256. Sem
+  qualquer um dos quatro secrets o job para antes de compilar.
+
+Limite honesto: a chave é sua e não passa por mim; sem ela não há APK de release
+assinado — só o teste local com `JARVIS_PERMITIR_DEBUG=true`, que não distribui.
+
+## 1.76.0 — Duress PIN no formato de visita
+
+### O que mudou
+- **Segundo PIN na tela de bloqueio**: além do PIN principal, um **PIN de coação**
+  abre o JARVIS em **modo de visita** — um app recém-instalado, sem conversas,
+  memória, fichas de pessoas, arquivos ou chaves de provedor. Nada é apagado: o
+  app real volta com o PIN principal.
+- **Nada sai do aparelho**: no modo de visita nenhuma pergunta vai para provedor
+  de IA. As respostas são locais e só dizem o básico (hora, data, saudação);
+  qualquer outra coisa recebe "ainda não tenho um provedor configurado".
+- **A palavra de ativação é desligada** ao entrar no modo de visita, para o
+  JARVIS não falar dados reais em voz alta.
+- **Definição protegida**: o PIN de coação exige o PIN principal, passa pela
+  mesma política do principal e é recusado se for igual a ele. Só ficam no cofre
+  seguro o sal e o digest PBKDF2 com sal próprio — nunca o PIN.
+- **Registro discreto**: a tela de segurança mostra a data do último uso do modo
+  de visita, visível só para quem entra com o PIN principal.
+- **Prompt sugerido "Modo de visita"** disponível na tela de segurança e nos
+  ajustes do modo de visita, com botão de copiar: define como um assistente deve
+  falar dentro do modo sem revelar dono, histórico ou dados.
+- Biometria continua abrindo o app real, como antes — documentado como limite.
+
+Limite honesto: esconde o conteúdo, não o criptografa de novo; com root ou
+perícia os dados reais ainda podem ser encontrados. Sem aparelho, o fluxo real de
+digitação e o uso sob coação não foram medidos.
+
+## 1.75.1 — perguntas no segundo plano com o app fechado
+
+### O que estava errado
+- A ponte de IA do ajuste 085 dependia do motor do Flutter do app. Com o app
+  encerrado (ou descartado pelo Android), toda pergunta livre — "como está tudo,
+  Jarvis", "me fale sobre culinária" — caía no aviso "abra o JARVIS e pergunte de
+  novo", mesmo com provedor configurado e internet boa.
+
+### O que mudou
+- **Motor sem tela no serviço**: quando ninguém está atendendo, o próprio serviço
+  sobe um motor do Flutter com a entrada `mainFundo`, que liga a mesma ponte de
+  IA — mesmo provedor, mesmas chaves, mesma personalidade — sem abrir tela.
+- **Espera pelo canal**: a ponte tenta de novo até 12 s enquanto o Dart registra
+  o atendimento; se não registrar, a resposta é honesta.
+- **Memória contida**: o motor sem tela é desligado depois de 3 minutos ocioso,
+  quando o app volta a atender e no fim do serviço.
+- **Motivo certo na voz**: "Nenhum provedor de IA está configurado. Abra o
+  JARVIS, cadastre a chave…" para falta de chave; "O provedor demorou demais…"
+  para estouro de tempo; "Verifique a conexão…" para falha de rede.
+- Nenhuma permissão nova e nenhuma chave copiada para o Kotlin.
+
+Limite honesto: sem aparelho, o tempo de subida do motor sem tela e a memória
+extra não foram medidos.
+
+## 1.75.0 — perfis de timbre da voz na tela
+
+### O que mudou
+- **Três perfis escolhíveis**: **Grave** (o timbre original, 0,72 de tom e 0,88
+  de ritmo), **Natural** (a voz do aparelho sem alteração) e **Ágil** (mais
+  agudo e rápido). Nada de voz nova: muda só `setPitch` e `setSpeechRate` da
+  síntese já instalada.
+- **O perfil fica gravado no aparelho** (`jarvis_voz`) e vale para a voz da tela
+  **e do segundo plano**, porque as duas leem a mesma preferência.
+- **Nova tela “Perfis de timbre”** (gaveta e catálogo): mostra o timbre real,
+  deixa escolher e tem “Ouvir exemplo” com a mesma síntese da conversa.
+- **Sem canal Android ou sem síntese**, a tela explica em vez de mostrar uma
+  opção que não funciona.
+- Id desconhecido cai no grave, então nada quebra ao abrir uma conversa antiga
+  ou um perfil renomeado.
+
+Limite honesto: a voz é a do aparelho, o áudio não foi ouvido nesta sessão e a
+qualidade depende do mecanismo de síntese instalado.
+
+## 1.74.0 — virar para calar e modo noturno com os sensores do aparelho
+
+### Flip-to-shush
+- **Virar o celular para baixo cala o JARVIS na hora.** O acelerômetro do próprio
+  aparelho detecta a tela para baixo (Z ≤ −8,0), com histerese para não calar
+  duas vezes e intervalo mínimo de 1,2 s entre avisos.
+- **Vale para a voz da tela e para a voz de segundo plano**: o gesto para a
+  síntese das duas e devolve o microfone ao detector de palavra, sem encerrar o
+  serviço.
+- **Sem permissão nova**: acelerômetro não exige autorização, e o sensor só fica
+  registrado com a opção ligada e a tela do JARVIS na frente.
+- A resposta escrita continua na tela; o gesto cala o áudio, não apaga o texto.
+
+### Modo noturno
+- **Brilho baixo só na janela do JARVIS** (10–100%), via
+  `WindowManager.LayoutParams.screenBrightness`. O brilho do sistema exigiria
+  WRITE_SETTINGS, que o app não pede.
+- **Voz mais suave**: no modo noturno a síntese fala em 45% do volume, sem
+  silenciar de vez.
+- Estado guardado no aparelho (`jarvis_gestos`) e reaplicado ao abrir o app.
+
+### Tela e limites
+- **Nova tela “Gestos e modo noturno”** (gaveta e catálogo): estado real,
+  interruptor do gesto, interruptor e controle de brilho do modo noturno e
+  “Calar agora”.
+- Sem acelerômetro ou fora do Android, a tela explica em vez de mostrar opção
+  que não funciona.
+
+Limite honesto: o sensor só atua com a tela na frente, o brilho não muda o
+sistema inteiro e nada foi medido em aparelho físico.
+
+## 1.73.0 — habilidades em Markdown carregadas do aparelho
+
+### O que mudou
+- **Pastas de habilidades.** O JARVIS lê arquivos `.md` dentro de `Skills/` ou
+  `Habilidades/` na pasta conectada do Obsidian (a mesma do cofre, via SAF) e
+  também na pasta local do app. Cada arquivo é uma habilidade.
+- **Cabeçalho simples.** `nome`, `descricao` e `gatilhos` no frontmatter; o corpo
+  é o passo a passo. Sem frontmatter, o título do Markdown vira o nome.
+- **Usa só quando casa.** A pergunta é comparada com os gatilhos (sem acento e
+  sem caixa) e com palavras do nome; no máximo duas habilidades entram no pedido,
+  com limite de tamanho, e a resposta diz qual foi usada.
+- **Nova tela “Habilidades em Markdown”**, na gaveta e no catálogo: mostra o que
+  foi carregado, a origem e os gatilhos, tem “Ler de novo” e “Criar exemplo no
+  aparelho”, que grava `Skills/exemplo-revisar-texto.md` na pasta conectada
+  (ou na pasta local quando não há cofre).
+- Sem pasta conectada, sem escrita ou sem `Skills/`, a tela explica o motivo em
+  vez de mostrar uma lista vazia sem contexto.
+
+Limite honesto: nada é executado — o Markdown só orienta o provedor de IA, e a
+leitura de uma habilidade real em aparelho físico não foi medida.
+
+## 1.72.0 — o JARVIS responde em qualquer modo, e o resumo tático das mensagens
+
+### A resposta que dizia “estou em segundo plano”
+- **Com o app aberto, o comando voltava como segundo plano.** O serviço de
+  palavra de ativação só olhava a autorização de “Exibir sobre outros apps”; sem
+  ela, mesmo com a tela na frente, ele falava “Não reconheci esse comando em
+  segundo plano”. Agora a tela aberta muda a rota: o comando é reconhecido e
+  respondido na conversa.
+- **Hora e data são respondidas no aparelho** (“que horas são?”, “que dia é
+  hoje?”), em frase falável e sem provedor.
+- **Pergunta livre vai para o provedor de IA já configurado.** Uma ponte entre o
+  serviço e o Flutter leva o texto ouvido, recebe a resposta curta e fala — com a
+  personalidade escolhida e o texto limpo de markdown.
+- **Sem ponte ou sem chave, a resposta é honesta**: avisa que a IA não pôde ser
+  consultada e o histórico registra a tentativa como não concluída.
+
+### Resumo tático das mensagens
+- **Novo “Resumo tático por IA”** no cartão de notificações do painel do
+  aparelho: separa ruído de grupo, destaca o que é urgente e sugere respostas,
+  usando os provedores que o app já tem.
+- **Regra local pura** para urgência e sinais de grupo, pedido limitado a 24
+  notificações e leitura tolerante do JSON do provedor; resposta inválida não
+  vira resumo inventado.
+- **Sem provedor, a triagem local aparece** com o motivo escrito, e cada sugestão
+  abre a resposta da notificação já preenchida.
+
+Limite honesto: a ponte de IA só existe enquanto o app está vivo na memória; com
+o app encerrado pelo Android, o JARVIS avisa em vez de inventar a resposta.
+
+## 1.71.0 — sentinela de mensagens: responder e ouvir sem abrir o app
+
+### O que o ULTRON tinha e o JARVIS não tinha
+- **Resposta direta na notificação (RemoteInput)**: com o acesso a notificações
+  ligado, a aba CELULAR mostra um botão de responder em cada mensagem de
+  WhatsApp, Telegram, SMS, Signal ou Discord. A resposta é injetada no campo da
+  própria notificação e o aplicativo **não é aberto**. Se o Android não informou
+  campo de resposta, ou o serviço caiu, a tela diz isso — nunca “enviado” sem
+  confirmação.
+- **Ler mensagens em voz alta**: botão “Ler em voz alta” lê as cinco mensagens
+  mais recentes e um alto-falante em cada linha lê só aquela, com a voz pt-BR do
+  aparelho. Sem voz instalada, a mensagem continua escrita na tela e o aviso é
+  explícito.
+
+### Correções de base no caminho
+- **As peças nativas da sentinela passaram a ser copiadas pelo preparo**
+  (`JarvisAparelho.kt` e `JarvisNotificacaoListener.kt`): antes existiam só na
+  pasta gerada e sumiriam em uma instalação limpa.
+- **Notificação removida deixa de ser alvo de resposta**, e notificação fixa
+  (`FLAG_ONGOING_EVENT`) não entra na lista — antes podia receber uma resposta
+  que não fazia sentido.
+
+### Comparativo com o ULTRON
+- Novo `docs/COMPARATIVO-ULTRON.md` com o que já existe, o que é parcial e o que
+  falta, mais a ordem sugerida dos próximos blocos (resumo tático por IA, skills
+  em Markdown, flip-to-shush, perfis de timbre, Duress PIN, OTA).
+
+Limite honesto: o envio real depende do aplicativo (WhatsApp pode recusar
+RemoteInput em algumas versões) e só o aparelho físico confirma.
+
+## 1.70.0 — palavra de ativação mais confiável, com sensibilidade na tela
+
+### Por que às vezes o JARVIS não ouvia
+- **O limiar era fixo no código.** O detector abria sempre com sensibilidade 75 e
+  não havia como ajustar no app Flutter: pronúncia diferente, voz baixa ou
+  ambiente com ruído não tinham saída. Agora a sensibilidade (0–100) fica gravada
+  no aparelho e é ajustada na tela **Voz e palavra de ativação**.
+- **Só existiam três faixas de limiar.** Subir de 45% para 69% não mudava nada, e
+  acima de 70% o detector já estava no máximo. Agora são cinco faixas
+  (0,50 / 0,42 / 0,33 / 0,25 / 0,20) e a pontuação das palavras sobe junto
+  (1,5 → 1,8 → 2,0), então a sensibilidade alta realmente facilita acordar o JARVIS.
+- **Uma falha do motor deixava o JARVIS surdo.** Qualquer erro do detector
+  chamava `stopSelf()` e só abrir o app trazia a escuta de volta. Agora o serviço
+  religa sozinho, até três vezes e com espera crescente, e um vigia confere a cada
+  20 s se o motor continua de pé.
+- **Depois de acordar, o detector só voltava em 35 s.** A tela assume o microfone
+  e o serviço já bloqueia o religamento durante o comando, então a espera caiu
+  para 8 s — o JARVIS volta a ouvir logo depois de abrir a conversa.
+
+### Na tela
+- **Controle deslizante de sensibilidade** em Voz e palavra de ativação, de 0 a
+  100% em passos de 5, com rótulo (Mínima a Máxima), a explicação do efeito e o
+  limiar que o modelo passou a usar.
+- **Vale na hora**: soltar o controle grava no aparelho, religa o detector com o
+  limiar novo e confirma na tela a sensibilidade realmente aplicada.
+- **Diagnóstico mostra o valor em uso** — sensibilidade e limiar vindos do serviço
+  Android, não um número inventado pela interface.
+
+Limite honesto: o modelo KWS é treinado em inglês. A sensibilidade melhora a
+chance de o detector aceitar a pronúncia brasileira, mas voz real, sotaque e
+falso disparo continuam dependendo de medição no aparelho.
+
+## 1.69.0 — microfone: o detector entrega o microfone antes do comando
+
+### Microfone (o “não consegui entender”, de novo)
+- **A causa era a entrega do microfone, não o tempo de silêncio.** O pedido de
+  pausa ao detector era um Intent, entregue só depois: o reconhecedor do comando
+  abria a captura com o `AudioRecord` do detector ainda gravando. Dois microfones
+  abertos ao mesmo tempo devolvem silêncio e o Android respondia “não entendi”
+  mesmo com a fala clara. Agora o app **confirma** que o microfone ficou livre
+  antes de abrir o reconhecedor, fora da thread principal e com prazo de 1,5 s.
+- **Microfone ocupado também tem nova tentativa**: `ERROR_AUDIO` e
+  `ERROR_RECOGNIZER_BUSY` entram na repetição, com folga maior (800 ms) do que o
+  silêncio (350 ms).
+- **O que já foi reconhecido não é perdido**: se o Android entregou parte da frase
+  e falhou no fim, o parcial vira o comando em vez de “não entendi”.
+- **Fala fraca ganha ganho automático** antes do detector: até 4x em voz baixa,
+  1x em voz normal, com transição suave e sem estourar o sinal.
+- **O detector não religa com o comando em curso** — antes podia abrir um segundo
+  `AudioRecord` e derrubar a captura no meio da fala.
+
+### Segundo plano e resposta
+- **Uma nova tentativa no segundo plano** antes de desistir, e sem falar durante
+  a escuta (a voz do alto-falante viraria comando).
+- **A palavra de ativação volta só depois que a resposta termina** de ser falada
+  (`UtteranceProgressListener`); se a síntese não confirmar, a espera é
+  proporcional ao tamanho da resposta. Antes o JARVIS voltava a ouvir com o
+  próprio áudio no ar e podia se ativar sozinho.
+
+## 1.68.0 — histórico do que o JARVIS executou
+
+### Histórico de execuções
+- **Novo histórico, com horário e resultado**: cada comando que o JARVIS executou
+  fica registrado com o horário, o que foi pedido, a ação decidida e a resposta
+  lida do Android — “Executado” só quando o sistema confirmou; o resto aparece
+  como “Não executado”, com o motivo.
+- **Mesma lista para os dois caminhos**: o comando falado com o app aberto e o
+  comando executado em segundo plano, sem a tela na frente, entram no mesmo
+  histórico, com a origem marcada (“Por voz”, “Por voz, em segundo plano”,
+  “Digitado” ou “Teste”).
+- **Fica no aparelho**: até 100 registros, guardados localmente, sem áudio e sem
+  envio para a nuvem. O botão **Limpar histórico deste aparelho** apaga tudo,
+  com confirmação antes.
+- **Onde conferir**: ícone de histórico em **Comandos do Android** e o botão
+  **Ver histórico completo** na tela **Segundo plano**. Também dá para atualizar
+  a lista e ver o resumo do período (quantos executaram e quantos não).
+
+## 1.67.0 — microfone confiável, comando no segundo plano e abrir apps
+
+### Microfone
+- **Dois microfones ao mesmo tempo era a causa do “Não consegui entender o
+  comando”.** Quando a palavra de ativação abria a tela, o detector local voltava
+  a ligar antes de o reconhecedor do comando começar; os dois disputavam a
+  captura e o Android devolvia silêncio (`ERROR_NO_MATCH`) mesmo com a fala
+  clara. Agora o serviço **marca que o comando está com o microfone**, solta o
+  `AudioRecord` do detector e a tela **não religa o detector** enquanto isso.
+- **Nova tentativa automática**: em “não entendi” e “nenhuma fala detectada” o
+  JARVIS fala “Não entendi. Fale de novo, por favor…” e escuta mais uma vez, sem
+  exigir que você chame a palavra de ativação de novo. Erro de permissão, áudio ou
+  reconhecedor ocupado **não** repete à toa.
+- **Tempo de escuta mais tolerante**: 2 s de silêncio para concluir, 1,5 s de
+  silêncio provável e 1 s de fala mínima, no comando aberto e no segundo plano.
+- **Pacote offline ausente agora é explicado**: se o Android não tem o português
+  offline instalado (`ERROR_LANGUAGE_NOT_SUPPORTED`/
+  `ERROR_LANGUAGE_UNAVAILABLE`), a mensagem diz onde instalar e que **nada vai
+  para a nuvem** — o reconhecedor continua sendo só o do aparelho.
+
+### Segundo plano
+- **O microfone funciona mesmo quando o Android não deixa o JARVIS trazer a tela
+  para a frente.** Sem “Exibir sobre outros apps”, a palavra de ativação agora
+  ouve e executa o comando no próprio serviço (lanterna e volume funcionam) em
+  vez de tentar abrir o app e ficar sem resposta.
+- **Aviso “JARVIS ativo” ganhou o botão “Autorizar abrir apps”** quando falta a
+  autorização, levando direto ao ajuste do Android em um toque.
+- **Abrir o app pedido** (“abrir WhatsApp”) continua por dois caminhos: com a tela
+  aberta, pelo registro de comandos; com o app fechado, pelo serviço — e aí só
+  abre com “Exibir sobre outros apps” autorizado, avisando quando falta.
+
+### Documentação
+- Limites do segundo plano reescritos para dizer que lanterna e volume funcionam
+  sem a autorização de sobreposição, e abrir apps/alarme não.
+
+## 1.66.0 — status do celular e localização do aparelho
+
+### Status do celular
+- A **Central do aparelho** agora reúne, numa tela só: **memória**,
+  **armazenamento**, **bateria**, **rede**, **tempo ligado**, **notificações** e
+  **localização**. Cada número vem do Android; o que não foi informado aparece
+  como “não informado”.
+- **Notificações**: mostra se o acesso está autorizado, o botão que abre a
+  autorização do Android, a lista do que o sistema entregou ao JARVIS (até 12 na
+  tela; o app guarda no máximo 80, só em memória) e “Limpar leitura”.
+- **Localização do aparelho** pelo `LocationManager`, sem Google Play Services e
+  sem serviço de mapas: coordenadas, **precisão em metros**, **idade da leitura**
+  e a origem (leitura nova ou último ponto conhecido). O **endereço aproximado**
+  vem do `Geocoder` do próprio Android e é marcado como aproximado; sem ele, a
+  tela diz que não tem endereço em vez de inventar um.
+- **Permissão pedida na hora**, com `ACCESS_FINE_LOCATION`/`ACCESS_COARSE_LOCATION`;
+  sem autorização ou com o GPS desligado, a tela explica o que falta.
+- **A localização não é guardada nem enviada** pelo app; cada leitura acontece só
+  quando você clica em “Ver minha localização”.
+- **“Ouvir”** fala o resultado pela voz pt-BR do aparelho.
+- **Comando falado “onde estou”** (também “me diga onde estou”, “qual é a minha
+  localização”, “minha localização atual”): o JARVIS responde com o endereço
+  aproximado, as coordenadas, a precisão e a idade do dado. Perguntas como “onde
+  fica Paris?” e “como chegar no centro?” continuam indo para a conversa.
+- O comando de localização só roda com o app aberto e com a permissão já
+  concedida; no segundo plano ele não está no registro fechado.
+
+## 1.65.0 — tela de bloqueio, PIN e biometria (Fase 13)
+
+### Segurança
+- **Tela de bloqueio própria do JARVIS**, com PIN de 4 a 8 dígitos, teclado
+  numérico e pontos no lugar dos dígitos. Entra ao abrir o app e ao voltar do
+  segundo plano depois do tempo escolhido.
+- **O PIN não é guardado**: fica só o resultado de PBKDF2-HMAC-SHA256 com sal
+  aleatório e 24 000 iterações, no cofre seguro do aparelho.
+- **Política mínima**: recusa dígito repetido, sequência (1234, 9876) e a lista
+  de PINs mais usados.
+- **5 erros seguidos ⇒ 30 segundos de espera**; o PIN correto também não passa
+  durante a espera.
+- **Configurações em Segurança e privacidade**: definir, alterar e desligar o PIN
+  (sempre com o PIN atual), ligar biometria, escolher o tempo para pedir o PIN de
+  novo e “Bloquear agora”.
+- **Biometria opcional** pelo `BiometricPrompt`/digital do Android, sem
+  dependência nova; sem sensor, a opção aparece desabilitada com o motivo.
+- **Recuperação** de PIN esquecido só com a credencial do próprio aparelho (PIN,
+  padrão ou senha da tela do Android). Sem ela, resta reinstalar o app — e isso
+  está dito na tela.
+
+## 1.64.0 — segundo plano de verdade (Fase 12)
+
+### Voz com o app fechado
+- Com **executar comandos sem abrir a tela** ligado, a palavra de ativação não
+  abre mais o app: o serviço em primeiro plano escuta o comando pelo
+  reconhecimento **offline** pt-BR, executa e responde falando.
+- Ações do registro fechado: **abrir app**, **lanterna**, **volume** e
+  **alarme**. Comando fora disso é recusado com a lista do que é possível — nada
+  de interpretar pedido livre no escuro.
+- **Mostra na tela que está ativo**: notificação de alta prioridade “JARVIS
+  ativo · ouvindo seu comando” enquanto escuta e o resultado resumido depois.
+- **Abrir app a partir do segundo plano** exige “Exibir sobre outros apps”
+  autorizado (exceção documentada do Android); sem isso a resposta explica o que
+  falta em vez de falhar calado.
+- Tela nova **Android e dispositivos → Segundo plano**: estado real do serviço,
+  switch do modo sem tela, botão de autorização, pendências, teste de comando por
+  escrito e último comando executado.
+- O modo antigo continua: com o switch desligado, a palavra de ativação abre a
+  tela e a conversa, como antes.
+
+### Limites declarados na tela
+- Depois de reiniciar o aparelho o Android não permite iniciar sozinho um serviço
+  de microfone; a escuta volta quando o app é aberto uma vez.
+- No Não Perturbe o aviso pode ficar só na gaveta, sem surgir na tela.
+- O áudio continua sendo processado no aparelho; não há fallback de nuvem.
+
+## 1.63.1 — erro 404 do Gemini na Visão
+
+### Correção
+- A tela **Visão** parava em `HTTP 404` quando o Gemini não tinha o modelo
+  exato daquela chave. Agora o app tenta os modelos alternativos do provedor e,
+  se nenhum responder, o próximo provedor com chave cadastrada (Groq, Mistral ou
+  OpenRouter).
+- **404** passou a dizer que o *modelo* não está disponível para a chave, em vez
+  de mensagem genérica; **401/403** continua sendo recusa de credencial e
+  interrompe na hora, porque trocar de modelo não conserta chave.
+- O Gemini da conversa ganhou `gemini-2.5-flash` e `gemini-flash-latest` como
+  últimas alternativas da lista de reserva.
+- Nada mudou na privacidade: a chave continua no cabeçalho `Authorization`, a
+  imagem continua sem ser gravada e sem reconhecimento facial.
+
+## 1.63.0 — tarefas e automações persistentes (Fase 11)
+
+### Tarefas e automações
+- Tela nova em **Android e dispositivos → Tarefas e automações**: tarefas com
+  título, notas, prazo, prioridade, conclusão e exclusão; automações por horário
+  ou bateria baixa; fila offline e histórico.
+- **Prazo** aceita `19:30`, `24/12 19:30`, `24/12/2026 19:30` e ISO; data
+  inexistente é recusada em vez de corrigida.
+- **Alarme real** no `AlarmManager` (`setAlarmClock`) para tarefas com prazo e
+  avisos de horário; alarme diário é reprogramado pelo receptor e restaurado
+  após reiniciar o aparelho (`BOOT_COMPLETED`).
+- **Fila offline** guarda a ação que o Android não confirmou e tenta de novo ao
+  abrir a tela ou em "Tentar de novo agora", até 3 tentativas, com o motivo.
+- **Histórico** registra as últimas 200 execuções com estado real (executada,
+  aguardando confirmação, falhou, ignorada).
+- **Mensagem é ação sensível**: nasce aguardando confirmação; o toque em
+  Confirmar abre a conversa com o texto exato e o envio continua sendo do
+  usuário. Nada é enviado sozinho.
+- Limites: 100 tarefas, 40 automações, 100 itens de fila, 200 eventos e 128 kB.
+- Automação de bateria, abertura de app e criação de tarefa são avaliadas com o
+  app aberto; isso está escrito na tela, não escondido.
+
+### Testes
+- **17 verificações** do núcleo (`tool/tarefas_test.dart`), **3 testes de
+  widget** (`test/tarefas_page_test.dart`) e contrato `tests/test_tarefas_flutter.py`.
+- `flutter analyze` limpo e suíte Flutter completa aprovada.
+- APK de teste arm64 release gerado com SHA-256 registrado no relatório 075.
+
+## 1.62.0 — Fase 10 fechada e Fase 11 iniciada
+
+### Engenharia de circuitos (fecha a Fase 10)
+- **Sensor de fim de curso** no simulador: mesmo modelo elétrico da botoeira, com
+  rótulo `S1` e botão **Acionar sensor**; exemplo novo "Sensor de fim de curso"
+  (NF em série com a lâmpada — acesa em repouso, apaga ao acionar).
+- **Verificar ligações**: fonte, carga, terminal solto, contato órfão, temporizador
+  sem contato 67/68, contato sem temporizador, relé sem 95/96 e **curto** entre os
+  polos por caminho só de fios e contatos fechados.
+- **Continuidade** entre dois nós, como um multímetro em modo de teste (a fonte não
+  conta como caminho).
+- **Lista de materiais** agrupada por tipo e especificação, com os rótulos do circuito.
+- **Arquivo `.circ`** próprio, JSON versionado, com importação que recusa arquivo
+  inválido, versão futura, tipo desconhecido e nó fora da grade. O `.cad` continua
+  somente leitura: não é o CADeSIMU.
+- **Dimensionamento** de condutor e disjuntor (ampacidade resumida NBR 5410, queda
+  de tensão, fator 1,25) e de motor com rendimento, fator de potência e partida
+  estimada; a tela explica quando está fora do limite.
+- **CLP didático**: lógica ladder com contatos em série/paralelo, execução em ciclos
+  e saídas retidas (selo), com dois programas de exemplo. É análise lógica, não
+  simulação elétrica nem CLP físico.
+
+### Central do aparelho (inicia a Fase 11)
+- Tela nova em **Android e dispositivos → Central do aparelho**: memória livre e
+  total, armazenamento, bateria e carregamento, rede (Wi-Fi, dados móveis ou sem
+  rede), tempo ligado e **lista real de apps** com tela inicial (até 120), com busca.
+- **Abrir app** pelo intent de lançamento do pacote; sem tela inicial, a tela informa
+  o motivo em vez de dizer que abriu. Nada de encerrar apps ou pareamento ainda.
+
+### Testes
+- **15 verificações** de engenharia (`tool/engenharia_test.dart`), **5** da central
+  do aparelho (`tool/dispositivo_test.dart`) e **3** testes de widget da tela nova.
+- `flutter analyze` limpo, suíte Flutter completa e contratos Python aprovados.
+- **APK de teste**: `JARVIS-Nova-1.62.0-fase-10-e-11.apk` (arm64, release,
+  117.414.216 bytes, SHA-256 `3fef5509…8627f`) —
+  https://litter.catbox.moe/qeav7b.apk
+- `flutter test`: **166 testes** aprovados; três contratos Python aprovados.
+
+## 1.61.0 — tocar a faixa pedida de verdade no Spotify (Fase 11)
+
+### O comando de música agora toca
+- "Toca Bohemian Rhapsody no Spotify" não abre mais só a busca: o Jarvis manda a consulta pelo
+  **`MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH`** para o pacote do Spotify — o canal oficial
+  do Android para "tocar <faixa>", o mesmo usado pelo Google Assistente. O app escolhe o melhor
+  resultado e começa a tocar.
+- Quando a pessoa dita um link (`spotify:track:…` ou `open.spotify.com/track/…`), a **URI exata**
+  vai pela sessão de mídia (`playFromUri`) e também para o app, que enfileira a faixa certa.
+- Depois de mandar, o Jarvis acompanha a sessão por até **8 s** e **confere o título**: só responde
+  "Tocando «X» — Y" quando a faixa e o estado `PLAYING` conferem. Sem confirmação, diz o que está
+  tocando de fato e repete o limite.
+- A tela do Spotify explica em texto o que o Android permite: a sessão controla (pausar, avançar,
+  voltar, reiniciar), a busca de mídia toca, e sem SDK/API do Spotify não existe escolher faixa
+  arbitrária nem montar fila por fora do app.
+
+### Testes
+- **18 grupos** no teste puro do aparelho (4 novos: URI, pedido com link, conferência aceita e
+  conferência recusada), suíte Flutter completa e `flutter analyze` limpo.
+- **APK de teste compilado**: `JARVIS-Nova-1.61.0-spotify-toca-a-faixa.apk` (117.348.676 bytes,
+  ARM64, `versionCode 16100`), SHA-256
+  `9652e152284d77d28f85ddc2ad5ca71a13c98833798c3bb288e1cd47b7fa9fa7`, em
+  `https://litter.catbox.moe/xof18c.apk` (link temporário, 72 h; download conferido com o mesmo
+  tamanho e SHA). Não foi instalado em aparelho.
+
+## 1.60.0 — relógio por contato e aparelho conectado (Fases 10/11)
+
+### Cada contato com o próprio relógio
+- O 67/68 NA e o 67/68 NF deixaram de ler o relógio do temporizador: cada contato tem o **próprio
+  contador de subida e de queda**, guardado por id de contato. O botão **Avançar 1 s** anda os dois
+  separadamente; cada um zera quando o temporizador volta a energizar e continua na queda enquanto
+  o contato estiver segurando.
+- Exemplo novo **Relógios independentes no temporizador**, em 24 V: KT1 com ajuste base de 12 s que
+  ninguém usa, 67/68 NA com relógio de **2 s** (L1) e 67/68 NF com relógio de **7 s** (L2).
+- Circuitos antigos que não informam relógio de contato continuam usando o relógio do temporizador
+  (compatibilidade testada).
+
+### Jarvis ativo em segundo plano
+- Ao detectar a palavra de ativação com o app atrás, a tela mostra **JARVIS ATIVO · microfone
+  aberto, pode falar** e o Android traz o app para a frente, acende a tela e mantém o serviço de
+  microfone em primeiro plano.
+
+### Aparelho conectado (painel novo)
+- **Notificações**: serviço de leitura com autorização do usuário, últimas notificações no painel e
+  botão para abrir o acesso.
+- **Mensagens por qualquer app**: WhatsApp, WhatsApp Business, SMS, Gmail, Discord, Instagram,
+  Telegram, Messenger, Signal e E-mail. O texto é **exatamente** o pedido; nos apps de terceiros o
+  Jarvis abre a conversa e o toque em enviar é do usuário — só o SMS sai direto.
+- **Spotify**: pausar, continuar, avançar, voltar, reiniciar (`seekTo(0)`) e abrir a busca da música
+  pedida pela sessão de mídia ativa.
+- **Contatos e ligações**: busca em `ContactsContract` e discagem por `ACTION_CALL` com permissão.
+- **Status e configurações**: bateria, carga, volume, mudo, fone, brilho, rede, Não Perturbe,
+  modelo e Android; atalhos para som, tela, Wi-Fi, dados e notificações.
+- **Pessoas**: busca o contato no aparelho, cria a ficha nas perguntas básicas (nome, relação,
+  preferências, observações e consentimento) e salva no armazenamento seguro.
+
+### Limites
+- Nenhum app de terceiro aceita envio silencioso; o toque final é do usuário.
+- Tocar a música pedida abre a busca do Spotify; escolher a faixa exata por fora do app exige toque.
+- Nada foi instalado ou aberto em aparelho físico nesta sessão; os caminhos nativos não foram
+  exercitados em campo.
+- Sem root, ADB, Shizuku, permissão de todos os arquivos ou envio de notificações para a rede.
+
+### Testes
+- **66 grupos** de cálculo puro no simulador (5 novos), **14 grupos** do aparelho, **163 testes**
+  Flutter, `flutter analyze` limpo e contratos estáticos atualizados
+  (`tests/test_circuito_flutter.py` e `tests/test_aparelho_flutter.py`).
+- **APK de teste compilado**: `JARVIS-Nova-1.60.0-relogios-e-aparelho.apk` (117.348.680 bytes,
+  ARM64, `versionCode 16000`), SHA-256
+  `4bf91b18c1c6a71b27cbd4a248a7b4c4c640519a435f1e2aab229a4afa64ebc1`, em
+  `https://litter.catbox.moe/e25bah.apk` (link temporário, 72 h; download conferido com o mesmo
+  tamanho e SHA). Não foi instalado em aparelho.
+
+## 1.59.0 — retardo na queda por contato (Fase 10)
+
+### Cada contato segura pelo próprio tempo
+- **Retardo na queda por contato**: o 67/68 NA e o 67/68 NF podem segurar o contato por tempos
+  diferentes depois que o temporizador perde energia. No editor de qualquer contato entrou o campo
+  **queda própria (s)**: em 0 s ele usa o **retardo base** do temporizador, como antes.
+- O editor mostra **Retardo na queda deste contato: N s (próprio)** ou **(o do temporizador)**.
+- O relógio da queda do KT1 continua sendo um só, mas cada contato compara com o próprio tempo: o
+  que tem a queda menor abre primeiro e o de queda maior segura mais tempo.
+- Exemplo novo **Quedas diferentes no temporizador**, em 24 V: KT1 com atraso base de 2 s e queda
+  base de 2 s; o 67/68 NA tem queda de 1 s e o 67/68 NF tem queda de 4 s. Depois da parada, a
+  lâmpada L1 apaga em 1 s e a L2 só volta a acender em 4 s.
+
+### Limites
+- O tempo continua em passos de 1 s pelo botão **Avançar 1 s**, sem animação.
+- O relógio (subida e queda) continua sendo do temporizador; o que é individual é o atraso e o
+  retardo na queda de cada contato.
+- Continua sem corrente alternada, sem motor de indução, sem curva térmica e sem CLP.
+- **APK de teste compilado**: `JARVIS-Nova-1.59.0-queda-por-contato.apk` (117,2 MB, ARM,
+  `versionCode 15900`), SHA-256
+  `8b10533002402e3505b6f2b8a092ec062354789c57b5b790a2f44ced8ca73c64`, em
+  `https://litter.catbox.moe/wlwrw4.apk` (link temporário, 72 h). Não foi instalado em aparelho e nada foi commitado ou publicado.
+
+### Testes
+- **61 grupos** de cálculo puro, **157 testes** na suíte Flutter, `flutter analyze` limpo e o teste
+  estático atualizado.
+
+## 1.58.0 — atraso próprio de cada contato (Fase 10)
+
+### Cada contato com o seu tempo
+- **Atraso por contato**: o 67/68 NA e o 67/68 NF não precisam esperar o tempo do temporizador.
+  No editor de qualquer contato entrou o campo **atraso próprio (s)**: em 0 s ele usa o **ajuste
+  base** do temporizador, como antes; com um tempo, ele espera esse tempo e usa o mesmo relógio.
+- O editor mostra **Atraso deste contato: N s (próprio)** ou **(o do temporizador)**, e o relógio do
+  KT1 passou a dizer **(ajuste base)**.
+- Diagnósticos ajustados: o temporizador informa o ajuste base e os contatos mostram o atraso que
+  o próprio contato usa.
+- Exemplo novo **Contatos com tempos diferentes**, em 24 V: KT1 com ajuste base de 3 s, o 67/68 NA
+  ajustado em 1 s acende a lâmpada L1 no primeiro segundo e o 67/68 NF ajustado em 5 s só apaga a
+  lâmpada L2 aos 5 s.
+
+### Limites
+- O tempo continua em passos de 1 s pelo botão **Avançar 1 s**, sem animação.
+- Os contatos de um temporizador compartilham o mesmo relógio e o mesmo retardo na queda; o que é
+  individual é o atraso de cada contato.
+- Continua sem corrente alternada, sem motor de indução, sem curva térmica e sem CLP.
+- **APK de teste compilado**: `JARVIS-Nova-1.58.0-atraso-por-contato.apk` (117,2 MB, ARM,
+  `versionCode 15800`), SHA-256
+  `31e2fee8736b02943868b581f7ff5e6d87a7d55fcbce2a50ead2f920144b372a`, em
+  `https://litter.catbox.moe/1vl1mi.apk` (link temporário, 72 h). Não foi instalado em aparelho e
+  nada foi commitado ou publicado.
+
+### Testes
+- **56 grupos** de cálculo puro, **156 testes** na suíte Flutter, `flutter analyze` limpo e o teste
+  estático atualizado.
+
+## 1.57.0 — dois contatos por temporizador (Fase 10)
+
+### Um temporizador, dois contatos
+- **67/68 NA e 67/68 NF no mesmo temporizador**: os dois podem ficar no circuito ao mesmo tempo e
+  cada contato escolhe o dele. No editor de qualquer contato temporizado há as opções **67/68 NA** e
+  **67/68 NF**; trocar um não mexe no outro.
+- Contatos do mesmo tipo no mesmo temporizador passam a ter rótulo numerado
+  (`KT1-67/68`, `KT1-67/68 (2)`) para não se confundirem.
+- Exemplo novo **Dois contatos do temporizador**, em 24 V: KT1 com 3 s, o 67/68 NA acende a lâmpada
+  L1 ("pronto") e o 67/68 NF mantém a lâmpada L2 ("aguarde") acesa. Aos 3 s de relógio as duas
+  trocam: L1 acende e L2 apaga.
+
+### Limites
+- O tempo continua em passos de 1 s pelo botão **Avançar 1 s**, sem animação.
+- Os contatos de um temporizador compartilham o mesmo atraso e o mesmo retardo na queda; não há
+  atraso individual por contato.
+- Continua sem corrente alternada, sem motor de indução, sem curva térmica e sem CLP.
+- **APK de teste compilado**: `JARVIS-Nova-1.57.0-dois-contatos.apk` (117,2 MB, ARM,
+  `versionCode 15700`), SHA-256
+  `e118533ce8c14ee7d17a04423b7107a742e8b28810a01a417eef9db1e4045f57`. Não foi instalado em aparelho e nada foi
+  commitado ou publicado.
+
+### Testes
+- **51 grupos** de cálculo puro, **155 testes** na suíte Flutter, `flutter analyze` limpo e o teste
+  estático atualizado.
+
+## 1.56.0 — retardo na queda (Fase 10)
+
+### Desligar devagar
+- **Retardo na queda**: o temporizador agora tem dois ajustes — o atraso de subida e quantos
+  segundos o contato 67/68 **demora a abrir** depois que o temporizador perde energia. Assim o
+  contato demora a fechar e demora a abrir.
+- No editor do temporizador entrou o campo **retardo na queda (s)**, o botão **Aplicar** e o chip
+  **Queda: N s de M s**, que só aparece quando o retardo é maior que zero. O **Avançar 1 s** anda o
+  relógio da subida ou o da queda, conforme o temporizador esteja energizado ou não.
+- Exemplo novo **Desligamento temporizado**, em 24 V: a partida puxa K1 e o motor de 24 V / 24 W roda
+  com 1 A; o KT1 conta 3 s e o 67/68 fica em paralelo com o contato de potência. Ao apertar a parada
+  o K1 cai, mas o motor continua por mais 3 s, até o contato abrir.
+- Com retardo zero o contato abre na hora: o comportamento anterior continua igual.
+
+### Limites
+- O tempo continua em passos de 1 s pelo botão **Avançar 1 s**, sem animação, na subida e na queda.
+- Um ajuste de queda por temporizador, em segundos inteiros; um contato NA e um NF por temporizador.
+- Continua sem corrente alternada, sem motor de indução, sem curva térmica e sem CLP.
+- **APK de teste compilado**: `JARVIS-Nova-1.56.0-retardo-na-queda.apk` (117,2 MB, ARM,
+  `versionCode 15600`), SHA-256
+  `c66ae9251dd28dee6c67a941a1db539cdfe63a871fe6bbfbbf0a709ae83cf5ae`. Não foi instalado em
+  aparelho e nada foi commitado ou publicado.
+
+### Testes
+- **47 grupos** de cálculo puro, **154 testes** na suíte Flutter, `flutter analyze` limpo e o teste
+  estático atualizado.
+
+## 1.55.0 — contato NF temporizado (Fase 10)
+
+### Desligar em sequência
+- **Contato 67/68 NF**: fica fechado enquanto o temporizador não completou o atraso e **abre** no
+  instante em que o tempo acaba. Sem energia o contato volta a fechar.
+- Exemplo novo **Desligamento em sequência**, em 24 V: a partida puxa K1 e o motor de 24 V / 24 W
+  roda com 1 A; o KT1 conta 3 s e, ao completar, o 67/68 NF em série com a bobina abre, derruba K1
+  e para o motor — sem ninguém apertar a parada.
+- O temporizador agora informa no diagnóstico que o 67/68 fecha e o NF abre no fim do atraso.
+
+### Limites
+- Continua sem animação de tempo: o relógio anda de 1 em 1 segundo pelo botão **Avançar 1 s**.
+- Continua sem corrente alternada, sem motor de indução, sem curva térmica e sem CLP.
+
+### Testes
+- **42 grupos** de cálculo puro, **153 testes** na suíte Flutter, `flutter analyze` limpo e o teste
+  estático atualizado.
+
+## 1.54.0 — temporizador com retardo (Fase 10)
+
+### Tempo no simulador
+- **Temporizador KT** com atraso em segundos e **contato 67/68** que fecha quando o tempo
+  completa. Enquanto o temporizador está sem energia o relógio dele fica em zero.
+- A conta é instantânea, então o tempo **não corre sozinho**: no editor do temporizador há o
+  botão **Avançar 1 s**, que soma um segundo ao relógio dos temporizadores energizados e resolve o
+  circuito de novo. O app diz isso no texto de limites.
+- Exemplo novo **Sequência com temporizador**, em 24 V: a partida puxa K1 na hora e a lâmpada de
+  24 V / 5 W acende só depois de 3 s, quando o 67/68 fecha.
+- Diagnósticos: temporizador contando (com os segundos), temporizador com tensão baixa (abaixo de
+  70% não conta) e contato 67/68 sem temporizador.
+
+### Limites
+- Sem animação de tempo e sem contagem contínua: é passo a passo, de 1 em 1 segundo.
+- Continua sem corrente alternada, sem motor de indução, sem curva térmica e sem CLP.
+- **APK de teste compilado**: `JARVIS-Nova-1.54.0-temporizador.apk` (117,2 MB, ARM,
+  `versionCode 15400`) em `https://files.catbox.moe/bgvutu.apk`, SHA-256
+  `f913526eff2547f21c293bdc6e87bcb39e0f727ca5cf387c82cc0715a5d97c80`. Não foi instalado em
+  aparelho e nada foi commitado ou publicado.
+
+### Testes
+- **38 grupos** de cálculo puro, **152 testes** na suíte Flutter, `flutter analyze` limpo e o teste
+  estático atualizado.
+
+## 1.53.0 — relé de sobrecarga (térmico) no motor (Fase 10)
+
+### Proteção do motor
+- **Relé térmico (FT)** em série com a carga: ele mede a corrente e **desarma** quando passa do
+  ajuste. O **contato 95/96** do relé fica no comando, então o desarme derruba a bobina, abre o
+  contato de potência e corta o motor — exatamente a sequência do painel real.
+- O relé **tem memória**: depois de desarmar ele fica desarmado até você usar **Rearmar**. E
+  rearmar **não** religa o motor: a partida precisa ser apertada de novo.
+- Exemplo novo **Partida com relé de sobrecarga**, em 24 V: FT1 ajustado em 1,5 A com motor de
+  1 A; baixe o ajuste para 0,5 A e o relé desarma o comando.
+- Diagnósticos: relé desarmado, relé no limite (acima de 90% do ajuste), contato 95/96 sem relé.
+
+### Limites
+- O desarme é **instantâneo** acima do ajuste: não há curva tempo-corrente nem aquecimento do
+  bimetal. Continua sem corrente alternada, sem motor de indução e sem partida real de motor.
+
+### Testes
+- **35 grupos** de cálculo puro, **151 testes** na suíte Flutter, `flutter analyze` limpo e o teste
+  estático atualizado.
+
+## 1.52.0 — contato de potência e motor DC (Fase 10)
+
+### Potência no simulador
+- **Contato principal de potência (1-2)** do contator e **motor de corrente contínua** entraram no
+  simulador. O contato fecha junto com a bobina, e o motor é tratado como carga com tensão e
+  potência nominais (24 V / 24 W → 24 Ω → 1 A em 24 V).
+- Exemplo novo **Partida direta de motor DC**, com comando e potência no mesmo esquema em 24 V:
+  partida, selo, bobina K1 de 100 mA, contato K1-1/2 e motor de 1 A. A fonte entrega 1,1 A.
+- Diagnósticos novos: motor acima da tensão nominal (avisa que o motor real sobreaquece) e motor
+  abaixo da nominal (no modelo a potência cai; num motor real a rotação também). O contato de
+  potência aberto explica que o contator não puxou e o motor está desligado.
+
+### Limites
+- O motor é **carga resistiva**: a corrente de partida de um motor real é várias vezes a nominal e
+  **não** é simulada aqui; não há inércia, conjugado, rotação nem corrente alternada. Sem contato
+  reversor de potência, sem temporizador e sem CLP.
+
+### Testes
+- **32 grupos** de cálculo puro, **150 testes** na suíte Flutter, `flutter analyze` limpo e o teste
+  estático atualizado.
+
+## 1.51.0 — contato NF auxiliar, intertravamento e reversão (Fase 10)
+
+### Intertravamento
+- **Contato NF auxiliar (21-22)** entrou no simulador: fica fechado enquanto a bobina do
+  contator está solta e abre quando ela liga. É o contato que trava um contator contra o outro.
+- Exemplo novo **Reversão com intertravamento**, em 24 V, numa grade 8×5: parada comum, dois
+  ramos com partida, selo e o contato NF do outro contator em série com a bobina.
+- Comportamento calculado: apertar a partida 1 liga K1 (100 mA) e **não** liga K2; com K1
+  ligado, a partida 2 não faz nada e o app mostra "intertravamento agindo"; depois da parada, a
+  partida 2 liga K2 sem ligar K1.
+- Apertar as duas partidas ao mesmo tempo é resolvido por iteração e, como o comando não
+  estabiliza, o app **avisa** em vez de escolher um resultado.
+
+### Limites
+- Continua em corrente contínua, sem motor, sem contato de potência e sem corrente alternada.
+  O intertravamento é elétrico (contato NF na bobina), não mecânico.
+
+### Testes
+- **26 grupos** de cálculo puro, **149 testes** na suíte Flutter, `flutter analyze` limpo e o
+  teste estático atualizado.
+
+## 1.50.0 — botoeira, bobina de contator e contato de selo (Fase 10)
+
+### Comando elétrico no simulador
+- **Botoeira NA e NF**, **bobina de contator** e **contato de selo** entraram no simulador de
+  circuitos: agora dá para montar comando, não só carga.
+- O motor resolve o comando **por iteração de verdade**: calcula o circuito, vê quais bobinas
+  puxam (a partir de 70% da tensão nominal) ou soltam (abaixo de 50%), reajusta os contatos de
+  selo e recalcula até o estado parar de mudar. Se o comando ficar oscilando, o app avisa em vez
+  de inventar um resultado.
+- **O contator tem memória**: a tela guarda o estado das bobinas entre os cálculos, e é isso que
+  faz o selo manter o contator ligado depois de soltar a botoeira de partida.
+- Exemplo novo **Partida direta com selo** (comando em 24 V): botoeira de parada NF, botoeira de
+  partida NA, bobina K1 de 240 Ω (100 mA) e o contato de selo de K1 em paralelo com a partida.
+- Diagnósticos novos: bobina com tensão insuficiente para puxar, contato de selo sem bobina e
+  comando que não se estabiliza. O editor da botoeira tem **Apertar/Soltar** e alterna entre NA e
+  NF; o contato de selo escolhe qual bobina o comanda.
+
+### Limites
+- Continua sendo **corrente contínua**: sem corrente alternada, motor, temporizador, relé com
+  retardo ou CLP, e o arquivo `.cad` continua somente leitura. O CADeSIMU não foi embutido.
+
+### Testes
+- **20 grupos** de cálculo puro (o selo tem teste próprio: partir, soltar, parar e não religar),
+  **148 testes** na suíte Flutter e `flutter analyze` limpo; teste estático atualizado.
+
+## 1.49.0 — simulador de circuitos nativo (Fase 10)
+
+### Simulador
+- **Simulador de circuitos DC dentro do Jarvis**, no módulo CADeSIMU e elétrica: monte fonte,
+  resistor, lâmpada, interruptor, fusível e fio numa grade e o app resolve tensão, corrente e
+  potência **no próprio aparelho**, por análise nodal modificada, sem nuvem e sem chave de API.
+- Cinco circuitos prontos (lâmpada com interruptor, duas em série, duas em paralelo, divisor de
+  tensão e curto protegido por fusível) abrem já calculados.
+- **Diagnóstico honesto**: curto entre os polos, circuito aberto, componente fora da malha,
+  lâmpada acima da tensão nominal, resistor acima de 1/4 W e fusível no limite. Nada é declarado
+  funcionando sem a conta.
+- O fusível **rompe de verdade** quando passa do limite e o circuito é recalculado aberto; há
+  botão para trocar o fusível e para remover o componente.
+- A tela declara os limites: não é o CADeSIMU, não cobre corrente alternada, contatores, CLP,
+  motores nem o arquivo `.cad`.
+
+### Limites
+- O CADeSIMU é freeware de Windows, sem versão Android e sem API pública; **não foi embutido**, e
+  o prompt proíbe WebView. A importação `.cad` continua somente leitura.
+- **APK de teste compilado**: `JARVIS-Nova-1.49.0-simulador-circuitos.apk` (117,1 MB, ARM,
+  `versionCode 14900`) em `https://files.catbox.moe/oiah3h.apk`, SHA-256
+  `038d47629afd3886c66f5385f98e4f8c0945a84b813508112d985d247f004b92`. Não foi instalado em
+  aparelho e nada foi commitado ou publicado.
+
+### Testes
+- 13 grupos de cálculo puro (`tool/circuito_test.dart`), 5 testes de tela, suíte Flutter com
+  **147 testes aprovados** e `flutter analyze` limpo; teste estático novo na suíte.
+
+## 1.48.1 — comandos Android de baixo risco (Fase 10B, primeira etapa)
+
+### Comandos
+- **Lanterna, volume, abrir app e alarme** por texto ou voz, interpretados **no aparelho** por
+  regras locais, sem enviar o pedido a provedor de IA e sem exigir chave configurada.
+- Registro fechado de ações com risco e permissão; o executor só aceita quatro métodos nomeados e
+  **não recebe intents, shell ou código arbitrário**.
+- **Confirmação do estado real**: a lanterna só responde "ligada" depois do callback do Android; o
+  volume é lido de volta; app e alarme informam que a abertura foi enviada, sem fingir que
+  verificaram a tela.
+- Volume não mexe em Não Perturbe; alarme abre o relógio para confirmação e nunca cria sozinho.
+- Limite de cinco comandos seguidos e mensagens específicas para lanterna indisponível, volume
+  recusado, app ambíguo ou inexistente e aparelho sem relógio.
+- Nova tela **Android e dispositivos ▸ Abrir comandos do Android**, com exemplos, registro de
+  ações e resultado. Sem permissões novas, sem root, ADB, Shizuku ou acesso a todos os arquivos.
+
+### Pendente
+- Fechar apps, Wi-Fi/dados, brilho, SMS, ligações, WhatsApp e automação de interface continuam
+  fora desta etapa e estão declarados na tela.
+- Nada foi exercitado em aparelho físico.
+
+### Testes
+- 6 grupos do interpretador puro, 4 testes de tela/conversa e novo teste estático na suíte.
+
+## 1.48.0 — voz JARVIS em pt-BR e importador .cad somente leitura
+
+### Voz
+- **Voz masculina grave em pt-BR** no app Flutter Android, via `TextToSpeech` do sistema: pitch
+  `0,72`, velocidade `0,88` e preferência por voz masculina local. Sem dependência nova.
+- A resposta completa do assistente é falada ao terminar o streaming; há botão para repetir,
+  botão no topo para silenciar e a fala para ao enviar ou descartar a conversa.
+- Ajustes ▸ Voz ganhou **Testar voz do JARVIS**.
+
+### CADeSIMU
+- **Fase 10A:** importador `.cad` **somente leitura** em `CADeSIMU e elétrica`, com seletor do
+  sistema sem permissão ampla (limite de 2 MB), leitura ISO-8859-1, inventário e geometria.
+- A tela declara que **não edita, não simula e não gera netlist elétrica**; nada é gravado de volta.
+
+### Pendente
+- Exportação `.cad` (Fase 10B) continua bloqueada até haver tabela de pinos validada e teste no
+  CADeSIMU oficial.
+
+### Testes
+- `flutter analyze` limpo; suíte Flutter com **138 testes** aprovados, incluindo 9 novos do leitor e da tela; novo teste estático na suíte.
+
 ## 1.45.0
 
 ### Corrigido

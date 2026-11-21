@@ -5,19 +5,56 @@ import 'package:http/http.dart' as http;
 import '../core/sse.dart';
 
 class AiProvider {
-  const AiProvider({required this.id, required this.name, required this.endpoint, required this.model});
+  const AiProvider(
+      {required this.id,
+      required this.name,
+      required this.endpoint,
+      required this.model,
+      this.fallbackModels = const []});
   final String id;
   final String name;
   final String endpoint;
   final String model;
+
+  /// Modelos tentados somente quando o principal responde 404 (modelo retirado
+  /// para chaves novas). Nunca troca a chave, apenas o identificador do modelo.
+  final List<String> fallbackModels;
 }
 
 const aiProviders = <AiProvider>[
-  AiProvider(id: 'groq', name: 'Groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'openai/gpt-oss-20b'),
-  AiProvider(id: 'openrouter', name: 'OpenRouter · DeepSeek', endpoint: 'https://openrouter.ai/api/v1/chat/completions', model: 'deepseek/deepseek-chat'),
-  AiProvider(id: 'cerebras', name: 'Cerebras', endpoint: 'https://api.cerebras.ai/v1/chat/completions', model: 'gpt-oss-120b'),
-  AiProvider(id: 'mistral', name: 'Mistral', endpoint: 'https://api.mistral.ai/v1/chat/completions', model: 'mistral-small-latest'),
-  AiProvider(id: 'gemini', name: 'Gemini', endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash'),
+  AiProvider(
+      id: 'groq',
+      name: 'Groq',
+      endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+      model: 'openai/gpt-oss-20b'),
+  AiProvider(
+      id: 'openrouter',
+      name: 'OpenRouter · DeepSeek',
+      endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+      model: 'deepseek/deepseek-chat'),
+  AiProvider(
+      id: 'cerebras',
+      name: 'Cerebras',
+      endpoint: 'https://api.cerebras.ai/v1/chat/completions',
+      model: 'gpt-oss-120b'),
+  AiProvider(
+      id: 'mistral',
+      name: 'Mistral',
+      endpoint: 'https://api.mistral.ai/v1/chat/completions',
+      model: 'mistral-small-2603',
+      fallbackModels: ['mistral-small-latest']),
+  AiProvider(
+      id: 'gemini',
+      name: 'Gemini',
+      endpoint:
+          'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      model: 'gemini-3.8-flash',
+      fallbackModels: [
+        'gemini-3.6-flash',
+        'gemini-3.5-flash',
+        'gemini-2.5-flash',
+        'gemini-flash-latest'
+      ]),
 ];
 
 abstract interface class SecretStore {
@@ -27,14 +64,16 @@ abstract interface class SecretStore {
 }
 
 class PlatformSecretStore implements SecretStore {
-  PlatformSecretStore({FlutterSecureStorage? storage}) : _storage = storage ?? const FlutterSecureStorage();
+  PlatformSecretStore({FlutterSecureStorage? storage})
+      : _storage = storage ?? const FlutterSecureStorage();
   final FlutterSecureStorage _storage;
 
   @override
   Future<String?> read(String key) => _storage.read(key: 'jarvis.ai.$key');
 
   @override
-  Future<void> write(String key, String value) => _storage.write(key: 'jarvis.ai.$key', value: value);
+  Future<void> write(String key, String value) =>
+      _storage.write(key: 'jarvis.ai.$key', value: value);
 
   @override
   Future<void> delete(String key) => _storage.delete(key: 'jarvis.ai.$key');
@@ -45,6 +84,14 @@ class ProviderCheck {
   final bool ok;
   final String message;
   final String? model;
+}
+
+/// Falha já traduzida para a interface. Nunca carrega a chave nem o corpo bruto.
+class ProviderException implements Exception {
+  ProviderException(this.message);
+  final String message;
+  @override
+  String toString() => message;
 }
 
 class ProviderService {
@@ -67,11 +114,24 @@ class ProviderService {
     return null;
   }
 
+  Future<List<AiProvider>> configuredProviders() async {
+    final configurados = <AiProvider>[];
+    for (final provider in aiProviders) {
+      if (await isConfigured(provider.id)) configurados.add(provider);
+    }
+    return configurados;
+  }
+
   Future<void> saveKey(String providerId, String rawKey) async {
     _provider(providerId);
-    final key = rawKey.trim().replaceFirst(RegExp(r'^Bearer\s+', caseSensitive: false), '');
+    final key = rawKey
+        .trim()
+        .replaceFirst(RegExp(r'^Bearer\s+', caseSensitive: false), '')
+        .replaceAll(RegExp(r'''^["']+|["']+$'''), '')
+        .trim();
     if (key.length < 8 || key.length > 512 || key.contains(RegExp(r'\s'))) {
-      throw ArgumentError('A chave informada parece inválida. Confira o valor e tente novamente.');
+      throw ArgumentError(
+          'A chave informada parece inválida. Confira o valor e tente novamente.');
     }
     await _secrets.write(providerId, key);
   }
@@ -85,107 +145,226 @@ class ProviderService {
     final provider = _provider(providerId);
     final key = await _secrets.read(providerId);
     if (key == null || key.isEmpty) {
-      return const ProviderCheck(ok: false, message: 'Cadastre a chave deste provedor antes de testar.');
+      return const ProviderCheck(
+          ok: false,
+          message: 'Cadastre a chave deste provedor antes de testar.');
     }
 
     try {
-      final response = await _client
-          .post(
-            Uri.parse(provider.endpoint),
-            headers: {'Authorization': 'Bearer $key', 'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'model': provider.model,
-              'messages': [
-                {'role': 'user', 'content': 'Responda somente: OK'}
-              ],
-              'max_tokens': 8,
-              'temperature': 0,
-            }),
-          )
-          .timeout(const Duration(seconds: 18));
+      var status = 0;
+      var modeloTestado = provider.model;
+      for (final modelo in [provider.model, ...provider.fallbackModels]) {
+        modeloTestado = modelo;
+        final response = await _client
+            .post(
+              Uri.parse(provider.endpoint),
+              headers: {
+                'Authorization': 'Bearer $key',
+                'Content-Type': 'application/json'
+              },
+              body: jsonEncode({
+                'model': modelo,
+                'messages': [
+                  {'role': 'user', 'content': 'Responda somente: OK'}
+                ],
+                'max_tokens': 8,
+                'temperature': 0,
+              }),
+            )
+            .timeout(const Duration(seconds: 18));
+        status = response.statusCode;
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = jsonDecode(response.body);
-        final content = data is Map ? data['choices'] : null;
-        if (content is List && content.isNotEmpty) {
-          return ProviderCheck(ok: true, message: 'Conexão confirmada; o provedor respondeu.', model: provider.model);
+        if (status >= 200 && status < 300) {
+          final data = jsonDecode(response.body);
+          final content = data is Map ? data['choices'] : null;
+          if (content is List && content.isNotEmpty) {
+            return ProviderCheck(
+                ok: true,
+                message: 'Conexão confirmada; o provedor respondeu.',
+                model: modelo);
+          }
+          return const ProviderCheck(
+              ok: false,
+              message:
+                  'O provedor respondeu, mas o formato da resposta não foi reconhecido.');
         }
-        return const ProviderCheck(ok: false, message: 'O provedor respondeu, mas o formato da resposta não foi reconhecido.');
+
+        // Só 404 indica modelo retirado; 401/403/429 não melhoram trocando o nome.
+        if (status != 404) break;
       }
 
       // Não repassa o corpo bruto: alguns gateways ecoam metadados que não devem aparecer na UI.
-      final message = switch (response.statusCode) {
-        401 || 403 => 'A chave foi recusada. Confira a credencial e as permissões da conta.',
-        404 => 'O modelo ou endpoint configurado não está disponível neste provedor.',
-        429 => 'Limite de requisições atingido. Aguarde e tente novamente.',
-        >= 500 => 'O serviço do provedor está instável. Tente novamente mais tarde.',
-        _ => 'O provedor recusou o teste (HTTP ${response.statusCode}).',
+      final message = switch (status) {
+        401 ||
+        403 =>
+          'A chave foi recusada. Confira a credencial e as permissões da conta.',
+        404 =>
+          'O modelo $modeloTestado não está disponível para esta chave. Atualize o app ou escolha outro provedor.',
+        429 =>
+          'A chave foi aceita, mas a conta está sem cota ou no limite de requisições. Aguarde ou ative o faturamento; não é preciso trocar a chave.',
+        >= 500 =>
+          'O serviço do provedor está instável. Tente novamente mais tarde.',
+        _ => 'O provedor recusou o teste (HTTP $status).',
       };
       return ProviderCheck(ok: false, message: message);
     } on http.ClientException {
-      return const ProviderCheck(ok: false, message: 'Não foi possível alcançar o provedor. Verifique a conexão.');
+      return const ProviderCheck(
+          ok: false,
+          message:
+              'Não foi possível alcançar o provedor. Verifique a conexão.');
     } on FormatException {
-      return const ProviderCheck(ok: false, message: 'O provedor retornou uma resposta inválida.');
+      return const ProviderCheck(
+          ok: false, message: 'O provedor retornou uma resposta inválida.');
     } catch (error) {
       if (error is TimeoutException) {
-        return const ProviderCheck(ok: false, message: 'O teste excedeu 18 segundos e foi interrompido.');
+        return const ProviderCheck(
+            ok: false,
+            message: 'O teste excedeu 18 segundos e foi interrompido.');
       }
-      return const ProviderCheck(ok: false, message: 'Falha inesperada ao testar o provedor.');
+      return const ProviderCheck(
+          ok: false, message: 'Falha inesperada ao testar o provedor.');
     }
   }
 
-  Future<String> complete(String providerId, List<Map<String, String>> messages) async {
+  Future<String> complete(
+      String providerId, List<Map<String, String>> messages) async {
     final provider = _provider(providerId);
     final key = await _secrets.read(providerId);
-    if (key == null || key.isEmpty) { throw StateError('O provedor ${provider.name} não tem chave cadastrada.'); }
+    if (key == null || key.isEmpty) {
+      throw ProviderException(
+          'O provedor ${provider.name} não tem chave cadastrada.');
+    }
 
-    final response = await _client
-        .post(
-          Uri.parse(provider.endpoint),
-          headers: {'Authorization': 'Bearer $key', 'Content-Type': 'application/json'},
-          body: jsonEncode({'model': provider.model, 'messages': messages, 'temperature': 0.4}),
-        )
-        .timeout(const Duration(seconds: 30));
+    late http.Response response;
+    var modelo = provider.model;
+    try {
+      final modelos = [provider.model, ...provider.fallbackModels];
+      for (var i = 0; i < modelos.length; i++) {
+        modelo = modelos[i];
+        response = await _client
+            .post(
+              Uri.parse(provider.endpoint),
+              headers: {
+                'Authorization': 'Bearer $key',
+                'Content-Type': 'application/json'
+              },
+              body: jsonEncode(
+                  {'model': modelo, 'messages': messages, 'temperature': 0.4}),
+            )
+            .timeout(const Duration(seconds: 30));
+        if (response.statusCode != 404 || i == modelos.length - 1) break;
+      }
+    } on TimeoutException {
+      throw ProviderException(
+          'O provedor ${provider.name} demorou mais de 30 segundos. Tente novamente.');
+    } on http.ClientException {
+      throw ProviderException(
+          'Não foi possível alcançar ${provider.name}. Verifique o Wi-Fi/5G e tente de novo.');
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError('O provedor ${provider.name} não concluiu a solicitação (HTTP ${response.statusCode}).');
+      throw ProviderException(
+          _mensagemHttp(provider, response.statusCode, modelo));
     }
     final data = jsonDecode(response.body);
     final choices = data is Map ? data['choices'] : null;
-    final firstChoice = choices is List && choices.isNotEmpty ? choices.first : null;
+    final firstChoice =
+        choices is List && choices.isNotEmpty ? choices.first : null;
     final message = firstChoice is Map ? firstChoice['message'] : null;
     final content = message is Map ? message['content'] : null;
     if (content is! String || content.trim().isEmpty) {
-      throw StateError('O provedor ${provider.name} retornou uma resposta vazia.');
+      throw ProviderException(
+          'O provedor ${provider.name} retornou uma resposta vazia.');
     }
     return content.trim();
   }
+
+  String _mensagemHttp(AiProvider provider, int status, [String? modelo]) =>
+      switch (status) {
+        401 ||
+        403 =>
+          'A chave do ${provider.name} foi recusada. Confira a credencial em Provedores de IA.',
+        404 =>
+          'O modelo ${modelo ?? provider.model} do ${provider.name} não está disponível para esta chave.',
+        429 =>
+          'A conta do ${provider.name} está sem cota ou no limite de requisições. Aguarde ou ative o faturamento.',
+        >= 500 =>
+          'O serviço do ${provider.name} está instável. Tente novamente mais tarde.',
+        _ => 'O ${provider.name} não concluiu a solicitação (HTTP $status).',
+      };
 
   /// Resposta em streaming: emite cada fragmento assim que o provedor manda.
   ///
   /// Cancelar a assinatura interrompe a leitura e libera a conexão — é o que o botão de parar
   /// usa. Provedor que ignora `stream` responde pelo envelope normal e o parser ainda entrega o
   /// texto (o chamador decide se cai para [complete] quando nada chega).
-  Stream<String> streamComplete(String providerId, List<Map<String, String>> messages) async* {
-    final provider = _provider(providerId);
-    final key = await _secrets.read(providerId);
-    if (key == null || key.isEmpty) {
-      throw StateError('O provedor ${provider.name} não tem chave cadastrada.');
+  Stream<String> streamComplete(
+      String providerId, List<Map<String, String>> messages) async* {
+    final preferido = _provider(providerId);
+    final ordem = [
+      preferido,
+      ...aiProviders.where((p) => p.id != preferido.id)
+    ];
+    Object? ultimoErro;
+    for (final provider in ordem) {
+      final key = await _secrets.read(provider.id);
+      if (key == null || key.isEmpty) continue;
+      var entregouTexto = false;
+      try {
+        await for (final texto in _streamProvider(provider, key, messages)) {
+          entregouTexto = true;
+          yield texto;
+        }
+        return;
+      } catch (erro) {
+        ultimoErro = erro;
+        // Depois do primeiro token não dá para trocar de provedor sem duplicar
+        // a resposta na tela; nesse caso a falha sobe para o chamador.
+        if (entregouTexto) rethrow;
+      }
     }
-    final requisicao = http.Request('POST', Uri.parse(provider.endpoint))
-      ..headers.addAll({
-        'Authorization': 'Bearer $key',
-        'Content-Type': 'application/json',
-        'Accept': 'text/event-stream',
-      })
-      ..body = jsonEncode({
-        'model': provider.model,
-        'messages': messages,
-        'temperature': 0.4,
-        'stream': true,
-      });
-    final resposta = await _client.send(requisicao).timeout(const Duration(seconds: 30));
+    if (ultimoErro != null) throw ultimoErro;
+    throw ProviderException(
+        'Nenhum provedor configurado. Cadastre uma chave em Provedores de IA.');
+  }
+
+  Stream<String> _streamProvider(
+    AiProvider provider,
+    String key,
+    List<Map<String, String>> messages,
+  ) async* {
+    late http.StreamedResponse resposta;
+    var modelo = provider.model;
+    try {
+      final modelos = [provider.model, ...provider.fallbackModels];
+      for (var i = 0; i < modelos.length; i++) {
+        modelo = modelos[i];
+        final requisicao = http.Request('POST', Uri.parse(provider.endpoint))
+          ..headers.addAll({
+            'Authorization': 'Bearer $key',
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+          })
+          ..body = jsonEncode({
+            'model': modelo,
+            'messages': messages,
+            'temperature': 0.4,
+            'stream': true,
+          });
+        resposta =
+            await _client.send(requisicao).timeout(const Duration(seconds: 30));
+        if (resposta.statusCode != 404 || i == modelos.length - 1) break;
+        await resposta.stream.drain<void>();
+      }
+    } on TimeoutException {
+      throw ProviderException(
+          'O provedor ${provider.name} demorou mais de 30 segundos. Tente novamente.');
+    } on http.ClientException {
+      throw ProviderException(
+          'Não foi possível alcançar ${provider.name}. Verifique o Wi-Fi/5G e tente de novo.');
+    }
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
-      throw StateError('O provedor ${provider.name} não concluiu a solicitação (HTTP ${resposta.statusCode}).');
+      throw ProviderException(
+          _mensagemHttp(provider, resposta.statusCode, modelo));
     }
     final parser = SseParser();
     await for (final pedaco in resposta.stream.transform(utf8.decoder)) {

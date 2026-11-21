@@ -1,9 +1,11 @@
 # Ponte CADeSIMU — o que é conferido e o que não é
 
-O J.A.R.V.I.S. Nova **não lê nem gera o `.cad` nativo do CADeSIMU**. Esse formato é proprietário e
-não tem especificação pública; afirmar compatibilidade sem um arquivo real para testar seria mentira.
+O J.A.R.V.I.S. Nova **ainda não lê nem gera o `.cad` nativo do CADeSIMU**. O formato é proprietário
+e não tem especificação **oficial**, mas não é ilegível: a engenharia reversa pública mostra que é
+texto e o estudo de 2026-11-15 leu e reescreveu três arquivos reais byte a byte. O que falta no app
+é o importador, não a possibilidade técnica. Ver [`FASE-10-ESTUDO.md`](FASE-10-ESTUDO.md).
 
-O que existe é uma **ponte de conferência e intercâmbio** para levar o projeto ao CADeSIMU por
+O que existe hoje é uma **ponte de conferência e intercâmbio** para levar o projeto ao CADeSIMU por
 redesenho manual, com menos erro:
 
 ## `conferirTrocaCadesimu(projeto)`
@@ -35,7 +37,8 @@ redesenhar, colar dados e conferir terminal por terminal.
 
 ## Limites declarados
 
-- Sem importação do `.cad` nativo.
+- Sem importação do `.cad` nativo **nesta versão**: o formato é legível, mas o importador ainda não
+  foi implementado; o estudo 058 mediu o que ele exigiria.
 - Sem biblioteca de símbolos idêntica à do CADeSIMU: o mapa é uma descrição IEC, não um ID de biblioteca.
 - Sem simulação elétrica e sem garantia de que o desenho manual ficará igual ao projeto.
 - A conferência prova consistência interna do projeto, não compatibilidade com o programa.

@@ -16,7 +16,8 @@ NotaMemoria nota(String titulo, String texto) => NotaMemoria(
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('cofre vazio explica o que existe e o que não existe', (tester) async {
+  testWidgets('cofre vazio explica o que existe e o que não existe',
+      (tester) async {
     final store = await MemoriaStore.abrir();
     await tester.pumpWidget(MaterialApp(home: MemoriaPage(store: store)));
     await tester.pumpAndSettle();
@@ -60,7 +61,8 @@ void main() {
     expect(find.text('Receita'), findsNothing);
   });
 
-  testWidgets('busca sem resultado avisa em vez de lista vazia', (tester) async {
+  testWidgets('busca sem resultado avisa em vez de lista vazia',
+      (tester) async {
     final store = await MemoriaStore.abrir();
     await store.salvar(nota('Motor', 'trifásico'));
 

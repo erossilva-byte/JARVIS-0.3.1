@@ -45,7 +45,8 @@ class _HistoricoPageState extends State<HistoricoPage> {
 
   Future<void> _abrir(Conversa conversa) async {
     await Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => VoiceConversationPage(initialCommand: '', conversa: conversa),
+      builder: (_) =>
+          VoiceConversationPage(initialCommand: '', conversa: conversa),
     ));
     await _carregar();
   }
@@ -64,8 +65,12 @@ class _HistoricoPageState extends State<HistoricoPage> {
         title: const Text('Apagar conversa?'),
         content: Text('“${conversa.titulo}” será removida deste aparelho.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogo, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(dialogo, true), child: const Text('Apagar')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogo, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogo, true),
+              child: const Text('Apagar')),
         ],
       ),
     );
@@ -86,7 +91,10 @@ class _HistoricoPageState extends State<HistoricoPage> {
       appBar: AppBar(
         title: const Text('Histórico de conversas'),
         actions: [
-          IconButton(tooltip: 'Nova conversa', onPressed: _nova, icon: const Icon(Icons.add_comment_rounded)),
+          IconButton(
+              tooltip: 'Nova conversa',
+              onPressed: _nova,
+              icon: const Icon(Icons.add_comment_rounded)),
         ],
       ),
       body: carregando
@@ -101,7 +109,9 @@ class _HistoricoPageState extends State<HistoricoPage> {
                       prefixIcon: const Icon(Icons.search_rounded),
                       hintText: 'Buscar por título ou mensagem…',
                       filled: true,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none),
                     ),
                   ),
                 ),
@@ -119,24 +129,38 @@ class _HistoricoPageState extends State<HistoricoPage> {
                                   margin: const EdgeInsets.only(bottom: 8),
                                   child: ListTile(
                                     onTap: () => _abrir(conversa),
-                                    title: Text(conversa.titulo, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    title: Text(conversa.titulo,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis),
                                     subtitle: Text(
                                       '${conversa.mensagens.length} mensagem(ns) · ${_data(conversa.atualizadaEm)}',
                                       style: const TextStyle(fontSize: 11),
                                     ),
-                                    leading: Icon(conversa.fixada ? Icons.push_pin_rounded : Icons.forum_outlined, color: colors.primary),
+                                    leading: Icon(
+                                        conversa.fixada
+                                            ? Icons.push_pin_rounded
+                                            : Icons.forum_outlined,
+                                        color: colors.primary),
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         IconButton(
-                                          tooltip: conversa.fixada ? 'Desafixar' : 'Fixar',
+                                          tooltip: conversa.fixada
+                                              ? 'Desafixar'
+                                              : 'Fixar',
                                           onPressed: () => _fixar(conversa),
-                                          icon: Icon(conversa.fixada ? Icons.push_pin : Icons.push_pin_outlined, size: 19),
+                                          icon: Icon(
+                                              conversa.fixada
+                                                  ? Icons.push_pin
+                                                  : Icons.push_pin_outlined,
+                                              size: 19),
                                         ),
                                         IconButton(
                                           tooltip: 'Apagar',
                                           onPressed: () => _apagar(conversa),
-                                          icon: const Icon(Icons.delete_outline_rounded, size: 19),
+                                          icon: const Icon(
+                                              Icons.delete_outline_rounded,
+                                              size: 19),
                                         ),
                                       ],
                                     ),
@@ -158,10 +182,13 @@ class _HistoricoPageState extends State<HistoricoPage> {
             children: [
               Icon(Icons.forum_outlined, size: 38, color: colors.primary),
               const SizedBox(height: 12),
-              const Text('Nenhuma conversa ainda', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              const Text('Nenhuma conversa ainda',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
-              const Text('As conversas ficam salvas neste aparelho. Comece uma nova pelo botão acima.',
-                  textAlign: TextAlign.center, style: TextStyle(fontSize: 12, height: 1.4)),
+              const Text(
+                  'As conversas ficam salvas neste aparelho. Comece uma nova pelo botão acima.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, height: 1.4)),
             ],
           ),
         ),
@@ -170,7 +197,8 @@ class _HistoricoPageState extends State<HistoricoPage> {
   Widget _semResultado() => const Center(
         child: Padding(
           padding: EdgeInsets.all(28),
-          child: Text('Nenhuma conversa corresponde à busca.', textAlign: TextAlign.center),
+          child: Text('Nenhuma conversa corresponde à busca.',
+              textAlign: TextAlign.center),
         ),
       );
 

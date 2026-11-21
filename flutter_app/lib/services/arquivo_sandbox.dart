@@ -33,7 +33,9 @@ class ArquivoSandboxDispositivo implements ArquivoSandbox {
     final validado = validarNomeArquivo(nome);
     if (!validado.valido) throw ArgumentError(validado.erro);
     final caminho = caminhoSeguroNaPasta(pasta, validado.nome!);
-    if (caminho == null) throw ArgumentError('Caminho fora da pasta isolada recusado.');
+    if (caminho == null) {
+      throw ArgumentError('Caminho fora da pasta isolada recusado.');
+    }
     return File(caminho);
   }
 
@@ -53,7 +55,8 @@ class ArquivoSandboxDispositivo implements ArquivoSandbox {
         modificadoEm: dados.modified,
       ));
     }
-    resumos.sort((a, b) => a.nome.toLowerCase().compareTo(b.nome.toLowerCase()));
+    resumos
+        .sort((a, b) => a.nome.toLowerCase().compareTo(b.nome.toLowerCase()));
     return resumos;
   }
 
@@ -69,9 +72,12 @@ class ArquivoSandboxDispositivo implements ArquivoSandbox {
     final erro = validarConteudoArquivo(conteudo);
     if (erro != null) throw ArgumentError(erro);
     final arquivo = await _arquivo(nome);
-    if (await arquivo.exists()) throw StateError('Já existe um arquivo com esse nome.');
+    if (await arquivo.exists()) {
+      throw StateError('Já existe um arquivo com esse nome.');
+    }
     if ((await listar()).length >= limiteArquivos) {
-      throw StateError('Limite de $limiteArquivos arquivos atingido. Apague algum antes de criar outro.');
+      throw StateError(
+          'Limite de $limiteArquivos arquivos atingido. Apague algum antes de criar outro.');
     }
     await arquivo.writeAsString(conteudo, encoding: utf8, flush: true);
   }
@@ -90,7 +96,9 @@ class ArquivoSandboxDispositivo implements ArquivoSandbox {
     final origem = await _arquivo(antigo);
     if (!await origem.exists()) throw StateError('Arquivo não encontrado.');
     final destino = await _arquivo(novo);
-    if (await destino.exists()) throw StateError('Já existe um arquivo com esse nome.');
+    if (await destino.exists()) {
+      throw StateError('Já existe um arquivo com esse nome.');
+    }
     await origem.rename(destino.path);
   }
 

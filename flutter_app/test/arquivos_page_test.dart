@@ -13,32 +13,45 @@ class SandboxFalso implements ArquivoSandbox {
     final nomes = conteudos.keys.toList()..sort();
     return [
       for (final nome in nomes)
-        ArquivoResumo(nome: nome, bytes: conteudos[nome]!.length, modificadoEm: DateTime(2026, 11, 15, 10)),
+        ArquivoResumo(
+            nome: nome,
+            bytes: conteudos[nome]!.length,
+            modificadoEm: DateTime(2026, 11, 15, 10)),
     ];
   }
 
   @override
   Future<String> ler(String nome) async {
-    if (!conteudos.containsKey(nome)) throw StateError('Arquivo não encontrado.');
+    if (!conteudos.containsKey(nome)) {
+      throw StateError('Arquivo não encontrado.');
+    }
     return conteudos[nome]!;
   }
 
   @override
   Future<void> criar(String nome, String conteudo) async {
-    if (conteudos.containsKey(nome)) throw StateError('Já existe um arquivo com esse nome.');
+    if (conteudos.containsKey(nome)) {
+      throw StateError('Já existe um arquivo com esse nome.');
+    }
     conteudos[nome] = conteudo;
   }
 
   @override
   Future<void> gravar(String nome, String conteudo) async {
-    if (!conteudos.containsKey(nome)) throw StateError('Arquivo não encontrado.');
+    if (!conteudos.containsKey(nome)) {
+      throw StateError('Arquivo não encontrado.');
+    }
     conteudos[nome] = conteudo;
   }
 
   @override
   Future<void> renomear(String antigo, String novo) async {
-    if (!conteudos.containsKey(antigo)) throw StateError('Arquivo não encontrado.');
-    if (conteudos.containsKey(novo)) throw StateError('Já existe um arquivo com esse nome.');
+    if (!conteudos.containsKey(antigo)) {
+      throw StateError('Arquivo não encontrado.');
+    }
+    if (conteudos.containsKey(novo)) {
+      throw StateError('Já existe um arquivo com esse nome.');
+    }
     conteudos[novo] = conteudos.remove(antigo)!;
   }
 
@@ -49,14 +62,16 @@ class SandboxFalso implements ArquivoSandbox {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('sem arquivo, explica a pasta isolada e o que não existe', (tester) async {
+  testWidgets('sem arquivo, explica a pasta isolada e o que não existe',
+      (tester) async {
     final sandbox = SandboxFalso();
     await tester.pumpWidget(MaterialApp(home: ArquivosPage(sandbox: sandbox)));
     await tester.pumpAndSettle();
 
     expect(find.text('Nenhum arquivo ainda.'), findsOneWidget);
     expect(find.textContaining('Sem acesso a Downloads'), findsOneWidget);
-    expect(find.textContaining('Execução de código não existe'), findsOneWidget);
+    expect(
+        find.textContaining('Execução de código não existe'), findsOneWidget);
   });
 
   testWidgets('criar grava o texto e acrescenta .txt', (tester) async {
@@ -67,7 +82,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('novo-arquivo')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('nome-arquivo')), 'nota');
-    await tester.enterText(find.byKey(const ValueKey('conteudo-arquivo')), 'Conteúdo local.');
+    await tester.enterText(
+        find.byKey(const ValueKey('conteudo-arquivo')), 'Conteúdo local.');
     await tester.tap(find.byKey(const ValueKey('salvar-arquivo')));
     await tester.pumpAndSettle();
 
@@ -79,14 +95,16 @@ void main() {
     expect(find.text('nota.txt'), findsOneWidget);
   });
 
-  testWidgets('nome com caminho é recusado antes de tocar no sandbox', (tester) async {
+  testWidgets('nome com caminho é recusado antes de tocar no sandbox',
+      (tester) async {
     final sandbox = SandboxFalso();
     await tester.pumpWidget(MaterialApp(home: ArquivosPage(sandbox: sandbox)));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('novo-arquivo')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const ValueKey('nome-arquivo')), '../segredo');
+    await tester.enterText(
+        find.byKey(const ValueKey('nome-arquivo')), '../segredo');
     await tester.enterText(find.byKey(const ValueKey('conteudo-arquivo')), 'x');
     await tester.tap(find.byKey(const ValueKey('salvar-arquivo')));
     await tester.pumpAndSettle();
@@ -95,7 +113,8 @@ void main() {
     expect(sandbox.conteudos, isEmpty);
   });
 
-  testWidgets('abrir, editar e salvar mantém o arquivo existente', (tester) async {
+  testWidgets('abrir, editar e salvar mantém o arquivo existente',
+      (tester) async {
     final sandbox = SandboxFalso()..conteudos['nota.txt'] = 'Antigo.';
     await tester.pumpWidget(MaterialApp(home: ArquivosPage(sandbox: sandbox)));
     await tester.pumpAndSettle();
@@ -104,14 +123,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Antigo.'), findsOneWidget);
 
-    await tester.enterText(find.byKey(const ValueKey('conteudo-arquivo')), 'Novo texto.');
+    await tester.enterText(
+        find.byKey(const ValueKey('conteudo-arquivo')), 'Novo texto.');
     await tester.tap(find.byKey(const ValueKey('salvar-arquivo')));
     await tester.pumpAndSettle();
 
     expect(sandbox.conteudos['nota.txt'], 'Novo texto.');
   });
 
-  testWidgets('renomear recusa nome com caminho e aceita nome simples', (tester) async {
+  testWidgets('renomear recusa nome com caminho e aceita nome simples',
+      (tester) async {
     final sandbox = SandboxFalso()..conteudos['nota.txt'] = 'Texto.';
     await tester.pumpWidget(MaterialApp(home: ArquivosPage(sandbox: sandbox)));
     await tester.pumpAndSettle();
@@ -147,11 +168,14 @@ void main() {
     expect(find.text('Nenhum arquivo ainda.'), findsOneWidget);
   });
 
-  testWidgets('sem pasta disponível, informa em vez de fingir lista vazia', (tester) async {
-    await tester.pumpWidget(MaterialApp(home: ArquivosPage(abrir: () async => throw StateError('sem pasta'))));
+  testWidgets('sem pasta disponível, informa em vez de fingir lista vazia',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: ArquivosPage(abrir: () async => throw StateError('sem pasta'))));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('pasta isolada de arquivos não está disponível'), findsOneWidget);
+    expect(find.textContaining('pasta isolada de arquivos não está disponível'),
+        findsOneWidget);
   });
 
   testWidgets('sair com texto não salvo pede confirmação', (tester) async {
@@ -161,7 +185,8 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('novo-arquivo')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const ValueKey('conteudo-arquivo')), 'Não salvo');
+    await tester.enterText(
+        find.byKey(const ValueKey('conteudo-arquivo')), 'Não salvo');
     await tester.tap(find.text('Voltar à lista'));
     await tester.pumpAndSettle();
 

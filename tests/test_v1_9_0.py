@@ -25,6 +25,14 @@ pacote = json.loads((raiz / "package.json").read_text(encoding="utf-8"))
 urls = re.findall(r'BASE \+ "([^"]+)"', plugin)
 nomes_modelo = re.findall(r'new Voz\(\s*"([a-z]+)"', plugin)
 
+# O detector da palavra de ativação (assets/kws) é embutido de propósito e o que está em
+# build/ é saída de compilação; o que não pode entrar no APK são os pacotes de voz
+# baixados em tempo de execução.
+modelos_embarcados = [
+    p for p in raiz.rglob("*.onnx")
+    if "assets/kws" not in p.as_posix() and "/build/" not in p.as_posix()
+] + [p for p in raiz.rglob("*.tar.bz2") if "/build/" not in p.as_posix()]
+
 checagens = {
     "Plugin de voz registrado na atividade principal": (
         "registerPlugin(JarvisVozPlugin.class);" in atividade),
@@ -49,8 +57,7 @@ checagens = {
         'new File(dir, "espeak-ng-data")' in plugin and "setDataDir(dataDir)" in plugin),
     "Kokoro usa o idioma que o pacote realmente tem": (
         'k.setLang("en")' in plugin and 'setLang("en-gb")' not in plugin),
-    "Modelos não são embarcados no APK": (
-        not list(raiz.rglob("*.onnx")) and not list(raiz.rglob("*.tar.bz2"))),
+    "Modelos não são embarcados no APK": not modelos_embarcados,
     "AAR é baixado no build e conferido por SHA-256": (
         'VERSAO = "1.13.8"' in baixar
         and 'NOME = f"sherpa-onnx-{VERSAO}.aar"' in baixar

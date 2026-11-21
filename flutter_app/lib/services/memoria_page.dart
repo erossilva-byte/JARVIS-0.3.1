@@ -54,7 +54,8 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
   /// Voltar ao app sincroniza de novo; só depois de realmente ter saído, para não repetir à toa.
   @override
   void didChangeAppLifecycleState(AppLifecycleState estado) {
-    if (estado == AppLifecycleState.paused || estado == AppLifecycleState.hidden) {
+    if (estado == AppLifecycleState.paused ||
+        estado == AppLifecycleState.hidden) {
       _emSegundoPlano = true;
       return;
     }
@@ -92,13 +93,15 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
     final resultado = await CofreSaf.escolherPasta();
     if (!mounted) return;
     if (!resultado.ok) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(resultado.erro!)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(resultado.erro!)));
       return;
     }
     final escolhida = resultado.valor;
     if (escolhida == null) return; // usuário cancelou
     setState(() => pasta = escolhida);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pasta conectada: ${escolhida.nome}')));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Pasta conectada: ${escolhida.nome}')));
     await _sincronizarAutomatico();
   }
 
@@ -109,12 +112,14 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
     if (!mounted) return;
     if (!leitura.ok) {
       setState(() => lendoPasta = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(leitura.erro!)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(leitura.erro!)));
       return;
     }
     final dados = leitura.valor!;
     final resultado = await widget.store.importar([
-      for (final nota in dados.notas) (nome: nota.caminho, conteudo: nota.conteudo),
+      for (final nota in dados.notas)
+        (nome: nota.caminho, conteudo: nota.conteudo),
     ]);
     if (!mounted) return;
     setState(() => lendoPasta = false);
@@ -123,11 +128,13 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
     final partes = <String>[
       '${resultado.adicionadas.length} nova(s)',
       '${resultado.repetidas} repetida(s)',
-      if (resultado.conflitos.isNotEmpty) '${resultado.conflitos.length} conflito(s) preservado(s)',
+      if (resultado.conflitos.isNotEmpty)
+        '${resultado.conflitos.length} conflito(s) preservado(s)',
       if (dados.ignoradas > 0) '${dados.ignoradas} arquivo(s) ignorado(s)',
       if (dados.truncadas > 0) '${dados.truncadas} grande(s) recusado(s)',
     ];
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pasta importada: ${partes.join(', ')}.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Pasta importada: ${partes.join(', ')}.')));
   }
 
   Future<void> _sincronizarPasta({bool silencioso = false}) async {
@@ -135,12 +142,16 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
     if (!pasta!.podeEscrever) {
       if (silencioso) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A pasta está conectada só para leitura. Conecte de novo e permita editar para enviar notas.')),
+        const SnackBar(
+            content: Text(
+                'A pasta está conectada só para leitura. Conecte de novo e permita editar para enviar notas.')),
       );
       return;
     }
     setState(() => sincronizando = true);
-    final resultado = await Sincronizador(store: widget.store, cofre: const CofreSafGateway()).sincronizar();
+    final resultado =
+        await Sincronizador(store: widget.store, cofre: const CofreSafGateway())
+            .sincronizar();
     if (!mounted) return;
     setState(() {
       sincronizando = false;
@@ -151,7 +162,8 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
     if (!mounted) return;
     if (!resultado.ok) {
       if (silencioso) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Não sincronizou: ${resultado.erroGeral}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Não sincronizou: ${resultado.erroGeral}')));
       return;
     }
     if (silencioso) return;
@@ -180,15 +192,18 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
     final resultado = await CofreSaf.esquecerPasta();
     if (!mounted) return;
     if (!resultado.ok) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(resultado.erro!)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(resultado.erro!)));
       return;
     }
     setState(() => pasta = null);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pasta desconectada.')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Pasta desconectada.')));
   }
 
   Future<void> _abrirBackups() async {
-    await Navigator.of(context).push<void>(MaterialPageRoute<void>(builder: (_) => BackupsPage(store: widget.store)));
+    await Navigator.of(context).push<void>(MaterialPageRoute<void>(
+        builder: (_) => BackupsPage(store: widget.store)));
     if (mounted) await _carregar();
   }
 
@@ -201,11 +216,13 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
     });
   }
 
-  List<ResultadoMemoria> get resultados => busca.trim().isEmpty ? const [] : widget.store.buscar(busca, limite: 30);
+  List<ResultadoMemoria> get resultados =>
+      busca.trim().isEmpty ? const [] : widget.store.buscar(busca, limite: 30);
 
   Future<void> _editar([NotaMemoria? nota]) async {
     final salvou = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(builder: (_) => NotaEditorPage(store: widget.store, nota: nota)),
+      MaterialPageRoute<bool>(
+          builder: (_) => NotaEditorPage(store: widget.store, nota: nota)),
     );
     if (salvou == true) await _carregar();
   }
@@ -217,8 +234,12 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
         title: const Text('Apagar nota?'),
         content: Text('“${nota.titulo}” será removida deste aparelho.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogo, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(dialogo, true), child: const Text('Apagar')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogo, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogo, true),
+              child: const Text('Apagar')),
         ],
       ),
     );
@@ -230,7 +251,8 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
   Future<void> _copiarMarkdown(NotaMemoria nota) async {
     await Clipboard.setData(ClipboardData(text: escreverMarkdown(nota)));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Markdown copiado.')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Markdown copiado.')));
   }
 
   Future<void> _importar() async {
@@ -243,33 +265,43 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Cole o conteúdo de uma nota exportada do Obsidian. O frontmatter é lido; '
+            const Text(
+                'Cole o conteúdo de uma nota exportada do Obsidian. O frontmatter é lido; '
                 'título repetido com texto diferente vira conflito e não sobrescreve nada.'),
             const SizedBox(height: 10),
             TextField(
               controller: controller,
               maxLines: 8,
               minLines: 5,
-              decoration: const InputDecoration(border: OutlineInputBorder(), hintText: '---\ntitulo: …\n---'),
+              decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: '---\ntitulo: …\n---'),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogo), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(dialogo, controller.text), child: const Text('Importar')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogo),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogo, controller.text),
+              child: const Text('Importar')),
         ],
       ),
     );
     if (texto == null || texto.trim().isEmpty) return;
-    final resultado = await widget.store.importar([(nome: 'colado.md', conteudo: texto)]);
+    final resultado =
+        await widget.store.importar([(nome: 'colado.md', conteudo: texto)]);
     await _carregar();
     if (!mounted) return;
     final partes = <String>[
       '${resultado.adicionadas.length} adicionada(s)',
       '${resultado.repetidas} repetida(s)',
-      if (resultado.conflitos.isNotEmpty) '${resultado.conflitos.length} conflito(s) preservado(s)',
+      if (resultado.conflitos.isNotEmpty)
+        '${resultado.conflitos.length} conflito(s) preservado(s)',
     ];
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Importação: ${partes.join(', ')}.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Importação: ${partes.join(', ')}.')));
   }
 
   @override
@@ -285,7 +317,10 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
               onPressed: _conectarPasta,
               icon: const Icon(Icons.folder_open_rounded),
             ),
-          IconButton(tooltip: 'Importar Markdown', onPressed: _importar, icon: const Icon(Icons.file_download_outlined)),
+          IconButton(
+              tooltip: 'Importar Markdown',
+              onPressed: _importar,
+              icon: const Icon(Icons.file_download_outlined)),
           IconButton(
             tooltip: 'Backups de conflito',
             onPressed: _abrirBackups,
@@ -313,15 +348,22 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.search_rounded),
                       hintText: 'Buscar nas notas…',
-                      helperText: 'Busca por palavra (sem embeddings neurais); o motivo aparece em cada resultado.',
+                      helperText:
+                          'Busca por palavra (sem embeddings neurais); o motivo aparece em cada resultado.',
                       filled: true,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none),
                     ),
                   ),
                 ),
                 if (pasta != null) _cartaoPasta(colors),
                 Expanded(
-                  child: notas.isEmpty ? _vazio(colors) : busca.trim().isEmpty ? _lista(colors) : _resultados(colors),
+                  child: notas.isEmpty
+                      ? _vazio(colors)
+                      : busca.trim().isEmpty
+                          ? _lista(colors)
+                          : _resultados(colors),
                 ),
               ],
             ),
@@ -334,9 +376,11 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.account_tree_outlined, size: 40, color: colors.primary),
+              Icon(Icons.account_tree_outlined,
+                  size: 40, color: colors.primary),
               const SizedBox(height: 12),
-              const Text('Nenhuma nota no cofre', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              const Text('Nenhuma nota no cofre',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               const Text(
                 'As notas ficam neste aparelho. Você pode criar uma nota, colar um Markdown exportado do Obsidian '
@@ -350,8 +394,14 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
                 runSpacing: 8,
                 alignment: WrapAlignment.center,
                 children: [
-                  OutlinedButton.icon(onPressed: _importar, icon: const Icon(Icons.file_download_outlined), label: const Text('Importar Markdown')),
-                  OutlinedButton.icon(onPressed: _conectarPasta, icon: const Icon(Icons.folder_open_rounded), label: const Text('Conectar pasta do Obsidian')),
+                  OutlinedButton.icon(
+                      onPressed: _importar,
+                      icon: const Icon(Icons.file_download_outlined),
+                      label: const Text('Importar Markdown')),
+                  OutlinedButton.icon(
+                      onPressed: _conectarPasta,
+                      icon: const Icon(Icons.folder_open_rounded),
+                      label: const Text('Conectar pasta do Obsidian')),
                 ],
               ),
             ],
@@ -368,13 +418,18 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
             children: [
               Row(
                 children: [
-                  Icon(Icons.folder_special_rounded, color: colors.primary, size: 20),
+                  Icon(Icons.folder_special_rounded,
+                      color: colors.primary, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(pasta!.nome, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text(pasta!.nome,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13)),
                         Text(
                           sincronizando
                               ? 'Sincronizando nos dois sentidos…'
@@ -408,12 +463,17 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
                   runSpacing: 4,
                   children: [
                     FilledButton.tonalIcon(
-                      onPressed: sincronizando || lendoPasta || !pasta!.podeEscrever ? null : _sincronizarPasta,
+                      onPressed:
+                          sincronizando || lendoPasta || !pasta!.podeEscrever
+                              ? null
+                              : _sincronizarPasta,
                       icon: const Icon(Icons.sync_rounded, size: 18),
-                      label: Text(sincronizando ? 'Sincronizando…' : 'Sincronizar'),
+                      label: Text(
+                          sincronizando ? 'Sincronizando…' : 'Sincronizar'),
                     ),
                     TextButton(
-                      onPressed: sincronizando || lendoPasta ? null : _importarPasta,
+                      onPressed:
+                          sincronizando || lendoPasta ? null : _importarPasta,
                       child: const Text('Importar notas'),
                     ),
                   ],
@@ -432,7 +492,8 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
           if (indice == 0) {
             return Padding(
               padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-              child: Text('${notas.length} nota(s) · mais recentes primeiro', style: const TextStyle(color: muted, fontSize: 11)),
+              child: Text('${notas.length} nota(s) · mais recentes primeiro',
+                  style: const TextStyle(color: muted, fontSize: 11)),
             );
           }
           return _cartao(notas[indice - 1], colors, motivo: null);
@@ -445,7 +506,8 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(26),
-          child: Text('Nenhuma nota corresponde a “$busca”.', textAlign: TextAlign.center),
+          child: Text('Nenhuma nota corresponde a “$busca”.',
+              textAlign: TextAlign.center),
         ),
       );
     }
@@ -453,11 +515,13 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 90),
       itemCount: achados.length,
       separatorBuilder: (_, __) => const SizedBox(height: 6),
-      itemBuilder: (_, indice) => _cartao(achados[indice].nota, colors, motivo: achados[indice].motivo),
+      itemBuilder: (_, indice) =>
+          _cartao(achados[indice].nota, colors, motivo: achados[indice].motivo),
     );
   }
 
-  Widget _cartao(NotaMemoria nota, ColorScheme colors, {required String? motivo}) {
+  Widget _cartao(NotaMemoria nota, ColorScheme colors,
+      {required String? motivo}) {
     final tema = temasMemoria[nota.tema] ?? nota.tema;
     return Card(
       margin: EdgeInsets.zero,
@@ -466,19 +530,29 @@ class _MemoriaPageState extends State<MemoriaPage> with WidgetsBindingObserver {
         isThreeLine: true,
         title: Row(
           children: [
-            Expanded(child: Text(nota.titulo, maxLines: 1, overflow: TextOverflow.ellipsis)),
-            if (nota.importancia >= 2) const Icon(Icons.star_rounded, size: 15, color: Color(0xFFFFC66D)),
+            Expanded(
+                child: Text(nota.titulo,
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+            if (nota.importancia >= 2)
+              const Icon(Icons.star_rounded,
+                  size: 15, color: Color(0xFFFFC66D)),
           ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 3),
-            Text(trecho(nota), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, height: 1.35)),
+            Text(trecho(nota),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, height: 1.35)),
             const SizedBox(height: 4),
             Text(
-              motivo == null ? '$tema · ${nota.tags.isEmpty ? 'sem tags' : nota.tags.join(', ')}' : '$tema · $motivo',
-              style: TextStyle(fontSize: 10, color: motivo == null ? muted : colors.primary),
+              motivo == null
+                  ? '$tema · ${nota.tags.isEmpty ? 'sem tags' : nota.tags.join(', ')}'
+                  : '$tema · $motivo',
+              style: TextStyle(
+                  fontSize: 10, color: motivo == null ? muted : colors.primary),
             ),
           ],
         ),
@@ -512,9 +586,12 @@ class NotaEditorPage extends StatefulWidget {
 }
 
 class _NotaEditorPageState extends State<NotaEditorPage> {
-  late final TextEditingController titulo = TextEditingController(text: widget.nota?.titulo ?? '');
-  late final TextEditingController texto = TextEditingController(text: widget.nota?.texto ?? '');
-  late final TextEditingController tags = TextEditingController(text: widget.nota?.tags.join(', ') ?? '');
+  late final TextEditingController titulo =
+      TextEditingController(text: widget.nota?.titulo ?? '');
+  late final TextEditingController texto =
+      TextEditingController(text: widget.nota?.texto ?? '');
+  late final TextEditingController tags =
+      TextEditingController(text: widget.nota?.tags.join(', ') ?? '');
   late String tema = widget.nota?.tema ?? 'contextos';
   late int importancia = widget.nota?.importancia ?? 1;
   String? erro;
@@ -540,7 +617,11 @@ class _NotaEditorPageState extends State<NotaEditorPage> {
             titulo: titulo.text.trim(),
             texto: texto.text.trim(),
             tema: tema,
-            tags: tags.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList(),
+            tags: tags.text
+                .split(',')
+                .map((t) => t.trim())
+                .where((t) => t.isNotEmpty)
+                .toList(),
             importancia: importancia,
             criadaEm: agora,
             atualizadaEm: agora,
@@ -549,7 +630,11 @@ class _NotaEditorPageState extends State<NotaEditorPage> {
             titulo: titulo.text.trim(),
             texto: texto.text.trim(),
             tema: tema,
-            tags: tags.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList(),
+            tags: tags.text
+                .split(',')
+                .map((t) => t.trim())
+                .where((t) => t.isNotEmpty)
+                .toList(),
             importancia: importancia,
             atualizadaEm: agora,
           );
@@ -572,31 +657,42 @@ class _NotaEditorPageState extends State<NotaEditorPage> {
         children: [
           TextField(
             controller: titulo,
-            decoration: const InputDecoration(labelText: 'Título', border: OutlineInputBorder()),
+            decoration: const InputDecoration(
+                labelText: 'Título', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: texto,
             minLines: 8,
             maxLines: 20,
-            decoration: const InputDecoration(labelText: 'Texto', alignLabelWithHint: true, border: OutlineInputBorder()),
+            decoration: const InputDecoration(
+                labelText: 'Texto',
+                alignLabelWithHint: true,
+                border: OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: tags,
-            decoration: const InputDecoration(labelText: 'Tags (separadas por vírgula)', border: OutlineInputBorder()),
+            decoration: const InputDecoration(
+                labelText: 'Tags (separadas por vírgula)',
+                border: OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             initialValue: tema,
-            decoration: const InputDecoration(labelText: 'Tema', border: OutlineInputBorder()),
-            items: [for (final entrada in temasMemoria.entries) DropdownMenuItem(value: entrada.key, child: Text(entrada.value))],
+            decoration: const InputDecoration(
+                labelText: 'Tema', border: OutlineInputBorder()),
+            items: [
+              for (final entrada in temasMemoria.entries)
+                DropdownMenuItem(value: entrada.key, child: Text(entrada.value))
+            ],
             onChanged: (valor) => setState(() => tema = valor ?? 'contextos'),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
             initialValue: importancia,
-            decoration: const InputDecoration(labelText: 'Importância', border: OutlineInputBorder()),
+            decoration: const InputDecoration(
+                labelText: 'Importância', border: OutlineInputBorder()),
             items: const [
               DropdownMenuItem(value: 0, child: Text('0 — passageira')),
               DropdownMenuItem(value: 1, child: Text('1 — normal')),
@@ -607,7 +703,9 @@ class _NotaEditorPageState extends State<NotaEditorPage> {
           ),
           if (erro != null) ...[
             const SizedBox(height: 12),
-            Text(erro!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12)),
+            Text(erro!,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.error, fontSize: 12)),
           ],
         ],
       ),

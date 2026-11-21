@@ -22,7 +22,8 @@ class PlanoResolucao {
   final EnvioNota? envio;
 }
 
-String _tituloBackup(String titulo, String origem) => '$titulo (versão $origem)';
+String _tituloBackup(String titulo, String origem) =>
+    '$titulo (versão $origem)';
 
 NotaMemoria _notaDeBackup({
   required NotaMemoria origem,
@@ -70,7 +71,9 @@ PlanoResolucao planejarResolucao(
       notaOficial: oficial,
       backup: _notaDeBackup(
         origem: local,
-        titulo: lerMarkdown(conflito.remoto.conteudo, tituloReserva: nomeSemExtensao(caminho)).titulo,
+        titulo: lerMarkdown(conflito.remoto.conteudo,
+                tituloReserva: nomeSemExtensao(caminho))
+            .titulo,
         texto: corpoRemoto,
         agora: quando,
         caminhoConflito: caminho,
@@ -84,7 +87,9 @@ PlanoResolucao planejarResolucao(
     );
   }
 
-  final tituloRemoto = lerMarkdown(conflito.remoto.conteudo, tituloReserva: nomeSemExtensao(caminho)).titulo;
+  final tituloRemoto = lerMarkdown(conflito.remoto.conteudo,
+          tituloReserva: nomeSemExtensao(caminho))
+      .titulo;
   final oficial = local.copiarCom(
     titulo: tituloRemoto,
     texto: corpoRemoto,

@@ -28,7 +28,8 @@ void main() {
     expect(find.text('Obsidian'), findsNWidgets(2));
   });
 
-  testWidgets('o botão de ajustes abre a central com provedores reais', (tester) async {
+  testWidgets('o botão de ajustes abre a central com provedores reais',
+      (tester) async {
     await tester.pumpWidget(const JarvisApp());
 
     await tester.tap(find.byKey(const ValueKey('settings-button')));
@@ -41,8 +42,8 @@ void main() {
     expect(find.textContaining('sincronização bidirecional'), findsOneWidget);
   });
 
-
-  testWidgets('atalho Provedores de IA abre a configuração funcional', (tester) async {
+  testWidgets('atalho Provedores de IA abre a configuração funcional',
+      (tester) async {
     await tester.pumpWidget(const JarvisApp());
     await tester.tap(find.text('Sistemas'));
     await tester.pump(const Duration(milliseconds: 350));
@@ -54,7 +55,8 @@ void main() {
     expect(find.textContaining('Groq é o provedor principal'), findsOneWidget);
   });
 
-  testWidgets('atalho Voz e KWS abre o painel nativo de diagnóstico', (tester) async {
+  testWidgets('atalho Voz e KWS abre o painel nativo de diagnóstico',
+      (tester) async {
     await tester.pumpWidget(const JarvisApp());
     await tester.tap(find.text('Sistemas'));
     await tester.pump(const Duration(milliseconds: 350));
@@ -68,7 +70,8 @@ void main() {
     expect(find.textContaining('sherpa-onnx'), findsWidgets);
   });
 
-  testWidgets('núcleo responde ao toque e abre painel holográfico', (tester) async {
+  testWidgets('núcleo responde ao toque e abre painel holográfico',
+      (tester) async {
     await tester.pumpWidget(const JarvisApp());
     await tester.tap(find.text('NÚCLEO HOLOGRÁFICO'));
     await tester.pump();

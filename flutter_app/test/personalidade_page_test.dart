@@ -17,18 +17,21 @@ void main() {
     store = PersonalidadeStore(prefs);
   });
 
-  testWidgets('abre no nível salvo e mostra a prévia correspondente', (tester) async {
+  testWidgets('abre no nível salvo e mostra a prévia correspondente',
+      (tester) async {
     await prefs.setString(PersonalidadeStore.chave, NivelHumor.avancado.name);
     await tester.pumpWidget(MaterialApp(home: PersonalidadePage(store: store)));
     await tester.pumpAndSettle();
 
     expect(find.text('Prévia — Avançado'), findsOneWidget);
     expect(find.textContaining('revolucionário'), findsOneWidget);
-    expect(find.textContaining('humor é suspenso por completo'), findsOneWidget);
+    expect(
+        find.textContaining('humor é suspenso por completo'), findsOneWidget);
     expect(find.textContaining('não autentica'), findsOneWidget);
   });
 
-  testWidgets('trocar para Discreto atualiza a prévia sem gravar sozinho', (tester) async {
+  testWidgets('trocar para Discreto atualiza a prévia sem gravar sozinho',
+      (tester) async {
     await tester.pumpWidget(MaterialApp(home: PersonalidadePage(store: store)));
     await tester.pumpAndSettle();
 
@@ -40,7 +43,8 @@ void main() {
     expect(store.carregar().nivel, NivelHumor.equilibrado);
   });
 
-  testWidgets('salvar grava o nível escolhido e informa o usuário', (tester) async {
+  testWidgets('salvar grava o nível escolhido e informa o usuário',
+      (tester) async {
     await tester.pumpWidget(MaterialApp(home: PersonalidadePage(store: store)));
     await tester.pumpAndSettle();
 
@@ -50,6 +54,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(store.carregar().nivel, NivelHumor.avancado);
-    expect(find.textContaining('Personalidade salva: Avançado'), findsOneWidget);
+    expect(
+        find.textContaining('Personalidade salva: Avançado'), findsOneWidget);
   });
 }

@@ -13,7 +13,8 @@ class PersonalidadeStore {
   static Future<PersonalidadeStore> abrir() async =>
       PersonalidadeStore(await SharedPreferences.getInstance());
 
-  Personalidade carregar() => Personalidade(nivel: nivelHumorDe(_prefs.getString(chave)));
+  Personalidade carregar() =>
+      Personalidade(nivel: nivelHumorDe(_prefs.getString(chave)));
 
   /// Devolve `false` quando o sistema não conseguiu gravar; o chamador informa o usuário.
   Future<bool> salvar(Personalidade personalidade) =>

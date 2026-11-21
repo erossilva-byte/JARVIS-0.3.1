@@ -14,7 +14,8 @@ abstract interface class ArmazenamentoSeguro {
 }
 
 class ArmazenamentoSeguroDispositivo implements ArmazenamentoSeguro {
-  const ArmazenamentoSeguroDispositivo({FlutterSecureStorage? storage}) : _storage = storage ?? const FlutterSecureStorage();
+  const ArmazenamentoSeguroDispositivo({FlutterSecureStorage? storage})
+      : _storage = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
 
@@ -22,7 +23,8 @@ class ArmazenamentoSeguroDispositivo implements ArmazenamentoSeguro {
   Future<String?> ler(String chave) => _storage.read(key: chave);
 
   @override
-  Future<void> gravar(String chave, String valor) => _storage.write(key: chave, value: valor);
+  Future<void> gravar(String chave, String valor) =>
+      _storage.write(key: chave, value: valor);
 
   @override
   Future<void> apagar(String chave) => _storage.delete(key: chave);
@@ -43,7 +45,8 @@ class ResultadoSalvarPessoa {
 /// Sem foto, câmera, biometria ou reconhecimento facial nesta etapa: a identidade é o nome que o
 /// usuário digita. Nada sai para a rede — não há importação de `http` neste arquivo.
 class PessoasStore {
-  PessoasStore(this._armazenamento, {DateTime Function()? agora}) : _agora = agora ?? DateTime.now;
+  PessoasStore(this._armazenamento, {DateTime Function()? agora})
+      : _agora = agora ?? DateTime.now;
 
   static const chave = 'jarvis.pessoas.v1';
 
@@ -53,7 +56,8 @@ class PessoasStore {
   /// Relógio pode repetir (teste ou dois toques no mesmo microssegundo): a sequência garante id.
   int _sequencia = 0;
 
-  static Future<PessoasStore> abrir() async => PessoasStore(const ArmazenamentoSeguroDispositivo());
+  static Future<PessoasStore> abrir() async =>
+      PessoasStore(const ArmazenamentoSeguroDispositivo());
 
   Future<List<Pessoa>> listar() async {
     final bruto = await _armazenamento.ler(chave);
@@ -62,12 +66,14 @@ class PessoasStore {
 
   Future<ResultadoSalvarPessoa> salvar(Pessoa dados) async {
     final lista = await listar();
-    final existente = dados.id.isEmpty ? null : lista.where((p) => p.id == dados.id).firstOrNull;
+    final existente = dados.id.isEmpty
+        ? null
+        : lista.where((p) => p.id == dados.id).firstOrNull;
     final quando = _agora();
     var ficha = dados.sanitizada().copiarCom(
-      criadaEm: existente?.criadaEm ?? quando,
-      atualizadaEm: quando,
-    );
+          criadaEm: existente?.criadaEm ?? quando,
+          atualizadaEm: quando,
+        );
     if (ficha.id.isEmpty) ficha = _comId(ficha, quando);
 
     final erro = validarPessoa(ficha);
@@ -90,7 +96,8 @@ class PessoasStore {
     try {
       await _armazenamento.gravar(chave, jsonDePessoas(proxima));
     } catch (_) {
-      return const ResultadoSalvarPessoa.falha('Não foi possível gravar no armazenamento seguro deste aparelho.');
+      return const ResultadoSalvarPessoa.falha(
+          'Não foi possível gravar no armazenamento seguro deste aparelho.');
     }
     return ResultadoSalvarPessoa.ok(ficha);
   }

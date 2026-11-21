@@ -28,6 +28,41 @@ ACOES = (
     "com.jarvis.nova.ACAO_HISTORICO",
 )
 
+# O runner gerado pelo Flutter declara INTERNET apenas no manifesto de debug.
+# Sem estas permissões no manifesto principal, o APK de release não resolve DNS
+# e a conversa falha com "Failed host lookup" mesmo com Wi-Fi/5G ativos.
+PERMISSOES = (
+    ("android.permission.INTERNET", ""),
+    ("android.permission.ACCESS_NETWORK_STATE", ""),
+    ("android.permission.CAMERA", ""),
+    ("android.permission.READ_MEDIA_IMAGES", ""),
+    ("android.permission.READ_MEDIA_VIDEO", ""),
+    ("android.permission.READ_EXTERNAL_STORAGE", ' android:maxSdkVersion="32"'),
+    ("android.permission.RECEIVE_BOOT_COMPLETED", ""),
+    # Exceção documentada pelo Android para abrir apps a partir do segundo plano.
+    ("android.permission.SYSTEM_ALERT_WINDOW", ""),
+    # Biometria da tela de bloqueio; a digital antiga só existe até o Android 8.1.
+    ("android.permission.USE_BIOMETRIC", ""),
+    ("android.permission.USE_FINGERPRINT", ' android:maxSdkVersion="27"'),
+    # Localização pedida na tela de status, sempre com ação explícita do usuário.
+    ("android.permission.ACCESS_FINE_LOCATION", ""),
+    ("android.permission.ACCESS_COARSE_LOCATION", ""),
+)
+
+CAMERA_FEATURE = '    <uses-feature android:name="android.hardware.camera" android:required="false" />\n'
+
+# Android 11 esconde TTS e os apps com ícone sem estas consultas explícitas.
+TTS_QUERY = """    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+"""
+
 NS = "{http://schemas.android.com/apk/res/android}"
 
 ATALHOS_META = '            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />\n'
@@ -45,6 +80,16 @@ FILTROS = """            <intent-filter>
             </intent-filter>
 """
 
+RECEPTOR_AGENDA = """        <receiver
+            android:name=".JarvisAgendaReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+"""
+
 RECEPTOR = """        <receiver
             android:name=".JarvisWidgetProvider"
             android:exported="true">
@@ -56,6 +101,114 @@ RECEPTOR = """        <receiver
                 android:resource="@xml/jarvis_widget_info" />
         </receiver>
 """
+
+
+# --- Assinatura de release ---------------------------------------------------
+# A chave de release vive FORA do repositório, em key.properties. Este bloco é
+# aplicado sempre, de forma idempotente, porque o build.gradle.kts do runner
+# Android nasce do `flutter create` e não entra no controle de versão.
+MARCA_ASSINATURA = "JARVIS_KEY_PROPERTIES"
+
+IMPORTS_ASSINATURA = """import java.io.FileInputStream
+import java.util.Properties
+
+"""
+
+CABECALHO_ASSINATURA = """// Assinatura de release (ver docs/GUIA-ASSINATURA-RELEASE.md).
+// Ordem de procura do key.properties: variável JARVIS_KEY_PROPERTIES,
+// android/key.properties, ~/.jarvis/key.properties. As propriedades -P do
+// Gradle (usadas pelo CI a partir dos secrets) completam o que faltar.
+val chaveRelease: Properties = Properties().apply {
+    val externo = System.getenv("JARVIS_KEY_PROPERTIES")
+    val arquivo = when {
+        !externo.isNullOrBlank() -> File(externo)
+        rootProject.file("key.properties").isFile -> rootProject.file("key.properties")
+        else -> File(System.getProperty("user.home") ?: ".", ".jarvis/key.properties")
+    }
+    if (arquivo.isFile) FileInputStream(arquivo).use { load(it) }
+    listOf("storeFile", "storePassword", "keyAlias", "keyPassword").forEach { nome ->
+        val doGradle = project.findProperty(nome) as String?
+        if (getProperty(nome).isNullOrBlank() && !doGradle.isNullOrBlank()) {
+            setProperty(nome, doGradle)
+        }
+    }
+}
+val temChaveRelease = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+    .all { !chaveRelease.getProperty(it).isNullOrBlank() }
+// Teste local consciente de APK sem chave: -PJARVIS_PERMITIR_DEBUG=true ou a
+// variável de ambiente JARVIS_PERMITIR_DEBUG=true.
+val permitirDebug = ((project.findProperty("JARVIS_PERMITIR_DEBUG") as String?)
+    ?: System.getenv("JARVIS_PERMITIR_DEBUG"))?.toBoolean() ?: false
+"""
+
+BLOCO_CONFIG = """    signingConfigs {
+        // Release assina com a chave do projeto, nunca com a de debug.
+        create("release") {
+            if (temChaveRelease) {
+                storeFile = file(chaveRelease.getProperty("storeFile"))
+                storePassword = chaveRelease.getProperty("storePassword")
+                keyAlias = chaveRelease.getProperty("keyAlias")
+                keyPassword = chaveRelease.getProperty("keyPassword")
+            }
+        }
+    }
+"""
+
+BLOCO_RELEASE = """        release {
+            signingConfig = if (temChaveRelease) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+            // Sem chave de release o build de release para: um APK assinado em
+            // debug tem outra assinatura e não instala por cima do anterior.
+            // Para um teste local consciente: -PJARVIS_PERMITIR_DEBUG=true.
+            gradle.taskGraph.whenReady {
+                if (!temChaveRelease && !permitirDebug &&
+                    allTasks.any { it.name.contains("Release") }) {
+                    throw GradleException(
+                        "APK de release sem chave de assinatura. Crie key.properties " +
+                        "com storeFile, storePassword, keyAlias e keyPassword " +
+                        "(docs/GUIA-ASSINATURA-RELEASE.md) ou passe " +
+                        "-PJARVIS_PERMITIR_DEBUG=true para um teste local."
+                    )
+                }
+            }
+        }"""
+
+RELEASE_ANTIGO = """        release {
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig = signingConfigs.getByName("debug")
+        }"""
+
+
+def configurar_assinatura(app: Path) -> None:
+    """Liga a chave de release ao build, sem guardar segredo no repositório."""
+    build = app / "build.gradle.kts"
+    if not build.is_file():
+        falhar(f"build.gradle.kts ausente em {app}")
+    texto = build.read_text(encoding="utf-8")
+    if MARCA_ASSINATURA in texto:
+        print("Assinatura de release já configurada.")
+        return
+    if "import java.util.Properties" not in texto:
+        texto = IMPORTS_ASSINATURA + texto
+    if "android {" not in texto:
+        falhar("bloco android { não encontrado no build.gradle.kts")
+    # O bloco plugins { } precisa continuar sendo o primeiro do arquivo.
+    fim = texto.find("\n}", texto.find("plugins {"))
+    if "plugins {" not in texto or fim < 0:
+        falhar("bloco plugins { } não encontrado no build.gradle.kts")
+    texto = texto[:fim + 2] + "\n" + CABECALHO_ASSINATURA + texto[fim + 2:]
+    if "import java.util.Properties" not in texto:
+        texto = IMPORTS_ASSINATURA + texto
+    texto = texto.replace("android {", "android {\n" + BLOCO_CONFIG, 1)
+    if RELEASE_ANTIGO not in texto:
+        falhar("buildType release do runner Android mudou; revise a assinatura")
+    texto = texto.replace(RELEASE_ANTIGO, BLOCO_RELEASE, 1)
+    build.write_text(texto, encoding="utf-8")
+    print("Assinatura de release configurada por key.properties.")
 
 
 def falhar(mensagem: str) -> None:
@@ -80,6 +233,32 @@ def copiar_codigo(app: Path) -> None:
     kotlin.mkdir(parents=True, exist_ok=True)
     shutil.copy2(ANDROID / "MainActivity.kt", kotlin / "MainActivity.kt")
     shutil.copy2(ANDROID / "JarvisWidgetProvider.kt", kotlin / "JarvisWidgetProvider.kt")
+    shutil.copy2(ANDROID / "JarvisVoz.kt", kotlin / "JarvisVoz.kt")
+    shutil.copy2(ANDROID / "JarvisComandos.kt", kotlin / "JarvisComandos.kt")
+    shutil.copy2(ANDROID / "JarvisFundo.kt", kotlin / "JarvisFundo.kt")
+    shutil.copy2(ANDROID / "JarvisFundoCanal.kt", kotlin / "JarvisFundoCanal.kt")
+    shutil.copy2(ANDROID / "JarvisEscutaFundo.kt", kotlin / "JarvisEscutaFundo.kt")
+    shutil.copy2(ANDROID / "JarvisBiometria.kt", kotlin / "JarvisBiometria.kt")
+    shutil.copy2(ANDROID / "JarvisLocalizacao.kt", kotlin / "JarvisLocalizacao.kt")
+    shutil.copy2(ANDROID / "JarvisAparelho.kt", kotlin / "JarvisAparelho.kt")
+    shutil.copy2(ANDROID / "JarvisNotificacaoListener.kt",
+                 kotlin / "JarvisNotificacaoListener.kt")
+    shutil.copy2(ANDROID / "JarvisPonteIa.kt", kotlin / "JarvisPonteIa.kt")
+    shutil.copy2(ANDROID / "JarvisSensores.kt", kotlin / "JarvisSensores.kt")
+    shutil.copy2(ANDROID / "JarvisTimbre.kt", kotlin / "JarvisTimbre.kt")
+
+
+def garantir_permissoes(texto: str) -> str:
+    """Acrescenta permissões que o release não herda do manifesto de debug."""
+    for permissao, extra in PERMISSOES:
+        marcador = f'android:name="{permissao}"'
+        if marcador in texto:
+            continue
+        linha = f'    <uses-permission android:name="{permissao}"{extra} />\n'
+        if "<application" not in texto:
+            falhar("manifesto sem <application>")
+        texto = texto.replace("<application", linha + "    <application", 1)
+    return texto
 
 
 def ajustar_manifesto(app: Path) -> None:
@@ -90,10 +269,21 @@ def ajustar_manifesto(app: Path) -> None:
     if "</activity>" not in texto:
         falhar("manifesto sem </activity>; o runner não é o esperado")
 
+    texto = garantir_permissoes(texto)
+    if "android.hardware.camera" not in texto:
+        texto = texto.replace("<application", CAMERA_FEATURE + "    <application", 1)
+    if "android.intent.action.TTS_SERVICE" not in texto:
+        texto = texto.replace("<application", TTS_QUERY + "    <application", 1)
+
     if "com.jarvis.nova.ACAO_VOZ" not in texto:
         texto = texto.replace("</activity>", FILTROS + "        </activity>", 1)
     if "android.app.shortcuts" not in texto:
         texto = texto.replace("</activity>", ATALHOS_META + "        </activity>", 1)
+
+    if ".JarvisAgendaReceiver" not in texto:
+        if "</application>" not in texto:
+            falhar("manifesto sem </application>")
+        texto = texto.replace("</application>", RECEPTOR_AGENDA + "    </application>", 1)
 
     if ".JarvisWidgetProvider" not in texto:
         if "</application>" not in texto:
@@ -125,6 +315,13 @@ def verificar(app: Path) -> None:
     if not receptores:
         falhar("receiver do widget ausente")
 
+    permissoes = {n.get(NS + "name") for n in manifesto.iter("uses-permission")}
+    for permissao, _ in PERMISSOES:
+        if permissao not in permissoes:
+            falhar(f"permissão ausente no manifesto principal: {permissao}")
+    if not any(n.get(NS + "name") == "android.hardware.camera" for n in manifesto.iter("uses-feature")):
+        falhar("declaração opcional da câmera ausente no manifesto")
+
     atalhos = ET.parse(app / "src" / "main" / "res" / "xml" / "shortcuts.xml").getroot()
     if len(atalhos.findall("shortcut")) != 3:
         falhar("shortcuts.xml precisa declarar três atalhos")
@@ -135,12 +332,22 @@ def verificar(app: Path) -> None:
         falhar("layout do widget não copiado")
 
     kotlin = app / "src" / "main" / "kotlin" / "com" / "jarvis" / "nova"
-    for nome in ("MainActivity.kt", "JarvisWidgetProvider.kt"):
+    for nome in ("MainActivity.kt", "JarvisWidgetProvider.kt", "JarvisVoz.kt", "JarvisComandos.kt",
+                 "JarvisFundo.kt", "JarvisFundoCanal.kt", "JarvisEscutaFundo.kt",
+                 "JarvisBiometria.kt", "JarvisLocalizacao.kt", "JarvisAparelho.kt",
+                 "JarvisNotificacaoListener.kt", "JarvisPonteIa.kt",
+                 "JarvisSensores.kt", "JarvisTimbre.kt"):
         if not (kotlin / nome).is_file():
             falhar(f"{nome} não copiado")
+    if not any(n.get(NS + "name") == "android.intent.action.TTS_SERVICE"
+               for n in manifesto.iter("action")):
+        falhar("consulta de síntese de voz (TTS_SERVICE) ausente no manifesto")
     texto = (kotlin / "MainActivity.kt").read_text(encoding="utf-8")
     if '"com.jarvis.nova/sistema"' not in texto:
         falhar("MainActivity sem canal do sistema")
+    gradle = (app / "build.gradle.kts").read_text(encoding="utf-8")
+    if MARCA_ASSINATURA not in gradle or "JARVIS_PERMITIR_DEBUG" not in gradle:
+        falhar("build.gradle.kts sem a assinatura de release por key.properties")
     provedor = (kotlin / "JarvisWidgetProvider.kt").read_text(encoding="utf-8")
     if "R.layout.jarvis_widget" not in provedor:
         falhar("widget provider não usa o layout copiado")
@@ -156,6 +363,7 @@ def main() -> int:
     copiar_recursos(app)
     copiar_codigo(app)
     ajustar_manifesto(app)
+    configurar_assinatura(app)
     verificar(app)
     print("Integração Android preparada: atalhos, widget, compartilhamento e canal do sistema.")
     return 0

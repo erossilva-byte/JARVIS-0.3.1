@@ -12,10 +12,12 @@ class CofreFalso implements CofreRemoto {
   final Map<String, String> arquivos = {};
 
   @override
-  Future<ResultadoSaf<LeituraSaf>> listarNotas() async => ResultadoSaf.ok(LeituraSaf(notas: const []));
+  Future<ResultadoSaf<LeituraSaf>> listarNotas() async =>
+      ResultadoSaf.ok(LeituraSaf(notas: const []));
 
   @override
-  Future<ResultadoSaf<bool>> escreverNota({required String caminho, required String conteudo}) async {
+  Future<ResultadoSaf<bool>> escreverNota(
+      {required String caminho, required String conteudo}) async {
     arquivos[caminho] = conteudo;
     return const ResultadoSaf.ok(true);
   }
@@ -24,7 +26,8 @@ class CofreFalso implements CofreRemoto {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('mostra as duas versões e mantém a escolhida sem apagar a outra', (tester) async {
+  testWidgets('mostra as duas versões e mantém a escolhida sem apagar a outra',
+      (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await MemoriaStore.abrir();
     final quando = DateTime(2026, 11, 15);
@@ -39,7 +42,9 @@ void main() {
     ));
     final conflito = ConflitoSync(
       local: store.listar().single,
-      remoto: ArquivoRemoto(caminho: 'Oficina/Motor.md', conteudo: '---\ntitulo: Motor\n---\ntexto da pasta'),
+      remoto: ArquivoRemoto(
+          caminho: 'Oficina/Motor.md',
+          conteudo: '---\ntitulo: Motor\n---\ntexto da pasta'),
       motivo: 'as duas cópias mudaram',
     );
     final cofre = CofreFalso();
@@ -49,8 +54,10 @@ void main() {
         builder: (contexto) => Scaffold(
           body: Center(
             child: TextButton(
-              onPressed: () => Navigator.of(contexto).push(MaterialPageRoute<void>(
-                builder: (_) => ConflitosPage(conflitos: [conflito], store: store, cofre: cofre),
+              onPressed: () =>
+                  Navigator.of(contexto).push(MaterialPageRoute<void>(
+                builder: (_) => ConflitosPage(
+                    conflitos: [conflito], store: store, cofre: cofre),
               )),
               child: const Text('abrir conflitos'),
             ),

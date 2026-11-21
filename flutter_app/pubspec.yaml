@@ -1,15 +1,19 @@
 name: jarvis_nova
 description: Interface nativa Flutter do J.A.R.V.I.S. Nova.
 publish_to: none
-version: 1.46.0+14600
+version: 1.77.0+17700
 environment:
   sdk: ">=3.4.0 <4.0.0"
   flutter: ">=3.47.0"
 dependencies:
+  camera: ^0.12.2
+  crypto: ^3.0.6
   flutter:
     sdk: flutter
   flutter_secure_storage: ^9.2.4
+  gal: ^3.0.1
   http: ^1.2.2
+  image: ^4.13.1
   image_picker: ^1.2.4
   material_ui: ^1.11.0
   path: ^1.9.1

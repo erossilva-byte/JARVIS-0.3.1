@@ -31,6 +31,19 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | TTS pt-BR | Sim | Sim | Parcial | `fala.js`, `voz_motor.js` | pacote de voz | Voz masculina grave não garantida |
 | Barge-in / interrupção | Sim | Sim | Parcial | `voz_motor.js` | — | Sem medição de eco |
 
+## Aparelho conectado (Flutter, versão 1.60.0)
+
+| Função | Android | Windows | Estado | Evidência | Requisito | Limitações |
+|---|---|---|---|---|---|---|
+| Relógio próprio por contato 67/68 | Sim | Não | Verificada (cálculo e tela) | `core/circuito.dart` (`relogioDoContato`, `temposContato`), `tool/circuito_test.dart` grupos 53–57, `test/circuito_page_test.dart` | — | Passos de 1 s; sem teste em aparelho |
+| Aviso "JARVIS ATIVO" no segundo plano | Sim | Não | Não verificado | `MainActivity.kt` (`acao=ativo`), `home_screen.dart` (`jarvis-ativo`), `AparelhoService.ativarEmSegundoPlano` | microfone | Não exercitado com o app fechado |
+| Leitura de notificações | Sim | Não | Não verificado | `JarvisNotificacaoListener.kt`, `aparelho_page.dart` | acesso a notificações | Sem teste em aparelho; lista só em memória |
+| Mensagem por qualquer app | Sim | Não | Parcial | `core/aparelho.dart` (`appsMensagem`, `interpretarMensagem`), `JarvisAparelho.kt` (`enviarMensagem`), `tool/aparelho_test.dart` | permissão do app/SMS | Apps de terceiros não enviam sozinhos; só SMS sai direto |
+| Controle do Spotify | Sim | Não | Parcial | `JarvisAparelho.kt` (`spotify`, `tocarFaixa`, `verificarFaixa`, `MediaController`), `interpretarSpotify`, `uriSpotify`, `faixaConfere` | sessão ativa + acesso a notificações | Música pedida toca por `MEDIA_PLAY_FROM_SEARCH`; faixa exata só com link `spotify:track:…`; confirmação em até 8 s |
+| Contatos e ligações | Sim | Não | Não verificado | `JarvisAparelho.kt` (`buscarContatos`, `ligar`) | READ_CONTACTS, CALL_PHONE | Sem teste em aparelho |
+| Status e ajustes básicos | Sim | Não | Parcial | `JarvisAparelho.kt` (`status`, `abrirAjustes`), `EstadoAparelho.descrever` | — | Só leitura de status; abrir ajustes depende do aparelho |
+| Ficha a partir de contato | Sim | Não | Verificada (modelo) | `fichaDeContato`, `perguntasBasicasPessoa`, `aparelho_page.dart`, `PessoasStore` | consentimento | Ficha nasce vazia; sem teste em aparelho |
+
 ## Memória e pessoas
 
 | Função | Android | Windows | Estado | Evidência | Requisito | Limitações |
@@ -47,7 +60,7 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Função | Android | Windows | Estado | Evidência | Requisito | Limitações |
 |---|---|---|---|---|---|---|
 | Hora, clima, pesquisa | Sim | Sim | Verificada (motor) | `ACOES` risco 0 | rede (clima) | Clima depende de API |
-| Abrir app, volume, lanterna | Sim | Parcial | Parcial | `ACOES` risco 1, `JarvisUtilPlugin` | — | Lista de apps conhecidos |
+| Abrir app, volume, lanterna e alarme | Sim | Parcial | Parcial | `flutter_app/lib/core/comandos_android.dart`, `JarvisComandos.kt`, `tests/test_comandos_android.py` | nenhuma permissão nova | Só quatro ações de baixo risco; não fecha apps, não alterna Wi-Fi/dados e não envia SMS/ligações; sem teste em aparelho |
 | Ligações e SMS | Sim | Não | Parcial | `ACOES` risco 2 | CALL_PHONE | Confirmação obrigatória |
 | WhatsApp com texto pronto | Sim | Sim | Parcial | `ACOES` risco 2 | — | Envio final é do usuário |
 | Acessibilidade (clicar/digitar/rolar) | Sim | Não | Parcial | `JarvisAcessibilidade.java` | serviço opt-in | Não validado contra blocklist em campo |
@@ -71,7 +84,8 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Arquivos (criar/editar/analisar) | Sim | Sim | Parcial | `arquivos_dev.js`, `platforms/desktop/arquivos.js`, `tests/test_arquivos_dev.js` (PDF/DOCX/XLSX/CSV/ZIP revalidados por leitor independente) | seletor | Sem OCR embarcado; ponte do Electron sem teste |
 | Sandbox de execução | Sim | Sim | Parcial | `sandbox.js`, `tests/test_sandbox.js` (limites e isolamento por contrato) | — | Sem isolamento de SO; execução real em navegador não exercitada |
 | CAD próprio (`.cad` JSON) | Sim | Sim | Parcial | `cad.js`, `cad_projeto.js`, `CAD-MOBILE.md` | — | Primitivas facetadas, sem B-rep |
-| CADeSIMU importar/exportar | Não | Não | Inviável | `CAD-MOBILE.md` | — | Formato sem especificação pública |
+| CADeSIMU importar/exportar | Sim (leitura) | Não | Parcial | `flutter_app/lib/services/cadesimu_cad.dart`, `cadesimu_page.dart`, `tests/test_cadesimu_flutter.py`, `tests/test_cadesimu_sonda.py` | seletor do sistema | Leitura somente; não edita, não simula e não gera netlist; exportação 10B bloqueada até tabela de pinos e teste no CADeSIMU oficial |
+| Simulador de circuitos DC com comando por contator | Sim | Não | Verificado no código | `flutter_app/lib/core/circuito.dart`, `circuito_page.dart`, `tool/circuito_test.dart` (20 grupos), `test/circuito_page_test.dart` (6 testes) | — | Só DC linear, sem motor nem CA; CADeSIMU em si não foi embutido |
 | Git/GitHub integrado | Não | Parcial | Não verificado | `pc.js` | token | Não auditado nesta fase |
 
 ## Entrega
@@ -391,3 +405,292 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 | Pasta externa via SAF | Não | Não | Não implementado | — | Fase 9 | Exige seletor e permissão |
 
 | Promessa de execução isolada | Removida | — | Verificada | catálogo, gaveta e tela declaram ausência; 4 testes | Fase 9 | Sem sandbox |
+
+## Simulador de circuitos DC — Fase 10 (ajustes 061 e 062, 2026-11-18)
+
+| Função | Android | Windows | Estado | Evidência | Requisito | Limitações |
+|---|---|---|---|---|---|---|
+| Simulação DC por análise nodal modificada | Sim | Não | Verificado no código | `lib/core/circuito.dart`; 42 grupos em `tool/circuito_test.dart` | — | Só DC linear, sem CA ou transitórios |
+| Montagem visual em grade | Sim | Não | Verificado no código | `circuito_page.dart`; 11 testes de tela | — | Sem arrastar componente nem zoom |
+| Botoeira de comando NA e NF | Sim | Não | Verificado no código | `TipoElemento.botoeira`, `ativaEm`; teste da partida direta | — | Sem botoeira com retenção mecânica nem contato duplo |
+| Bobina de contator com puxar e soltar | Sim | Não | Verificado no código | teste "24 V e 100 mA" e teste de bobina com 55% da tensão | — | Puxa em 70% e solta em 50%; sem tempo de operação nem bobina CA |
+| Contato de selo comandado pela bobina | Sim | Não | Verificado no código | teste "contato de selo mantém a bobina" | — | NA apenas; sem contato NF de selo |
+| Contato NF auxiliar (21-22) e intertravamento | Sim | Não | Verificado no código | `TipoElemento.contatoNf`; teste "contato NF de K1 impede K2" e teste de tela da reversão | — | Elétrico, um contato por bobina; sem trava mecânica |
+| Reversão com dois contatores (exemplo) | Sim | Não | Verificado no código | grade 8×5, K1 e K2 com selo, 100 mA cada | — | Só comando; sem reversão de potência |
+| Contato principal de potência (1-2) | Sim | Não | Verificado no código | teste "motor parado: contato de potência aberto" | — | Um contato por bobina |
+| Motor DC com tensão e potência nominais | Sim | Não | Verificado no código | 24 V / 24 W → 1 A e 24 W; fonte com 1,1 A | — | Carga resistiva: sem corrente de partida, inércia ou rotação |
+| Partida direta de motor (exemplo) | Sim | Não | Verificado no código | 5 grupos de cálculo no teste puro + teste de tela | — | Sem motor de indução nem partida real |
+| Relé térmico com ajuste de corrente | Sim | Não | Verificado no código | testes "1,5 A deixa rodar" e "0,5 A desarma" | — | Desarme instantâneo, sem curva tempo-corrente |
+| Contato 95/96 do relé no comando | Sim | Não | Verificado no código | teste do desarme derrubando a bobina | — | Um contato por relé |
+| Desarme com memória e rearme manual | Sim | Não | Verificado no código | testes "rearmar não religa" e teste de tela com `rearmar-rele` | — | Rearme só pelo app, sem rearme automático |
+| Temporizador com atraso em segundos | Sim | Não | Verificado no código | grupos "não acende antes do atraso" e "fecha aos 3 s" | — | Tempo em passos de 1 s, sem contagem contínua |
+| Contato 67/68 do temporizador | Sim | Não | Verificado no código | teste do 67/68 acendendo a lâmpada | — | Um contato por temporizador |
+| Contato 67/68 NF do temporizador | Sim | Não | Verificado no código | teste do NF derrubando K1 aos 3 s | — | Um contato NF por temporizador |
+| Desligamento em sequência (exemplo) | Sim | Não | Verificado no código | motor para sozinho aos 3 s e nova partida religa | — | Só DC, com o tempo em passos de 1 s |
+| Retardo na queda do temporizador | Sim | Não | Verificado no código | grupos 34–38: motor segue 24 W aos 2 s de queda e para aos 3 s | — | Um ajuste por temporizador, em segundos inteiros |
+| Desligamento temporizado (exemplo) | Sim | Não | Verificado no código | partida, parada, 2 s com o motor ligado e 3 s desligando | — | Só DC; queda em passos de 1 s |
+| Dois contatos no mesmo temporizador (NA e NF) | Sim | Não | Verificado no código | exemplo "Dois contatos do temporizador": L2 acesa antes dos 3 s, L1 e L2 trocam aos 3 s | — | Os contatos dividem o mesmo atraso e retardo na queda |
+| Atraso próprio de cada contato 67/68 | Sim | Não | Verificado no código | exemplo "Contatos com tempos diferentes": L1 aos 1 s e L2 só aos 5 s, no mesmo KT1 | — | Compartilham o relógio e o retardo na queda do temporizador |
+| Atraso 0 s usa o ajuste base do temporizador | Sim | Não | Verificado no código | teste `atrasoDoContato` igual ao atraso do KT1 e exemplos antigos sem mudança | — | Não há atraso negativo nem por contato na queda |
+| Retardo na queda próprio de cada contato | Sim | Não | Verificado no código | exemplo "Quedas diferentes no temporizador": L1 apaga em 1 s e L2 volta aos 4 s | — | O relógio da queda continua sendo do temporizador |
+| Queda 0 s usa o retardo base do temporizador | Sim | Não | Verificado no código | teste `atrasoQuedaDoContato` igual à queda do KT1 | — | Não há queda negativa nem independente do relógio |
+| Campo da queda própria na tela | Sim | Não | Verificado no código | `campo-queda-contato`, `aplicar-queda-contato` e o texto `queda-contato` | — | Um segundo por passo, sem animação |
+| Campo do atraso próprio na tela | Sim | Não | Verificado no código | `campo-atraso-contato`, `aplicar-atraso-contato` e o texto `atraso-contato` | — | Um segundo por passo, sem animação |
+| Escolha individual do tipo do contato | Sim | Não | Verificado no código | chips `contato-tipo-na`/`contato-tipo-nf`; trocar um não mexe no outro e teste dos rótulos | — | Só NA ou NF, sem contato com atraso próprio |
+| Rótulos numerados para contatos repetidos | Sim | Não | Verificado no código | teste dos dois contatos NA no mesmo temporizador | — | Numeração só quando o tipo se repete |
+| Relógio da queda com Avançar 1 s | Sim | Não | Verificado no código | teste de tela com o chip `relogio-queda` em 2 s e 3 s de 3 s | — | Um segundo por toque, sem animação |
+| Campo do retardo na queda | Sim | Não | Verificado no código | `campo-atraso-queda` e `aplicar-atraso-queda` no editor do temporizador | — | Sem retardo por contato |
+| Relógio do temporizador com Avançar 1 s | Sim | Não | Verificado no código | teste de tela indo de 0 a 3 s com `avancar-tempo` | — | Um segundo por toque, sem animação |
+| Partida direta com selo (exemplo) | Sim | Não | Verificado no código | `exemplosCircuito` + teste de tela com apertar/soltar/parar | — | Comando em 24 V DC; sem motor nem contato de potência |
+| Comando que não estabiliza é avisado | Sim | Não | Verificado no código | limite de 12 iterações em `_comandar` | — | Avalia o estado final, sem gráfico de tempo |
+| Inserir, remover e selecionar componente | Sim | Não | Verificado no código | teste "ferramenta apagar remove o componente" | — | Um componente por trecho |
+| Diagnósticos: curto, aberto, ilha, sobretensão, potência | Sim | Não | Verificado no código | avisos com teste dedicado no motor | — | Curto classificado acima de 25 A |
+| Fusível que rompe e abre o circuito | Sim | Não | Verificado no código | teste do exemplo "Curto protegido por fusível" | — | Rompimento imediato, sem curva tempo-corrente |
+| Exemplos prontos de circuito | Sim | Não | Verificado no código | 5 circuitos, todos calculam no teste | — | Fixos, sem geração por IA ainda |
+| Simulador do próprio CADeSIMU | Não | Não | Fora de escopo | CADeSIMU é freeware de Windows, sem versão Android, sem API e sem motor separado; WebView é proibido | — | Não há forma legítima de embutir |
+| `.cad` → netlist para simular | Não | Não | Não implementado | relatório 059 | — | Falta a tabela de pinos e a prova no CADeSIMU oficial |
+
+## Engenharia de circuitos — Fase 10 (ajuste 074, 2026-11-19)
+
+| Função | Android | Windows | Estado | Evidência | Permissão ou requisito | Limitações |
+|---|---|---|---|---|---|---|
+| Sensor NA/NF no simulador | Sim | Não | Verificada (teste puro) | 15 verificações de engenharia | Nenhuma | Modelo DC; acionado por botão |
+| Verificar ligações e continuidade | Sim | Não | Verificada (teste puro) | idem | Nenhuma | Análise de ligação, não simulação |
+| Lista de materiais | Sim | Não | Verificada (teste puro) | idem | Nenhuma | Sem preço nem cotação |
+| Exportar/importar `.circ` | Sim | Não | Verificada (teste puro) | idem | Nenhuma | Formato próprio; `.cad` só leitura |
+| Dimensionamento de carga e motor | Sim | Não | Verificada (teste puro) | idem | Nenhuma | Tabela resumida; não é projeto assinado |
+| CLP didático (ladder) | Sim | Não | Verificada (teste puro) | idem | Nenhuma | Lógica pura, sem I/O físico |
+
+## Central do aparelho — Fase 11 (ajuste 074, 2026-11-19)
+
+| Função | Android | Windows | Estado | Evidência | Permissão ou requisito | Limitações |
+|---|---|---|---|---|---|---|
+| Memória, armazenamento, bateria, rede e uptime | Sim | Não | Parcial | modelo + widget test; falta Poco X7 | Nenhuma | Valores do Android, sem histórico |
+| Lista de apps com tela inicial | Sim | Não | Parcial | idem | Nenhuma | Até 120 apps |
+| Abrir app pelo pacote | Sim | Não | Parcial | idem | Nenhuma | Só apps com intent de lançamento |
+| Tarefas e automações agendadas | Sim | Não | Parcial | modelo + 3 testes de widget; falta Poco X7 | — | Ações não-aviso rodam com o app aberto |
+| Pareamento Android ↔ Windows | Não | Não | Não implementada | — | — | Depende de contraparte Windows |
+
+## Tarefas e automações — Fase 11 (ajuste 075, 2026-11-19)
+
+| Função | Android | Windows | Estado | Evidência | Permissão ou requisito | Limitações |
+|---|---|---|---|---|---|---|
+| Tarefas com prazo, prioridade e conclusão | Sim | Não | Parcial | `core/tarefas.dart`, `TarefasStore`, 17 verificações + widget | Nenhuma | Sem teste em aparelho; 100 tarefas |
+| Alarme de tarefa e aviso de horário | Sim | Não | Não verificado | `JarvisAgenda.kt` (`setAlarmClock`), `AgendaService` | notificação (Android 13+) | Não testado com app fechado nem após reiniciar |
+| Automação por bateria baixa | Sim | Não | Parcial | `automacaoVencida`, tela | leitura de bateria | Avaliada só com o app aberto; intervalo de 6 h |
+| Automação de abrir app / criar tarefa | Sim | Não | Parcial | fila + `executarItem` | canal do aparelho | Também só com o app aberto |
+| Mensagem por automação | Sim | Não | Parcial | fila `aguardandoConfirmacao`, Confirmar/Recusar | app de mensagem instalado | Abre a conversa; envio é do usuário |
+| Fila offline com novas tentativas | Sim | Não | Verificada (teste puro) | `marcarItemFalha`, 3 tentativas | — | Sem execução em segundo plano |
+| Histórico de execuções | Sim | Não | Verificada (teste puro) | `EventoAutomacao`, últimas 200 | — | Só neste aparelho |
+
+## Visão — erro 404 do Gemini (ajuste 076, 2026-11-19)
+
+| Função | Android | Windows | Estado | Evidência | Permissão ou requisito | Limitações |
+|---|---|---|---|---|---|---|
+| Análise de imagem resistente a modelo aposentado | Sim | Não | Parcial | `modelos` em `core/visao.dart`, laço de `VisaoService`, teste puro + 9 de widget | chave de provedor com visão | Sem chave real do Google e sem Poco X7 |
+| Troca automática de provedor de visão na falha | Sim | Não | Parcial | `VisaoService.analisar` percorre todos os configurados | 2ª chave cadastrada | Só testado com cliente falso/estático |
+| Mensagem de 404 explicando o modelo | Sim | Não | Verificada (teste puro) | `mensagemErroVisao` | — | — |
+
+## Segundo plano de verdade — Fase 12 (ajuste 077, 2026-11-19)
+
+| Função | Android | Windows | Estado | Evidência | Permissão ou requisito | Limitações |
+|---|---|---|---|---|---|---|
+| Comando por voz com o app fechado | Sim | Não | Parcial | `KwsForegroundService` + `JarvisEscutaFundo`, 6 grupos puros + 5 de widget | microfone + escuta ligada | Não testado em aparelho; depende do pacote offline pt-BR |
+| Abrir app a partir do segundo plano | Sim | Não | Parcial | `JarvisFundo.abrirApp`, contrato estático | “Exibir sobre outros apps” (`SYSTEM_ALERT_WINDOW`) | Fabricante pode restringir a exceção |
+| Lanterna, volume e alarme por voz no fundo | Sim | Não | Parcial | `JarvisFundo.executar` | idem para alarme | Volume é conferido; lanterna não relê o estado |
+| Aviso “JARVIS ativo” na tela | Sim | Não | Parcial | canal `jarvis_ativo_aviso`, `IMPORTANCE_HIGH` | notificações (Android 13+) | Não Perturbe pode reter o aviso na gaveta |
+| Modo sem tela (não abrir o app) | Sim | Não | Verificada (teste puro + tela) | `modoSemTela`, switch na tela | — | Escolha por aparelho |
+| Teste de comando por escrito | Sim | Não | Parcial | `executarTexto` no canal + teste de widget | — | Executa dentro do app aberto, não pelo serviço |
+
+## Tela de bloqueio — Fase 13 (ajuste 078, 2026-11-19)
+
+| Função | Android | Windows | Estado | Evidência | Permissão ou requisito | Limitações |
+|---|---|---|---|---|---|---|
+| Tela de bloqueio com PIN próprio | Sim | Não | Parcial | `core/seguranca.dart`, `TelaBloqueio`, 7 grupos puros + 8 testes de widget | — | Sem teste de toque em aparelho |
+| PIN derivado com sal (PBKDF2-HMAC-SHA256) | Sim | Não | Verificada (teste puro) | `derivarPin`, `compararDigest`, `CofreSeguro` | cofre seguro do aparelho | Custo medido só em teste, não em celular de entrada |
+| Limite de tentativas e espera de 30 s | Sim | Não | Verificada (teste puro) | `avaliarTentativa` | — | Sem persistência à prova de reinício do processo |
+| Bloqueio ao abrir e ao voltar | Sim | Não | Parcial | `BloqueioGate`, `deveBloquearAoVoltar` | — | Ciclo de vida não testado em aparelho |
+| Biometria opcional | Sim | Não | Não verificado | `JarvisBiometria.kt`, `BiometriaService` | biometria cadastrada | Prompt e HyperOS não testados |
+| Recuperação com credencial do aparelho | Sim | Não | Não verificado | `KeyguardManager`, `redefinirComCredencialDoAparelho` | aparelho com PIN/padrão/senha | Retorno da tela não testado |
+| Configurações da tela de bloqueio | Sim | Não | Parcial | `SegurancaPage`, testes de widget do gate | — | — |
+
+## Status do celular e localização — Fase 14 (ajuste 079, 2026-11-19)
+
+| Função | Android | Windows | Estado | Evidência | Permissão ou requisito | Limitações |
+|---|---|---|---|---|---|---|
+| Bateria, memória, rede e uptime na Central do aparelho | Sim | Não | Parcial | `core/dispositivo.dart`, `dispositivo_page.dart`, 7 testes de widget | Nenhuma | Sem teste no Poco X7; sem histórico |
+| Notificações na Central do aparelho | Sim | Não | Parcial | `JarvisNotificacaoListener.kt`, seção `NOTIFICAÇÕES` | Acesso a notificações | Lista só em memória (80); HyperOS não verificado |
+| Localização do aparelho (coordenadas e precisão) | Sim | Não | Não verificado | `JarvisLocalizacao.kt`, `core/localizacao.dart`, 4 testes de widget + 12 grupos puros | `ACCESS_FINE_LOCATION`/`ACCESS_COARSE_LOCATION` | GPS real e permissão não testados em aparelho |
+| Endereço aproximado | Sim | Não | Não verificado | `Geocoder` no Kotlin, marcação “aproximado” na tela | rede para o Geocoder | Pode falhar sem internet; nunca é exato |
+| Comando falado “onde estou” | Sim | Não | Parcial | registro + `InterpretadorComandos`, teste puro | permissão já concedida | Só com o app aberto |
+
+## Microfone do comando e segunda escuta — Fase 14 (ajuste 080, 2026-11-20)
+
+| Função | Android | Windows | Estado | Evidência | Permissão ou requisito | Limitações |
+|---|---|---|---|---|---|---|
+| Um microfone por vez entre detector e comando | Sim | Não | Parcial | `KwsForegroundService.marcarComandoAtivo`/`pausarMotor`, `MainActivity`, `home_screen` não religa o KWS, contrato estático | microfone | Corrida real só se confirma no aparelho |
+| Segunda escuta automática em “não entendi” | Sim | Não | Parcial | `tentativaValeRepetir` + `tentativasComando` no Kotlin, contrato estático | microfone | Uma repetição por comando; não testado em aparelho |
+| Folga de silêncio para comando curto | Sim | Não | Não verificado | `EXTRA_SPEECH_INPUT_*_SILENCE_LENGTH_MILLIS`, `MINIMUM_LENGTH` | microfone | O reconhecedor do aparelho pode ignorar as medidas |
+| Pacote offline pt-BR ausente explicado | Sim | Não | Parcial | mensagens de `ERROR_LANGUAGE_NOT_SUPPORTED`/`ERROR_LANGUAGE_UNAVAILABLE` | pacote de voz offline do Android | Sem instalar o pacote, não há transcrição offline |
+| Comando em segundo plano sem “Exibir sobre outros apps” | Sim | Não | Parcial | `!JarvisFundo.podeAbrirApps` no serviço, contrato estático | microfone + escuta ligada | Abrir apps continua exigindo a autorização |
+| Botão “Autorizar abrir apps” no aviso “JARVIS ativo” | Sim | Não | Não verificado | `addAction` com `ACTION_MANAGE_OVERLAY_PERMISSION` | notificações | HyperOS pode recolher o aviso no modo Não Perturbe |
+
+## Histórico de execuções — Fase 14 (ajuste 081, 2026-11-20)
+
+| Função | Android | Windows | Estado | Evidência | Permissão ou requisito | Limitações |
+|---|---|---|---|---|---|---|
+| Registro de comando executado com horário e resultado | Sim | Não | Parcial | `JarvisFundo.anotar`/`historico`, `core/historico_voz.dart`, testes puros | — | Só Android; sem teste no Poco X7 |
+| Registro do comando executado em segundo plano | Sim | Não | Parcial | `KwsForegroundService` chama `JarvisFundo.registrar` com o texto ouvido; contrato estático | microfone + escuta ligada | Depende do serviço continuar vivo |
+| Histórico alimentado pelo comando falado com a tela aberta | Sim | Não | Parcial | `VoiceConversationPage._concluirComando` + `registrarExecucao`; teste de widget da tela | microfone já usado | Origem “voz” só quando veio do KWS |
+| Lista com dia, hora, pedido, ação e mensagem | Sim | Não | Parcial | `historico_voz_page.dart`, 5 testes de widget | — | Sem teste em aparelho |
+| Limite de 100 registros e limpeza com confirmação | Sim | Não | Verificada (teste puro + widget) | `RegistroExecucao.limite`, `registrosDeMapa`, botão “Limpar histórico deste aparelho” | — | Limpeza apaga também a última ação |
+| Histórico só no aparelho, sem áudio e sem nuvem | Sim | Não | Parcial | `SharedPreferences` (`jarvis_fundo`), contrato sem `http`/nuvem | — | Não sincroniza entre aparelhos |
+
+## Microfone e resposta — Fase 14 (ajuste 082, 2026-11-20)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Entrega confirmada do microfone | palavra de ativação | espera o `AudioRecord` do detector fechar antes de abrir o reconhecedor (prazo 1,5 s, fora da thread principal) | `MainActivity.kt`, `KwsForegroundService.kt`, `JarvisKwsEngine.java` |
+| Repetição com folga por erro | silêncio, “não entendi”, microfone ocupado | tenta mais uma vez; 800 ms para áudio ocupado, 350 ms para silêncio | `MainActivity.kt`, `JarvisEscutaFundo.kt` |
+| Aproveitamento do parcial | frase reconhecida pela metade | usa o que já foi entendido em vez de pedir tudo de novo | `MainActivity.kt`, `JarvisEscutaFundo.kt` |
+| Ganho automático | voz baixa ou longe | até 4x de ganho em fala fraca, 1x em fala normal, com transição suave | `JarvisKwsEngine.java` |
+| Repetição no segundo plano | comando sem tela | uma nova escuta automática antes de desistir, sem falar por cima do microfone | `KwsForegroundService.kt` |
+| Resposta antes de rearmar | fim do comando | a palavra de ativação só volta quando a síntese termina; sem confirmação, espera proporcional | `KwsForegroundService.kt`, `JarvisVoz.kt` |
+
+Limite honesto: voz real, ruído, sotaque e o pacote offline pt-BR continuam
+dependendo do aparelho físico.
+
+## Palavra de ativação mais confiável — Fase 14 (ajuste 083, 2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Sensibilidade ajustável na tela | controle deslizante 0–100% (passos de 5) | grava no aparelho e religa o detector com o limiar novo | `services/kws_settings_page.dart`, `KwsForegroundService.definirSensibilidade` |
+| Limiar com cinco faixas | valor escolhido | 0,50 / 0,42 / 0,33 / 0,25 / 0,20, com pontuação das palavras 1,5 → 1,8 → 2,0 | `JarvisKwsEngine.limiarPara`/`pontuacaoPalavra`, `core/ativacao_sensibilidade.dart` |
+| Sensibilidade sobrevive ao app fechado | última escolha | preferência `jarvis_kws`, lida a cada início do motor | `KwsForegroundService.sensibilidadeDe` |
+| Recuperação de falha do motor | erro de JNI ou captura | até três tentativas com espera crescente antes de encerrar o serviço | `KwsForegroundService.onError`, `atrasoFalha` |
+| Vigia do detector | motor parado sem comando | religa sozinho a cada 20 s, nunca durante comando ou ativação recente | `KwsForegroundService.iniciarVigia` |
+| Rearme mais rápido | fim do comando / abertura da tela | detector volta em 8 s em vez de 35 s | `KwsForegroundService.REARM_DELAY_MS` |
+| Diagnóstico honesto | atualizar diagnóstico | mostra a sensibilidade e o limiar que o Android está usando | `MainActivity.statusMap`, `services/kws_bridge.dart` |
+
+Limite honesto: o modelo KWS é treinado em inglês; a sensibilidade aumenta a
+tolerância, mas a taxa de acerto por faixa só pode ser medida no aparelho físico.
+
+## Sentinela de mensagens — Fase 14 (ajuste 084, 2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Resposta direta na notificação (RemoteInput) | botão de responder na mensagem | injeta o texto no campo da própria notificação, sem abrir o app | `JarvisNotificacaoListener.responder`, `JarvisAparelho.kt`, `aparelho_page.dart` |
+| Recusa honesta sem campo de resposta | notificação sem RemoteInput ou serviço desconectado | explica o motivo, não registra envio | `JarvisNotificacaoListener.kt`, `core/aparelho.dart` |
+| Ler mensagens em voz alta | botão "Ler em voz alta" e alto-falante por linha | lê até cinco mensagens (ou uma) na voz pt-BR do aparelho | `aparelho_page.dart`, `VozJarvis` |
+| Escolha da mensagem a responder | app ou pacote | pega a respondível mais recente; nada é escolhido se não houver | `notificacaoParaResponder` |
+| Notificação fixa fora da resposta | evento contínuo | `FLAG_ONGOING_EVENT` não entra na lista | `JarvisNotificacaoListener.kt` |
+| Peças nativas copiadas pelo preparo | build release | `JarvisAparelho.kt` e `JarvisNotificacaoListener.kt` passam a ser reproduzíveis | `tool/prepare_android_sistema.py` |
+
+Limite honesto: o envio real depende do aplicativo (algumas versões do WhatsApp
+recusam RemoteInput) e não foi medido em aparelho físico.
+
+## Resposta em qualquer modo e resumo tático — Fase 14 (ajuste 085, 2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Rota por visibilidade | palavra de ativação com o app aberto | comando vai para a conversa, não para a recusa de segundo plano | `MainActivity.marcarVisivel`, `KwsForegroundService` |
+| Hora e data no aparelho | "que horas são", "que dia é hoje" | responde em frase falável, sem provedor e sem rede | `JarvisFundo.horaFalada`, `dataFalada` |
+| Pergunta livre por voz em segundo plano | qualquer pergunta fora dos comandos | envia ao provedor configurado pela ponte e fala a resposta | `JarvisPonteIa.kt`, `PonteIaFundo`, `ProviderService` |
+| Recusa honesta sem IA | app encerrado ou sem chave | avisa que não pôde consultar e registra no histórico | `KwsForegroundService.responderPerguntaLivre` |
+| Texto falado limpo | resposta do provedor | remove markdown, links e cercas antes da síntese de voz | `respostaFalada` |
+| Resumo tático das mensagens | botão no cartão de notificações | separa ruído de grupo, destaca urgente e sugere respostas | `core/resumo_tatico.dart`, `resumo_ia_service.dart`, `aparelho_page.dart` |
+| Triagem sem provedor | nenhuma chave configurada | mostra urgência e ruído por regra local, com o motivo escrito | `triagemLocal`, `mensagemUrgente`, `ruidoDeGrupo` |
+| Sugestão aproveitada | "Usar" em uma resposta sugerida | abre a resposta da notificação do app certo já preenchida | `_responderSugestao`, `textoInicial` |
+
+Limite honesto: a ponte de IA depende do motor do Flutter vivo; sem aparelho,
+a fala real e a classificação de grupos reais não foram medidas.
+
+## Habilidades em Markdown — Fase 15 (ajuste 086, 2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Pastas de habilidades no aparelho | `Skills/` ou `Habilidades/` na pasta conectada (SAF) e pasta local do app | cada `.md` vira uma habilidade, com limite de 24 | `habilidades_service.dart`, `caminhoDeHabilidade` |
+| Cabeçalho da habilidade | frontmatter `nome`, `descricao`, `gatilhos` | nome, descrição e gatilhos; o corpo é o passo a passo | `lerHabilidade`, `lerMarkdown` |
+| Habilidade repetida ou fora da pasta | arquivo na raiz do cofre, nome igual | é ignorada, sem duplicar o procedimento | `habilidadesDosArquivos` |
+| Ativação pela pergunta | pergunta com gatilho ou palavra do nome | no máximo duas habilidades entram no pedido | `habilidadesQueCasam` |
+| Bloco no pedido ao provedor | habilidade ativada | instrução de sistema com nome, quando e passos, com limite de 4000 caracteres | `blocoHabilidades`, `montarMensagens` |
+| Transparência da habilidade usada | resposta com habilidade | a conversa mostra “Habilidades usadas” e o histórico guarda os nomes | `conversa.dart`, `voice_conversation_page.dart` |
+| Tela de habilidades | módulo “Habilidades em Markdown” | lista, origem, gatilhos, “Ler de novo” e “Criar exemplo” | `habilidades_page.dart` |
+
+Limite honesto: o Markdown orienta a IA, não executa nada; a leitura real em
+aparelho e a qualidade da ativação por gatilho não foram medidas.
+
+## Flip-to-shush e modo noturno — Fase 15 (ajuste 087, 2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Virar para calar | celular de bruços (Z ≤ −8,0) | para a voz da tela e do serviço e devolve o microfone ao detector | `JarvisSensores.Vigia`, `MainActivity.calarTudo`, `ACTION_CALAR` |
+| Histerese do gesto | celular volta para cima (Z ≥ −4,0) | rearma o aviso; no máximo um a cada 1,2 s | `JarvisSensores` |
+| Sensor só com a tela na frente | onPause/onResume | registra e desregistra o acelerômetro | `MainActivity.rearmarVigia` |
+| Calar agora | botão na tela de gestos | chama o mesmo caminho do gesto | `sensores_service.dart`, `gestos_page.dart` |
+| Brilho do modo noturno | interruptor e controle 10–100% | aplica só na janela do app, sem WRITE_SETTINGS | `MainActivity.aplicarBrilho` |
+| Voz suave no modo noturno | resposta falada | volume em 45% via `KEY_PARAM_VOLUME` | `JarvisVoz.falar` |
+| Estado persistido | abrir a tela ou o app | lê `jarvis_gestos` e reaplica brilho e sensor | `JarvisSensores.estado` |
+
+Limite honesto: sem aparelho físico não foi medido o gesto real, o tempo de
+silenciamento nem o brilho percebido; o sensor não funciona com o app fechado.
+
+## Perfis de timbre — Fase 15 (ajuste 088, 2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Escolher o timbre | tela “Perfis de timbre” (gaveta e catálogo) | grava o perfil e aplica tom e ritmo na síntese | `JarvisTimbre.kt`, `VozJarvis.definirTimbre`, `timbre_page.dart` |
+| Grave | perfil original | tom 0,72 e ritmo 0,88, sem regressão do ajuste anterior | `core/timbre_voz.dart`, `JarvisTimbre.PERFIS` |
+| Natural | perfil neutro | tom e ritmo nativos da voz do aparelho | `JarvisVoz.aplicarTimbre` |
+| Ágil | perfil rápido | tom 1,15 e ritmo 1,12 | `JarvisTimbre.PERFIS` |
+| Ouvir exemplo | botão na tela | fala a frase de exemplo com o timbre atual | `fraseExemploTimbre`, `VozJarvis.falar` |
+| Um timbre para tudo | voz da tela e do segundo plano | as duas instâncias leem a mesma preferência do aparelho | `JarvisVoz.onInit` |
+| Padrão seguro | id desconhecido ou vazio | cai no grave sem quebrar a tela | `timbreDe`, `JarvisTimbre.perfil` |
+
+Limite honesto: a voz continua sendo a do aparelho; qualidade e percepção de
+tom não foram medidas em aparelho físico.
+
+## Segundo plano sem app aberto — Fase 15 (ajuste 089, 2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Motor sem tela | pergunta livre sem motor do app | sobe um `FlutterEngine` do serviço com a entrada `mainFundo` | `JarvisPonteIa.kt`, `main.dart` |
+| Mesma IA | pergunta livre | usa o mesmo `ProviderService`, chaves e personalidade do app | `PonteIaFundo.ligar` no motor sem tela |
+| Espera do canal | motor recém-criado | tenta de novo por até 12 s até o Dart atender | `esperarCanal` |
+| Motor ocioso | 3 min sem pergunta ou fim do serviço | desliga o motor para não gastar memória | `OCIOSIDADE_MS`, `JarvisPonteIa.encerrar` |
+| Motivo na voz | falha da IA | separa falta de provedor, demora e falha de rede | `KwsForegroundService.responderPerguntaLivre` |
+
+Limite honesto: o motor sem tela só existe depois de o serviço estar de pé; o
+tempo de subida não foi medido em aparelho físico.
+
+## Modo de visita (Duress PIN) — Fase 15 (ajuste 090, 2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| PIN de coação | tela “Segurança e privacidade” | valida o PIN principal, checa a política, recusa igual ao principal e grava sal e digest próprios | `BloqueioStore.definirCoacao` |
+| Abrir em visita | PIN de coação na tela de bloqueio | confere os dois PINs sempre e abre o app vazio, nunca o real | `BloqueioStore.conferir`, `bloqueio_gate.dart` |
+| Esconder dados | modo de visita | o app real nem é montado; conversa, memória, fichas, arquivos e chaves não aparecem | `ModoVisitaPage` |
+| Sem IA na coação | pergunta no modo de visita | respostas locais, nenhum provedor, nenhuma rede | `core/modo_visita.dart` |
+| Desligar a escuta | entrar em visita | para a palavra de ativação para não falar dados em voz alta | `jarvisKwsController.stop` |
+| Prompt sugerido | tela de segurança e ajustes da visita | texto “Modo de visita” com regras de neutralidade, botão de copiar | `promptModoVisita` |
+| Registro de uso | tela de segurança | data do último uso, só visível com o PIN principal | `coacaoUsadaEm` |
+
+Limite honesto: esconde, não apaga nem criptografa de novo; biometria ainda abre
+o app real e quem souber os dois PINs não é protegido.
+
+## Assinatura de release — Fase 15 (ajuste 091, 2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Chave de release | `key.properties` fora do repositório | assina o APK com a chave do projeto | `build.gradle.kts` (gerado por `tool/prepare_android_sistema.py`) |
+| Ordem de procura | env `JARVIS_KEY_PROPERTIES` → `android/key.properties` → `~/.jarvis/key.properties` | o segredo fica fora da pasta do projeto por padrão | bloco `chaveRelease` |
+| CI | propriedades `-P` com os secrets existentes | mesma assinatura sem arquivo versionado | `storeFile`, `storePassword`, `keyAlias`, `keyPassword` |
+| Recusa de debug | build de release sem chave | para com mensagem, em vez de gerar APK que não atualiza | `gradle.taskGraph.whenReady` |
+| Conferência | `tool/verificar_assinatura.py` | mostra certificado e SHA-256, compara com o esperado e reprova debug | `--exigir-release` |
+| Modelo | `flutter_app/key.properties.example` | campos obrigatórios sem segredo real | — |
+| Esteira de release | `.github/workflows/flutter-release-apk.yml` (disparo manual) | compila o APK arm64, decodifica o keystore dos secrets em `$RUNNER_TEMP`, confere com `keytool -list` e publica APK + SHA-256 | contrato em `tests/test_assinatura_release.py` |
+| Parada sem segredo | qualquer um dos quatro secrets faltando | job para antes de compilar, sem cair na chave de debug | `test -n` de cada secret |
+| Identidade Android | `tool/prepare_android_identidade.py` | `com.jarvis.nova`, rótulo e `MainActivity` no runner gerado | usado pelas duas esteiras |
+
+Limite honesto: a chave é do dono do app e nunca entra no repositório; perdê-la
+obriga todos os usuários a desinstalar para receber versões futuras.

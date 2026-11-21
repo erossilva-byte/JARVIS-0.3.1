@@ -3,7 +3,9 @@ import 'package:jarvis_nova/core/memoria.dart';
 import 'package:jarvis_nova/services/memoria_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-NotaMemoria nota(String titulo, String texto, {DateTime? atualizada, int importancia = 1}) => NotaMemoria(
+NotaMemoria nota(String titulo, String texto,
+        {DateTime? atualizada, int importancia = 1}) =>
+    NotaMemoria(
       id: titulo.toLowerCase().replaceAll(' ', '-'),
       titulo: titulo,
       texto: texto,
@@ -17,8 +19,10 @@ void main() {
 
   test('salva, relê e ordena pela atualização mais recente', () async {
     final store = await MemoriaStore.abrir();
-    await store.salvar(nota('Antiga', 'conteúdo', atualizada: DateTime(2026, 11, 1)));
-    await store.salvar(nota('Recente', 'conteúdo', atualizada: DateTime(2026, 11, 9)));
+    await store
+        .salvar(nota('Antiga', 'conteúdo', atualizada: DateTime(2026, 11, 1)));
+    await store
+        .salvar(nota('Recente', 'conteúdo', atualizada: DateTime(2026, 11, 9)));
 
     expect(store.listar().map((n) => n.titulo).toList(), ['Recente', 'Antiga']);
   });
@@ -31,7 +35,8 @@ void main() {
     expect(store.listar().map((n) => n.titulo).toList(), ['B']);
   });
 
-  test('registrar uso soma apenas nas notas enviadas e não mexe na data', () async {
+  test('registrar uso soma apenas nas notas enviadas e não mexe na data',
+      () async {
     final store = await MemoriaStore.abrir();
     await store.salvar(nota('A', 'x', atualizada: DateTime(2026, 11, 1)));
     await store.salvar(nota('B', 'y', atualizada: DateTime(2026, 11, 1)));
@@ -57,7 +62,8 @@ void main() {
     expect(resultado.repetidas, 1);
     expect(resultado.conflitos, ['Oficina']);
     expect(resultado.adicionadas.single.titulo, 'Bancada');
-    expect(store.listar().firstWhere((n) => n.titulo == 'Oficina').texto, 'mesmo texto');
+    expect(store.listar().firstWhere((n) => n.titulo == 'Oficina').texto,
+        'mesmo texto');
     expect(store.listar(), hasLength(2));
   });
 

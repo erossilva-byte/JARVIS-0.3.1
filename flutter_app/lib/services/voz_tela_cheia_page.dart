@@ -17,7 +17,8 @@ class VozTelaCheiaPage extends StatefulWidget {
   State<VozTelaCheiaPage> createState() => _VozTelaCheiaPageState();
 }
 
-class _VozTelaCheiaPageState extends State<VozTelaCheiaPage> with SingleTickerProviderStateMixin {
+class _VozTelaCheiaPageState extends State<VozTelaCheiaPage>
+    with SingleTickerProviderStateMixin {
   late final AnimationController motion = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 20),
@@ -103,7 +104,9 @@ class _VozTelaCheiaPageState extends State<VozTelaCheiaPage> with SingleTickerPr
         }
       }
     } catch (erro) {
-      if (mounted) setState(() => legenda = 'Não foi possível controlar a escuta: $erro');
+      if (mounted) {
+        setState(() => legenda = 'Não foi possível controlar a escuta: $erro');
+      }
     } finally {
       if (mounted) setState(() => ocupado = false);
     }
@@ -141,9 +144,18 @@ class _VozTelaCheiaPageState extends State<VozTelaCheiaPage> with SingleTickerPr
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(ouvindo ? Icons.graphic_eq_rounded : Icons.mic_off_rounded, color: _cor, size: 44),
+                          Icon(
+                              ouvindo
+                                  ? Icons.graphic_eq_rounded
+                                  : Icons.mic_off_rounded,
+                              color: _cor,
+                              size: 44),
                           const SizedBox(height: 8),
-                          Text(_rotulo, style: TextStyle(color: _cor, fontSize: 13, letterSpacing: 1.2)),
+                          Text(_rotulo,
+                              style: TextStyle(
+                                  color: _cor,
+                                  fontSize: 13,
+                                  letterSpacing: 1.2)),
                         ],
                       ),
                     ),
@@ -155,9 +167,14 @@ class _VozTelaCheiaPageState extends State<VozTelaCheiaPage> with SingleTickerPr
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 28),
               child: Text(
-                legenda.isEmpty ? 'Diga “Jarvis” ou use o botão para falar.' : legenda,
+                legenda.isEmpty
+                    ? 'Diga “Jarvis” ou use o botão para falar.'
+                    : legenda,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: legenda.isEmpty ? muted : Colors.white, fontSize: 16, height: 1.4),
+                style: TextStyle(
+                    color: legenda.isEmpty ? muted : Colors.white,
+                    fontSize: 16,
+                    height: 1.4),
               ),
             ),
             const Spacer(),
@@ -168,7 +185,8 @@ class _VozTelaCheiaPageState extends State<VozTelaCheiaPage> with SingleTickerPr
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: ocupado ? null : _alternar,
-                      icon: Icon(ouvindo ? Icons.stop_rounded : Icons.mic_rounded),
+                      icon: Icon(
+                          ouvindo ? Icons.stop_rounded : Icons.mic_rounded),
                       label: Text(ouvindo ? 'Parar escuta' : 'Iniciar escuta'),
                     ),
                   ),

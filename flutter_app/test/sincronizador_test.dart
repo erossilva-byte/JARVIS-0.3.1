@@ -18,12 +18,16 @@ class CofreFalso implements CofreRemoto {
     if (falharLeitura) return const ResultadoSaf.falha('pasta indisponível');
     return ResultadoSaf.ok(LeituraSaf(notas: [
       for (final item in arquivos.entries)
-        NotaSaf(nome: item.key.split('/').last, caminho: item.key, conteudo: item.value),
+        NotaSaf(
+            nome: item.key.split('/').last,
+            caminho: item.key,
+            conteudo: item.value),
     ]));
   }
 
   @override
-  Future<ResultadoSaf<bool>> escreverNota({required String caminho, required String conteudo}) async {
+  Future<ResultadoSaf<bool>> escreverNota(
+      {required String caminho, required String conteudo}) async {
     if (falharEscrita) return const ResultadoSaf.falha('disco cheio');
     enviados[caminho] = conteudo;
     arquivos[caminho] = conteudo;
@@ -46,7 +50,12 @@ void main() {
       Sincronizador(store: store, cofre: cofre, agora: () => quando);
 
   test('nota nova do aparelho vai para a pasta e fica marcada', () async {
-    await store.salvar(NotaMemoria(id: 'a', titulo: 'Minha nota', texto: 'conteúdo local', criadaEm: quando, atualizadaEm: quando));
+    await store.salvar(NotaMemoria(
+        id: 'a',
+        titulo: 'Minha nota',
+        texto: 'conteúdo local',
+        criadaEm: quando,
+        atualizadaEm: quando));
     final cofre = CofreFalso();
     final resultado = await sincronizador(cofre).sincronizar();
 
@@ -60,7 +69,8 @@ void main() {
   });
 
   test('arquivo novo da pasta vira nota local', () async {
-    final cofre = CofreFalso({'Normas/Segurança.md': '# Segurança\n\nUse EPI.'});
+    final cofre =
+        CofreFalso({'Normas/Segurança.md': '# Segurança\n\nUse EPI.'});
     final resultado = await sincronizador(cofre).sincronizar();
 
     expect(resultado.recebidas, ['Normas/Segurança.md']);
@@ -72,7 +82,12 @@ void main() {
   });
 
   test('segunda sincronização sem mudanças não escreve nada', () async {
-    await store.salvar(NotaMemoria(id: 'a', titulo: 'Motor', texto: 'texto', criadaEm: quando, atualizadaEm: quando));
+    await store.salvar(NotaMemoria(
+        id: 'a',
+        titulo: 'Motor',
+        texto: 'texto',
+        criadaEm: quando,
+        atualizadaEm: quando));
     final cofre = CofreFalso();
     await sincronizador(cofre).sincronizar();
     cofre.enviados.clear();
@@ -85,10 +100,16 @@ void main() {
   });
 
   test('mudança na pasta depois de sincronizar é recebida', () async {
-    await store.salvar(NotaMemoria(id: 'a', titulo: 'Motor', texto: 'versão 1', criadaEm: quando, atualizadaEm: quando));
+    await store.salvar(NotaMemoria(
+        id: 'a',
+        titulo: 'Motor',
+        texto: 'versão 1',
+        criadaEm: quando,
+        atualizadaEm: quando));
     final cofre = CofreFalso();
     await sincronizador(cofre).sincronizar();
-    cofre.arquivos['motor.md'] = escreverMarkdown(store.listar().single.copiarCom(texto: 'versão 2'));
+    cofre.arquivos['motor.md'] =
+        escreverMarkdown(store.listar().single.copiarCom(texto: 'versão 2'));
 
     final resultado = await sincronizador(cofre).sincronizar();
 
@@ -119,7 +140,12 @@ void main() {
   });
 
   test('falha de escrita é reportada e a nota continua local', () async {
-    await store.salvar(NotaMemoria(id: 'a', titulo: 'Nova', texto: 'texto', criadaEm: quando, atualizadaEm: quando));
+    await store.salvar(NotaMemoria(
+        id: 'a',
+        titulo: 'Nova',
+        texto: 'texto',
+        criadaEm: quando,
+        atualizadaEm: quando));
     final cofre = CofreFalso()..falharEscrita = true;
 
     final resultado = await sincronizador(cofre).sincronizar();
@@ -131,7 +157,12 @@ void main() {
   });
 
   test('falha de leitura interrompe sem tocar no cofre', () async {
-    await store.salvar(NotaMemoria(id: 'a', titulo: 'Nova', texto: 'x', criadaEm: quando, atualizadaEm: quando));
+    await store.salvar(NotaMemoria(
+        id: 'a',
+        titulo: 'Nova',
+        texto: 'x',
+        criadaEm: quando,
+        atualizadaEm: quando));
     final cofre = CofreFalso()..falharLeitura = true;
 
     final resultado = await sincronizador(cofre).sincronizar();

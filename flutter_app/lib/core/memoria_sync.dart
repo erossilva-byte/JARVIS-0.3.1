@@ -4,7 +4,9 @@ import 'memoria_busca.dart';
 /// Arquivo lido da pasta do Obsidian.
 class ArquivoRemoto {
   ArquivoRemoto({required this.caminho, required this.conteudo})
-      : corpo = lerMarkdown(conteudo, tituloReserva: nomeSemExtensao(caminho)).texto.trim();
+      : corpo = lerMarkdown(conteudo, tituloReserva: nomeSemExtensao(caminho))
+            .texto
+            .trim();
 
   final String caminho;
   final String conteudo;
@@ -17,7 +19,11 @@ class ArquivoRemoto {
 
 /// Nota local que vai para a pasta. `novo` diz se o arquivo ainda não existe lá.
 class EnvioNota {
-  const EnvioNota({required this.nota, required this.caminho, required this.conteudo, required this.novo});
+  const EnvioNota(
+      {required this.nota,
+      required this.caminho,
+      required this.conteudo,
+      required this.novo});
 
   final NotaMemoria nota;
   final String caminho;
@@ -73,27 +79,44 @@ class PlanoSync {
   int iguais;
 
   bool get vazio =>
-      envios.isEmpty && recebidas.isEmpty && marcar.isEmpty && conflitos.isEmpty && ausentesNaPasta.isEmpty;
+      envios.isEmpty &&
+      recebidas.isEmpty &&
+      marcar.isEmpty &&
+      conflitos.isEmpty &&
+      ausentesNaPasta.isEmpty;
 }
 
-String normalizarCaminho(String caminho) =>
-    caminho.replaceAll('\\', '/').split('/').where((parte) => parte.isNotEmpty).join('/');
+String normalizarCaminho(String caminho) => caminho
+    .replaceAll('\\', '/')
+    .split('/')
+    .where((parte) => parte.isNotEmpty)
+    .join('/');
 
 String nomeSemExtensao(String caminho) {
   final nome = normalizarCaminho(caminho).split('/').last;
-  return nome.toLowerCase().endsWith('.md') ? nome.substring(0, nome.length - 3) : nome;
+  return nome.toLowerCase().endsWith('.md')
+      ? nome.substring(0, nome.length - 3)
+      : nome;
 }
 
 /// Nome de arquivo seguro para uma nota nova: sem acento, sem espaço e sem caractere proibido.
 String caminhoParaTitulo(String titulo) {
-  final base = normalizar(titulo).replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
+  final base = normalizar(titulo)
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
   return '${base.isEmpty ? 'nota' : base}.md';
 }
 
 NotaMemoria _notaDeRemoto(ArquivoRemoto remoto, DateTime agora) {
-  final lido = lerMarkdown(remoto.conteudo, tituloReserva: nomeSemExtensao(remoto.caminho));
-  final importance = int.tryParse(lido.extras['importancia'] ?? '')?.clamp(0, 3) ?? 1;
-  final tags = (lido.extras['tags'] ?? '').split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
+  final lido = lerMarkdown(remoto.conteudo,
+      tituloReserva: nomeSemExtensao(remoto.caminho));
+  final importance =
+      int.tryParse(lido.extras['importancia'] ?? '')?.clamp(0, 3) ?? 1;
+  final tags = (lido.extras['tags'] ?? '')
+      .split(',')
+      .map((t) => t.trim())
+      .where((t) => t.isNotEmpty)
+      .toList();
   return NotaMemoria(
     id: 'saf-${hashConteudo('${remoto.caminho}|${remoto.hash}')}',
     titulo: lido.titulo,
@@ -106,7 +129,15 @@ NotaMemoria _notaDeRemoto(ArquivoRemoto remoto, DateTime agora) {
     caminho: remoto.caminho,
     hashSincronizado: remoto.hash,
     extras: Map<String, String>.from(lido.extras)
-      ..removeWhere((chave, _) => const {'id', 'titulo', 'title', 'nome', 'tema', 'tags', 'importancia'}.contains(chave)),
+      ..removeWhere((chave, _) => const {
+            'id',
+            'titulo',
+            'title',
+            'nome',
+            'tema',
+            'tags',
+            'importancia'
+          }.contains(chave)),
   );
 }
 
@@ -145,7 +176,8 @@ PlanoSync planejarSincronizacao(
 
   for (final nota in locais) {
     final hashLocal = hashConteudo(nota.texto.trim());
-    final caminhoDaNota = nota.caminho == null ? null : normalizarCaminho(nota.caminho!);
+    final caminhoDaNota =
+        nota.caminho == null ? null : normalizarCaminho(nota.caminho!);
 
     if (caminhoDaNota != null) {
       final remoto = porCaminho[caminhoDaNota];
@@ -163,7 +195,9 @@ PlanoSync planejarSincronizacao(
       if (base != null && base == hashLocal) {
         plano.recebidas.add(RecebidaNota(
           nota: nota.copiarCom(
-            titulo: lerMarkdown(remoto.conteudo, tituloReserva: nomeSemExtensao(caminhoDaNota)).titulo,
+            titulo: lerMarkdown(remoto.conteudo,
+                    tituloReserva: nomeSemExtensao(caminhoDaNota))
+                .titulo,
             texto: remoto.corpo,
             atualizadaEm: quando,
             caminho: caminhoDaNota,
@@ -185,7 +219,9 @@ PlanoSync planejarSincronizacao(
       plano.conflitos.add(ConflitoSync(
         local: nota,
         remoto: remoto,
-        motivo: base == null ? 'as cópias nunca foram sincronizadas e o texto é diferente' : 'as duas cópias mudaram desde a última sincronização',
+        motivo: base == null
+            ? 'as cópias nunca foram sincronizadas e o texto é diferente'
+            : 'as duas cópias mudaram desde a última sincronização',
       ));
       continue;
     }
@@ -217,7 +253,9 @@ PlanoSync planejarSincronizacao(
 
   for (final remoto in porCaminho.values) {
     if (usados.contains(normalizarCaminho(remoto.caminho))) continue;
-    final titulo = lerMarkdown(remoto.conteudo, tituloReserva: nomeSemExtensao(remoto.caminho)).titulo;
+    final titulo = lerMarkdown(remoto.conteudo,
+            tituloReserva: nomeSemExtensao(remoto.caminho))
+        .titulo;
     final localMesmoTitulo = locaisPorTitulo[chaveTitulo(titulo)];
     if (localMesmoTitulo != null && localMesmoTitulo.caminho == null) {
       plano.conflitos.add(ConflitoSync(

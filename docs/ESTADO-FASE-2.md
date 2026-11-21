@@ -41,7 +41,7 @@ Três níveis, sem meio-termo:
 |---|---|
 | Catálogo Flutter | 1 módulo implementado, 3 parciais, 16 não migrados, 1 fora de escopo (`docs/MATRIZ-CAPACIDADES-FLUTTER.md`) |
 | Visão e OCR | O Flutter agora envia uma imagem escolhida, com consentimento e sem rosto; **nenhuma imagem real passou por um modelo de visão** e câmera/galeria não foram exercitadas |
-| Ponte CADeSIMU | Consistência interna provada; **o programa CADeSIMU nunca foi aberto** e o `.cad` nativo não é gerado nem lido |
+| Ponte CADeSIMU | Consistência interna provada; **o programa CADeSIMU nunca foi aberto** e o app não lê nem gera `.cad`. O estudo 058 leu e reescreveu três amostras públicas byte a byte, mas isso ainda não virou importador |
 | Ponte Electron (Windows) | Código existe e compila no CI; nunca rodou em Windows |
 | SAF do Android | Mesma situação: existe, nunca exercitado |
 | Criptografia das fichas | Usa `FlutterSecureStorage`; o plugin nunca rodou neste ambiente |
@@ -67,8 +67,9 @@ Três níveis, sem meio-termo:
 - **Sem Android SDK nem Windows neste ambiente**: nada de aparelho pode ser verificado aqui.
 - **Sem credenciais reais de provedor**: conversa nunca foi exercitada ponta a ponta com chave do
   usuário.
-- **CADeSIMU é proprietário**: sem arquivo de amostra, qualquer exportador que prometesse
-  compatibilidade seria mentira.
+- **CADeSIMU é proprietário**: o estudo 058 mostrou que o `.cad` é texto e pode ser lido sem
+  perdas, mas o app ainda não tem importador/exportador e o programa não foi aberto; qualquer
+  promessa de compatibilidade continua sem prova.
 - Picovoice segue proibido; ESP32 e Home Assistant seguem fora de escopo.
 
 ## 5. Como atualizar este documento

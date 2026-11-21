@@ -28,6 +28,22 @@ ARQUIVOS = (
 )
 ARQUIVOS_RUNTIME = tuple(x for x in ARQUIVOS if x != "bpe.model")
 
+# O modelo é treinado em inglês e a pronúncia brasileira de "Jarvis" varia muito.
+# Cada alias é uma palavra-chave BPE independente; o detector aceita qualquer uma.
+PALAVRAS = (
+    "JARVIS",
+    "JAVIS",
+    "JARVE",
+    "JARVI",
+    "JARVIZ",
+    "JARVES",
+    "JAVI",
+    "JAVALI",
+    "CHARLES",
+    "CHALES",
+    "CHALE",
+)
+
 
 def baixar(destino: Path) -> None:
     pedido = urllib.request.Request(URL, headers={"User-Agent": "JARVIS-Nova-KWS/1.46.0"})
@@ -60,7 +76,7 @@ def gerar_keywords(pasta: Path) -> None:
     if not cli:
         raise SystemExit("sherpa-onnx-cli não encontrado. Instale sherpa-onnx==1.13.8 no Python do build.")
     raw = pasta / "keywords_raw.txt"
-    raw.write_text("JARVIS\nJAVIS\n", encoding="utf-8")
+    raw.write_text("\n".join(PALAVRAS) + "\n", encoding="utf-8")
     subprocess.run([
         cli, "text2token",
         "--tokens", str(pasta / "tokens.txt"),

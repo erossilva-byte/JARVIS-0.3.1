@@ -10,6 +10,7 @@ PACKAGE_DIR = APP / "src/main/kotlin/com/jarvis/nova"
 JAVA_DIR = APP / "src/main/java/com/jarvis/nova"
 MANIFEST = APP / "src/main/AndroidManifest.xml"
 GRADLE = APP / "build.gradle.kts"
+PROGUARD = APP / "proguard-rules.pro"
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
     if new in text:
@@ -26,6 +27,8 @@ JAVA_DIR.mkdir(parents=True, exist_ok=True)
 shutil.copy2(ROOT / "JarvisKwsEngine.java", JAVA_DIR / "JarvisKwsEngine.java")
 shutil.copy2(ROOT / "flutter_app/android/KwsForegroundService.kt", PACKAGE_DIR / "KwsForegroundService.kt")
 shutil.copy2(ROOT / "flutter_app/android/MainActivity.kt", PACKAGE_DIR / "MainActivity.kt")
+for extra in ("JarvisFundo.kt", "JarvisFundoCanal.kt", "JarvisEscutaFundo.kt"):
+    shutil.copy2(ROOT / "flutter_app/android" / extra, PACKAGE_DIR / extra)
 
 gradle = GRADLE.read_text(encoding="utf-8")
 # O template do Flutter pode gerar o build.gradle.kts sem bloco dependencies.
@@ -42,6 +45,17 @@ if faltantes:
         gradle = gradle[:abertura] + "\n" + "\n".join(faltantes) + gradle[abertura:]
     else:
         gradle = gradle.rstrip() + "\n\ndependencies {\n" + "\n".join(dependencias) + "\n}\n"
+# O plugin Gradle do Flutter liga R8/minify no release. O AAR do sherpa-onnx
+# tem proguard.txt vazio, então sem estas regras o R8 renomeia campos como
+# maxActivePaths e o JNI falha com "Failed to get field ID for maxActivePaths".
+# O Flutter adiciona automaticamente android/app/proguard-rules.pro ao release.
+PROGUARD.write_text(
+    "-keep class com.k2fsa.sherpa.onnx.** { *; }\n"
+    "-keepclassmembers class com.k2fsa.sherpa.onnx.** { *; }\n"
+    "-keepclasseswithmembernames class com.k2fsa.sherpa.onnx.** { native <methods>; }\n",
+    encoding="utf-8",
+)
+
 if "minSdk = 26" not in gradle:
     if "minSdk = flutter.minSdkVersion" in gradle:
         gradle = gradle.replace("minSdk = flutter.minSdkVersion", "minSdk = 26", 1)

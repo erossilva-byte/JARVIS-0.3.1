@@ -7,7 +7,8 @@ import 'memoria_store.dart';
 abstract interface class CofreRemoto {
   Future<ResultadoSaf<LeituraSaf>> listarNotas();
 
-  Future<ResultadoSaf<bool>> escreverNota({required String caminho, required String conteudo});
+  Future<ResultadoSaf<bool>> escreverNota(
+      {required String caminho, required String conteudo});
 }
 
 class CofreSafGateway implements CofreRemoto {
@@ -17,7 +18,8 @@ class CofreSafGateway implements CofreRemoto {
   Future<ResultadoSaf<LeituraSaf>> listarNotas() => CofreSaf.listarNotas();
 
   @override
-  Future<ResultadoSaf<bool>> escreverNota({required String caminho, required String conteudo}) =>
+  Future<ResultadoSaf<bool>> escreverNota(
+          {required String caminho, required String conteudo}) =>
       CofreSaf.escreverNota(caminho: caminho, conteudo: conteudo);
 }
 
@@ -40,9 +42,12 @@ class ResultadoSincronizacao {
       '${enviadas.length} enviada(s)',
       '${recebidas.length} recebida(s)',
       '${plano.iguais} já igual(is)',
-      if (plano.conflitos.isNotEmpty) '${plano.conflitos.length} conflito(s) preservado(s)',
-      if (plano.ausentesNaPasta.isNotEmpty) '${plano.ausentesNaPasta.length} nota(s) só neste aparelho',
-      if (plano.caminhosDuplicados.isNotEmpty) '${plano.caminhosDuplicados.length} arquivo(s) repetido(s) na pasta',
+      if (plano.conflitos.isNotEmpty)
+        '${plano.conflitos.length} conflito(s) preservado(s)',
+      if (plano.ausentesNaPasta.isNotEmpty)
+        '${plano.ausentesNaPasta.length} nota(s) só neste aparelho',
+      if (plano.caminhosDuplicados.isNotEmpty)
+        '${plano.caminhosDuplicados.length} arquivo(s) repetido(s) na pasta',
       if (falhas.isNotEmpty) '${falhas.length} falha(s)',
     ];
     return partes.join(', ');
@@ -54,7 +59,9 @@ class ResultadoSincronizacao {
 /// Quem decide é `planejarSincronizacao`, que nunca apaga: quando não dá para saber quem mudou,
 /// a nota fica em conflito e os dois lados permanecem como estão.
 class Sincronizador {
-  Sincronizador({required this.store, required this.cofre, DateTime Function()? agora}) : _agora = agora ?? DateTime.now;
+  Sincronizador(
+      {required this.store, required this.cofre, DateTime Function()? agora})
+      : _agora = agora ?? DateTime.now;
 
   final MemoriaStore store;
   final CofreRemoto cofre;
@@ -64,13 +71,16 @@ class Sincronizador {
     final leitura = await cofre.listarNotas();
     if (!leitura.ok) return ResultadoSincronizacao(erroGeral: leitura.erro);
     final arquivos = [
-      for (final nota in leitura.valor!.notas) ArquivoRemoto(caminho: nota.caminho, conteudo: nota.conteudo),
+      for (final nota in leitura.valor!.notas)
+        ArquivoRemoto(caminho: nota.caminho, conteudo: nota.conteudo),
     ];
-    final plano = planejarSincronizacao(store.listar(), arquivos, agora: _agora());
+    final plano =
+        planejarSincronizacao(store.listar(), arquivos, agora: _agora());
     final resultado = ResultadoSincronizacao(plano: plano);
 
     for (final envio in plano.envios) {
-      final escrita = await cofre.escreverNota(caminho: envio.caminho, conteudo: envio.conteudo);
+      final escrita = await cofre.escreverNota(
+          caminho: envio.caminho, conteudo: envio.conteudo);
       if (!escrita.ok) {
         resultado.falhas.add('${envio.caminho}: ${escrita.erro}');
         continue;
@@ -89,7 +99,8 @@ class Sincronizador {
 
     for (final nota in plano.marcar) {
       final caminho = nota.caminho ?? caminhoParaTitulo(nota.titulo);
-      await store.salvar(nota.copiarCom(caminho: caminho, hashSincronizado: hashConteudo(nota.texto.trim())));
+      await store.salvar(nota.copiarCom(
+          caminho: caminho, hashSincronizado: hashConteudo(nota.texto.trim())));
       resultado.marcadas.add(caminho);
     }
 

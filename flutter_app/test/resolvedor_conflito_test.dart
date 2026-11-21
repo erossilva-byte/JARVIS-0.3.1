@@ -15,10 +15,12 @@ class CofreFalso implements CofreRemoto {
   bool falharEscrita = false;
 
   @override
-  Future<ResultadoSaf<LeituraSaf>> listarNotas() async => ResultadoSaf.ok(LeituraSaf(notas: const []));
+  Future<ResultadoSaf<LeituraSaf>> listarNotas() async =>
+      ResultadoSaf.ok(LeituraSaf(notas: const []));
 
   @override
-  Future<ResultadoSaf<bool>> escreverNota({required String caminho, required String conteudo}) async {
+  Future<ResultadoSaf<bool>> escreverNota(
+      {required String caminho, required String conteudo}) async {
     if (falharEscrita) return const ResultadoSaf.falha('sem espaço');
     arquivos[caminho] = conteudo;
     return const ResultadoSaf.ok(true);
@@ -47,7 +49,9 @@ void main() {
 
   ConflitoSync conflito() => ConflitoSync(
         local: store.listar().single,
-        remoto: ArquivoRemoto(caminho: 'Oficina/Motor.md', conteudo: '---\ntitulo: Motor\n---\ntexto da pasta'),
+        remoto: ArquivoRemoto(
+            caminho: 'Oficina/Motor.md',
+            conteudo: '---\ntitulo: Motor\n---\ntexto da pasta'),
         motivo: 'as duas cópias mudaram',
       );
 
@@ -56,7 +60,8 @@ void main() {
 
   test('manter a do aparelho grava na pasta e preserva a da pasta', () async {
     final cofre = CofreFalso();
-    final resultado = await resolvedor(cofre).resolver(conflito(), DecisaoConflito.aparelho);
+    final resultado =
+        await resolvedor(cofre).resolver(conflito(), DecisaoConflito.aparelho);
 
     expect(resultado.ok, isTrue);
     expect(resultado.enviado, isTrue);
@@ -74,7 +79,8 @@ void main() {
 
   test('manter a da pasta adota o texto remoto e preserva o local', () async {
     final cofre = CofreFalso();
-    final resultado = await resolvedor(cofre).resolver(conflito(), DecisaoConflito.pasta);
+    final resultado =
+        await resolvedor(cofre).resolver(conflito(), DecisaoConflito.pasta);
 
     expect(resultado.ok, isTrue);
     expect(resultado.enviado, isFalse);
@@ -89,7 +95,8 @@ void main() {
 
   test('falha ao gravar na pasta não mexe em nada e avisa', () async {
     final cofre = CofreFalso()..falharEscrita = true;
-    final resultado = await resolvedor(cofre).resolver(conflito(), DecisaoConflito.aparelho);
+    final resultado =
+        await resolvedor(cofre).resolver(conflito(), DecisaoConflito.aparelho);
 
     expect(resultado.ok, isFalse);
     expect(resultado.erro, contains('continuam como estavam'));

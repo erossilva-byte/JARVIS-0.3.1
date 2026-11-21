@@ -45,6 +45,20 @@ CASOS = (
     ("tool/personalidade_test.dart", "personalidade: níveis, tom sensível, pressa e prompt"),
     ("tool/visao_test.dart", "visão: limite, prompt sem rosto, pedido multimodal e resposta"),
     ("tool/arquivos_test.dart", "arquivos: nome seguro, caminho confinado e operações reais"),
+    ("tool/comandos_android_test.dart", "comandos Android: registro, interpretação e perguntas preservadas"),
+    ("tool/circuito_test.dart", "simulador de circuitos: MNA, proteção e avisos elétricos"),
+    ("tool/fundo_test.dart", "segundo plano: pronto, pendências, resumo e limites"),
+    ("tool/seguranca_test.dart", "segurança: PIN, derivação, tentativas e biometria"),
+    ("tool/localizacao_test.dart", "localização: estado, leitura, honestidade e comando"),
+    ("tool/historico_voz_test.dart", "histórico de execuções: horário, origem, resultado e limites"),
+    ("tool/ativacao_sensibilidade_test.dart", "sensibilidade da ativação: faixa, passo, limiar e rótulos"),
+    ("tool/aparelho_resposta_test.dart", "sentinela de mensagens: chave, resposta direta e leitura"),
+    ("tool/pergunta_livre_test.dart", "pergunta livre: pedido, personalidade, limpeza e corte"),
+    ("tool/resumo_tatico_test.dart", "resumo tático: urgência, ruído, pedido, leitura e fala"),
+    ("tool/habilidades_test.dart", "habilidades: caminho, frontmatter, casamento, bloco e registro"),
+    ("tool/gestos_test.dart", "gestos: eixos, histerese, brilho, estado, resumo e limites"),
+    ("tool/timbre_voz_test.dart", "timbre: perfis, paridade do grave, faixas e limites"),
+    ("tool/modo_visita_test.dart", "modo de visita: prompt, respostas locais, ajustes vazios e limites"),
 )
 
 

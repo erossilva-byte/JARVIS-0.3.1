@@ -34,19 +34,24 @@ NomeArquivo validarNomeArquivo(String bruto) {
     return const NomeArquivo.recusado('Esse nome não é permitido.');
   }
   if (limpo.length > 64) {
-    return const NomeArquivo.recusado('O nome deve ter no máximo 64 caracteres.');
+    return const NomeArquivo.recusado(
+        'O nome deve ter no máximo 64 caracteres.');
   }
   if (RegExp(r'[\\/:*?"<>|\x00-\x1F]').hasMatch(limpo)) {
-    return const NomeArquivo.recusado('O nome não pode conter barras nem os caracteres \\ / : * ? " < > |.');
+    return const NomeArquivo.recusado(
+        'O nome não pode conter barras nem os caracteres \\ / : * ? " < > |.');
   }
   final minusculo = limpo.toLowerCase();
   final reservados = RegExp(r'^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)');
   if (reservados.hasMatch(minusculo)) {
-    return const NomeArquivo.recusado('Esse nome é reservado pelo sistema. Escolha outro.');
+    return const NomeArquivo.recusado(
+        'Esse nome é reservado pelo sistema. Escolha outro.');
   }
-  final nome = minusculo.endsWith(extensaoArquivo) ? limpo : '$limpo$extensaoArquivo';
+  final nome =
+      minusculo.endsWith(extensaoArquivo) ? limpo : '$limpo$extensaoArquivo';
   if (nome.length > 68) {
-    return const NomeArquivo.recusado('O nome com a extensão passou de 68 caracteres.');
+    return const NomeArquivo.recusado(
+        'O nome com a extensão passou de 68 caracteres.');
   }
   return NomeArquivo.ok(nome);
 }
@@ -69,7 +74,8 @@ String? caminhoSeguroNaPasta(String raiz, String nome) {
 }
 
 class ArquivoResumo {
-  const ArquivoResumo({required this.nome, required this.bytes, this.modificadoEm});
+  const ArquivoResumo(
+      {required this.nome, required this.bytes, this.modificadoEm});
 
   final String nome;
   final int bytes;

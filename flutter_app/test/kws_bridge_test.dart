@@ -10,7 +10,7 @@ void main() {
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(methods, null);
+        .setMockMethodCallHandler(methods, null);
   });
 
   test('não declara KWS ativo quando o plugin nativo não existe', () async {
@@ -23,15 +23,15 @@ void main() {
 
   test('interpreta o estado real retornado pelo plugin', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(methods, (call) async {
-        expect(call.method, 'status');
-        return {
-          'available': true,
-          'listening': true,
-          'engine': 'sherpa-onnx-kws',
-          'detail': 'AudioRecord ativo',
-        };
-      });
+        .setMockMethodCallHandler(methods, (call) async {
+      expect(call.method, 'status');
+      return {
+        'available': true,
+        'listening': true,
+        'engine': 'sherpa-onnx-kws',
+        'detail': 'AudioRecord ativo',
+      };
+    });
     final bridge = JarvisKwsBridge(methods: methods, events: events);
     final status = await bridge.status();
     expect(status.available, isTrue);
@@ -39,17 +39,36 @@ void main() {
     expect(status.engine, 'sherpa-onnx-kws');
   });
 
+  test('propaga erro explícito do plugin em vez de escondê-lo', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(methods, (call) async {
+      return {
+        'available': true,
+        'listening': false,
+        'engine': 'sherpa-onnx-kws',
+        'ok': false,
+        'error': 'Failed to get field ID for maxActivePaths',
+        'detail': 'Falha no KWS local',
+      };
+    });
+    final bridge = JarvisKwsBridge(methods: methods, events: events);
+    final status = await bridge.status();
+    expect(status.available, isTrue);
+    expect(status.ok, isFalse);
+    expect(status.error, contains('maxActivePaths'));
+  });
+
   test('limita janela do teste KWS entre 10 e 60 segundos', () async {
     int? receivedSeconds;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(methods, (call) async {
-        receivedSeconds = (call.arguments as Map)['seconds'] as int;
-        return {
-          'available': true,
-          'listening': true,
-          'engine': 'sherpa-onnx-kws',
-        };
-      });
+        .setMockMethodCallHandler(methods, (call) async {
+      receivedSeconds = (call.arguments as Map)['seconds'] as int;
+      return {
+        'available': true,
+        'listening': true,
+        'engine': 'sherpa-onnx-kws',
+      };
+    });
     final bridge = JarvisKwsBridge(methods: methods, events: events);
     await bridge.startTest(seconds: 120);
     expect(receivedSeconds, 60);

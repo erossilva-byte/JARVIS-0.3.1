@@ -1,0 +1,110 @@
+name: APK de release assinado (Flutter)
+
+# Esteira manual do APK que se distribui. Compila o Flutter em release para
+# arm64 e assina com a chave do projeto, guardada nos secrets do repositório —
+# nunca no código e nunca a chave de debug.
+#
+# Sem os quatro secrets o job para antes de compilar, em vez de publicar um APK
+# que o Android recusa atualizar por cima. A publicação de release do app
+# Capacitor antigo continua em release-apk.yml; esta esteira publica o artefato
+# (APK + SHA-256) na própria execução, com o commit já versionado.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jarvis-flutter-release
+  cancel-in-progress: false
+
+jobs:
+  apk-assinado:
+    name: Compilar e conferir o APK assinado
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Instalar tokenizer oficial do sherpa-onnx
+        run: python3 -m pip install --disable-pip-version-check sherpa-onnx==1.13.8 sentencepiece pypinyin
+
+      - name: Gerar o runner Android
+        run: flutter create --project-name jarvis_nova --platforms=android .
+
+      - name: Set the production Android application identity
+        run: python3 tool/prepare_android_identidade.py android/app
+
+      - run: flutter pub get
+
+      - name: Baixar o runtime de voz neural e preparar o KWS
+        run: |
+          python3 ../baixar_sherpa.py android/app
+          python3 ../preparar_kws.py android/app
+
+      - name: Registrar plugin KWS, atalhos, widget e compartilhamento
+        run: |
+          python3 tool/prepare_android_kws.py android/app
+          python3 tool/prepare_android_sistema.py android/app
+
+      - name: Preparar a chave de release a partir dos secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.JARVIS_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.JARVIS_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.JARVIS_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.JARVIS_KEY_PASSWORD }}
+        run: |
+          # A chave fica em $RUNNER_TEMP: fora do repositório e descartada no fim do job.
+          test -n "$KEYSTORE_B64" || { echo 'Secret JARVIS_KEYSTORE_B64 ausente (keystore de release em base64).'; exit 1; }
+          test -n "$KEYSTORE_PASSWORD" || { echo 'Secret JARVIS_KEYSTORE_PASSWORD ausente.'; exit 1; }
+          test -n "$KEY_ALIAS" || { echo 'Secret JARVIS_KEY_ALIAS ausente.'; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo 'Secret JARVIS_KEY_PASSWORD ausente.'; exit 1; }
+
+          KS="$RUNNER_TEMP/jarvis-release.jks"
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$KS"
+          test -s "$KS" || { echo 'Keystore de release vazio após decodificar o secret.'; exit 1; }
+          keytool -list -keystore "$KS" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null || {
+            echo 'Keystore de release inválido ou alias/senha não conferem.'; exit 1; }
+
+          # O build lê este arquivo por JARVIS_KEY_PROPERTIES; o storeFile é absoluto.
+          PROP="$RUNNER_TEMP/key.properties"
+          {
+            echo "storeFile=$KS"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > "$PROP"
+          chmod 600 "$PROP"
+          echo "JARVIS_KEY_PROPERTIES=$PROP" >> "$GITHUB_ENV"
+          echo "Keystore de release conferido: alias $KEY_ALIAS presente."
+
+      - name: Compilar o APK de release (arm64)
+        run: flutter build apk --release --target-platform android-arm64
+
+      - name: Conferir a assinatura e o SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK" || { echo 'APK de release não foi gerado.'; exit 1; }
+          python3 tool/verificar_assinatura.py "$APK" --exigir-release
+          sha256sum "$APK" | tee "$APK.sha256"
+
+      - name: Publicar o APK assinado e o SHA-256
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-flutter-android-release
+          path: |
+            flutter_app/build/app/outputs/flutter-apk/app-release.apk
+            flutter_app/build/app/outputs/flutter-apk/app-release.apk.sha256
+          if-no-files-found: error
+          retention-days: 14

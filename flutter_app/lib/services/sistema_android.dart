@@ -13,7 +13,11 @@ class IntencaoSistema {
   bool get abrirVoz => acao == 'voz';
   bool get abrirConversa => acao == 'conversa';
   bool get abrirHistorico => acao == 'historico';
-  bool get textoCompartilhado => acao == 'compartilhar' && texto.trim().isNotEmpty;
+
+  /// Palavra de ativação detectada com o app em segundo plano.
+  bool get abrirAtivo => acao == 'ativo';
+  bool get textoCompartilhado =>
+      acao == 'compartilhar' && texto.trim().isNotEmpty;
 
   static IntencaoSistema? deMapa(Object? dados) {
     if (dados is! Map) return null;
@@ -51,7 +55,8 @@ class SistemaAndroid {
       return null;
     });
     try {
-      final pendente = IntencaoSistema.deMapa(await canal.invokeMethod<Object?>('intencaoPendente'));
+      final pendente = IntencaoSistema.deMapa(
+          await canal.invokeMethod<Object?>('intencaoPendente'));
       if (pendente != null) _intencoes.add(pendente);
     } on MissingPluginException {
       // Plataforma sem integração (Windows/teste): segue sem intenção.
@@ -65,7 +70,8 @@ class SistemaAndroid {
   static Future<bool> compartilhar(String texto) async {
     if (texto.trim().isEmpty) return false;
     try {
-      final enviado = await canal.invokeMethod<bool>('compartilhar', {'texto': texto});
+      final enviado =
+          await canal.invokeMethod<bool>('compartilhar', {'texto': texto});
       return enviado ?? false;
     } on MissingPluginException {
       return false;

@@ -34,7 +34,8 @@ class _ConflitosPageState extends State<ConflitosPage> {
 
   Future<void> _escolher(ConflitoSync conflito, DecisaoConflito decisao) async {
     if (resolvendo != null) return;
-    final lado = decisao == DecisaoConflito.aparelho ? 'deste aparelho' : 'da pasta';
+    final lado =
+        decisao == DecisaoConflito.aparelho ? 'deste aparelho' : 'da pasta';
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogo) => AlertDialog(
@@ -44,22 +45,32 @@ class _ConflitosPageState extends State<ConflitosPage> {
           'backup no cofre e não é apagada; a próxima sincronização a envia como arquivo novo.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogo, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(dialogo, true), child: const Text('Manter')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogo, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogo, true),
+              child: const Text('Manter')),
         ],
       ),
     );
     if (confirmar != true || !mounted) return;
 
     setState(() => resolvendo = conflito.titulo);
-    final resultado = await ResolvedorConflito(store: widget.store, cofre: widget.cofre).resolver(conflito, decisao);
+    final resultado =
+        await ResolvedorConflito(store: widget.store, cofre: widget.cofre)
+            .resolver(conflito, decisao);
     if (!mounted) return;
     setState(() {
       resolvendo = null;
-      if (resultado.ok) pendentes = pendentes.where((c) => c.titulo != conflito.titulo).toList();
+      if (resultado.ok) {
+        pendentes =
+            pendentes.where((c) => c.titulo != conflito.titulo).toList();
+      }
     });
     if (!resultado.ok) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(resultado.erro!)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(resultado.erro!)));
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -81,9 +92,12 @@ class _ConflitosPageState extends State<ConflitosPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Nenhum conflito pendente.', textAlign: TextAlign.center),
+                    const Text('Nenhum conflito pendente.',
+                        textAlign: TextAlign.center),
                     const SizedBox(height: 12),
-                    FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Voltar ao cofre')),
+                    FilledButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Voltar ao cofre')),
                   ],
                 ),
               ),
@@ -106,7 +120,9 @@ class _ConflitosPageState extends State<ConflitosPage> {
   }
 
   Widget _cartao(ConflitoSync conflito, ColorScheme colors) {
-    final remotoTitulo = lerMarkdown(conflito.remoto.conteudo, tituloReserva: nomeSemExtensao(conflito.remoto.caminho)).titulo;
+    final remotoTitulo = lerMarkdown(conflito.remoto.conteudo,
+            tituloReserva: nomeSemExtensao(conflito.remoto.caminho))
+        .titulo;
     final ocupado = resolvendo == conflito.titulo;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -115,7 +131,9 @@ class _ConflitosPageState extends State<ConflitosPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(conflito.titulo, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            Text(conflito.titulo,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             const SizedBox(height: 2),
             Text(conflito.motivo, style: TextStyle(fontSize: 11, color: muted)),
             const SizedBox(height: 10),
@@ -135,7 +153,8 @@ class _ConflitosPageState extends State<ConflitosPage> {
                   cor: colors.secondary,
                 );
                 if (!ladoALado) {
-                  return Column(children: [aparelho, const SizedBox(height: 8), pasta]);
+                  return Column(
+                      children: [aparelho, const SizedBox(height: 8), pasta]);
                 }
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,25 +172,37 @@ class _ConflitosPageState extends State<ConflitosPage> {
               runSpacing: 6,
               children: [
                 OutlinedButton.icon(
-                  onPressed: ocupado ? null : () => _escolher(conflito, DecisaoConflito.aparelho),
+                  onPressed: ocupado
+                      ? null
+                      : () => _escolher(conflito, DecisaoConflito.aparelho),
                   icon: const Icon(Icons.phone_android_rounded, size: 18),
                   label: const Text('Manter a do aparelho'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: ocupado ? null : () => _escolher(conflito, DecisaoConflito.pasta),
+                  onPressed: ocupado
+                      ? null
+                      : () => _escolher(conflito, DecisaoConflito.pasta),
                   icon: const Icon(Icons.folder_outlined, size: 18),
                   label: const Text('Manter a da pasta'),
                 ),
               ],
             ),
-            if (ocupado) const Padding(padding: EdgeInsets.only(top: 6), child: LinearProgressIndicator(minHeight: 2)),
+            if (ocupado)
+              const Padding(
+                  padding: EdgeInsets.only(top: 6),
+                  child: LinearProgressIndicator(minHeight: 2)),
           ],
         ),
       ),
     );
   }
 
-  Widget _versao({required String titulo, required String rotulo, required String texto, required Color cor}) => Container(
+  Widget _versao(
+          {required String titulo,
+          required String rotulo,
+          required String texto,
+          required Color cor}) =>
+      Container(
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
         decoration: BoxDecoration(
@@ -182,9 +213,15 @@ class _ConflitosPageState extends State<ConflitosPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(rotulo, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: cor)),
+            Text(rotulo,
+                style: TextStyle(
+                    fontSize: 10, fontWeight: FontWeight.w700, color: cor)),
             const SizedBox(height: 2),
-            Text(titulo, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(titulo,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 150),

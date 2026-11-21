@@ -593,3 +593,15 @@ Relatório: `docs/relatorios/2026-11-15_056-arquivos-de-texto.md`.
 - [ ] O sandbox de código continua fora do escopo, conforme a análise registrada.
 
 Relatório: `docs/relatorios/2026-11-15_057-sem-promessa-de-sandbox.md`.
+
+### Ajuste 058 — estudo do formato CADeSIMU (2026-11-15)
+
+- [x] Formato identificado como texto ISO-8859-1, não binário opaco.
+- [x] Três amostras públicas lidas e reescritas byte a byte idênticas.
+- [x] Sonda e teste registrados; nenhuma promessa de importação/exportação no app.
+- [x] Decisão: importação somente leitura é viável; exportação exige tabela de pinos e abertura no
+  CADeSIMU oficial.
+- [ ] Importador `.cad` no app (Fase 10A).
+- [ ] Exportador de subconjunto validado no programa (Fase 10B).
+
+Relatório: `docs/relatorios/2026-11-15_058-cadesimu-formato.md`.

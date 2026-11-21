@@ -14,7 +14,8 @@ class MemoriaStore {
 
   final SharedPreferences _prefs;
 
-  static Future<MemoriaStore> abrir() async => MemoriaStore(await SharedPreferences.getInstance());
+  static Future<MemoriaStore> abrir() async =>
+      MemoriaStore(await SharedPreferences.getInstance());
 
   List<NotaMemoria> listar() {
     final notas = notasDeJson(_prefs.getString(chave));
@@ -34,7 +35,8 @@ class MemoriaStore {
   }
 
   Future<void> apagar(String id) async {
-    final notas = notasDeJson(_prefs.getString(chave))..removeWhere((n) => n.id == id);
+    final notas = notasDeJson(_prefs.getString(chave))
+      ..removeWhere((n) => n.id == id);
     await _gravar(notas);
   }
 
@@ -45,12 +47,14 @@ class MemoriaStore {
     if (alvo.isEmpty) return;
     final notas = notasDeJson(_prefs.getString(chave));
     final atualizadas = notas
-        .map((nota) => alvo.contains(nota.id) ? nota.copiarCom(usos: nota.usos + 1) : nota)
+        .map((nota) =>
+            alvo.contains(nota.id) ? nota.copiarCom(usos: nota.usos + 1) : nota)
         .toList();
     await _gravar(atualizadas);
   }
 
-  Future<ImportacaoMemoria> importar(List<({String nome, String conteudo})> arquivos) async {
+  Future<ImportacaoMemoria> importar(
+      List<({String nome, String conteudo})> arquivos) async {
     final notas = notasDeJson(_prefs.getString(chave));
     final resultado = importarMarkdowns(arquivos, notas);
     if (resultado.adicionadas.isNotEmpty) {
@@ -65,5 +69,6 @@ class MemoriaStore {
   ContextoMemoria contexto(String consulta, {int orcamento = 1800}) =>
       contextoRelevante(listar(), consulta, orcamento: orcamento);
 
-  Future<void> _gravar(List<NotaMemoria> notas) => _prefs.setString(chave, jsonDeNotas(notas));
+  Future<void> _gravar(List<NotaMemoria> notas) =>
+      _prefs.setString(chave, jsonDeNotas(notas));
 }

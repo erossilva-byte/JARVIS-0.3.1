@@ -4,7 +4,8 @@ import 'package:jarvis_nova/services/voice_conversation_page.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const _bloco = 'FICHA DE PESSOA — dados fornecidos pelo próprio usuário; use apenas o que está aqui.\n'
+const _bloco =
+    'FICHA DE PESSOA — dados fornecidos pelo próprio usuário; use apenas o que está aqui.\n'
     '- Nome: Ana\n'
     '- Relação: irmã\n'
     '\n'
@@ -32,9 +33,12 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('a resposta mostra a ficha usada e o bloco exato enviado', (tester) async {
+  testWidgets('a resposta mostra a ficha usada e o bloco exato enviado',
+      (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: VoiceConversationPage(initialCommand: '', conversa: _conversa(fichas: ['Ana'], bloco: _bloco)),
+      home: VoiceConversationPage(
+          initialCommand: '',
+          conversa: _conversa(fichas: ['Ana'], bloco: _bloco)),
     ));
     await tester.pumpAndSettle();
 
@@ -48,11 +52,15 @@ void main() {
     expect(find.textContaining('- Nome: Ana'), findsOneWidget);
   });
 
-  testWidgets('sem correspondência a bolha diz isso, sem inventar nome', (tester) async {
+  testWidgets('sem correspondência a bolha diz isso, sem inventar nome',
+      (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: VoiceConversationPage(
         initialCommand: '',
-        conversa: _conversa(fichas: const [], bloco: 'FICHAS DE PESSOAS — nenhuma ficha corresponde ao nome perguntado.'),
+        conversa: _conversa(
+            fichas: const [],
+            bloco:
+                'FICHAS DE PESSOAS — nenhuma ficha corresponde ao nome perguntado.'),
       ),
     ));
     await tester.pumpAndSettle();
@@ -61,16 +69,20 @@ void main() {
     expect(find.textContaining('Ficha usada'), findsNothing);
   });
 
-  testWidgets('resposta sem ficha não ganha o bloco de transparência', (tester) async {
+  testWidgets('resposta sem ficha não ganha o bloco de transparência',
+      (tester) async {
     final conversa = Conversa(
       id: 'c2',
       titulo: 'Sem ficha',
       criadaEm: DateTime(2026, 11, 15, 10),
       atualizadaEm: DateTime(2026, 11, 15, 10),
     );
-    conversa.adicionar(MensagemConversa(autor: 'user', texto: 'qual a capital da França?'));
-    conversa.adicionar(const MensagemConversa(autor: 'assistant', texto: 'Paris.'));
-    await tester.pumpWidget(MaterialApp(home: VoiceConversationPage(initialCommand: '', conversa: conversa)));
+    conversa.adicionar(
+        MensagemConversa(autor: 'user', texto: 'qual a capital da França?'));
+    conversa
+        .adicionar(const MensagemConversa(autor: 'assistant', texto: 'Paris.'));
+    await tester.pumpWidget(MaterialApp(
+        home: VoiceConversationPage(initialCommand: '', conversa: conversa)));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Ficha usada'), findsNothing);

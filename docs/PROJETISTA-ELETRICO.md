@@ -140,10 +140,12 @@ Cada pino aponta para o **nome da rede**; dois pinos com o mesmo nome estão no 
 
 ## Limitações — sem rodeios
 
-- **CADeSIMU**: o `.cad` nativo do CADe SIMU é proprietário e não tem especificação pública. Este
-  módulo **não** gera esse arquivo, **não** abre esse arquivo e **não** foi testado no CADe SIMU.
-  O que existe é o formato documentado acima, mais a netlist do painel "Montar circuito" para
-  simuladores de PC.
+- **CADeSIMU**: o `.cad` nativo do CADe SIMU é proprietário e não tem especificação **oficial**.
+  Este módulo **não** gera esse arquivo, **não** abre esse arquivo e **não** foi testado no CADe
+  SIMU. O formato, porém, é texto e foi lido/reescrito sem perdas em amostras públicas; a
+  importação ainda não está implementada e a exportação depende de tabela de pinos e validação no
+  programa oficial. Ver [`FASE-10-ESTUDO.md`](FASE-10-ESTUDO.md). O que existe hoje é o formato
+  documentado acima, mais a netlist do painel "Montar circuito" para simuladores de PC.
 - **Sem simulação elétrica**: não há cálculo de tensão, corrente, queda, curto real ou transitório.
 - **Dimensionamento didático**: corrente estimada com fp 0,8 e rendimento 0,9; disjuntor/contator/
   térmico saem de uma série comercial. Projeto executivo exige cálculo normativo (NBR 5410) e

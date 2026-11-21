@@ -48,7 +48,8 @@ class _ArquivosPageState extends State<ArquivosPage> {
       if (!mounted) return;
       setState(() {
         carregando = false;
-        erroPasta = 'A pasta isolada de arquivos não está disponível neste aparelho.';
+        erroPasta =
+            'A pasta isolada de arquivos não está disponível neste aparelho.';
       });
     }
   }
@@ -65,7 +66,8 @@ class _ArquivosPageState extends State<ArquivosPage> {
   }
 
   bool get alterado =>
-      editando && (conteudo.text != original || (novo && nome.text.trim().isNotEmpty));
+      editando &&
+      (conteudo.text != original || (novo && nome.text.trim().isNotEmpty));
 
   Future<bool> _confirmarDescarte() async {
     if (!alterado) return true;
@@ -75,8 +77,12 @@ class _ArquivosPageState extends State<ArquivosPage> {
         title: const Text('Descartar alterações?'),
         content: const Text('O texto que não foi salvo será perdido.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(contexto, false), child: const Text('Continuar editando')),
-          FilledButton(onPressed: () => Navigator.pop(contexto, true), child: const Text('Descartar')),
+          TextButton(
+              onPressed: () => Navigator.pop(contexto, false),
+              child: const Text('Continuar editando')),
+          FilledButton(
+              onPressed: () => Navigator.pop(contexto, true),
+              child: const Text('Descartar')),
         ],
       ),
     );
@@ -123,7 +129,8 @@ class _ArquivosPageState extends State<ArquivosPage> {
   Future<void> _salvar() async {
     final atual = sandbox;
     if (atual == null || salvando) return;
-    final validado = novo ? validarNomeArquivo(nome.text) : NomeArquivo.ok(nomeAtual!);
+    final validado =
+        novo ? validarNomeArquivo(nome.text) : NomeArquivo.ok(nomeAtual!);
     if (!validado.valido) {
       setState(() => erro = validado.erro);
       return;
@@ -133,8 +140,11 @@ class _ArquivosPageState extends State<ArquivosPage> {
       setState(() => erro = erroTexto);
       return;
     }
-    if (novo && arquivos.any((a) => a.nome.toLowerCase() == validado.nome!.toLowerCase())) {
-      setState(() => erro = 'Já existe um arquivo com esse nome. Renomeie antes de salvar.');
+    if (novo &&
+        arquivos
+            .any((a) => a.nome.toLowerCase() == validado.nome!.toLowerCase())) {
+      setState(() => erro =
+          'Já existe um arquivo com esse nome. Renomeie antes de salvar.');
       return;
     }
     setState(() {
@@ -156,7 +166,8 @@ class _ArquivosPageState extends State<ArquivosPage> {
         original = conteudo.text;
       });
       nome.text = nomeAtual ?? '';
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Arquivo salvo na pasta isolada.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Arquivo salvo na pasta isolada.')));
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -191,7 +202,8 @@ class _ArquivosPageState extends State<ArquivosPage> {
       });
       await _recarregar();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Arquivo renomeado.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Arquivo renomeado.')));
       }
     } catch (e) {
       if (!mounted) return;
@@ -207,10 +219,15 @@ class _ArquivosPageState extends State<ArquivosPage> {
       context: context,
       builder: (contexto) => AlertDialog(
         title: const Text('Apagar este arquivo?'),
-        content: Text('“$alvo” será removido da pasta isolada. Não há lixeira.'),
+        content:
+            Text('“$alvo” será removido da pasta isolada. Não há lixeira.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(contexto, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(contexto, true), child: const Text('Apagar')),
+          TextButton(
+              onPressed: () => Navigator.pop(contexto, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(contexto, true),
+              child: const Text('Apagar')),
         ],
       ),
     );
@@ -228,7 +245,8 @@ class _ArquivosPageState extends State<ArquivosPage> {
       conteudo.clear();
       await _recarregar();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Arquivo apagado.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Arquivo apagado.')));
       }
     } catch (e) {
       if (!mounted) return;
@@ -262,7 +280,10 @@ class _ArquivosPageState extends State<ArquivosPage> {
                 tooltip: 'Salvar arquivo',
                 onPressed: salvando ? null : _salvar,
                 icon: salvando
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.check_rounded),
               ),
               if (!novo) ...[
@@ -294,7 +315,8 @@ class _ArquivosPageState extends State<ArquivosPage> {
     if (erroPasta != null) {
       return Padding(
         padding: const EdgeInsets.all(20),
-        child: Text(erroPasta!, style: TextStyle(color: colors.error, fontSize: 13, height: 1.45)),
+        child: Text(erroPasta!,
+            style: TextStyle(color: colors.error, fontSize: 13, height: 1.45)),
       );
     }
     if (editando) return _editor(colors);
@@ -304,7 +326,8 @@ class _ArquivosPageState extends State<ArquivosPage> {
   Widget _lista(ColorScheme colors) => ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('PASTA ISOLADA DO APP', style: TextStyle(color: cyan, fontSize: 10, letterSpacing: 2)),
+          const Text('PASTA ISOLADA DO APP',
+              style: TextStyle(color: cyan, fontSize: 10, letterSpacing: 2)),
           const SizedBox(height: 8),
           const Text(
             'Só arquivos de texto (.txt) criados aqui. Sem acesso a Downloads, à pasta do Obsidian '
@@ -328,9 +351,12 @@ class _ArquivosPageState extends State<ArquivosPage> {
               ),
               child: const Column(
                 children: [
-                  Icon(Icons.folder_open_rounded, color: Color(0xFF55DFFF), size: 28),
+                  Icon(Icons.folder_open_rounded,
+                      color: Color(0xFF55DFFF), size: 28),
                   SizedBox(height: 9),
-                  Text('Nenhum arquivo ainda.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  Text('Nenhum arquivo ainda.',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                   SizedBox(height: 5),
                   Text(
                     'Crie o primeiro texto. Ele fica neste aparelho, nesta pasta, e pode ser apagado a qualquer momento.',
@@ -347,13 +373,18 @@ class _ArquivosPageState extends State<ArquivosPage> {
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   key: ValueKey('arquivo-${arquivo.nome}'),
-                  leading: const Icon(Icons.description_outlined, color: Color(0xFF55DFFF)),
-                  title: Text(arquivo.nome, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+                  leading: const Icon(Icons.description_outlined,
+                      color: Color(0xFF55DFFF)),
+                  title: Text(arquivo.nome,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13)),
                   subtitle: Text(
                     '${arquivo.tamanhoLegivel}${arquivo.modificadoEm == null ? '' : ' · ${_data(arquivo.modificadoEm!)}'}',
                     style: const TextStyle(fontSize: 10.5, color: muted),
                   ),
-                  trailing: const Icon(Icons.chevron_right_rounded, size: 18, color: muted),
+                  trailing: const Icon(Icons.chevron_right_rounded,
+                      size: 18, color: muted),
                   onTap: () => _abrir(arquivo),
                 ),
               ),
@@ -382,7 +413,9 @@ class _ArquivosPageState extends State<ArquivosPage> {
               ),
             )
           else
-            Text(nomeAtual ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(nomeAtual ?? '',
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           TextField(
             key: const ValueKey('conteudo-arquivo'),
@@ -399,7 +432,9 @@ class _ArquivosPageState extends State<ArquivosPage> {
           ),
           if (erro != null) ...[
             const SizedBox(height: 10),
-            Text(erro!, style: TextStyle(color: colors.error, fontSize: 12, height: 1.4)),
+            Text(erro!,
+                style:
+                    TextStyle(color: colors.error, fontSize: 12, height: 1.4)),
           ],
           const SizedBox(height: 10),
           Row(
@@ -410,7 +445,8 @@ class _ArquivosPageState extends State<ArquivosPage> {
                 label: const Text('Voltar à lista'),
               ),
               const Spacer(),
-              const Text('Salva no aparelho', style: TextStyle(color: muted, fontSize: 10)),
+              const Text('Salva no aparelho',
+                  style: TextStyle(color: muted, fontSize: 10)),
             ],
           ),
         ],
@@ -425,7 +461,6 @@ class _ArquivosPageState extends State<ArquivosPage> {
   }
 }
 
-
 /// Diálogo com controlador próprio: descartá-lo fora do diálogo derrubava o foco durante a
 /// animação de saída.
 class _DialogoNome extends StatefulWidget {
@@ -438,7 +473,8 @@ class _DialogoNome extends StatefulWidget {
 }
 
 class _DialogoNomeState extends State<_DialogoNome> {
-  late final TextEditingController controlador = TextEditingController(text: widget.inicial);
+  late final TextEditingController controlador =
+      TextEditingController(text: widget.inicial);
 
   @override
   void dispose() {
@@ -455,8 +491,12 @@ class _DialogoNomeState extends State<_DialogoNome> {
           decoration: const InputDecoration(labelText: 'Novo nome'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(context, controlador.text), child: const Text('Renomear')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, controlador.text),
+              child: const Text('Renomear')),
         ],
       );
 }

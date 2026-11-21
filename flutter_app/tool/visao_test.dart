@@ -87,5 +87,32 @@ void main() {
     assert(!provedor.modelo.contains('gpt-oss'), 'modelo textual gpt-oss na visão');
   }
 
-  stdout.writeln('OK: visão — validação, prompt sem reconhecimento facial, pedido multimodal e leitura');
+  // 6. Modelo aposentado (HTTP 404) tem plano B: outros nomes e outro provedor.
+  final gemini = provedoresVisao.firstWhere((p) => p.id == 'gemini');
+  assert(gemini.modelo == 'gemini-2.5-flash', 'modelo principal do Gemini mudou sem prova');
+  assert(gemini.modelos.length >= 3, 'Gemini sem modelos alternativos para o 404');
+  assert(gemini.modelos.first == gemini.modelo, 'principal não é o primeiro tentado');
+  assert(gemini.modelos.toSet().length == gemini.modelos.length, 'modelo repetido na lista');
+  assert(gemini.modelos.contains('gemini-flash-latest'), 'sem alias estável do Google');
+  for (final provedor in provedoresVisao) {
+    assert(provedor.modelos.isNotEmpty, '${provedor.nome} sem nenhum modelo');
+  }
+  assert(
+    mensagemErroVisao(status: 404, provedor: 'Gemini 2.5 Flash', modelo: 'gemini-2.5-flash')
+        .contains('HTTP 404'),
+    'erro 404 não é identificado na mensagem',
+  );
+  assert(
+    mensagemErroVisao(status: 404, provedor: 'Gemini 2.5 Flash', modelo: 'm')
+        .contains('não está disponível para esta chave'),
+    'mensagem de 404 não explica o modelo',
+  );
+  assert(
+    mensagemErroVisao(status: 401, provedor: 'Gemini 2.5 Flash', modelo: 'm')
+        .contains('recusou a chave'),
+    'mensagem de 401 não aponta a credencial',
+  );
+
+  stdout.writeln(
+      'OK: visão — validação, prompt sem reconhecimento facial, pedido multimodal, leitura e plano B no 404');
 }

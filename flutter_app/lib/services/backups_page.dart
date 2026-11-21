@@ -19,13 +19,16 @@ class BackupsPage extends StatefulWidget {
 }
 
 class _BackupsPageState extends State<BackupsPage> {
-  late List<NotaMemoria> backups = widget.store.listar().where(ehBackupConflito).toList();
+  late List<NotaMemoria> backups =
+      widget.store.listar().where(ehBackupConflito).toList();
 
-  void _recarregar() => setState(() => backups = widget.store.listar().where(ehBackupConflito).toList());
+  void _recarregar() => setState(
+      () => backups = widget.store.listar().where(ehBackupConflito).toList());
 
   Future<void> _abrir(NotaMemoria backup) async {
     await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(builder: (_) => NotaEditorPage(store: widget.store, nota: backup)),
+      MaterialPageRoute<bool>(
+          builder: (_) => NotaEditorPage(store: widget.store, nota: backup)),
     );
     if (mounted) _recarregar();
   }
@@ -47,7 +50,9 @@ class _BackupsPageState extends State<BackupsPage> {
     if (!mounted) return;
     _recarregar();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('“${restaurada.titulo}” voltou como nota normal; o backup foi removido.')),
+      SnackBar(
+          content: Text(
+              '“${restaurada.titulo}” voltou como nota normal; o backup foi removido.')),
     );
   }
 
@@ -56,10 +61,15 @@ class _BackupsPageState extends State<BackupsPage> {
       context: context,
       builder: (dialogo) => AlertDialog(
         title: const Text('Apagar este backup?'),
-        content: Text('“${backup.titulo}” será removido deste aparelho. A pasta do Obsidian não é alterada.'),
+        content: Text(
+            '“${backup.titulo}” será removido deste aparelho. A pasta do Obsidian não é alterada.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogo, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(dialogo, true), child: const Text('Apagar')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogo, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogo, true),
+              child: const Text('Apagar')),
         ],
       ),
     );
@@ -79,8 +89,12 @@ class _BackupsPageState extends State<BackupsPage> {
           'As notas atuais do cofre e a pasta do Obsidian não são alteradas.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogo, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(dialogo, true), child: const Text('Apagar todos')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogo, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogo, true),
+              child: const Text('Apagar todos')),
         ],
       ),
     );
@@ -149,7 +163,8 @@ class _BackupsPageState extends State<BackupsPage> {
                       backup.titulo,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                   ),
                   Text(
@@ -177,7 +192,8 @@ class _BackupsPageState extends State<BackupsPage> {
                   IconButton(
                     tooltip: 'Restaurar como nota',
                     onPressed: () => _restaurar(backup),
-                    icon: Icon(Icons.restore_rounded, size: 20, color: colors.primary),
+                    icon: Icon(Icons.restore_rounded,
+                        size: 20, color: colors.primary),
                   ),
                   IconButton(
                     tooltip: 'Apagar backup',

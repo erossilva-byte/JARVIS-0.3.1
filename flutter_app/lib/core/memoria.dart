@@ -31,7 +31,8 @@ class NotaMemoria {
     this.hashSincronizado,
     Map<String, String>? extras,
   })  : tags = List<String>.unmodifiable(tags ?? const <String>[]),
-        extras = Map<String, String>.unmodifiable(extras ?? const <String, String>{});
+        extras = Map<String, String>.unmodifiable(
+            extras ?? const <String, String>{});
 
   final String id;
   final String titulo;
@@ -99,7 +100,11 @@ class NotaMemoria {
     final id = dados['id'];
     final titulo = dados['titulo'];
     final texto = dados['texto'];
-    if (id is! String || id.isEmpty || titulo is! String || titulo.trim().isEmpty || texto is! String) {
+    if (id is! String ||
+        id.isEmpty ||
+        titulo is! String ||
+        titulo.trim().isEmpty ||
+        texto is! String) {
       return null;
     }
     DateTime lerData(Object? valor, DateTime padrao) =>
@@ -112,24 +117,37 @@ class NotaMemoria {
       id: id,
       titulo: titulo.trim(),
       texto: texto,
-      tema: temaValido(dados['tema'] is String ? dados['tema'] as String : 'contextos'),
-      tags: tags is List ? tags.whereType<String>().map((t) => t.trim()).where((t) => t.isNotEmpty).toList() : const [],
+      tema: temaValido(
+          dados['tema'] is String ? dados['tema'] as String : 'contextos'),
+      tags: tags is List
+          ? tags
+              .whereType<String>()
+              .map((t) => t.trim())
+              .where((t) => t.isNotEmpty)
+              .toList()
+          : const [],
       importancia: importancia is int ? importancia.clamp(0, 3) : 1,
       criadaEm: lerData(dados['criadaEm'], agora),
       atualizadaEm: lerData(dados['atualizadaEm'], agora),
       usos: dados['usos'] is int ? (dados['usos'] as int).clamp(0, 100000) : 0,
-      caminho: dados['caminho'] is String && (dados['caminho'] as String).trim().isNotEmpty
+      caminho: dados['caminho'] is String &&
+              (dados['caminho'] as String).trim().isNotEmpty
           ? (dados['caminho'] as String).trim()
           : null,
-      hashSincronizado: dados['hashSincronizado'] is String ? dados['hashSincronizado'] as String : null,
-      extras: extras is Map ? extras.map((chave, valor) => MapEntry('$chave', '$valor')) : const {},
+      hashSincronizado: dados['hashSincronizado'] is String
+          ? dados['hashSincronizado'] as String
+          : null,
+      extras: extras is Map
+          ? extras.map((chave, valor) => MapEntry('$chave', '$valor'))
+          : const {},
     );
   }
 }
 
 /// Nota lida de um Markdown, com o nome do arquivo para usar como título reserva.
 class MarkdownLido {
-  const MarkdownLido({required this.titulo, required this.texto, required this.extras});
+  const MarkdownLido(
+      {required this.titulo, required this.texto, required this.extras});
   final String titulo;
   final String texto;
   final Map<String, String> extras;
@@ -164,11 +182,14 @@ MarkdownLido lerMarkdown(String bruto, {String tituloReserva = 'Sem título'}) {
   final corpo = linhas.sublist(inicioCorpo).join('\n');
   var titulo = extras['titulo'] ?? extras['title'] ?? extras['nome'] ?? '';
   if (titulo.trim().isEmpty) {
-    final cabecalho = corpo.split('\n').firstWhere((linha) => linha.trim().startsWith('# '), orElse: () => '');
+    final cabecalho = corpo
+        .split('\n')
+        .firstWhere((linha) => linha.trim().startsWith('# '), orElse: () => '');
     if (cabecalho.isNotEmpty) titulo = cabecalho.trim().substring(2).trim();
   }
   if (titulo.trim().isEmpty) titulo = tituloReserva;
-  return MarkdownLido(titulo: titulo.trim(), texto: corpo.trim(), extras: extras);
+  return MarkdownLido(
+      titulo: titulo.trim(), texto: corpo.trim(), extras: extras);
 }
 
 /// Gera Markdown com frontmatter estável; chaves desconhecidas são preservadas.
@@ -184,8 +205,17 @@ String escreverMarkdown(NotaMemoria nota) {
     'criada: ${data(nota.criadaEm)}',
     'atualizada: ${data(nota.atualizadaEm)}',
     for (final entrada in nota.extras.entries)
-      if (!const {'id', 'titulo', 'title', 'nome', 'tema', 'tags', 'importancia', 'criada', 'atualizada'}
-          .contains(entrada.key))
+      if (!const {
+        'id',
+        'titulo',
+        'title',
+        'nome',
+        'tema',
+        'tags',
+        'importancia',
+        'criada',
+        'atualizada'
+      }.contains(entrada.key))
         '${entrada.key}: ${entrada.value}',
     '---',
   ];
@@ -195,7 +225,10 @@ String escreverMarkdown(NotaMemoria nota) {
 /// Importação de vários Markdowns, com o mesmo critério do legado: título repetido com conteúdo
 /// igual é repetição; título repetido com conteúdo diferente vira conflito e não sobrescreve nada.
 class ImportacaoMemoria {
-  ImportacaoMemoria({List<NotaMemoria>? adicionadas, this.repetidas = 0, List<String>? conflitos})
+  ImportacaoMemoria(
+      {List<NotaMemoria>? adicionadas,
+      this.repetidas = 0,
+      List<String>? conflitos})
       : adicionadas = adicionadas ?? [],
         conflitos = conflitos ?? [];
 
@@ -214,12 +247,15 @@ ImportacaoMemoria importarMarkdowns(
   DateTime? agora,
 }) {
   final quando = agora ?? DateTime.now();
-  final porTitulo = {for (final nota in existentes) chaveTitulo(nota.titulo): nota};
+  final porTitulo = {
+    for (final nota in existentes) chaveTitulo(nota.titulo): nota
+  };
   final resultado = ImportacaoMemoria();
   var sequencia = 0;
 
   for (final arquivo in arquivos) {
-    final lido = lerMarkdown(arquivo.conteudo, tituloReserva: arquivo.nome.replaceAll('.md', ''));
+    final lido = lerMarkdown(arquivo.conteudo,
+        tituloReserva: arquivo.nome.replaceAll('.md', ''));
     final chave = chaveTitulo(lido.titulo);
     final existente = porTitulo[chave];
     if (existente != null) {
@@ -230,8 +266,13 @@ ImportacaoMemoria importarMarkdowns(
       }
       continue;
     }
-    final tags = (lido.extras['tags'] ?? '').split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
-    final importancia = int.tryParse(lido.extras['importancia'] ?? '')?.clamp(0, 3) ?? 1;
+    final tags = (lido.extras['tags'] ?? '')
+        .split(',')
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+    final importancia =
+        int.tryParse(lido.extras['importancia'] ?? '')?.clamp(0, 3) ?? 1;
     final tema = temaValido(lido.extras['tema'] ?? 'contextos');
     final nota = NotaMemoria(
       id: '${quando.microsecondsSinceEpoch}-${sequencia++}',
@@ -243,8 +284,15 @@ ImportacaoMemoria importarMarkdowns(
       criadaEm: quando,
       atualizadaEm: quando,
       extras: Map<String, String>.from(lido.extras)
-        ..removeWhere((chave, _) => const {'id', 'titulo', 'title', 'nome', 'tema', 'tags', 'importancia'}
-            .contains(chave)),
+        ..removeWhere((chave, _) => const {
+              'id',
+              'titulo',
+              'title',
+              'nome',
+              'tema',
+              'tags',
+              'importancia'
+            }.contains(chave)),
     );
     resultado.adicionadas.add(nota);
     porTitulo[chave] = nota;
@@ -264,7 +312,8 @@ String hashConteudo(String texto) {
     a = ((a ^ unidade) * 0x01000193) & 0xffffffff;
     b = ((b ^ (unidade + 0x9e37)) * 0x85ebca6b) & 0xffffffff;
   }
-  return a.toRadixString(16).padLeft(8, '0') + b.toRadixString(16).padLeft(8, '0');
+  return a.toRadixString(16).padLeft(8, '0') +
+      b.toRadixString(16).padLeft(8, '0');
 }
 
 /// Marca usada nas notas que guardam a versão perdedora de um conflito.
@@ -274,16 +323,20 @@ const origemBackupConflito = 'backup-conflito';
 ///
 /// O id também é conferido porque backups criados antes da marca existir têm só o prefixo.
 bool ehBackupConflito(NotaMemoria nota) =>
-    nota.extras['origem'] == origemBackupConflito || nota.id.startsWith('conflito-');
+    nota.extras['origem'] == origemBackupConflito ||
+    nota.id.startsWith('conflito-');
 
 /// Tira o sufixo que a resolução de conflito acrescenta ao título.
 String tituloSemSufixoBackup(String titulo) {
   const sufixo = ' (versão do conflito)';
   final limpo = titulo.trim();
-  return limpo.endsWith(sufixo) ? limpo.substring(0, limpo.length - sufixo.length).trim() : limpo;
+  return limpo.endsWith(sufixo)
+      ? limpo.substring(0, limpo.length - sufixo.length).trim()
+      : limpo;
 }
 
-String jsonDeNotas(List<NotaMemoria> notas) => jsonEncode(notas.map((n) => n.paraJson()).toList());
+String jsonDeNotas(List<NotaMemoria> notas) =>
+    jsonEncode(notas.map((n) => n.paraJson()).toList());
 
 List<NotaMemoria> notasDeJson(String? bruto) {
   if (bruto == null || bruto.isEmpty) return [];

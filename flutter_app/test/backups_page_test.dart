@@ -6,7 +6,8 @@ import 'package:jarvis_nova/services/memoria_store.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-NotaMemoria simples(String id, String titulo, [String texto = 'x']) => NotaMemoria(
+NotaMemoria simples(String id, String titulo, [String texto = 'x']) =>
+    NotaMemoria(
       id: id,
       titulo: titulo,
       texto: texto,
@@ -33,9 +34,12 @@ void main() {
     store = MemoriaStore(await SharedPreferences.getInstance());
   });
 
-  test('reconhece backup pela marca e pelo prefixo antigo; título perde o sufixo', () {
+  test(
+      'reconhece backup pela marca e pelo prefixo antigo; título perde o sufixo',
+      () {
     final marcado = backup('x1', 'Motor (versão do conflito)', 'texto');
-    final antigo = simples('conflito-antigo', 'Antigo (versão do conflito)', 'x');
+    final antigo =
+        simples('conflito-antigo', 'Antigo (versão do conflito)', 'x');
     final normal = simples('nota', 'Motor (versão do conflito)', 'x');
     expect(ehBackupConflito(marcado), isTrue);
     expect(ehBackupConflito(antigo), isTrue);
@@ -45,7 +49,8 @@ void main() {
   });
 
   testWidgets('restaura como nota normal e apaga o backup', (tester) async {
-    await store.salvar(backup('conflito-a', 'Motor (versão do conflito)', 'texto perdido'));
+    await store.salvar(
+        backup('conflito-a', 'Motor (versão do conflito)', 'texto perdido'));
     await store.salvar(simples('nota', 'Nota comum', 'normal'));
     await tester.pumpWidget(MaterialApp(home: BackupsPage(store: store)));
     await tester.pumpAndSettle();
@@ -61,8 +66,10 @@ void main() {
     expect(find.textContaining('Nenhum backup'), findsOneWidget);
   });
 
-  testWidgets('apagar um backup pede confirmação e não toca na nota original', (tester) async {
-    await store.salvar(backup('conflito-a', 'Motor (versão do conflito)', 'perdido'));
+  testWidgets('apagar um backup pede confirmação e não toca na nota original',
+      (tester) async {
+    await store
+        .salvar(backup('conflito-a', 'Motor (versão do conflito)', 'perdido'));
     await store.salvar(simples('motor', 'Motor', 'oficial'));
     await tester.pumpWidget(MaterialApp(home: BackupsPage(store: store)));
     await tester.pumpAndSettle();
@@ -95,7 +102,8 @@ void main() {
   });
 
   testWidgets('a tela de memória tem atalho para os backups', (tester) async {
-    await store.salvar(backup('conflito-a', 'Motor (versão do conflito)', 'perdido'));
+    await store
+        .salvar(backup('conflito-a', 'Motor (versão do conflito)', 'perdido'));
     await tester.pumpWidget(MaterialApp(home: MemoriaPage(store: store)));
     await tester.pumpAndSettle();
 

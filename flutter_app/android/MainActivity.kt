@@ -6,6 +6,8 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -19,6 +21,8 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayOutputStream
+import kotlin.math.min
 
 class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventChannel.StreamHandler {
     companion object {
@@ -27,9 +31,18 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         const val ACAO_HISTORICO = "com.jarvis.nova.ACAO_HISTORICO"
         const val CANAL_SISTEMA = "com.jarvis.nova/sistema"
         const val CANAL_MEMORIA = "com.jarvis.nova/memoria"
+        const val CANAL_SENSORES = "com.jarvis.nova/sensores"
+        const val CANAL_VIDEO = "com.jarvis.nova/visao-video"
+        const val CANAL_VOZ = "com.jarvis.nova/voz"
 
         private const val PREFS_SAF = "jarvis_saf"
         private const val CHAVE_PASTA = "pasta"
+        /** Prazo para o AudioRecord do detector fechar de verdade. */
+        private const val ESPERA_LIBERAR_MICROFONE_MS = 1_500L
+        /** Folga depois de soltar o microfone, antes de abrir o reconhecedor. */
+        private const val FOLGA_DEPOIS_DO_MICROFONE_MS = 180L
+        /** Quando o microfone não fechou no prazo, abre mais devagar. */
+        private const val FOLGA_LONGA_DO_MICROFONE_MS = 600L
         private const val LIMITE_NOTAS = 400
         private const val LIMITE_BYTES = 256 * 1024
 
@@ -50,6 +63,16 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
 
         @JvmStatic
         fun emitWake(keyword: String) = emitEvent(mapOf("type" to "wake", "keyword" to keyword))
+
+        /**
+         * A tela está na frente? O serviço de palavra de ativação usa isto para
+         * distinguir "chamado com o app aberto" de "chamado em segundo plano".
+         * Com a tela aberta o comando é reconhecido e respondido na conversa,
+         * mesmo sem a autorização de "Exibir sobre outros apps".
+         */
+        @Volatile private var visivel = false
+        @JvmStatic fun marcarVisivel(ativo: Boolean) { visivel = ativo }
+        @JvmStatic fun estaVisivel() = visivel
     }
 
     private var sistemaCanal: MethodChannel? = null
@@ -57,11 +80,23 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
     private var pendingPermissionResult: MethodChannel.Result? = null
     private var pendingTestSeconds: Int? = null
     private var speechRecognizer: SpeechRecognizer? = null
+    private var voz: JarvisVoz? = null
     private var recognitionInProgress = false
     private var wakeIntentPending = false
+    // Uma nova tentativa automática depois de "não entendi": o usuário não precisa
+    // chamar o JARVIS de novo só porque falou baixo na primeira vez.
+    private var tentativasComando = 0
+    // O reconhecedor offline costuma entregar parte da frase antes de falhar;
+    // guardar o melhor parcial evita perder o comando no fim do áudio.
+    private var melhorParcialComando = ""
     private val requestAudioCode = 47147
     private val requestPastaCode = 47150
     private var pendingPasta: MethodChannel.Result? = null
+    private val requestCadCode = 47151
+    private var pendingCad: MethodChannel.Result? = null
+    private val limiteCadBytes = 2 * 1024 * 1024
+    private var aparelho: JarvisAparelho? = null
+    private var vigiaSensores: JarvisSensores.Vigia? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -69,6 +104,74 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
             .setMethodCallHandler(this)
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, "com.jarvis.nova/kws/events")
             .setStreamHandler(this)
+        JarvisComandos(this).registrar(flutterEngine)
+        JarvisFundoCanal(this).registrar(flutterEngine)
+        // Perguntas livres ouvidas em segundo plano são respondidas pelo
+        // provedor de IA configurado no app, por esta ponte.
+        JarvisPonteIa.registrar(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CANAL_SENSORES)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "estado" -> result.success(JarvisSensores.estado(this))
+                    "definirCalarAoVirar" -> {
+                        JarvisSensores.definirCalarAoVirar(
+                            this, call.argument<Boolean>("ativo") == true)
+                        rearmarVigia()
+                        result.success(JarvisSensores.estado(this))
+                    }
+                    "definirModoNoturno" -> {
+                        JarvisSensores.definirModoNoturno(
+                            this, call.argument<Boolean>("ativo") == true)
+                        aplicarBrilho()
+                        result.success(JarvisSensores.estado(this))
+                    }
+                    "definirBrilho" -> {
+                        val valor = call.argument<Number>("brilho")?.toInt()
+                            ?: JarvisSensores.brilho(this)
+                        JarvisSensores.definirBrilho(this, valor)
+                        aplicarBrilho()
+                        result.success(JarvisSensores.estado(this))
+                    }
+                    // Fallback da tela e do gesto: cala a voz agora.
+                    "calar" -> {
+                        calarTudo()
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        JarvisBiometria(this).registrar(flutterEngine)
+        aparelho = JarvisAparelho(this).also { it.registrar(flutterEngine) }
+        voz = JarvisVoz(this)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CANAL_VOZ)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "falar" -> {
+                        val texto = call.argument<String>("texto").orEmpty().trim()
+                        if (texto.isEmpty()) {
+                            result.success(false)
+                        } else {
+                            result.success(voz?.falar(texto) == true)
+                        }
+                    }
+                    "parar" -> {
+                        voz?.parar()
+                        result.success(true)
+                    }
+                    "status" -> result.success(voz?.status() ?: mapOf("available" to false))
+                    // Perfis de timbre: grave, natural e ágil.
+                    "timbre" -> result.success(JarvisTimbre.estado(this))
+                    "definirTimbre" -> {
+                        val salvo = JarvisTimbre.definir(
+                            this, call.argument<String>("id"))
+                        val aplicado = voz?.aplicarTimbre() == true
+                        result.success(
+                            JarvisTimbre.estado(this) + mapOf("aplicado" to aplicado)
+                        )
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         val sistema = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CANAL_SISTEMA)
         sistema.setMethodCallHandler { call, result ->
             when (call.method) {
@@ -94,11 +197,41 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         }
         sistemaCanal = sistema
 
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CANAL_VIDEO)
+            .setMethodCallHandler { call, result ->
+                if (call.method != "extrairQuadros") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                val caminho = call.argument<String>("caminho").orEmpty().trim()
+                if (caminho.isEmpty()) {
+                    result.error("caminho_vazio", "O vídeo não tem um caminho válido.", null)
+                    return@setMethodCallHandler
+                }
+                val maximo = (call.argument<Number>("max")?.toInt() ?: 6).coerceIn(1, 8)
+                val larguraMax = (call.argument<Number>("larguraMax")?.toInt() ?: 1024).coerceIn(320, 1600)
+                Thread {
+                    try {
+                        val dados = extrairQuadrosVideo(caminho, maximo, larguraMax)
+                        runOnUiThread { result.success(dados) }
+                    } catch (erro: Exception) {
+                        runOnUiThread {
+                            result.error(
+                                "falha_video",
+                                "Não foi possível ler o vídeo: ${erro.message ?: erro.javaClass.simpleName}",
+                                null
+                            )
+                        }
+                    }
+                }.start()
+            }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CANAL_MEMORIA)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "pastaAtual" -> result.success(pastaAtual())
                     "escolherPasta" -> escolherPasta(result)
+                    "abrirCad" -> abrirCad(result)
                     "listarNotas" -> listarNotas(result)
                     "escreverNota" -> {
                         val caminho = call.argument<String>("caminho").orEmpty()
@@ -112,6 +245,63 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    /** Extrai até [maximo] quadros distribuídos e devolve JPEG reduzido para análise. */
+    private fun extrairQuadrosVideo(caminho: String, maximo: Int, larguraMax: Int): Map<String, Any> {
+        val retriever = MediaMetadataRetriever()
+        try {
+            if (caminho.startsWith("content://")) {
+                retriever.setDataSource(this, Uri.parse(caminho))
+            } else {
+                retriever.setDataSource(caminho)
+            }
+            val duracaoMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                ?.toLongOrNull() ?: 0L
+            if (duracaoMs <= 0L) {
+                throw IllegalStateException("A duração do vídeo não foi informada.")
+            }
+            val quantidade = if (duracaoMs < 1000L) 1 else maximo
+            val passo = duracaoMs / (quantidade + 1)
+            val quadros = mutableListOf<Map<String, Any>>()
+            for (indice in 1..quantidade) {
+                val tempoMs = (passo * indice).coerceIn(0L, (duracaoMs - 1).coerceAtLeast(0L))
+                val bitmap = try {
+                    retriever.getFrameAtTime(tempoMs * 1000L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                } catch (_: Exception) {
+                    null
+                } ?: continue
+                val escala = min(1f, larguraMax.toFloat() / bitmap.width.toFloat())
+                val ajustado = if (escala < 1f) {
+                    Bitmap.createScaledBitmap(
+                        bitmap,
+                        (bitmap.width * escala).toInt().coerceAtLeast(1),
+                        (bitmap.height * escala).toInt().coerceAtLeast(1),
+                        true
+                    )
+                } else {
+                    bitmap
+                }
+                val saida = ByteArrayOutputStream()
+                ajustado.compress(Bitmap.CompressFormat.JPEG, 80, saida)
+                quadros.add(
+                    mapOf(
+                        "tempoMs" to tempoMs,
+                        "largura" to ajustado.width,
+                        "altura" to ajustado.height,
+                        "bytes" to saida.toByteArray()
+                    )
+                )
+                if (ajustado !== bitmap) ajustado.recycle()
+                bitmap.recycle()
+            }
+            if (quadros.isEmpty()) {
+                throw IllegalStateException("Nenhum quadro pôde ser extraído do vídeo.")
+            }
+            return mapOf("duracaoMs" to duracaoMs, "quadros" to quadros)
+        } finally {
+            retriever.release()
+        }
     }
 
     /** Abre o seletor do sistema; a permissão é pedida de forma durável (SAF). */
@@ -140,9 +330,83 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         }
     }
 
+    /** Abre um .cad do CADe_SIMU somente para leitura; nada é gravado de volta. */
+    private fun abrirCad(result: MethodChannel.Result) {
+        if (pendingCad != null) {
+            result.error("em_andamento", "Já existe uma escolha de arquivo .cad em andamento.", null)
+            return
+        }
+        pendingCad = result
+        val seletor = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("text/plain", "application/octet-stream", "application/x-cad"))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            startActivityForResult(seletor, requestCadCode)
+        } catch (erro: Exception) {
+            pendingCad = null
+            result.error("sem_seletor", "Este aparelho não abriu o seletor de arquivos: ${erro.message ?: erro.javaClass.simpleName}", null)
+        }
+    }
+
+    private fun lerCad(uri: Uri, result: MethodChannel.Result) {
+        val nome = try {
+            contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        } catch (_: Exception) {
+            null
+        } ?: uri.lastPathSegment.orEmpty()
+        if (!nome.lowercase().endsWith(".cad")) {
+            result.error("formato", "Escolha um arquivo com extensão .cad do CADe_SIMU.", null)
+            return
+        }
+        val bytes = try {
+            contentResolver.openInputStream(uri)?.use { entrada ->
+                val saida = ByteArrayOutputStream()
+                val bloco = ByteArray(64 * 1024)
+                var total = 0
+                while (true) {
+                    val lido = entrada.read(bloco)
+                    if (lido <= 0) break
+                    total += lido
+                    if (total > limiteCadBytes) {
+                        result.error("grande", "O arquivo .cad passou do limite de 2 MB para leitura.", null)
+                        return
+                    }
+                    saida.write(bloco, 0, lido)
+                }
+                saida.toByteArray()
+            }
+        } catch (erro: Exception) {
+            result.error("leitura", "Não foi possível ler o arquivo .cad: ${erro.message ?: erro.javaClass.simpleName}", null)
+            return
+        }
+        if (bytes == null || bytes.isEmpty()) {
+            result.error("vazio", "O arquivo .cad está vazio.", null)
+            return
+        }
+        result.success(mapOf("nome" to nome, "bytes" to bytes))
+    }
+
     @Deprecated("FlutterActivity usa onActivityResult para o seletor de pasta do SAF")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        // A credencial do aparelho (recuperação do PIN) volta por aqui.
+        if (JarvisBiometria.tratarResultado(requestCode, resultCode)) return
+        if (requestCode == requestCadCode) {
+            val pendente = pendingCad ?: return
+            pendingCad = null
+            val uri = data?.data
+            if (resultCode != Activity.RESULT_OK || uri == null) {
+                pendente.success(null)
+                return
+            }
+            lerCad(uri, pendente)
+            return
+        }
         if (requestCode != requestPastaCode) return
         val pendente = pendingPasta ?: return
         pendingPasta = null
@@ -387,8 +651,10 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // A palavra é lida antes porque a intenção é consumida na entrega.
+        val palavra = intent.getStringExtra("jarvis_wake_keyword")
         despacharIntencao(intent)
-        if (intent.getStringExtra("jarvis_wake_keyword") != null) {
+        if (!palavra.isNullOrBlank()) {
             wakeIntentPending = true
             startCommandRecognitionWhenResumed()
         }
@@ -396,7 +662,62 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
 
     override fun onResume() {
         super.onResume()
+        marcarVisivel(true)
+        aplicarBrilho()
+        rearmarVigia()
         if (wakeIntentPending) startCommandRecognitionWhenResumed()
+    }
+
+    override fun onPause() {
+        // Sensor só enquanto a tela está na frente: sem isso ele gastaria bateria.
+        vigiaSensores?.parar()
+        vigiaSensores = null
+        marcarVisivel(false)
+        super.onPause()
+    }
+
+    /**
+     * Aplica o brilho do modo noturno na janela do app.
+     *
+     * BRIGHTNESS_OVERRIDE_NONE devolve o controle ao sistema; mudar o brilho do
+     * aparelho exigiria WRITE_SETTINGS e não é pedido aqui.
+     */
+    private fun aplicarBrilho() {
+        val atributos = window.attributes
+        atributos.screenBrightness = if (JarvisSensores.modoNoturno(this)) {
+            JarvisSensores.brilho(this) / 100f
+        } else {
+            android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        }
+        window.attributes = atributos
+    }
+
+    /** Liga o vigia do acelerômetro só com a opção ativa e a tela na frente. */
+    private fun rearmarVigia() {
+        vigiaSensores?.parar()
+        vigiaSensores = null
+        if (!JarvisSensores.calarAoVirar(this)) return
+        val vigia = JarvisSensores.Vigia(this) { calarTudo() }
+        if (vigia.iniciar()) vigiaSensores = vigia
+    }
+
+    /** Para a fala do JARVIS (tela e serviço) quando o celular é virado. */
+    private fun calarTudo() {
+        voz?.parar()
+        val pedido = Intent(this, KwsForegroundService::class.java).apply {
+            action = KwsForegroundService.ACTION_CALAR
+        }
+        try {
+            ContextCompat.startForegroundService(this, pedido)
+        } catch (_: Exception) {
+            // Sem serviço ativo não há voz de segundo plano para calar.
+        }
+        emitEvent(
+            mapOf(
+                "type" to "calou",
+                "message" to "JARVIS calado pelo gesto do aparelho.",
+            )
+        )
     }
 
     /** Entrega a intenção ao Flutter quando ele já está ouvindo; senão guarda para a abertura. */
@@ -413,6 +734,14 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
     /** Traduz a ação Android em um pedido conhecido pelo Flutter; consome a intenção. */
     private fun lerIntencao(intent: Intent?): Map<String, Any>? {
         if (intent == null) return null
+        // Palavra de ativação detectada em segundo plano: a tela avisa que o
+        // Jarvis está ativo e o reconhecimento segue no onResume.
+        val palavra = intent.getStringExtra("jarvis_wake_keyword")
+        if (!palavra.isNullOrBlank()) {
+            intent.removeExtra("jarvis_wake_keyword")
+            intent.action = Intent.ACTION_MAIN
+            return mapOf("acao" to "ativo", "texto" to palavra)
+        }
         val texto = intent.getStringExtra(Intent.EXTRA_TEXT)?.trim().orEmpty()
         val dados = when (intent.action) {
             ACAO_VOZ -> mapOf("acao" to "voz", "texto" to "")
@@ -447,9 +776,21 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
     }
 
     private fun beginOnDeviceCommandRecognition() {
+        tentativasComando = 0
+        iniciarTentativaComando()
+    }
+
+    /**
+     * Abre o microfone para o comando. O detector de palavra fica pausado e o estado
+     * "comando em andamento" é publicado para a interface não religar o KWS por cima do
+     * reconhecedor — dois microfones ao mesmo tempo devolvem silêncio e o Android
+     * responde ERROR_NO_MATCH.
+     */
+    private fun iniciarTentativaComando() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED) {
             emitEvent(mapOf("type" to "command_error", "message" to "Permissão de microfone não concedida para capturar o comando."))
+            encerrarComando()
             return
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
@@ -458,11 +799,43 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                 "type" to "command_error",
                 "message" to "Este aparelho não disponibilizou reconhecimento de fala offline em português. Nenhum serviço de nuvem será usado como fallback."
             ))
+            encerrarComando()
             return
         }
 
+        KwsForegroundService.marcarComandoAtivo(true)
+        // Libera o AudioRecord do detector antes de abrir o reconhecedor.
+        if (KwsForegroundService.isServiceRunning()) KwsForegroundService.pausarMotor(this)
+        abrirMicrofoneDoComando()
+    }
+
+    /**
+     * Espera o detector fechar o microfone de verdade antes de abrir o reconhecedor.
+     *
+     * Antes o pedido de pausa era só um Intent, entregue depois: o reconhecedor abria
+     * a captura com o AudioRecord do detector ainda gravando. Dois microfones ao mesmo
+     * tempo devolvem silêncio, e o Android respondia "não entendi" mesmo com a fala
+     * clara. A espera é confirmada, fora da thread principal e com prazo fixo.
+     */
+    private fun abrirMicrofoneDoComando() {
+        Thread {
+            val livre = KwsForegroundService.liberarMicrofone(ESPERA_LIBERAR_MICROFONE_MS)
+            // Folga curta depois de soltar: o Android precisa reabrir a captura.
+            val folga =
+                if (livre) FOLGA_DEPOIS_DO_MICROFONE_MS else FOLGA_LONGA_DO_MICROFONE_MS
+            mainHandler.postDelayed({
+                if (isFinishing || isDestroyed) return@postDelayed
+                if (!KwsForegroundService.isCommandActive()) return@postDelayed
+                iniciarEscutaDoComando()
+            }, folga)
+        }.start()
+    }
+
+    /** Cria o reconhecedor offline e começa a ouvir o comando. */
+    private fun iniciarEscutaDoComando() {
+        melhorParcialComando = ""
         try {
-            speechRecognizer?.destroy()
+            destroySpeechRecognizer()
             speechRecognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
             val recognizer = speechRecognizer ?: throw IllegalStateException("Não foi possível criar o reconhecedor offline.")
             recognitionInProgress = true
@@ -477,24 +850,51 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                     emitEvent(mapOf("type" to "command_status", "message" to "Processando transcrição local…"))
                 }
                 override fun onError(error: Int) {
+                    if (!recognitionInProgress) return
                     recognitionInProgress = false
-                    emitEvent(mapOf("type" to "command_error", "message" to recognitionError(error)))
                     destroySpeechRecognizer()
+                    val parcial = melhorParcialComando.trim()
+                    melhorParcialComando = ""
+                    // O reconhecedor já entendeu parte do pedido: usar o que foi
+                    // ouvido é melhor do que pedir a frase inteira de novo.
+                    if (parcial.length >= 3) {
+                        tentativasComando = 0
+                        emitEvent(mapOf("type" to "command_result", "text" to parcial, "language" to "pt-BR", "engine" to "Android On-device SpeechRecognizer"))
+                        encerrarComando()
+                        return
+                    }
+                    if (tentativaValeRepetir(error) && tentativasComando < 1) {
+                        tentativasComando++
+                        emitEvent(mapOf("type" to "command_status", "message" to "Não entendi. Fale de novo, por favor…"))
+                        mainHandler.postDelayed({
+                            if (isFinishing || isDestroyed) return@postDelayed
+                            iniciarTentativaComando()
+                        }, atrasoRepeticao(error))
+                        return
+                    }
+                    emitEvent(mapOf("type" to "command_error", "message" to recognitionError(error)))
+                    encerrarComando()
                 }
                 override fun onResults(results: Bundle?) {
+                    if (!recognitionInProgress) return
                     recognitionInProgress = false
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.firstOrNull()?.trim().orEmpty()
                     if (text.isEmpty()) {
                         emitEvent(mapOf("type" to "command_error", "message" to "O reconhecimento offline não identificou palavras. Tente novamente."))
                     } else {
+                        tentativasComando = 0
                         emitEvent(mapOf("type" to "command_result", "text" to text, "language" to "pt-BR", "engine" to "Android On-device SpeechRecognizer"))
                     }
                     destroySpeechRecognizer()
+                    encerrarComando()
                 }
                 override fun onPartialResults(partialResults: Bundle?) {
                     val partial = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-                    if (!partial.isNullOrBlank()) emitEvent(mapOf("type" to "command_partial", "text" to partial))
+                    if (!partial.isNullOrBlank()) {
+                        if (partial.length > melhorParcialComando.length) melhorParcialComando = partial
+                        emitEvent(mapOf("type" to "command_partial", "text" to partial))
+                    }
                 }
                 override fun onEvent(eventType: Int, params: Bundle?) = Unit
             })
@@ -506,13 +906,53 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
                 putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
+                // Folga maior entre falar e concluir: comando curto ("abre o WhatsApp")
+                // era cortado cedo demais e voltava como ERROR_NO_MATCH.
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000L)
             }
             recognizer.startListening(request)
         } catch (error: Exception) {
             recognitionInProgress = false
             emitEvent(mapOf("type" to "command_error", "message" to "Falha ao iniciar reconhecimento offline: ${error.message ?: error.javaClass.simpleName}"))
             destroySpeechRecognizer()
+            encerrarComando()
         }
+    }
+
+    /** Microfone ocupado precisa de mais folga que silêncio. */
+    private fun atrasoRepeticao(error: Int): Long = when (error) {
+        SpeechRecognizer.ERROR_AUDIO,
+        SpeechRecognizer.ERROR_RECOGNIZER_BUSY,
+        SpeechRecognizer.ERROR_CLIENT -> 800L
+        else -> 350L
+    }
+
+    /** Silêncio e "não entendi" merecem outra escuta; falta de microfone não. */
+    private fun tentativaValeRepetir(code: Int): Boolean = when (code) {
+        SpeechRecognizer.ERROR_NO_MATCH,
+        SpeechRecognizer.ERROR_SPEECH_TIMEOUT,
+        SpeechRecognizer.ERROR_SERVER_DISCONNECTED,
+        // Microfone ocupado ou captura vazia: quase sempre é o detector ainda
+        // soltando o AudioRecord; com a folga maior a segunda tentativa ouve.
+        SpeechRecognizer.ERROR_AUDIO,
+        SpeechRecognizer.ERROR_RECOGNIZER_BUSY,
+        SpeechRecognizer.ERROR_CLIENT -> true
+        else -> false
+    }
+
+    /** Fecha o comando e devolve o microfone ao detector de palavra de ativação. */
+    private fun encerrarComando() {
+        tentativasComando = 0
+        KwsForegroundService.marcarComandoAtivo(false)
+        destroySpeechRecognizer()
+        retomarKws()
+    }
+
+    /** O serviço KWS fica vivo; depois do comando, volta a ouvir a palavra. */
+    private fun retomarKws() {
+        if (KwsForegroundService.isServiceRunning()) KwsForegroundService.rearm(this)
     }
 
     private fun recognitionError(code: Int): String = when (code) {
@@ -523,6 +963,8 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         SpeechRecognizer.ERROR_NO_MATCH -> "Não consegui entender o comando. Tente falar novamente."
         SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "O reconhecedor de fala já está ocupado."
         SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Nenhuma fala foi detectada após a ativação."
+        SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ->
+            "O Android não tem o pacote offline de português neste aparelho. Instale em Configurações → Google → Voz → Reconhecimento de fala offline, ou escreva o comando na conversa. Nada é enviado para a nuvem."
         else -> "Erro no reconhecimento offline (código $code)."
     }
 
@@ -535,7 +977,13 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "status" -> result.success(statusMap())
-            "start" -> ensurePermissionAndStart(result, null)
+            // Enquanto o comando está sendo ouvido o microfone é dele: iniciar o
+            // detector agora roubaria a captura e o reconhecimento voltaria vazio.
+            "start" -> if (KwsForegroundService.isCommandActive()) {
+                result.success(statusMap())
+            } else {
+                ensurePermissionAndStart(result, null)
+            }
             "test" -> {
                 val seconds = (call.argument<Number>("seconds")?.toInt() ?: 20).coerceIn(10, 60)
                 ensurePermissionAndStart(result, seconds)
@@ -544,6 +992,13 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                 stopService(Intent(this, KwsForegroundService::class.java))
                 KwsForegroundService.clearState()
                 result.success(statusMap())
+            }
+            // Sensibilidade da palavra de ativação (0–100), guardada no aparelho.
+            "sensibilidade" -> result.success(KwsForegroundService.sensibilidadeDe(this))
+            "definirSensibilidade" -> {
+                val valor = call.argument<Number>("valor")?.toInt()
+                    ?: KwsForegroundService.sensibilidadeDe(this)
+                result.success(KwsForegroundService.definirSensibilidade(this, valor))
             }
             else -> result.notImplemented()
         }
@@ -567,6 +1022,7 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
     @Deprecated("Deprecated in Android API; retained for FlutterActivity compatibility")
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (aparelho?.onRequestPermissionsResult(requestCode, grantResults) == true) return
         if (requestCode != requestAudioCode) return
         val result = pendingPermissionResult ?: return
         val testSeconds = pendingTestSeconds
@@ -576,6 +1032,7 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
             startAndAwaitEngine(result, testSeconds)
         } else {
             result.success(mapOf("available" to true, "listening" to false, "engine" to KwsForegroundService.ENGINE,
+                "ok" to false, "error" to "Permissão de microfone negada. O KWS não foi iniciado.",
                 "detail" to "Permissão de microfone negada. O KWS não foi iniciado."))
         }
     }
@@ -589,8 +1046,9 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         try {
             ContextCompat.startForegroundService(this, intent)
         } catch (error: Exception) {
+            val detalhe = "Não foi possível iniciar o serviço KWS: ${error.message ?: error.javaClass.simpleName}"
             result.success(mapOf("available" to true, "listening" to false, "engine" to KwsForegroundService.ENGINE,
-                "detail" to "Não foi possível iniciar o serviço KWS: ${error.message ?: error.javaClass.simpleName}"))
+                "ok" to false, "error" to detalhe, "detail" to detalhe))
             return
         }
         awaitEngineState(result, System.currentTimeMillis() + 10000L)
@@ -606,16 +1064,27 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         mainHandler.postDelayed({ awaitEngineState(result, deadline) }, 120L)
     }
 
-    private fun statusMap(): Map<String, Any> = mapOf(
-        "available" to true,
-        "listening" to KwsForegroundService.isListening(),
-        "engine" to KwsForegroundService.ENGINE,
-        "detail" to KwsForegroundService.lastError().ifEmpty {
-            if (KwsForegroundService.isListening()) "Detector sherpa-onnx ativo; áudio processado localmente."
-            else if (KwsForegroundService.isServiceRunning()) "Serviço ativo; aguardando confirmação de captura e inferência."
-            else "Plugin Android carregado; serviço KWS parado."
-        }
-    )
+    private fun statusMap(): Map<String, Any> {
+        val erro = KwsForegroundService.lastError()
+        val comandoAtivo = KwsForegroundService.isCommandActive()
+        val sensibilidade = KwsForegroundService.sensibilidadeDe(this)
+        return mapOf(
+            "available" to true,
+            "listening" to KwsForegroundService.isListening(),
+            "sensibilidade" to sensibilidade,
+            "limiar" to JarvisKwsEngine.limiarPara(sensibilidade).toDouble(),
+            "engine" to KwsForegroundService.ENGINE,
+            "ok" to erro.isEmpty(),
+            "error" to erro,
+            "comandoAtivo" to comandoAtivo,
+            "detail" to erro.ifEmpty {
+                if (comandoAtivo) "O microfone está com o seu comando; a palavra de ativação volta em seguida."
+                else if (KwsForegroundService.isListening()) "Detector sherpa-onnx ativo; áudio processado localmente."
+                else if (KwsForegroundService.isServiceRunning()) "Serviço ativo; aguardando confirmação de captura e inferência."
+                else "Plugin Android carregado; serviço KWS parado."
+            }
+        )
+    }
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         eventSink = events
@@ -633,7 +1102,18 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
             pendingPasta?.error("activity_destroyed", "A tela foi encerrada durante a escolha da pasta.", null)
             pendingPasta = null
         }
+        if (pendingCad != null) {
+            pendingCad?.error("activity_destroyed", "A tela foi encerrada durante a escolha do arquivo .cad.", null)
+            pendingCad = null
+        }
+        KwsForegroundService.marcarComandoAtivo(false)
+        // Sem isso a próxima ativação acharia que ainda existe comando em curso.
+        recognitionInProgress = false
+        melhorParcialComando = ""
         destroySpeechRecognizer()
+        voz?.shutdown()
+        voz = null
+        retomarKws()
         super.onDestroy()
     }
 }

@@ -91,9 +91,12 @@ class Pessoa {
         apelido: limparCampoPessoa(apelido, limitesPessoa['apelido']!),
         relacao: limparCampoPessoa(relacao, limitesPessoa['relacao']!),
         contatos: limparCampoPessoa(contatos, limitesPessoa['contatos']!),
-        preferencias: limparCampoPessoa(preferencias, limitesPessoa['preferencias']!),
-        observacoes: limparCampoPessoa(observacoes, limitesPessoa['observacoes']!),
-        compromissos: limparCampoPessoa(compromissos, limitesPessoa['compromissos']!),
+        preferencias:
+            limparCampoPessoa(preferencias, limitesPessoa['preferencias']!),
+        observacoes:
+            limparCampoPessoa(observacoes, limitesPessoa['observacoes']!),
+        compromissos:
+            limparCampoPessoa(compromissos, limitesPessoa['compromissos']!),
         historico: limparCampoPessoa(historico, limitesPessoa['historico']!),
         consentimento: consentimento,
         criadaEm: criadaEm,
@@ -120,7 +123,9 @@ class Pessoa {
     final id = dados['id'];
     final nome = dados['nome'];
     if (id is! String || id.isEmpty || nome is! String) return null;
-    DateTime data(Object? valor) => valor is String ? DateTime.tryParse(valor) ?? DateTime.now() : DateTime.now();
+    DateTime data(Object? valor) => valor is String
+        ? DateTime.tryParse(valor) ?? DateTime.now()
+        : DateTime.now();
     String texto(Object? valor) => valor is String ? valor : '';
     return Pessoa(
       id: id,
@@ -142,7 +147,8 @@ class Pessoa {
 /// Limpa um campo: remove controle e `<>`, normaliza espaços e corta no limite.
 String limparCampoPessoa(String? texto, int limite) {
   var limpo = (texto ?? '')
-      .replaceAll(RegExp(r'[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]'), ' ')
+      .replaceAll(
+          RegExp(r'[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]'), ' ')
       .replaceAll(RegExp(r'[<>]'), '')
       .replaceAll(RegExp(r'[ \t]+'), ' ')
       .replaceAll(RegExp(r'\n{3,}'), '\n\n')
@@ -162,26 +168,33 @@ List<Pessoa> pessoasDeJson(String? bruto) {
   }
 }
 
-String jsonDePessoas(List<Pessoa> pessoas) => jsonEncode(pessoas.map((p) => p.paraJson()).toList());
+String jsonDePessoas(List<Pessoa> pessoas) =>
+    jsonEncode(pessoas.map((p) => p.paraJson()).toList());
 
 /// Nome só com espaços não vale; consentimento é obrigatório.
 String? validarPessoa(Pessoa pessoa) {
-  if (pessoa.nome.trim().isEmpty) return 'Informe o nome ou uma identificação para a pessoa.';
+  if (pessoa.nome.trim().isEmpty) {
+    return 'Informe o nome ou uma identificação para a pessoa.';
+  }
   if (!pessoa.consentimento) {
     return 'Confirme que você tem o consentimento desta pessoa para guardar estas informações neste aparelho.';
   }
   return null;
 }
 
-int _compararNome(Pessoa a, Pessoa b) => normalizar(a.nome).compareTo(normalizar(b.nome));
+int _compararNome(Pessoa a, Pessoa b) =>
+    normalizar(a.nome).compareTo(normalizar(b.nome));
 
-List<Pessoa> ordenarPessoas(List<Pessoa> pessoas) => pessoas.toList()..sort(_compararNome);
+List<Pessoa> ordenarPessoas(List<Pessoa> pessoas) =>
+    pessoas.toList()..sort(_compararNome);
 
 List<Pessoa> buscarPessoas(List<Pessoa> pessoas, String termo) {
   final busca = normalizar(termo);
   if (busca.isEmpty) return ordenarPessoas(pessoas);
   return ordenarPessoas(pessoas)
-      .where((p) => normalizar(p.nome).contains(busca) || normalizar(p.apelido).contains(busca))
+      .where((p) =>
+          normalizar(p.nome).contains(busca) ||
+          normalizar(p.apelido).contains(busca))
       .toList();
 }
 
@@ -203,19 +216,29 @@ ResolucaoPessoa resolverPessoa(List<Pessoa> pessoas, String termo) {
   if (busca.isEmpty) return const ResolucaoPessoa(TipoResolucaoPessoa.nenhum);
   final ordenadas = ordenarPessoas(pessoas);
   final exatos = ordenadas
-      .where((p) => normalizar(p.nome) == busca || (p.apelido.isNotEmpty && normalizar(p.apelido) == busca))
+      .where((p) =>
+          normalizar(p.nome) == busca ||
+          (p.apelido.isNotEmpty && normalizar(p.apelido) == busca))
       .toList();
   if (exatos.length == 1) {
-    return ResolucaoPessoa(TipoResolucaoPessoa.exato, perfil: exatos.single, candidatos: exatos);
+    return ResolucaoPessoa(TipoResolucaoPessoa.exato,
+        perfil: exatos.single, candidatos: exatos);
   }
-  if (exatos.length > 1) return ResolucaoPessoa(TipoResolucaoPessoa.ambiguo, candidatos: exatos);
+  if (exatos.length > 1) {
+    return ResolucaoPessoa(TipoResolucaoPessoa.ambiguo, candidatos: exatos);
+  }
   final parciais = ordenadas
-      .where((p) => normalizar(p.nome).contains(busca) || normalizar(p.apelido).contains(busca))
+      .where((p) =>
+          normalizar(p.nome).contains(busca) ||
+          normalizar(p.apelido).contains(busca))
       .toList();
   if (parciais.length == 1) {
-    return ResolucaoPessoa(TipoResolucaoPessoa.unico, perfil: parciais.single, candidatos: parciais);
+    return ResolucaoPessoa(TipoResolucaoPessoa.unico,
+        perfil: parciais.single, candidatos: parciais);
   }
-  if (parciais.length > 1) return ResolucaoPessoa(TipoResolucaoPessoa.ambiguo, candidatos: parciais);
+  if (parciais.length > 1) {
+    return ResolucaoPessoa(TipoResolucaoPessoa.ambiguo, candidatos: parciais);
+  }
   return const ResolucaoPessoa(TipoResolucaoPessoa.nenhum);
 }
 
@@ -223,11 +246,19 @@ ResolucaoPessoa resolverPessoa(List<Pessoa> pessoas, String termo) {
 String descreverPessoa(Pessoa? pessoa) {
   if (pessoa == null) return '';
   final partes = <String>[];
-  if (pessoa.apelido.isNotEmpty) partes.add('também conhecida como ${pessoa.apelido}');
+  if (pessoa.apelido.isNotEmpty) {
+    partes.add('também conhecida como ${pessoa.apelido}');
+  }
   if (pessoa.relacao.isNotEmpty) partes.add(pessoa.relacao);
-  if (pessoa.preferencias.isNotEmpty) partes.add('preferências: ${pessoa.preferencias}');
-  if (pessoa.observacoes.isNotEmpty) partes.add('observações: ${pessoa.observacoes}');
-  if (pessoa.compromissos.isNotEmpty) partes.add('compromissos: ${pessoa.compromissos}');
+  if (pessoa.preferencias.isNotEmpty) {
+    partes.add('preferências: ${pessoa.preferencias}');
+  }
+  if (pessoa.observacoes.isNotEmpty) {
+    partes.add('observações: ${pessoa.observacoes}');
+  }
+  if (pessoa.compromissos.isNotEmpty) {
+    partes.add('compromissos: ${pessoa.compromissos}');
+  }
   final nome = pessoa.nome.isEmpty ? 'sem nome' : pessoa.nome;
   if (partes.isEmpty) return '$nome — nenhuma informação além do nome.';
   return '$nome — ${partes.join('. ')}.';
@@ -235,7 +266,11 @@ String descreverPessoa(Pessoa? pessoa) {
 
 /// Última linha do histórico escrito pelo usuário; nulo quando ele não anotou nada.
 String? ultimaInteracao(Pessoa pessoa) {
-  final linhas = pessoa.historico.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+  final linhas = pessoa.historico
+      .split('\n')
+      .map((l) => l.trim())
+      .where((l) => l.isNotEmpty)
+      .toList();
   return linhas.isEmpty ? null : linhas.last;
 }
 
@@ -243,7 +278,8 @@ enum TipoContextoPessoas { nenhum, detalhe, ambiguo, ausente }
 
 /// Resultado do bloco de pessoas: o texto exato enviado e quem foi citado.
 class ContextoPessoasConversa {
-  const ContextoPessoasConversa({required this.bloco, required this.nomes, required this.tipo});
+  const ContextoPessoasConversa(
+      {required this.bloco, required this.nomes, required this.tipo});
 
   const ContextoPessoasConversa.nenhum()
       : bloco = '',
@@ -262,7 +298,8 @@ class ContextoPessoasConversa {
 /// Só entram nome, apelido, relação e preferências. Contato, anotações, compromissos e histórico
 /// nunca são enviados. Quando não há ficha, o bloco manda dizer que não encontrou em vez de
 /// deixar a IA completar com invenção. Pergunta que não é sobre pessoa devolve bloco vazio.
-ContextoPessoasConversa contextoPessoasParaConsulta(List<Pessoa> pessoas, String consulta) {
+ContextoPessoasConversa contextoPessoasParaConsulta(
+    List<Pessoa> pessoas, String consulta) {
   final pergunta = ' ${normalizar(consulta)} ';
   if (pergunta.trim().isEmpty) return const ContextoPessoasConversa.nenhum();
 
@@ -274,10 +311,14 @@ ContextoPessoasConversa contextoPessoasParaConsulta(List<Pessoa> pessoas, String
   var citadas = pessoas.where((p) => citado(p.nome)).toList();
   if (citadas.isNotEmpty) {
     // Nome completo vence primeiro nome: "Ana Paula" não vira ambiguidade com "Ana".
-    final maior = citadas.map((p) => normalizar(p.nome).length).reduce((a, b) => a > b ? a : b);
+    final maior = citadas
+        .map((p) => normalizar(p.nome).length)
+        .reduce((a, b) => a > b ? a : b);
     citadas = citadas.where((p) => normalizar(p.nome).length == maior).toList();
   } else {
-    citadas = pessoas.where((p) => citado(p.apelido) || citado(p.nome.split(' ').first)).toList();
+    citadas = pessoas
+        .where((p) => citado(p.apelido) || citado(p.nome.split(' ').first))
+        .toList();
   }
 
   const pistas = [
@@ -292,12 +333,15 @@ ContextoPessoasConversa contextoPessoasParaConsulta(List<Pessoa> pessoas, String
     'ultima interacao',
     'ultima conversa',
   ];
-  final falaDePessoa = citadas.isNotEmpty || pistas.any(pergunta.contains) || pergunta.contains(' pessoa ');
+  final falaDePessoa = citadas.isNotEmpty ||
+      pistas.any(pergunta.contains) ||
+      pergunta.contains(' pessoa ');
   if (!falaDePessoa) return const ContextoPessoasConversa.nenhum();
 
   if (citadas.isEmpty) {
     return const ContextoPessoasConversa(
-      bloco: 'FICHAS DE PESSOAS — nenhuma ficha corresponde ao nome perguntado. Diga que não encontrou; '
+      bloco:
+          'FICHAS DE PESSOAS — nenhuma ficha corresponde ao nome perguntado. Diga que não encontrou; '
           'não invente dados nem atribua informações a outra pessoa.',
       nomes: [],
       tipo: TipoContextoPessoas.ausente,
@@ -306,7 +350,8 @@ ContextoPessoasConversa contextoPessoasParaConsulta(List<Pessoa> pessoas, String
   if (citadas.length > 1) {
     final nomes = citadas.map((p) => p.nome).toList();
     return ContextoPessoasConversa(
-      bloco: 'FICHAS DE PESSOAS — mais de uma ficha corresponde: ${nomes.join(', ')}. Pergunte qual delas; '
+      bloco:
+          'FICHAS DE PESSOAS — mais de uma ficha corresponde: ${nomes.join(', ')}. Pergunte qual delas; '
           'não escolha sozinho e não invente.',
       nomes: nomes,
       tipo: TipoContextoPessoas.ambiguo,
@@ -319,7 +364,8 @@ ContextoPessoasConversa contextoPessoasParaConsulta(List<Pessoa> pessoas, String
     '- Nome: ${pessoa.nome}',
     if (pessoa.apelido.isNotEmpty) '- Apelido: ${pessoa.apelido}',
     if (pessoa.relacao.isNotEmpty) '- Relação: ${pessoa.relacao}',
-    if (pessoa.preferencias.isNotEmpty) '- Preferências: ${pessoa.preferencias}',
+    if (pessoa.preferencias.isNotEmpty)
+      '- Preferências: ${pessoa.preferencias}',
     '',
     'Contato, anotações, compromissos e histórico não estão disponíveis para envio. Se a pergunta '
         'pedir algo que não está acima, diga que não encontrou — não invente.',

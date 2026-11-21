@@ -38,6 +38,14 @@ android {
     defaultConfig {
         minSdk = flutter.minSdkVersion
     }
+
+    buildTypes {
+        release {
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
 }
 """
 
@@ -82,6 +90,14 @@ def caso_atalhos_widget_e_compartilhamento(tmp: Path) -> None:
     assert any(d.get(NS + "mimeType") == "text/plain" for d in atividade.iter("data"))
     assert any(m.get(NS + "name") == "android.app.shortcuts" for m in atividade.iter("meta-data"))
 
+    permissoes = {n.get(NS + "name") for n in raiz.iter("uses-permission")}
+    assert "android.permission.INTERNET" in permissoes
+    assert "android.permission.ACCESS_NETWORK_STATE" in permissoes
+    assert "android.permission.CAMERA" in permissoes
+    assert any(
+        n.get(NS + "name") == "android.hardware.camera" for n in raiz.iter("uses-feature")
+    ), "declaração opcional da câmera ausente"
+
     receptores = [n for n in raiz.iter("receiver") if n.get(NS + "name") == ".JarvisWidgetProvider"]
     assert receptores, "receiver do widget ausente"
     atualizacao = {a.get(NS + "name") for a in receptores[0].iter("action")}
@@ -107,6 +123,12 @@ def caso_recursos_e_codigo(tmp: Path) -> None:
     provedor = (kotlin / "JarvisWidgetProvider.kt").read_text(encoding="utf-8")
     assert "R.layout.jarvis_widget" in provedor
     assert provedor.count("setOnClickPendingIntent") == 2
+    assert (kotlin / "JarvisVoz.kt").is_file()
+    assert any(
+        a.get(NS + "name") == "android.intent.action.TTS_SERVICE"
+        for a in manifesto(app).iter("action")
+    ), "consulta de síntese de voz ausente"
+    assert '"com.jarvis.nova/voz"' in atividade
 
 
 def caso_idempotente(tmp: Path) -> None:
@@ -117,7 +139,9 @@ def caso_idempotente(tmp: Path) -> None:
     depois = ET.tostring(manifesto(app), encoding="unicode")
     assert antes == depois, "segunda execução alterou o manifesto"
     texto = (app / "src" / "main" / "AndroidManifest.xml").read_text(encoding="utf-8")
-    assert texto.count("<receiver") == 1
+    assert texto.count("<receiver") == 2
+    assert texto.count("android:name=\".JarvisWidgetProvider\"") == 1
+    assert texto.count("android:name=\".JarvisAgendaReceiver\"") == 1
     assert texto.count("android.app.shortcuts") == 1
     assert texto.count("com.jarvis.nova.ACAO_VOZ") == 1
 
@@ -128,6 +152,29 @@ def caso_recusa_runner_incompleto(tmp: Path) -> None:
     r = rodar(app)
     assert r.returncode != 0, "script aceitou runner sem manifesto"
     assert "manifesto ausente" in r.stdout + r.stderr
+
+
+def caso_permissoes_de_release(tmp: Path) -> None:
+    """O manifesto principal precisa de INTERNET; o debug do Flutter não serve no release."""
+    app = runner(tmp)
+    manifest_path = app / "src" / "main" / "AndroidManifest.xml"
+    texto = manifest_path.read_text(encoding="utf-8").replace(
+        '    <uses-permission android:name="android.permission.INTERNET" />\n', ""
+    )
+    manifest_path.write_text(texto, encoding="utf-8")
+    r = rodar(app)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+    permissoes = {n.get(NS + "name") for n in manifesto(app).iter("uses-permission")}
+    for esperada in (
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+    ):
+        assert esperada in permissoes, esperada
+    assert "android.permission.INTERNET" in manifest_path.read_text(encoding="utf-8")
 
 
 def caso_manifesto_parcialmente_preparado(tmp: Path) -> None:
@@ -148,6 +195,7 @@ def caso_manifesto_parcialmente_preparado(tmp: Path) -> None:
     assert depois.count(".JarvisWidgetProvider") == 1
     assert depois.count("android.app.shortcuts") == 1
     assert depois.count("com.jarvis.nova.ACAO_VOZ") == 1
+    assert depois.count("android.hardware.camera") == 1
 
 
 def main() -> int:
@@ -155,6 +203,7 @@ def main() -> int:
         ("atalhos, widget e compartilhamento", caso_atalhos_widget_e_compartilhamento),
         ("recursos e código copiados", caso_recursos_e_codigo),
         ("execução idempotente", caso_idempotente),
+        ("permissões de release", caso_permissoes_de_release),
         ("recusa runner incompleto", caso_recusa_runner_incompleto),
         ("manifesto parcialmente preparado", caso_manifesto_parcialmente_preparado),
     )

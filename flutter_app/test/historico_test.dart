@@ -23,7 +23,8 @@ void main() {
     final motor = Conversa.nova(id: 'a', agora: DateTime(2026, 11, 1))
       ..adicionar(const MensagemConversa(autor: 'user', texto: 'motor 220 V'));
     final tempo = Conversa.nova(id: 'b', agora: DateTime(2026, 11, 2))
-      ..adicionar(const MensagemConversa(autor: 'user', texto: 'previsão do tempo'));
+      ..adicionar(
+          const MensagemConversa(autor: 'user', texto: 'previsão do tempo'));
     await store.salvar(motor);
     await store.salvar(tempo);
 
@@ -40,11 +41,13 @@ void main() {
     expect(find.text('previsão do tempo'), findsOneWidget);
   });
 
-  testWidgets('busca sem resultado avisa em vez de mostrar lista vazia', (tester) async {
+  testWidgets('busca sem resultado avisa em vez de mostrar lista vazia',
+      (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await ConversaStore.abrir();
     await store.salvar(Conversa.nova(id: 'a', agora: DateTime(2026, 11, 1))
-      ..adicionar(const MensagemConversa(autor: 'user', texto: 'assunto qualquer')));
+      ..adicionar(
+          const MensagemConversa(autor: 'user', texto: 'assunto qualquer')));
 
     await tester.pumpWidget(MaterialApp(home: HistoricoPage(store: store)));
     await tester.pumpAndSettle();

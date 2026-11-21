@@ -14,7 +14,8 @@ const limiteBytesVisao = 4 * 1024 * 1024;
 const mimesVisao = <String>['image/jpeg', 'image/png', 'image/webp'];
 
 class ImagemParaAnalise {
-  const ImagemParaAnalise({required this.bytes, required this.mime, this.nome = 'imagem'});
+  const ImagemParaAnalise(
+      {required this.bytes, required this.mime, this.nome = 'imagem'});
 
   final Uint8List bytes;
   final String mime;
@@ -29,12 +30,21 @@ class ProvedorVisao {
     required this.nome,
     required this.endpoint,
     required this.modelo,
+    this.modelosAlternativos = const [],
   });
 
   final String id;
   final String nome;
   final String endpoint;
   final String modelo;
+
+  /// Nomes tentados somente quando o principal responde 404. O Google aposenta
+  /// modelos para chaves novas, e o 404 é o aviso de que o nome mudou; a chave
+  /// continua a mesma.
+  final List<String> modelosAlternativos;
+
+  /// Ordem de tentativa, do principal ao último alternativo.
+  List<String> get modelos => [modelo, ...modelosAlternativos];
 }
 
 /// Provedores com modelo que aceita imagem, na ordem de preferência da visão.
@@ -45,37 +55,72 @@ const provedoresVisao = <ProvedorVisao>[
   ProvedorVisao(
     id: 'gemini',
     nome: 'Gemini 2.5 Flash',
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    endpoint:
+        'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
     modelo: 'gemini-2.5-flash',
+    modelosAlternativos: ['gemini-2.0-flash', 'gemini-flash-latest'],
   ),
   ProvedorVisao(
     id: 'groq',
     nome: 'Groq · Llama 4 Scout',
     endpoint: 'https://api.groq.com/openai/v1/chat/completions',
     modelo: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    modelosAlternativos: ['meta-llama/llama-4-maverick-17b-128e-instruct'],
   ),
   ProvedorVisao(
     id: 'mistral',
     nome: 'Mistral · Pixtral',
     endpoint: 'https://api.mistral.ai/v1/chat/completions',
     modelo: 'pixtral-12b-2409',
+    modelosAlternativos: ['pixtral-large-latest'],
   ),
   ProvedorVisao(
     id: 'openrouter',
     nome: 'OpenRouter · Gemini',
     endpoint: 'https://openrouter.ai/api/v1/chat/completions',
     modelo: 'google/gemini-2.5-flash',
+    modelosAlternativos: ['google/gemini-2.0-flash-001'],
   ),
 ];
 
+/// Explicação do que o provedor recusou, já sem chave e sem corpo bruto.
+///
+/// O 404 é o caso do modelo aposentado para a chave: não é culpa da credencial,
+/// então a mensagem precisa dizer isso em vez de "falha desconhecida".
+String mensagemErroVisao({
+  required int status,
+  required String provedor,
+  required String modelo,
+}) =>
+    switch (status) {
+      401 || 403 =>
+        'O provedor $provedor recusou a chave. Confira a credencial em Provedores de IA.',
+      404 =>
+        'O modelo $modelo do $provedor não está disponível para esta chave (HTTP 404). '
+            'O catálogo do app pode estar desatualizado; tente de novo ou cadastre outra chave '
+            'com visão.',
+      413 => 'A imagem é grande demais para o $provedor. Escolha uma menor.',
+      429 =>
+        'O $provedor está no limite de requisições. Aguarde alguns instantes e tente de novo.',
+      >= 500 => 'O serviço do $provedor está instável. Tente novamente mais tarde.',
+      _ => 'O $provedor não concluiu a análise (HTTP $status).',
+    };
+
 /// Instrução fixa. O usuário pode perguntar algo, mas nunca desbloqueia identificação de pessoas.
-const instrucaoVisao = 'Analise somente o que está visível na imagem enviada pelo próprio usuário. '
+const instrucaoVisao =
+    'Analise somente o que está visível na imagem enviada pelo próprio usuário. '
     'Descreva objetos, cena, cores e textos legíveis; diga quando algo estiver borrado, cortado ou '
     'incerto, em vez de adivinhar. Não identifique pessoas, não faça reconhecimento facial e não '
     'estime idade, emoção, saúde, deficiência, etnia, religião, orientação sexual ou qualquer '
     'atributo sensível. Não deduza localização, documento, placa ou dado pessoal: se aparecer, '
     'ignore e avise que não trata disso. Não invente o que não está na imagem e não afirme ter '
-    'executado ações.';
+    'executado ações.'
+    '\n\nResponda em JSON válido, sem cercas de código, neste formato: '
+    '{"summary":"frase curta","objects":[{"label":"objeto","confidence":0.0,'
+    '"bbox":[0.0,0.0,0.0,0.0]}],"text":["texto legível"]}. '
+    'bbox é [x,y,w,h] normalizado de 0 a 1. Se não houver objetos ou texto, use listas vazias. '
+    'Para qualquer pessoa, use somente o rótulo "Pessoa"; não descreva rosto, idade, gênero, '
+    'emoção ou identidade.';
 
 String montarPedidoVisao(String pergunta) {
   final limpa = pergunta.trim();
@@ -114,7 +159,8 @@ Map<String, Object?> montarCorpoVisao({
             {
               'type': 'image_url',
               'image_url': {
-                'url': 'data:${imagem.mime};base64,${base64Encode(imagem.bytes)}',
+                'url':
+                    'data:${imagem.mime};base64,${base64Encode(imagem.bytes)}',
               },
             },
           ],
@@ -141,7 +187,9 @@ String? extrairTextoVisao(String corpo) {
     if (conteudo is List) {
       final partes = <String>[];
       for (final parte in conteudo) {
-        if (parte is Map && parte['type'] == 'text' && parte['text'] is String) {
+        if (parte is Map &&
+            parte['type'] == 'text' &&
+            parte['text'] is String) {
           final texto = (parte['text'] as String).trim();
           if (texto.isNotEmpty) partes.add(texto);
         }
