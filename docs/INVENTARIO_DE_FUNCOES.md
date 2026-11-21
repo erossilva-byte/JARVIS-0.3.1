@@ -729,3 +729,21 @@ aparelho físico.
 Limite honesto: o serviço público é anônimo por IP, tem cota compartilhada e pode
 mudar ou sair do ar sem aviso; o endpoint foi medido uma vez (resposta 200 sem
 chave em 2026-11-21) e nada foi testado em aparelho físico.
+
+## Descoberta de modelos — ajuste 094 (2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Listar modelos | botão “Ver modelos” no cartão do provedor | consulta `/models` derivado do endpoint de conversa | `urlDeModelos`, `ProviderService.descobrirModelos` |
+| Gemini nativo | provedor Gemini | usa `/v1beta/models` com `x-goog-api-key` (o caminho de compatibilidade responde 404) | `urlDeModelos`, `descobrirModelos` |
+| Ler a resposta | corpo do provedor | lê `data[]` (OpenAI) e `models[]` (Gemini), descarta embedding e duplicado | `lerModelos` |
+| Escolher modelo | janela com filtro | grava o id escolhido nas preferências, sem chave | `PreferencesModeloStore`, `escolherModelo` |
+| Ordem de tentativa | chamada de IA | escolhido → padrão do app → reservas do código, sem repetir | `_modelosPara` |
+| Modelo retirado | HTTP 404 | cai para o próximo da ordem na mesma chamada | laço de `complete` e `_streamProvider` |
+| Voltar ao padrão | botão “Usar padrão” | apaga a escolha guardada | `_voltarAoPadrao` |
+| Limite da lista | OpenRouter público | a lista é catálogo, não cota da chave; a tela avisa e o teste confirma | `_SeletorDeModelos` |
+| Privacidade | descoberta | manda só a chave, nunca a conversa | corpo vazio no `GET` |
+
+Limite honesto: os endereços foram medidos nesta sessão, mas nenhuma chave real
+de cada provedor foi usada e a escolha de modelo não foi testada em aparelho
+físico.

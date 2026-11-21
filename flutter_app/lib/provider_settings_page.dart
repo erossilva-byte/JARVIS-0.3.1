@@ -17,6 +17,7 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
       widget.service ?? ProviderService(secrets: PlatformSecretStore());
   final Map<String, TextEditingController> fields = {};
   final Map<String, bool> configured = {};
+  final Map<String, String?> modelos = {};
   final Map<String, String> messages = {};
   final Set<String> busy = {};
   @override
@@ -32,8 +33,12 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
     for (final p in aiProviders) {
       try {
         final value = await service.isConfigured(p.id);
+        final escolhido = await service.modeloEscolhido(p.id);
         if (mounted) {
-          setState(() => configured[p.id] = value);
+          setState(() {
+            configured[p.id] = value;
+            modelos[p.id] = escolhido;
+          });
         }
       } catch (_) {
         if (mounted) {
@@ -115,6 +120,68 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
     }
   }
 
+  Future<void> _abrirModelos(AiProvider p) async {
+    setState(() {
+      busy.add(p.id);
+      messages[p.id] = 'Consultando a lista de modelos do ${p.name}…';
+    });
+    List<ModeloDoProvedor> lista;
+    try {
+      lista = await service.descobrirModelos(p.id);
+    } on ProviderException catch (e) {
+      if (mounted) setState(() => messages[p.id] = e.message);
+      return;
+    } catch (_) {
+      if (mounted) {
+        setState(() => messages[p.id] =
+            'Falha inesperada ao listar os modelos. O padrão continua valendo.');
+      }
+      return;
+    } finally {
+      if (mounted) setState(() => busy.remove(p.id));
+    }
+    if (!mounted) return;
+    final escolhido = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: panel,
+      builder: (_) => _SeletorDeModelos(
+          provedor: p.name, modelos: lista, atual: modelos[p.id]),
+    );
+    if (escolhido == null || !mounted) return;
+    try {
+      await service.escolherModelo(p.id, escolhido.isEmpty ? null : escolhido);
+      if (!mounted) return;
+      setState(() {
+        modelos[p.id] = escolhido.isEmpty ? null : escolhido;
+        messages[p.id] = escolhido.isEmpty
+            ? 'Modelo voltou ao padrão do app.'
+            : 'Modelo escolhido: $escolhido. O teste de conexão confirma se a sua chave alcança esse modelo.';
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => messages[p.id] =
+            'Não foi possível guardar o modelo escolhido no aparelho.');
+      }
+    }
+  }
+
+  Future<void> _voltarAoPadrao(AiProvider p) async {
+    try {
+      await service.escolherModelo(p.id, null);
+      if (!mounted) return;
+      setState(() {
+        modelos[p.id] = null;
+        messages[p.id] = 'Modelo voltou ao padrão do app.';
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => messages[p.id] =
+            'Não foi possível guardar o modelo escolhido no aparelho.');
+      }
+    }
+  }
+
   Future<void> _remove(AiProvider p) async {
     setState(() => busy.add(p.id));
     try {
@@ -190,7 +257,10 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
                                     : muted))
                       ]),
                       const SizedBox(height: 4),
-                      Text('Modelo de teste: ${provider.model}',
+                      Text(
+                          'Modelo em uso: ${modelos[provider.id] ?? provider.model}'
+                          '${modelos[provider.id] == null ? ' (padrão do app)' : ' (escolhido)'}',
+                          key: ValueKey('modelo-atual-${provider.id}'),
                           style: const TextStyle(fontSize: 9, color: muted)),
                       const SizedBox(height: 10),
                       if (provider.semChave) ...[
@@ -241,6 +311,19 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
                                 ? null
                                 : () => _test(provider),
                             child: const Text('Testar conexão')),
+                        OutlinedButton(
+                            key: ValueKey('modelos-${provider.id}'),
+                            onPressed: busy.contains(provider.id) ||
+                                    configured[provider.id] != true
+                                ? null
+                                : () => _abrirModelos(provider),
+                            child: const Text('Ver modelos')),
+                        if (modelos[provider.id] != null)
+                          TextButton(
+                              onPressed: busy.contains(provider.id)
+                                  ? null
+                                  : () => _voltarAoPadrao(provider),
+                              child: const Text('Usar padrão')),
                         if (!provider.semChave)
                           TextButton(
                               onPressed: busy.contains(provider.id) ||
@@ -264,14 +347,134 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
                                         messages[provider.id]!
                                             .contains('ativado') ||
                                         messages[provider.id]!
-                                            .contains('desligado')
+                                            .contains('desligado') ||
+                                        messages[provider.id]!
+                                            .contains('Modelo escolhido') ||
+                                        messages[provider.id]!
+                                            .contains('Modelo voltou')
                                     ? const Color(0xFF64E6B1)
                                     : const Color(0xFFFFC66D)))
                       ],
                     ])),
           ],
           const FootnoteText(
-              'As chaves nunca são exibidas novamente nem incluídas em logs. O teste envia uma solicitação mínima ao provedor selecionado e pode gerar cobrança de tokens.'),
+              'As chaves nunca são exibidas novamente nem incluídas em logs. A lista de modelos manda só a chave ao provedor, nunca a conversa. O teste envia uma solicitação mínima e pode gerar cobrança de tokens.'),
         ]),
       );
+}
+
+/// Janela de escolha do modelo: filtra a lista que o provedor devolveu.
+/// Devolve o id escolhido, `''` para voltar ao padrão, ou `null` se fechar.
+class _SeletorDeModelos extends StatefulWidget {
+  const _SeletorDeModelos(
+      {required this.provedor, required this.modelos, this.atual});
+  final String provedor;
+  final List<ModeloDoProvedor> modelos;
+  final String? atual;
+
+  @override
+  State<_SeletorDeModelos> createState() => _SeletorDeModelosState();
+}
+
+class _SeletorDeModelosState extends State<_SeletorDeModelos> {
+  final busca = TextEditingController();
+  String filtro = '';
+
+  @override
+  void dispose() {
+    busca.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final termo = filtro.trim().toLowerCase();
+    final visiveis = [
+      for (final m in widget.modelos)
+        if (termo.isEmpty ||
+            m.id.toLowerCase().contains(termo) ||
+            (m.nome ?? '').toLowerCase().contains(termo))
+          m,
+    ].take(300).toList();
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * .8,
+        child: Column(children: [
+          Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 8, 0),
+              child: Row(children: [
+                Expanded(
+                    child: Text('Modelos do ${widget.provedor}',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w700))),
+                IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, size: 18)),
+              ])),
+          const Padding(
+              padding: EdgeInsets.fromLTRB(16, 4, 16, 10),
+              child: Text(
+                  'A lista vem do provedor. Ela não garante que a sua chave alcança todos os modelos; o teste de conexão é que confirma.',
+                  style: TextStyle(fontSize: 10, height: 1.45, color: muted))),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                  key: const ValueKey('modelos-busca'),
+                  controller: busca,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  onChanged: (valor) => setState(() => filtro = valor),
+                  decoration: InputDecoration(
+                      hintText: 'Filtrar por nome',
+                      hintStyle: const TextStyle(fontSize: 11),
+                      filled: true,
+                      fillColor: bg,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 11)))),
+          const SizedBox(height: 8),
+          Expanded(
+              child: ListView.builder(
+            itemCount: visiveis.length + 1,
+            itemBuilder: (context, indice) {
+              if (indice == 0) {
+                return ListTile(
+                  key: const ValueKey('modelo-padrao'),
+                  dense: true,
+                  title: const Text('Usar o padrão do app',
+                      style: TextStyle(fontSize: 12)),
+                  subtitle: const Text('Descarta a escolha guardada neste provedor',
+                      style: TextStyle(fontSize: 9, color: muted)),
+                  trailing: widget.atual == null
+                      ? const Icon(Icons.check, size: 18, color: cyan)
+                      : null,
+                  onTap: () => Navigator.pop(context, ''),
+                );
+              }
+              final modelo = visiveis[indice - 1];
+              final atual = modelo.id == widget.atual;
+              return ListTile(
+                key: ValueKey('modelo-${modelo.id}'),
+                dense: true,
+                title: Text(modelo.id,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                        color: atual ? cyan : null)),
+                subtitle: modelo.nome == null || modelo.nome == modelo.id
+                    ? null
+                    : Text(modelo.nome!,
+                        style: const TextStyle(fontSize: 9, color: muted)),
+                trailing:
+                    atual ? const Icon(Icons.check, size: 18, color: cyan) : null,
+                onTap: () => Navigator.pop(context, modelo.id),
+              );
+            },
+          )),
+        ]),
+      ),
+    );
+  }
 }

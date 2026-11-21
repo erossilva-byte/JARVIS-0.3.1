@@ -1,3 +1,26 @@
+## 1.80.0 — descoberta de modelos (/models) por provedor
+
+### O que mudou
+- **A lista de modelos vem do provedor**, não de nomes fixos no código: cada
+  cartão de Provedores de IA ganha “Ver modelos”, que consulta `/models` e
+  permite filtrar e escolher o modelo. O Gemini usa o endereço nativo, porque o
+  caminho de compatibilidade responde 404.
+- **A escolha vale nas chamadas**: o modelo escolhido é tentado primeiro na
+  conversa, no resumo tático, no segundo plano e no teste de conexão. Se ele for
+  retirado (HTTP 404), a chamada cai para o modelo padrão do app na mesma hora,
+  em vez de deixar o provedor inutilizável.
+- **“Usar o padrão” desfaz a escolha.** A preferência guarda só o identificador do
+  modelo; nada de chave.
+- **A lista não promete acesso**: OpenRouter devolve o catálogo público inteiro
+  (mais de 900 KB) e a chave pode não alcançar todos; a tela diz isso e o teste de
+  conexão continua sendo a confirmação real.
+- **A descoberta manda só a chave**, nunca a conversa; falha com 401/403/404/429
+  é explicada e o modelo padrão continua valendo.
+
+Limite honesto: os endereços foram medidos nesta sessão (lista pública do
+Zero-Key e do OpenRouter; os outros exigem chave), mas nenhuma escolha de modelo
+foi testada em aparelho físico nem com uma chave real de cada provedor.
+
 ## 1.79.0 — provedor sem chave (Zero-Key), opcional e desligado por padrão
 
 ### O que mudou

@@ -46,7 +46,7 @@ limite), **Falta** (não existe), **Não se aplica** (decisão do projeto).
 |---|---|---|
 | Vários provedores com failover | `provider_service.dart`, 12 agentes | **Tem** |
 | Provedor sem chave (Zero-Key) | `zero_key_store.dart`, `ProviderService` | **Novo no ajuste 093** (opcional, desligado por padrão; limite de ~1 resposta/45 s por IP) |
-| Descobrir modelos (`/models`) | seleção manual de modelo | **Falta** |
+| Descobrir modelos (`/models`) | `/models` por provedor, escolha guardada e queda para o padrão no 404 | **Novo no ajuste 094** (a lista não garante acesso; o teste de conexão confirma) |
 | IA local no aparelho | Gemma 3 1B opcional (~529 MB) | **Parcial** (não usado por padrão) |
 | Visão multimodal com consentimento | `visao_page.dart` | **Tem** |
 | Tags `[ACTION:...]` | comandos naturais interpretados no aparelho | **Tem** (equivalente) |
@@ -84,7 +84,9 @@ de **conveniência de mensagens** e **automação**:
 6. ~~Duress PIN~~ — feito no ajuste 090 no formato de modo de visita;
 7. ~~atualização OTA com SHA-256~~ — feito no ajuste 092;
 8. ~~provedor sem chave~~ — feito no ajuste 093 como opção explícita, desligada
-   por padrão e com o limite do serviço público declarado.
+   por padrão e com o limite do serviço público declarado;
+9. ~~descoberta de modelos (`/models`)~~ — feito no ajuste 094, com escolha por
+   provedor e queda para o modelo padrão quando o escolhido é retirado.
 
 Nada nesta lista foi medido em aparelho físico neste repositório; a coluna
 “Tem” significa “existe no código com teste”, não “funciona no seu celular”.

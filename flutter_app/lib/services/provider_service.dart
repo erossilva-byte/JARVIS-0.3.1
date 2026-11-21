@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../core/sse.dart';
+import 'modelo_store.dart';
 import 'zero_key_store.dart';
 
 class AiProvider {
@@ -107,6 +108,70 @@ class ProviderCheck {
   final String? model;
 }
 
+/// Modelo que o provedor declarou na lista de `/models`.
+class ModeloDoProvedor {
+  const ModeloDoProvedor({required this.id, this.nome});
+  final String id;
+  final String? nome;
+}
+
+/// Endereço da lista de modelos de cada provedor.
+///
+/// Cinco são compatíveis com OpenAI: basta trocar `/chat/completions` por
+/// `/models` no mesmo endereço. O Gemini é a exceção: a lista fica na API
+/// nativa, não no caminho de compatibilidade (que responde 404).
+String urlDeModelos(AiProvider provider) {
+  if (provider.id == 'gemini') {
+    return 'https://generativelanguage.googleapis.com/v1beta/models';
+  }
+  final base =
+      provider.endpoint.replaceFirst(RegExp(r'/chat/completions$'), '');
+  return '$base/models';
+}
+
+/// Lê a resposta de `/models` nos dois formatos vistos no campo.
+///
+/// OpenAI e clones respondem `{"data":[{"id":…}]}`. O Gemini nativo responde
+/// `{"models":[{"name":"models/…","supportedGenerationMethods":[…]}]}`, e
+/// inclui modelos de embedding que não servem para conversa: esses são
+/// descartados.
+List<ModeloDoProvedor> lerModelos(String corpo) {
+  late final Object? dados;
+  try {
+    dados = jsonDecode(corpo);
+  } on FormatException {
+    return const [];
+  }
+  if (dados is! Map) return const [];
+  final abertos = dados['data'];
+  final nativos = dados['models'];
+  final brutos = abertos is List ? abertos : (nativos is List ? nativos : null);
+  if (brutos == null) return const [];
+  final vistos = <String>{};
+  final lista = <ModeloDoProvedor>[];
+  for (final item in brutos) {
+    if (item is! Map) continue;
+    final metodos = item['supportedGenerationMethods'];
+    if (metodos is List && !metodos.contains('generateContent')) continue;
+    var id = item['id'] is String ? (item['id'] as String) : '';
+    if (id.isEmpty && item['name'] is String) {
+      id = (item['name'] as String).replaceFirst(RegExp(r'^models/'), '');
+    }
+    id = id.trim();
+    if (id.isEmpty || id.contains('embedding') || !vistos.add(id)) continue;
+    final exibicao = item['displayName'] ?? item['display_name'];
+    String? nome;
+    if (exibicao is String && exibicao.trim().isNotEmpty) {
+      nome = exibicao.trim();
+    } else if (item['id'] is String && item['name'] is String) {
+      nome = (item['name'] as String).trim();
+    }
+    lista.add(ModeloDoProvedor(id: id, nome: nome));
+  }
+  lista.sort((a, b) => a.id.toLowerCase().compareTo(b.id.toLowerCase()));
+  return lista;
+}
+
 /// Falha já traduzida para a interface. Nunca carrega a chave nem o corpo bruto.
 class ProviderException implements Exception {
   const ProviderException(this.message);
@@ -123,14 +188,17 @@ class ProviderService {
   ProviderService(
       {required SecretStore secrets,
       http.Client? client,
-      ZeroKeyStore? zeroKey})
+      ZeroKeyStore? zeroKey,
+      ModeloStore? modelos})
       : _secrets = secrets,
         _client = client ?? http.Client(),
-        _zeroKey = zeroKey ?? PreferencesZeroKey();
+        _zeroKey = zeroKey ?? PreferencesZeroKey(),
+        _modelos = modelos ?? PreferencesModeloStore();
 
   final SecretStore _secrets;
   final http.Client _client;
   final ZeroKeyStore _zeroKey;
+  final ModeloStore _modelos;
 
   Future<bool> isConfigured(String providerId) async {
     final provider = _provider(providerId);
@@ -141,6 +209,64 @@ class ProviderService {
   Future<bool> zeroKeyAtiva() => _zeroKey.ativo();
 
   Future<void> definirZeroKey(bool ativo) => _zeroKey.definir(ativo);
+
+  /// Modelo escolhido para o provedor, ou `null` quando vale o padrão do app.
+  Future<String?> modeloEscolhido(String providerId) async {
+    _provider(providerId);
+    return _modelos.ler(providerId);
+  }
+
+  /// Grava (ou apaga, com `null`) o modelo escolhido para o provedor.
+  Future<void> escolherModelo(String providerId, String? modelo) async {
+    _provider(providerId);
+    final limpo = modelo?.trim() ?? '';
+    await _modelos.gravar(providerId, limpo.isEmpty ? null : limpo);
+  }
+
+  /// Consulta a lista de modelos do provedor. Só manda a chave, nada de conversa.
+  Future<List<ModeloDoProvedor>> descobrirModelos(String providerId) async {
+    final provider = _provider(providerId);
+    String? key;
+    if (provider.semChave) {
+      if (!await _zeroKey.ativo()) {
+        throw const ProviderException(_zerokeyDesligado);
+      }
+    } else {
+      key = await _secrets.read(providerId);
+      if (key == null || key.isEmpty) {
+        throw const ProviderException(
+            'Cadastre a chave deste provedor antes de ver os modelos.');
+      }
+    }
+
+    late http.Response resposta;
+    try {
+      resposta = await _client
+          .get(
+            Uri.parse(urlDeModelos(provider)),
+            headers: provider.id == 'gemini'
+                ? {'x-goog-api-key': key ?? ''}
+                : _cabecalhos(key),
+          )
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      throw ProviderException(
+          'A lista de modelos do ${provider.name} demorou mais de 15 segundos.');
+    } on http.ClientException {
+      throw ProviderException(
+          'Não foi possível alcançar ${provider.name} para listar os modelos. Verifique o Wi-Fi/5G.');
+    }
+    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+      throw ProviderException(
+          _mensagemModelos(provider, resposta.statusCode));
+    }
+    final lista = lerModelos(resposta.body);
+    if (lista.isEmpty) {
+      throw ProviderException(
+          'O ${provider.name} respondeu sem modelos. O modelo padrão continua valendo.');
+    }
+    return lista;
+  }
 
   /// Retorna o primeiro provedor configurado respeitando a prioridade oficial.
   /// A ordem de [aiProviders] mantém Groq como principal e OpenRouter como fallback.
@@ -205,7 +331,7 @@ class ProviderService {
     try {
       var status = 0;
       var modeloTestado = provider.model;
-      for (final modelo in [provider.model, ...provider.fallbackModels]) {
+      for (final modelo in await _modelosPara(provider)) {
         modeloTestado = modelo;
         final response = await _client
             .post(
@@ -290,7 +416,7 @@ class ProviderService {
     late http.Response response;
     var modelo = provider.model;
     try {
-      final modelos = [provider.model, ...provider.fallbackModels];
+      final modelos = await _modelosPara(provider);
       for (var i = 0; i < modelos.length; i++) {
         modelo = modelos[i];
         response = await _client
@@ -430,7 +556,7 @@ class ProviderService {
     late http.StreamedResponse resposta;
     var modelo = provider.model;
     try {
-      final modelos = [provider.model, ...provider.fallbackModels];
+      final modelos = await _modelosPara(provider);
       for (var i = 0; i < modelos.length; i++) {
         modelo = modelos[i];
         final requisicao = http.Request('POST', Uri.parse(provider.endpoint))
@@ -464,6 +590,35 @@ class ProviderService {
       }
     }
   }
+
+  /// Modelos tentados em ordem: o escolhido (se houver), o padrão do app e as
+  /// reservas do código. Um modelo escolhido que foi retirado cai para o padrão
+  /// em vez de deixar o provedor inutilizável.
+  Future<List<String>> _modelosPara(AiProvider provider) async {
+    final escolhido = await _modelos.ler(provider.id);
+    final lista = [
+      if (escolhido != null && escolhido.isNotEmpty) escolhido,
+      provider.model,
+      ...provider.fallbackModels,
+    ];
+    final vistos = <String>{};
+    return [for (final modelo in lista) if (vistos.add(modelo)) modelo];
+  }
+
+  String _mensagemModelos(AiProvider provider, int status) =>
+      switch (status) {
+        401 ||
+        403 =>
+          'A chave do ${provider.name} foi recusada ao listar os modelos. Confira a credencial.',
+        404 =>
+          'O ${provider.name} não expõe a lista de modelos neste endereço. O modelo padrão continua valendo.',
+        429 =>
+          'O ${provider.name} está no limite de requisições agora; a lista de modelos não pôde ser lida.',
+        >= 500 =>
+          'O serviço do ${provider.name} está instável; a lista de modelos não pôde ser lida.',
+        _ =>
+          'O ${provider.name} recusou a lista de modelos (HTTP $status). O modelo padrão continua valendo.',
+      };
 
   AiProvider _provider(String id) => aiProviders.firstWhere(
         (provider) => provider.id == id,
