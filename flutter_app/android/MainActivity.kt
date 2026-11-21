@@ -96,6 +96,8 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
     private var pendingCad: MethodChannel.Result? = null
     private val limiteCadBytes = 2 * 1024 * 1024
     private var aparelho: JarvisAparelho? = null
+    // Atualizador OTA: consulta o release, confere o SHA-256 e abre o instalador.
+    private var atualizacao: JarvisAtualizacao? = null
     private var vigiaSensores: JarvisSensores.Vigia? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -142,6 +144,7 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
             }
         JarvisBiometria(this).registrar(flutterEngine)
         aparelho = JarvisAparelho(this).also { it.registrar(flutterEngine) }
+        atualizacao = JarvisAtualizacao(this).also { it.registrar(flutterEngine) }
         voz = JarvisVoz(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CANAL_VOZ)
             .setMethodCallHandler { call, result ->
@@ -1113,6 +1116,8 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         destroySpeechRecognizer()
         voz?.shutdown()
         voz = null
+        atualizacao?.encerrar()
+        atualizacao = null
         retomarKws()
         super.onDestroy()
     }

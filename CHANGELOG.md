@@ -1,3 +1,25 @@
+## 1.78.0 — atualização OTA conferida pelo SHA-256
+
+### O que mudou
+- **Tela “Atualizações” de verdade**: mostra a versão instalada, consulta o
+  release publicado e diz com franqueza quando não há atualização, quando não
+  existe release ou quando o release não tem APK.
+- **Download conferido**: o app baixa o `.sha256` que a esteira publica, calcula
+  o SHA-256 enquanto copia o APK e **apaga o arquivo** se o digesto não
+  coincidir. Sem digesto publicado, nada é baixado.
+- **Instalador do Android**: o APK baixado vai ao instalador pelo FileProvider
+  `com.jarvis.nova.fileprovider`, que expõe só `files/updates/`. O Android sempre
+  pede confirmação — não existe instalação silenciosa.
+- **Esteira publica um Release**: `gh release create android-v<versão>` com o APK
+  `jarvis-nova-<versão>-arm64.apk` e o `.sha256` ao lado. Antes o APK só existia
+  como artefato de execução, que exige login e expira em 14 dias.
+- **Permissão declarada**: `REQUEST_INSTALL_PACKAGES` entra no manifesto pelo
+  preparo do Android, junto do provider e do caminho privado.
+
+Limite honesto: nada foi compilado nem instalado em aparelho nesta sessão; a
+primeira atualização real depende de a esteira publicar o release e de o APK em
+uso ter sido assinado com a mesma chave.
+
 ## 1.77.0 — assinatura de release permanente
 
 ### O que mudou

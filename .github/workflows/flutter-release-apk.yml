@@ -12,8 +12,10 @@ name: APK de release assinado (Flutter)
 on:
   workflow_dispatch:
 
+# `contents: write` serve só para publicar o Release com o APK e o SHA-256, que
+# é de onde o próprio app se atualiza. O resto do job apenas lê o repositório.
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: jarvis-flutter-release
@@ -90,21 +92,50 @@ jobs:
       - name: Compilar o APK de release (arm64)
         run: flutter build apk --release --target-platform android-arm64
 
-      - name: Conferir a assinatura e o SHA-256
+      - name: Conferir a assinatura, nomear e gerar o SHA-256
         shell: bash
         run: |
           set -euo pipefail
           APK=build/app/outputs/flutter-apk/app-release.apk
           test -s "$APK" || { echo 'APK de release não foi gerado.'; exit 1; }
           python3 tool/verificar_assinatura.py "$APK" --exigir-release
-          sha256sum "$APK" | tee "$APK.sha256"
+          # O nome do anexo carrega a versão: é ele que o atualizador baixa.
+          VERSAO=$(sed -n 's/^version: *\([0-9][0-9.]*\).*/\1/p' pubspec.yaml | head -1)
+          test -n "$VERSAO" || { echo 'versão ausente no pubspec.yaml.'; exit 1; }
+          NOME="jarvis-nova-$VERSAO-arm64.apk"
+          mkdir -p build/app/outputs/entrega
+          cp "$APK" "build/app/outputs/entrega/$NOME"
+          ( cd build/app/outputs/entrega && sha256sum "$NOME" > "$NOME.sha256" && cat "$NOME.sha256" )
+          echo "APK_ENTREGA=build/app/outputs/entrega/$NOME" >> "$GITHUB_ENV"
+          echo "VERSAO_APK=$VERSAO" >> "$GITHUB_ENV"
 
       - name: Publicar o APK assinado e o SHA-256
         uses: actions/upload-artifact@v4
         with:
           name: jarvis-flutter-android-release
           path: |
-            flutter_app/build/app/outputs/flutter-apk/app-release.apk
-            flutter_app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            flutter_app/${{ env.APK_ENTREGA }}
+            flutter_app/${{ env.APK_ENTREGA }}.sha256
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publicar o Release com o APK e o SHA-256
+        # O app só encontra a atualização num Release. Artefato de execução
+        # exige login e expira em 14 dias, então não serve para o OTA.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="android-v$VERSAO_APK"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK_ENTREGA" "$APK_ENTREGA.sha256" \
+              --clobber --repo "$GITHUB_REPOSITORY"
+            echo "Release $TAG já existia: APK e SHA-256 substituídos."
+          else
+            gh release create "$TAG" "$APK_ENTREGA" "$APK_ENTREGA.sha256" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "J.A.R.V.I.S. Nova $VERSAO_APK (Android arm64)" \
+              --notes-file "../docs/relatorios/2026-11-21_092-atualizacao-ota.md"
+            echo "Release $TAG publicado com o APK e o SHA-256."
+          fi

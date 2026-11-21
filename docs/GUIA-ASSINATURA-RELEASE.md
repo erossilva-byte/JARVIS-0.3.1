@@ -186,3 +186,15 @@ o `build.gradle.kts` do Flutter aceita as duas formas.
 
 O `.gitignore` do projeto já cobre esses nomes; o contrato
 `tests/test_assinatura_release.py` reprova se algum deles aparecer versionado.
+
+## 8. A esteira também publica o Release
+
+Desde o ajuste 092, o mesmo job vai além do artefato: ele copia o APK para
+`jarvis-nova-<versão>-arm64.apk`, gera o `sha256sum` desse nome e publica um
+Release `android-v<versão>` com os dois arquivos (`gh release create`; se a tag
+já existir, `gh release upload --clobber`). É de lá que o app se atualiza pela
+tela **Atualizações**: o download só é oferecido depois de o SHA-256 bater.
+
+Por isso a chave deixou de ser só requisito de build: **a atualização por cima
+só é aceita pelo Android com a mesma chave do APK instalado**. Trocá-la obriga a
+desinstalar antes — e apaga os dados do app.

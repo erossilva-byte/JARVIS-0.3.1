@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Caminhos que o FileProvider do atualizador pode entregar ao instalador do
+     Android. Só a pasta privada de atualizações: nada de armazenamento externo. -->
+<paths>
+    <files-path name="atualizacoes" path="updates/" />
+</paths>

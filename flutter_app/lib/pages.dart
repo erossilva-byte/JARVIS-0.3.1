@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'catalog.dart';
 import 'provider_settings_page.dart';
 import 'services/aparelho_page.dart';
+import 'services/atualizacao_page.dart';
 import 'services/cadesimu_page.dart';
 import 'services/circuito_page.dart';
 import 'services/comandos_android_page.dart';
@@ -120,6 +121,17 @@ class ModulePage extends StatelessWidget {
             ),
             icon: const Icon(Icons.science_outlined),
             label: const Text('Abrir simulador de circuitos'),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (module.name == 'Atualizações') ...[
+          FilledButton.icon(
+            key: const ValueKey('abrir-atualizacoes'),
+            onPressed: () => Navigator.of(c).push(
+              MaterialPageRoute<void>(builder: (_) => const AtualizacaoPage()),
+            ),
+            icon: const Icon(Icons.system_update_alt_rounded),
+            label: const Text('Abrir atualizações do app'),
           ),
           const SizedBox(height: 12),
         ],

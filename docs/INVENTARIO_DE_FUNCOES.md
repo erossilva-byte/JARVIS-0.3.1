@@ -694,3 +694,22 @@ o app real e quem souber os dois PINs não é protegido.
 
 Limite honesto: a chave é do dono do app e nunca entra no repositório; perdê-la
 obriga todos os usuários a desinstalar para receber versões futuras.
+
+## Atualização pelo release — Fase 15 (ajuste 092, 2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Consultar release | tela “Atualizações” | lista os releases publicados e escolhe o primeiro com `.apk` | `JarvisAtualizacao.consultar` |
+| Comparar versão | resultado da consulta | compara tag e versão instalada em três números | `versaoMaior`, `versaoMaiorQue` |
+| Digesto publicado | release com `.sha256` | lê o hash do arquivo publicado; sem ele não baixa | `hashPublicado`, `hashSha256Publicado` |
+| Baixar conferindo | botão “Baixar o APK” | copia para `files/updates/` medindo SHA-256 e apaga o arquivo divergente | `JarvisAtualizacao.baixar` |
+| Progresso | download em curso | evento a cada 5% pelo canal `…/atualizacao/eventos` | `emitirProgresso` |
+| Instalar | botão “Instalar atualização” | abre o instalador do Android com confirmação obrigatória | `JarvisAtualizacao.instalar` |
+| Autorização de origem | primeira instalação | checa `canRequestPackageInstalls` e abre a tela do Android | `podeInstalar` |
+| Arquivo exposto | FileProvider | só `files/updates/`, nada de armazenamento externo | `jarvis_arquivos.xml` |
+| Publicar release | esteira do Actions | cria/atualiza `android-v<versão>` com APK e `.sha256` | `.github/workflows/flutter-release-apk.yml` |
+| Nome do anexo | build de release | `jarvis-nova-<versão>-arm64.apk` para o atualizador achar a versão | etapa `Conferir a assinatura, nomear e gerar o SHA-256` |
+
+Limite honesto: a instalação por cima só funciona com a mesma chave de
+assinatura do APK instalado; o APK da esteira é arm64 e nada disso foi testado em
+aparelho físico.

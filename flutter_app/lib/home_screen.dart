@@ -12,6 +12,7 @@ import 'services/kws_bridge.dart';
 import 'services/kws_controller.dart';
 import 'services/aparelho_service.dart';
 import 'services/arquivos_page.dart';
+import 'services/atualizacao_page.dart';
 import 'services/conversa_store.dart';
 import 'services/gestos_page.dart';
 import 'services/habilidades_page.dart';
@@ -352,6 +353,11 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     if (name == 'Habilidades em Markdown') {
       Navigator.of(context)
           .push(MaterialPageRoute<void>(builder: (_) => const HabilidadesPage()));
+      return;
+    }
+    if (name == 'Atualizações') {
+      Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const AtualizacaoPage()));
       return;
     }
     if (name == 'Gestos e modo noturno') {

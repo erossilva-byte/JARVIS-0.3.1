@@ -47,6 +47,9 @@ PERMISSOES = (
     # Localização pedida na tela de status, sempre com ação explícita do usuário.
     ("android.permission.ACCESS_FINE_LOCATION", ""),
     ("android.permission.ACCESS_COARSE_LOCATION", ""),
+    # Atualização OTA: sem esta permissão o Android não deixa o app pedir a
+    # autorização de instalar APK e o instalador nunca abre.
+    ("android.permission.REQUEST_INSTALL_PACKAGES", ""),
 )
 
 CAMERA_FEATURE = '    <uses-feature android:name="android.hardware.camera" android:required="false" />\n'
@@ -100,6 +103,19 @@ RECEPTOR = """        <receiver
                 android:name="android.appwidget.provider"
                 android:resource="@xml/jarvis_widget_info" />
         </receiver>
+"""
+
+# FileProvider do atualizador: entrega ao instalador do Android só o APK da pasta
+# privada `files/updates/`. Nada de armazenamento externo nem de permissão ampla.
+PROVEDOR_ATUALIZACAO = """        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/jarvis_arquivos" />
+        </provider>
 """
 
 
@@ -246,6 +262,7 @@ def copiar_codigo(app: Path) -> None:
     shutil.copy2(ANDROID / "JarvisPonteIa.kt", kotlin / "JarvisPonteIa.kt")
     shutil.copy2(ANDROID / "JarvisSensores.kt", kotlin / "JarvisSensores.kt")
     shutil.copy2(ANDROID / "JarvisTimbre.kt", kotlin / "JarvisTimbre.kt")
+    shutil.copy2(ANDROID / "JarvisAtualizacao.kt", kotlin / "JarvisAtualizacao.kt")
 
 
 def garantir_permissoes(texto: str) -> str:
@@ -289,6 +306,12 @@ def ajustar_manifesto(app: Path) -> None:
         if "</application>" not in texto:
             falhar("manifesto sem </application>")
         texto = texto.replace("</application>", RECEPTOR + "    </application>", 1)
+
+    if "fileprovider" not in texto:
+        if "</application>" not in texto:
+            falhar("manifesto sem </application>")
+        texto = texto.replace(
+            "</application>", PROVEDOR_ATUALIZACAO + "    </application>", 1)
 
     try:
         ET.fromstring(texto)
@@ -336,15 +359,33 @@ def verificar(app: Path) -> None:
                  "JarvisFundo.kt", "JarvisFundoCanal.kt", "JarvisEscutaFundo.kt",
                  "JarvisBiometria.kt", "JarvisLocalizacao.kt", "JarvisAparelho.kt",
                  "JarvisNotificacaoListener.kt", "JarvisPonteIa.kt",
-                 "JarvisSensores.kt", "JarvisTimbre.kt"):
+                 "JarvisSensores.kt", "JarvisTimbre.kt", "JarvisAtualizacao.kt"):
         if not (kotlin / nome).is_file():
             falhar(f"{nome} não copiado")
+    provedores = [n for n in manifesto.iter("provider")
+                  if (n.get(NS + "authorities") or "").endswith(".fileprovider")]
+    if not provedores:
+        falhar("FileProvider do atualizador ausente no manifesto")
+    if not any(m.get(NS + "resource") == "@xml/jarvis_arquivos"
+               for m in provedores[0].iter("meta-data")):
+        falhar("FileProvider sem o caminho do APK baixado (@xml/jarvis_arquivos)")
+    if not (app / "src" / "main" / "res" / "xml" / "jarvis_arquivos.xml").is_file():
+        falhar("jarvis_arquivos.xml não copiado")
+    if "android.permission.REQUEST_INSTALL_PACKAGES" not in permissoes:
+        falhar("manifesto sem permissão de instalar APK")
     if not any(n.get(NS + "name") == "android.intent.action.TTS_SERVICE"
                for n in manifesto.iter("action")):
         falhar("consulta de síntese de voz (TTS_SERVICE) ausente no manifesto")
     texto = (kotlin / "MainActivity.kt").read_text(encoding="utf-8")
     if '"com.jarvis.nova/sistema"' not in texto:
         falhar("MainActivity sem canal do sistema")
+    if "JarvisAtualizacao(this)" not in texto:
+        falhar("MainActivity sem registrar o canal de atualização")
+    atualizacao = (kotlin / "JarvisAtualizacao.kt").read_text(encoding="utf-8")
+    if '"com.jarvis.nova/atualizacao"' not in atualizacao:
+        falhar("JarvisAtualizacao.kt sem o canal de atualização")
+    if ".fileprovider" not in atualizacao:
+        falhar("JarvisAtualizacao.kt sem a autoridade do FileProvider")
     gradle = (app / "build.gradle.kts").read_text(encoding="utf-8")
     if MARCA_ASSINATURA not in gradle or "JARVIS_PERMITIR_DEBUG" not in gradle:
         falhar("build.gradle.kts sem a assinatura de release por key.properties")
