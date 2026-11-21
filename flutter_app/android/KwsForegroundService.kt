@@ -42,6 +42,9 @@ class KwsForegroundService : Service() {
         /** Janela em que o vigia não interfere: a ativação acabou de acontecer. */
         private const val JANELA_POS_DETECCAO_MS = 20_000L
 
+        /** Tempo para confirmar um toque de tela antes de descartar o pedido. */
+        private const val PRAZO_CONFIRMACAO_MS = 20_000L
+
         // Sensibilidade da palavra de ativação, guardada no aparelho.
         private const val PREFS_ATIVACAO = "jarvis_kws"
         private const val CHAVE_SENSIBILIDADE = "sensibilidade"
@@ -163,6 +166,10 @@ class KwsForegroundService : Service() {
     private var escuta: JarvisEscutaFundo? = null
     private var comandoEmAndamento = false
     private var tentativasFundo = 0
+
+    /** Toque aguardando “confirmar”; nulo quando não há nada pendente. */
+    private var telaPendente: JarvisTelaVoz.Pedido.Tocar? = null
+    private var pedidoTelaPendente = ""
     private var falhasMotor = 0
     private var ultimaDeteccao = 0L
     private var vigia: Runnable? = null
@@ -388,6 +395,33 @@ class KwsForegroundService : Service() {
             }
 
             override fun onTexto(texto: String) {
+                // Resposta de um toque pendente vem antes de qualquer outro comando.
+                val aguardando = telaPendente
+                if (aguardando != null) {
+                    telaPendente = null
+                    val pedidoOriginal = pedidoTelaPendente.ifEmpty { texto }
+                    pedidoTelaPendente = ""
+                    when (JarvisTelaVoz.confirmar(texto)) {
+                        true -> {
+                            escuta?.cancelar()
+                            escuta = null
+                            executarTela(aguardando, pedidoOriginal)
+                        }
+                        false -> finalizarComando("Cancelado. Nada foi tocado na tela.")
+                        null -> finalizarComando(
+                            "Não entendi a confirmação. Nada foi tocado na tela."
+                        )
+                    }
+                    return
+                }
+                // Comando de tela tem prioridade sobre a pergunta livre.
+                val pedidoTela = JarvisTelaVoz.interpretar(texto)
+                if (pedidoTela != null) {
+                    escuta?.cancelar()
+                    escuta = null
+                    atenderPedidoDeTela(pedidoTela, texto)
+                    return
+                }
                 val comando = JarvisFundo.interpretar(texto)
                 // Pergunta livre (“que horas são”, “quem descobriu o Brasil”):
                 // hora e data são respondidas no aparelho; o resto vai para o
@@ -435,6 +469,87 @@ class KwsForegroundService : Service() {
     }
 
     /**
+     * Comando de tela ouvido com o app fechado. Leitura e rolagem executam na
+     * hora; toque só depois de uma confirmação falada.
+     */
+    private fun atenderPedidoDeTela(pedido: JarvisTelaVoz.Pedido, texto: String) {
+        if (!JarvisTelaVoz.consentido(applicationContext)) {
+            val recusa = "A automação de tela está desligada neste app. Abra o JARVIS, " +
+                "ligue “Ler a tela e tocar por mim” e autorize o serviço em Configurações " +
+                "de Acessibilidade."
+            JarvisFundo.registrarHistorico(
+                applicationContext,
+                origem = JarvisFundo.ORIGEM_SEGUNDO_PLANO,
+                pedido = texto,
+                acao = "comando de tela sem consentimento",
+                ok = false,
+                mensagem = recusa,
+            )
+            finalizarComando(recusa)
+            return
+        }
+        if (pedido is JarvisTelaVoz.Pedido.Tocar) {
+            perguntarConfirmacaoTela(pedido, texto)
+            return
+        }
+        executarTela(pedido, texto)
+    }
+
+    /**
+     * Pergunta antes do toque e escuta a resposta. Sem “confirmar” dentro do
+     * prazo, o toque é descartado — o microfone não fica esperando para sempre.
+     */
+    private fun perguntarConfirmacaoTela(
+        pedido: JarvisTelaVoz.Pedido.Tocar,
+        texto: String,
+    ) {
+        telaPendente = pedido
+        pedidoTelaPendente = texto
+        val pergunta = JarvisTelaVoz.confirmacaoPara(pedido)
+        updateNotification("Confirmação: tocar em ${pedido.texto}?")
+        avisarAtivo("JARVIS ativo", "Confirme o toque: diga confirmar ou cancelar.")
+        // O microfone só abre quando a pergunta termina; ouvir junto faria o
+        // próprio JARVIS se ativar com a própria voz.
+        val falou = voz?.falar(pergunta) { ouvirConfirmacaoTela() } ?: false
+        if (!falou) {
+            handler.postDelayed(
+                { if (telaPendente != null) ouvirConfirmacaoTela() },
+                atrasoResposta(pergunta),
+            )
+        }
+        handler.postDelayed({
+            if (telaPendente === pedido) {
+                telaPendente = null
+                pedidoTelaPendente = ""
+                finalizarComando("Ninguém confirmou o toque. Nada foi tocado na tela.")
+            }
+        }, PRAZO_CONFIRMACAO_MS)
+    }
+
+    private fun ouvirConfirmacaoTela() {
+        if (telaPendente == null || !comandoEmAndamento) return
+        ouvirComandoFundo()
+    }
+
+    /** Executa fora da thread principal: percorrer a árvore da tela custa tempo. */
+    private fun executarTela(pedido: JarvisTelaVoz.Pedido, texto: String) {
+        updateNotification("Executando na tela…")
+        avisarAtivo("JARVIS ativo", "Agindo na tela…")
+        Thread {
+            val resposta = JarvisTelaVoz.executar(pedido)
+            JarvisFundo.registrarHistorico(
+                applicationContext,
+                origem = JarvisFundo.ORIGEM_SEGUNDO_PLANO,
+                pedido = texto,
+                acao = resposta.acao,
+                ok = resposta.ok,
+                mensagem = resposta.mensagem,
+            )
+            handler.post { finalizarComando(resposta.mensagem) }
+        }.start()
+    }
+
+    /**
      * Responde uma pergunta livre pela ponte de IA. Com o app aberto quem
      * responde é o motor da tela; com o app encerrado a ponte sobe o motor sem
      * tela (`mainFundo`), que usa o mesmo provedor e a mesma personalidade.
@@ -467,6 +582,9 @@ class KwsForegroundService : Service() {
     private fun finalizarComando(mensagem: String) {
         comandoEmAndamento = false
         tentativasFundo = 0
+        // Confirmação não sobrevive ao fim do comando: nada fica armado.
+        telaPendente = null
+        pedidoTelaPendente = ""
         escuta?.cancelar()
         escuta = null
         updateNotification("JARVIS: $mensagem")

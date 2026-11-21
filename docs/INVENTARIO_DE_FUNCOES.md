@@ -781,3 +781,20 @@ em vez de fingir que agiu.
 
 Limite honesto: a confirmação falada depende do reconhecimento de fala do
 aparelho; o botão na tela é o caminho garantido. Nada foi testado em aparelho.
+
+## Tela no segundo plano — ajuste 097 (2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Interpretar sem Flutter | voz com o app fechado | lê, rola, toca e para pela árvore da tela | `JarvisTelaVoz.interpretar`, `JarvisAcessibilidade` |
+| Consentimento | preferência do app | lê `flutter.jarvis.acessibilidade.ativo`; ausente vale desligado | `JarvisTelaVoz.consentido` |
+| Confirmação do toque | “tocar em Enviar” | pergunta falada e escuta “confirmar” ou “cancelar” antes de agir | `KwsForegroundService.perguntarConfirmacaoTela` |
+| Prazo da confirmação | 20 s sem resposta | descarta o toque e avisa que nada foi tocado | `PRAZO_CONFIRMACAO_MS` |
+| Fim do comando | qualquer desfecho | limpa a pendência; nada fica armado | `finalizarComando` |
+| Leitura e rolagem | pedido direto | executam na hora, fora da thread principal | `executarTela` |
+| Histórico | execução, recusa ou cancelamento | registra pedido, ação, resultado e origem de segundo plano | `JarvisFundo.registrarHistorico` |
+| Escopo | leitura, toque e rolagem | não digita, não lê senha nem campo de texto | `JarvisTelaVoz`, `JarvisAcessibilidade` |
+
+Limite honesto: o caminho do fundo depende do reconhecimento offline em
+português e do serviço de acessibilidade autorizado; nada foi executado em
+aparelho nesta sessão.

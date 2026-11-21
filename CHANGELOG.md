@@ -1,3 +1,26 @@
+## 1.83.0 — comandos de tela com o app fechado
+
+### O que mudou
+- **A tela agora funciona no segundo plano.** Com o app fechado e a palavra de
+  ativação ouvida, “ler a tela”, “rolar para baixo” e “tocar em Enviar” são
+  interpretados no próprio Android, sem depender do Flutter.
+- **Tocar continua exigindo confirmação.** O JARVIS pergunta em voz alta
+  (“Posso tocar em Enviar? Diga confirmar ou cancelar.”), escuta a resposta e só
+  então age. Sem resposta em 20 segundos, o toque é descartado e ele avisa que
+  nada foi tocado.
+- **Mesmo consentimento do app**: o fundo lê `jarvis.acessibilidade.ativo` das
+  preferências do Flutter (desligado por padrão). Desligado o interruptor, a
+  recusa é dita e registrada, sem tocar em nada.
+- **Mesmo escopo estreito**: ler, tocar, rolar e parar. Não digita, não lê senha
+  nem o que você escreveu em campos de texto.
+- **Histórico**: leitura, rolagem, toque, cancelamento e recusa entram no
+  histórico de execuções com a origem “segundo plano”.
+- O microfone só abre depois que a pergunta termina, para o JARVIS não se ativar
+  com a própria voz.
+
+Limite honesto: nada disto foi compilado nem testado em aparelho nesta sessão; a
+confirmação depende do reconhecimento de fala offline entender “confirmar”.
+
 ## 1.82.0 — comandos de tela na conversa, com confirmação antes de tocar
 
 ### O que mudou

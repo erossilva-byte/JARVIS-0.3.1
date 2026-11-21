@@ -16,7 +16,7 @@ limite), **Falta** (não existe), **Não se aplica** (decisão do projeto).
 | Discador, vibração, pesquisa web | `JarvisAparelho.kt` (ligar), comandos de risco 2 | **Tem** |
 | Alarmes e lembretes no Relógio | `JarvisAgenda.kt`, `agenda_service.dart` | **Tem** |
 | Controle do Spotify | `JarvisAparelho.kt` + `interpretarSpotify` | **Parcial** (faixa exata só com link) |
-| Acessibilidade (ler a tela, tocar e rolar) | `JarvisAcessibilidade.kt`, `acessibilidade_page.dart` | **Novo nos ajustes 095/096** (escopo estreito, desligado por padrão; toque só com confirmação) |
+| Acessibilidade (ler a tela, tocar e rolar) | `JarvisAcessibilidade.kt`, `acessibilidade_page.dart` | **Novo nos ajustes 095/096/097** (escopo estreito, desligado por padrão; toque só com confirmação; funciona com o app fechado) |
 
 ## Mensagens e notificações
 
@@ -89,6 +89,8 @@ de **conveniência de mensagens** e **automação**:
    provedor e queda para o modelo padrão quando o escolhido é retirado;
 10. ~~acessibilidade (ler a tela, tocar e rolar)~~ — feito no ajuste 095, com
     escopo estreito, consentimento dentro do app e serviço desligado por padrão.
+11. ~~tela no segundo plano~~ — feito no ajuste 097: os mesmos comandos pelo
+    serviço de palavra de ativação, com confirmação falada antes do toque.
 
 Nada nesta lista foi medido em aparelho físico neste repositório; a coluna
 “Tem” significa “existe no código com teste”, não “funciona no seu celular”.

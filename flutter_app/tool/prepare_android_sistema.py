@@ -282,6 +282,7 @@ def copiar_codigo(app: Path) -> None:
     shutil.copy2(ANDROID / "JarvisTimbre.kt", kotlin / "JarvisTimbre.kt")
     shutil.copy2(ANDROID / "JarvisAtualizacao.kt", kotlin / "JarvisAtualizacao.kt")
     shutil.copy2(ANDROID / "JarvisAcessibilidade.kt", kotlin / "JarvisAcessibilidade.kt")
+    shutil.copy2(ANDROID / "JarvisTelaVoz.kt", kotlin / "JarvisTelaVoz.kt")
 
 
 def garantir_permissoes(texto: str) -> str:
@@ -385,7 +386,7 @@ def verificar(app: Path) -> None:
                  "JarvisBiometria.kt", "JarvisLocalizacao.kt", "JarvisAparelho.kt",
                  "JarvisNotificacaoListener.kt", "JarvisPonteIa.kt",
                  "JarvisSensores.kt", "JarvisTimbre.kt", "JarvisAtualizacao.kt",
-                 "JarvisAcessibilidade.kt"):
+                 "JarvisAcessibilidade.kt", "JarvisTelaVoz.kt"):
         if not (kotlin / nome).is_file():
             falhar(f"{nome} não copiado")
     provedores = [n for n in manifesto.iter("provider")
