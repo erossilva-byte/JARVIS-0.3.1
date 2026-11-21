@@ -27,7 +27,7 @@ limite), **Falta** (não existe), **Não se aplica** (decisão do projeto).
 | Resposta em 2º plano pelo campo da notificação (RemoteInput) | `JarvisNotificacaoListener.responder` | **Novo no ajuste 084** |
 | Enviar WhatsApp/SMS com busca na agenda | `enviarMensagem` + `buscarContatos` | **Tem** (SMS sai direto; WhatsApp abre o app) |
 | Resumo tático das mensagens por IA | `core/resumo_tatico.dart`, `resumo_ia_service.dart` | **Novo no ajuste 085** |
-| Hotword fonético com variações | KWS com aliases (Javis, Jarve, Charles…) | **Parcial** (modelo inglês, sem modelo pt-BR) |
+| Hotword fonético com variações | `core/hotword_portugues.dart`, `hotword_store.dart` + KWS com aliases | **Novo no ajuste 098**: 15 frases em português, escolhidas na tela e aplicadas com o app fechado. Toque do motor continua sendo modelo inglês |
 
 ## Voz e interface
 
@@ -91,6 +91,9 @@ de **conveniência de mensagens** e **automação**:
     escopo estreito, consentimento dentro do app e serviço desligado por padrão.
 11. ~~tela no segundo plano~~ — feito no ajuste 097: os mesmos comandos pelo
     serviço de palavra de ativação, com confirmação falada antes do toque.
+12. ~~hotword fonética em português~~ — feito no ajuste 098 no que o modelo
+    permite: frases brasileiras (inclusive “Ei/Oi/Alô/Olá Jarvis”) escolhidas na
+    tela, com o limite declarado de que o detector acústico é treinado em inglês.
 
 Nada nesta lista foi medido em aparelho físico neste repositório; a coluna
 “Tem” significa “existe no código com teste”, não “funciona no seu celular”.

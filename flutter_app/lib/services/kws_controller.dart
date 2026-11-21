@@ -45,6 +45,7 @@ class KwsController extends ChangeNotifier {
   String? get error => _error;
   bool get busy => _busy;
   int get sensibilidade => _status.sensibilidade;
+  int get hotword => _status.hotword;
 
   Future<KwsStatus> initialize() async {
     if (_disposed) return _status;
@@ -88,6 +89,12 @@ class KwsController extends ChangeNotifier {
     }
     return _status;
   }
+
+  /// Relê as frases escolhidas e religa o detector com elas.
+  Future<KwsStatus> aplicarHotword() => _run(
+        transitional: KwsPhase.starting,
+        action: _gateway.aplicarHotword,
+      );
 
   Future<KwsStatus> _run(
       {required KwsPhase transitional,

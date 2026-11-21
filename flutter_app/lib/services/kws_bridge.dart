@@ -13,6 +13,13 @@ abstract interface class KwsGateway {
   /// Grava a sensibilidade da palavra de ativação no aparelho e devolve o
   /// estado já com o detector religado no limiar novo.
   Future<KwsStatus> definirSensibilidade(int valor);
+
+  /// Relê as frases escolhidas nas preferências e religa o detector.
+  ///
+  /// As frases já foram gravadas pelo Flutter; o serviço Android lê as linhas
+  /// tokenizadas direto de `FlutterSharedPreferences` também quando o app
+  /// está fechado, então aqui só é preciso aplicar agora.
+  Future<KwsStatus> aplicarHotword();
 }
 
 class KwsCommandEvent {
@@ -43,6 +50,7 @@ class KwsStatus {
     this.comandoAtivo = false,
     this.sensibilidade = AtivacaoSensibilidade.padrao,
     this.limiar = 0.25,
+    this.hotword = 0,
   });
   final bool available;
   final bool listening;
@@ -64,6 +72,9 @@ class KwsStatus {
   /// Limiar acústico que essa sensibilidade produziu no detector.
   final double limiar;
 
+  /// Quantas frases de ativação o detector aceita agora.
+  final int hotword;
+
   factory KwsStatus.fromMap(Map<Object?, Object?> map) {
     final detail = map['detail']?.toString() ?? '';
     final error = map['error']?.toString() ?? '';
@@ -83,6 +94,7 @@ class KwsStatus {
       limiar: map['limiar'] is num
           ? (map['limiar'] as num).toDouble()
           : 0.25,
+      hotword: map['hotword'] is num ? (map['hotword'] as num).toInt() : 0,
     );
   }
 }
@@ -179,6 +191,27 @@ class JarvisKwsBridge implements KwsGateway {
     }
     // Relê o estado para a tela mostrar o limiar que o Android realmente usa.
     return status();
+  }
+
+  @override
+  Future<KwsStatus> aplicarHotword() async {
+    try {
+      final result =
+          await _methods.invokeMapMethod<Object?, Object?>('aplicarHotword');
+      if (result == null) {
+        throw PlatformException(
+            code: 'empty_result',
+            message: 'O plugin KWS não retornou diagnóstico.');
+      }
+      return KwsStatus.fromMap(result);
+    } on MissingPluginException {
+      return const KwsStatus(
+          available: false,
+          listening: false,
+          engine: '',
+          detail: 'KWS ainda não conectado ao runner Flutter desta plataforma.',
+          ok: false);
+    }
   }
 
   Future<KwsStatus> _command(String method) async {

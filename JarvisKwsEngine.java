@@ -19,10 +19,18 @@ import com.k2fsa.sherpa.onnx.OnlineModelConfig;
 import com.k2fsa.sherpa.onnx.OnlineStream;
 import com.k2fsa.sherpa.onnx.OnlineTransducerModelConfig;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -32,6 +40,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * O modelo GigaSpeech é treinado em inglês; "Jarvis" é a palavra-chave configurada.
  * A aceitação de sotaques brasileiros deve ser medida em aparelhos/vozes reais antes
  * de declarar precisão final.
+ *
+ * As frases em português escolhidas na tela chegam tokenizadas pelo Flutter
+ * (`lib/core/hotword_portugues.dart`) e são gravadas sobre o keywords.txt dos
+ * assets; só entram linhas cujos tokens existem no tokens.txt do modelo.
  */
 final class JarvisKwsEngine {
     interface Listener {
@@ -46,9 +58,16 @@ final class JarvisKwsEngine {
 
     private final Context context;
     private final Listener listener;
+    /** Teto de frases aceitas ao mesmo tempo (o mesmo da tabela em Dart). */
+    static final int LIMITE_FRASES = 16;
+
     private final float keywordThreshold;
     private final int sensibilidade;
     private final String keywords;
+    /** Linhas tokenizadas escolhidas na tela; vazio usa o keywords.txt dos assets. */
+    private final String linhasHotword;
+    /** Frases realmente em uso, em letras comuns, para o diagnóstico. */
+    private volatile String palavrasLegiveis;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private volatile AudioRecord recorder;
     private volatile Thread worker;
@@ -56,12 +75,19 @@ final class JarvisKwsEngine {
     private volatile OnlineStream stream;
 
     JarvisKwsEngine(Context context, Listener listener, int sensitivity, String extraKeywords) {
+        this(context, listener, sensitivity, extraKeywords, "");
+    }
+
+    JarvisKwsEngine(Context context, Listener listener, int sensitivity,
+                    String extraKeywords, String linhasHotword) {
         this.context = context.getApplicationContext();
         this.listener = listener;
         int s = Math.max(0, Math.min(100, sensitivity));
         this.sensibilidade = s;
         this.keywordThreshold = limiarPara(s);
         this.keywords = montarPalavrasChave(extraKeywords);
+        this.linhasHotword = linhasHotword == null ? "" : linhasHotword;
+        this.palavrasLegiveis = this.keywords.replace('/', ',');
     }
 
     /**
@@ -195,6 +221,7 @@ final class JarvisKwsEngine {
             listener.onState("Preparando detector acústico local");
             File dir = new File(context.getFilesDir(), MODEL_DIR);
             instalarAssets(dir);
+            gravarPalavrasChave(dir);
 
             String base = dir.getAbsolutePath() + File.separator;
             // O AAR Android oficial expõe a Kotlin API (data classes + AssetManager),
@@ -251,7 +278,7 @@ final class JarvisKwsEngine {
             }
             spotter = kws;
             stream = kwsStream;
-            listener.onState("KWS local ativo · limiar " + keywordThreshold + " · palavras: " + keywords.replace('/', ',') + " · áudio não enviado à rede");
+            listener.onState("KWS local ativo · limiar " + keywordThreshold + " · palavras: " + palavrasLegiveis + " · áudio não enviado à rede");
 
             short[] pcm = new short[Math.max(1600, SAMPLE_RATE / 10)];
             float[] samples = new float[pcm.length];
@@ -327,6 +354,89 @@ final class JarvisKwsEngine {
             destino[i] = amostra;
         }
         return ganho;
+    }
+
+    /**
+     * Grava as frases escolhidas na tela por cima do keywords.txt dos assets.
+     *
+     * O Flutter manda as linhas já tokenizadas. Aqui a linha só é aceita se
+     * todos os tokens existirem no tokens.txt do modelo: uma linha inválida
+     * faria o KeywordSpotter falhar na criação, então é descartada em vez de
+     * derrubar o detector. Sem nenhuma linha válida, o arquivo dos assets
+     * continua valendo — é o conjunto de fábrica.
+     *
+     * @return quantas frases foram gravadas.
+     */
+    private int gravarPalavrasChave(File dir) {
+        palavrasLegiveis = keywords.replace('/', ',');
+        if (linhasHotword == null || linhasHotword.trim().isEmpty()) return 0;
+        Set<String> vocabulario = lerVocabulario(new File(dir, "tokens.txt"));
+        if (vocabulario.isEmpty()) return 0;
+        List<String> validas = new ArrayList<>();
+        for (String bruta : linhasHotword.split("\n")) {
+            String linha = bruta.trim().replaceAll("\\s+", " ");
+            if (linha.isEmpty() || validas.contains(linha)) continue;
+            boolean completa = true;
+            for (String token : linha.split(" ")) {
+                if (!vocabulario.contains(token)) {
+                    completa = false;
+                    break;
+                }
+            }
+            if (completa) validas.add(linha);
+            if (validas.size() >= LIMITE_FRASES) break;
+        }
+        if (validas.isEmpty()) return 0;
+        File alvo = new File(dir, "keywords.txt");
+        File temp = new File(dir, "keywords.txt.part");
+        try (FileOutputStream out = new FileOutputStream(temp)) {
+            out.write((String.join("\n", validas) + "\n").getBytes(StandardCharsets.UTF_8));
+            out.getFD().sync();
+        } catch (Throwable e) {
+            temp.delete();
+            return 0;
+        }
+        if (!temp.renameTo(alvo)) {
+            temp.delete();
+            return 0;
+        }
+        StringBuilder legivel = new StringBuilder();
+        for (String linha : validas) {
+            if (legivel.length() > 0) legivel.append(", ");
+            legivel.append(fraseLegivel(linha));
+        }
+        palavrasLegiveis = legivel.toString();
+        return validas.size();
+    }
+
+    /** Junta os tokens de uma linha em letras comuns ("▁E I ▁JA R VI S" → "EI JARVIS"). */
+    static String fraseLegivel(String linha) {
+        StringBuilder sb = new StringBuilder();
+        for (String token : linha.split(" ")) {
+            if (token.isEmpty()) continue;
+            boolean inicio = token.startsWith("▁");
+            if (inicio && sb.length() > 0) sb.append(' ');
+            sb.append(inicio ? token.substring(1) : token);
+        }
+        return sb.toString();
+    }
+
+    /** Lê o vocabulário do modelo: o primeiro campo de cada linha do tokens.txt. */
+    private static Set<String> lerVocabulario(File arquivo) {
+        Set<String> vocabulario = new HashSet<>();
+        if (!arquivo.isFile()) return vocabulario;
+        try (BufferedReader leitor = new BufferedReader(
+                new InputStreamReader(new FileInputStream(arquivo), StandardCharsets.UTF_8))) {
+            String linha;
+            while ((linha = leitor.readLine()) != null) {
+                String[] partes = linha.trim().split("\\s+");
+                if (partes.length > 0 && !partes[0].isEmpty()) vocabulario.add(partes[0]);
+            }
+        } catch (Throwable ignorado) {
+            // Sem vocabulário legível a escolha da tela não é aplicada; o
+            // conjunto dos assets continua valendo.
+        }
+        return vocabulario;
     }
 
     private void instalarAssets(File dir) throws Exception {

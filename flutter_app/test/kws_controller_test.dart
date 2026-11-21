@@ -17,6 +17,7 @@ class FakeKwsGateway implements KwsGateway {
   bool throwOnStart = false;
   bool emitDuringStart = false;
   final List<int> sensibilidades = <int>[];
+  int hotwordsAplicadas = 0;
 
   @override
   Stream<String> get wakeEvents => events.stream;
@@ -52,6 +53,12 @@ class FakeKwsGateway implements KwsGateway {
   Future<KwsStatus> startTest({int seconds = 20}) async {
     expect(seconds, inInclusiveRange(10, 60));
     return start();
+  }
+
+  @override
+  Future<KwsStatus> aplicarHotword() async {
+    hotwordsAplicadas++;
+    return current;
   }
 
   @override

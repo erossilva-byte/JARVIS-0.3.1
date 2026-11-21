@@ -1,3 +1,28 @@
+## 1.84.0 — hotword em português
+
+### O que mudou
+- **As frases de ativação agora falam português.** Em “Voz e palavra de
+  ativação” aparece a lista completa — Jarvis, Javis, Jarvi, Jarve, Jarviz,
+  Jarves, Javi, Javali, Charles, Chales, Chale — mais as frases de tratamento
+  **“Ei Jarvis”, “Oi Jarvis”, “Alô Jarvis” e “Olá Jarvis”**, cada uma com a
+  pronúncia escrita ao lado.
+- **Você escolhe quais valem.** Ligar ou desligar grava a escolha e religa o
+  detector na hora; a escolha também vale com o app fechado, porque o serviço
+  Android lê as linhas gravadas pelo Flutter antes de abrir o microfone.
+- **O padrão não muda**: as 11 frases que já existiam seguem ligadas; as quatro
+  novas vêm desligadas, porque cada palavra extra custa processamento e pode
+  acordar o JARVIS por engano. O teto é 16 frases ao mesmo tempo.
+- **A tela diz qual frase soou**: “Última ativação recebida: Ei Jarvis”, em vez
+  da linha de tokens do modelo.
+- **O motor só aceita linha válida**: as frases chegam tokenizadas do Flutter e
+  cada token é conferido contra o `tokens.txt` do modelo antes de gravar; linha
+  inválida é descartada em vez de derrubar o detector.
+
+Limite honesto: o modelo acústico continua sendo inglês (não existe modelo
+público de KWS em português). As frases com “ei/oi/alô/olá” melhoram a chamada
+natural, mas a taxa de acerto de cada uma só pode ser medida no seu aparelho,
+com a sua voz. Nada disto foi compilado nem testado em aparelho nesta sessão.
+
 ## 1.83.0 — comandos de tela com o app fechado
 
 ### O que mudou

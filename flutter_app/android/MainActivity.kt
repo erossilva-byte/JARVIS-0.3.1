@@ -1006,6 +1006,12 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                     ?: KwsForegroundService.sensibilidadeDe(this)
                 result.success(KwsForegroundService.definirSensibilidade(this, valor))
             }
+            // Frases em português: o Flutter já gravou as linhas tokenizadas; aqui
+            // só religamos o detector para valer agora.
+            "aplicarHotword" -> {
+                KwsForegroundService.aplicarHotword(this)
+                result.success(statusMap())
+            }
             else -> result.notImplemented()
         }
     }
@@ -1079,6 +1085,7 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
             "listening" to KwsForegroundService.isListening(),
             "sensibilidade" to sensibilidade,
             "limiar" to JarvisKwsEngine.limiarPara(sensibilidade).toDouble(),
+            "hotword" to KwsForegroundService.quantasHotwordsDe(this),
             "engine" to KwsForegroundService.ENGINE,
             "ok" to erro.isEmpty(),
             "error" to erro,

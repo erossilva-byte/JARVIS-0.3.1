@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import '../core/ativacao_sensibilidade.dart';
+import '../core/hotword_portugues.dart';
+import 'hotword_store.dart';
 import 'kws_controller.dart';
 import 'kws_bridge.dart';
 import 'voz_jarvis.dart';
 
 class KwsSettingsPage extends StatefulWidget {
-  const KwsSettingsPage({super.key, this.controller});
+  const KwsSettingsPage({super.key, this.controller, this.hotwordStore});
   final KwsController? controller;
+  final PreferenciasHotword? hotwordStore;
 
   @override
   State<KwsSettingsPage> createState() => _KwsSettingsPageState();
@@ -16,6 +19,9 @@ class KwsSettingsPage extends StatefulWidget {
 class _KwsSettingsPageState extends State<KwsSettingsPage> {
   late final KwsController controller;
   late final bool ownsController;
+  late final PreferenciasHotword hotwordStore;
+  Set<String> _hotword = HotwordPortugues.idsPadrao;
+  bool _hotwordCarregada = false;
   double? _sensibilidadeLocal;
 
   int get _sensibilidade =>
@@ -27,8 +33,56 @@ class _KwsSettingsPageState extends State<KwsSettingsPage> {
     super.initState();
     ownsController = widget.controller == null;
     controller = widget.controller ?? KwsController();
+    hotwordStore = widget.hotwordStore ?? HotwordStore();
     controller.addListener(_refresh);
     if (ownsController) unawaited(controller.initialize());
+    unawaited(_carregarHotword());
+  }
+
+  Future<void> _carregarHotword() async {
+    final ids = await hotwordStore.carregar();
+    if (!mounted) return;
+    setState(() {
+      _hotword = ids;
+      _hotwordCarregada = true;
+    });
+  }
+
+  /// Liga/desliga uma frase e aplica na hora no detector.
+  Future<void> _alternarHotword(VarianteHotword variante, bool ligada) async {
+    final nova = {..._hotword};
+    if (ligada) {
+      nova.add(variante.id);
+    } else {
+      nova.remove(variante.id);
+    }
+    if (nova.isEmpty) {
+      // Sem nenhuma frase o motor volta ao conjunto empacotado no APK; a tela
+      // não finge que a escuta ficou muda.
+      _avisar('Deixe pelo menos uma frase ligada para o JARVIS continuar ouvindo.');
+      return;
+    }
+    if (nova.length > HotwordPortugues.limite) {
+      _avisar('O detector aceita até ${HotwordPortugues.limite} frases ao mesmo tempo.');
+      return;
+    }
+    setState(() => _hotword = HotwordPortugues.seguras(nova));
+    final gravadas = await hotwordStore.gravar(_hotword);
+    if (!mounted) return;
+    setState(() => _hotword = gravadas);
+    await controller.aplicarHotword();
+    if (!mounted) return;
+    setState(() {});
+    final status = controller.status;
+    _avisar(status.hotword > 0
+        ? '${HotwordPortugues.resumo(gravadas)} · detector religado com ${status.hotword} frases.'
+        : 'Frases gravadas. O detector as usa na próxima escuta.');
+  }
+
+  void _avisar(String mensagem) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
   void _refresh() {
@@ -152,7 +206,8 @@ class _KwsSettingsPageState extends State<KwsSettingsPage> {
                 if (controller.lastWake != null) ...[
                   const SizedBox(height: 12),
                   Text(
-                    'Última ativação recebida: ${controller.lastWake}',
+                    'Última ativação recebida: '
+                    '${HotwordPortugues.nomeAmigavel(controller.lastWake!)}',
                     style:
                         const TextStyle(color: Color(0xFF54D6A0), fontSize: 12),
                   ),
@@ -216,6 +271,13 @@ class _KwsSettingsPageState extends State<KwsSettingsPage> {
                 setState(() => _sensibilidadeLocal = valor.roundToDouble()),
             onChangeEnd: _gravarSensibilidade,
           ),
+          const SizedBox(height: 14),
+          _HotwordCard(
+            carregada: _hotwordCarregada,
+            ativos: _hotword,
+            busy: controller.busy,
+            onChanged: _alternarHotword,
+          ),
           const SizedBox(height: 20),
           const _InfoCard(
             icon: Icons.lock_outline_rounded,
@@ -242,7 +304,7 @@ class _KwsSettingsPageState extends State<KwsSettingsPage> {
             icon: Icons.translate_rounded,
             title: 'Limitação do modelo atual',
             description:
-                'O modelo KWS foi treinado em inglês. Além de Jarvis, aceita Javis, Jarve, Jarvi, Jarviz, Jarves, Javi, Javali, Charles, Chales e Chale. A precisão de cada pronúncia ainda precisa ser medida no seu aparelho.',
+                'O modelo KWS foi treinado em inglês. As frases em português da lista acima são pronúncias aceitas pelo modelo, não um modelo brasileiro: “Ei Jarvis” e “Olá Jarvis” chegam ao detector como sons parecidos com palavras inglesas. A precisão de cada pronúncia só pode ser medida no seu aparelho, com a sua voz.',
           ),
           const SizedBox(height: 10),
           const _InfoCard(
@@ -266,6 +328,121 @@ class _KwsSettingsPageState extends State<KwsSettingsPage> {
                 .bodySmall
                 ?.copyWith(color: colors.onSurfaceVariant),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HotwordCard extends StatelessWidget {
+  const _HotwordCard({
+    required this.carregada,
+    required this.ativos,
+    required this.busy,
+    required this.onChanged,
+  });
+
+  final bool carregada;
+  final Set<String> ativos;
+  final bool busy;
+  final void Function(VarianteHotword variante, bool ligada) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final grupos = <String, List<VarianteHotword>>{};
+    for (final variante in HotwordPortugues.variantes) {
+      grupos.putIfAbsent(variante.grupo, () => []).add(variante);
+    }
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: colors.surfaceContainerHighest.withValues(alpha: .32),
+        border: Border.all(color: colors.primary.withValues(alpha: .28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.record_voice_over_rounded,
+                  size: 20, color: colors.primary),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text('Palavras que acordam o JARVIS',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            carregada
+                ? '${ativos.length} de ${HotwordPortugues.variantes.length} ligadas. '
+                    'O detector aceita até ${HotwordPortugues.limite} ao mesmo tempo.'
+                : 'Lendo as frases gravadas no aparelho…',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.4),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'O nome e as pronúncias que já existiam ficam ligados. As frases com '
+            '“ei”, “oi”, “alô” e “olá” vêm desligadas: cada palavra extra custa '
+            'processamento e pode acordar o JARVIS por engano. Ligue só a que você '
+            'usa de verdade.',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: colors.onSurfaceVariant, height: 1.4),
+          ),
+          for (final entrada in grupos.entries) ...[
+            const SizedBox(height: 10),
+            Text(
+              HotwordPortugues.grupos[entrada.key] ?? entrada.key,
+              style: TextStyle(
+                color: colors.primary,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: .8,
+              ),
+            ),
+            for (final variante in entrada.value)
+              InkWell(
+                onTap: busy || !carregada
+                    ? null
+                    : () => onChanged(variante, !ativos.contains(variante.id)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        key: ValueKey('hotword-${variante.id}'),
+                        value: ativos.contains(variante.id),
+                        onChanged: busy || !carregada
+                            ? null
+                            : (valor) =>
+                                onChanged(variante, valor ?? false),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(variante.frase,
+                                style: const TextStyle(fontSize: 13)),
+                            Text(
+                              variante.dica,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ],
       ),
     );

@@ -45,6 +45,13 @@ class KwsForegroundService : Service() {
         /** Tempo para confirmar um toque de tela antes de descartar o pedido. */
         private const val PRAZO_CONFIRMACAO_MS = 20_000L
 
+        // Frases de ativação escolhidas na tela do Flutter. As linhas já chegam
+        // tokenizadas e ficam nas preferências do app; o serviço lê o mesmo
+        // arquivo direto, como já faz com o consentimento de acessibilidade,
+        // porque com o app fechado não há Flutter para consultar.
+        private const val PREFS_FLUTTER = "FlutterSharedPreferences"
+        private const val CHAVE_HOTWORD_LINHAS = "flutter.jarvis.hotword.linhas"
+
         // Sensibilidade da palavra de ativação, guardada no aparelho.
         private const val PREFS_ATIVACAO = "jarvis_kws"
         private const val CHAVE_SENSIBILIDADE = "sensibilidade"
@@ -89,6 +96,31 @@ class KwsForegroundService : Service() {
             val valor = context.getSharedPreferences(PREFS_ATIVACAO, Context.MODE_PRIVATE)
                 .getInt(CHAVE_SENSIBILIDADE, SENSIBILIDADE_PADRAO)
             return valor.coerceIn(SENSIBILIDADE_MINIMA, SENSIBILIDADE_MAXIMA)
+        }
+
+        /**
+         * Linhas tokenizadas das frases escolhidas na tela.
+         * Vazio significa “usar o conjunto empacotado no APK”.
+         */
+        @JvmStatic fun linhasHotwordDe(context: Context): String =
+            context.getSharedPreferences(PREFS_FLUTTER, Context.MODE_PRIVATE)
+                .getString(CHAVE_HOTWORD_LINHAS, "") ?: ""
+
+        /** Quantas frases o detector aceita agora (para o diagnóstico). */
+        @JvmStatic fun quantasHotwordsDe(context: Context): Int =
+            linhasHotwordDe(context).split("\n").count { it.trim().isNotEmpty() }
+
+        /** A tela mudou as frases: reinicia o detector para valer já. */
+        @JvmStatic fun aplicarHotword(context: Context) {
+            if (!running) return
+            val intent = Intent(context, KwsForegroundService::class.java).apply {
+                action = ACTION_REINICIAR
+            }
+            try {
+                ContextCompat.startForegroundService(context, intent)
+            } catch (_: Exception) {
+                // Se o Android recusar, o próximo start já usa as frases novas.
+            }
         }
 
         /**
@@ -349,7 +381,8 @@ class KwsForegroundService : Service() {
                 }
             },
             sensibilidade,
-            ""
+            "",
+            linhasHotwordDe(applicationContext)
         )
         motorAtual = engine
         engine?.start()

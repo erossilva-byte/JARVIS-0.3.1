@@ -26,6 +26,7 @@ Estados: **Verificada** (teste real com evidência) · **Parcial** (funciona com
 |---|---|---|---|---|---|---|
 | KWS local sherpa-onnx | Sim | Não | Parcial | `JarvisKwsEngine.java` | RECORD_AUDIO | Modelo **inglês**; precisão pt-BR não medida |
 | KWS no Flutter | Sim (branch) | Não | Não verificado | `KwsForegroundService.kt`, `kws_bridge.dart`, 23 testes | microfone | Nunca executado em aparelho |
+| Hotword em português (frases escolhidas) — ajuste 098 | Sim (branch) | Não | Não verificado | `core/hotword_portugues.dart`, `hotword_store.dart`, `JarvisKwsEngine.gravarPalavrasChave`, `tests/test_hotword_portugues.py` | microfone | Modelo inglês: “Ei/Oi/Alô/Olá Jarvis” são opcionais e o acerto não foi medido em voz real |
 | Serviço de escuta em segundo plano | Sim | Não | Parcial | `JarvisService`, `patch_manifest.py` | FOREGROUND_SERVICE_MICROPHONE | Restrições Android 14+/HyperOS não validadas |
 | STT pt-BR | Sim | Sim | Parcial | `escuta.js`, `JarvisVozPlugin.java` | RECORD_AUDIO | On-device depende do aparelho |
 | TTS pt-BR | Sim | Sim | Parcial | `fala.js`, `voz_motor.js` | pacote de voz | Voz masculina grave não garantida |

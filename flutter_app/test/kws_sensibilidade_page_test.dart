@@ -12,6 +12,7 @@ class FakeKwsGateway implements KwsGateway {
   final StreamController<KwsCommandEvent> commands =
       StreamController<KwsCommandEvent>.broadcast();
   final List<int> gravados = <int>[];
+  int hotwordsAplicadas = 0;
 
   KwsStatus current = const KwsStatus(
     available: true,
@@ -37,6 +38,12 @@ class FakeKwsGateway implements KwsGateway {
 
   @override
   Future<KwsStatus> startTest({int seconds = 20}) async => current;
+
+  @override
+  Future<KwsStatus> aplicarHotword() async {
+    hotwordsAplicadas++;
+    return current;
+  }
 
   @override
   Future<KwsStatus> definirSensibilidade(int valor) async {

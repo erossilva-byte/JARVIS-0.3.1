@@ -61,7 +61,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_084-sentinela-de-mensagens.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.83.0+18300" in pubspec, "versão não atualizada para 1.71.0")
+exigir("version: 1.84.0+18400" in pubspec, "versão não atualizada para 1.71.0")
 exigir("1.71.0" in changelog and "mensagens" in changelog.lower(),
        "CHANGELOG sem o bloco 1.71.0 da sentinela")
 exigir("tests/test_sentinela_mensagens_flutter.py" in pacote,
