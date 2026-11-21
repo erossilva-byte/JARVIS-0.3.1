@@ -150,6 +150,57 @@ class InterpretadorTela {
   }
 }
 
+/// Decisão da conversa para um pedido de tela.
+sealed class DecisaoDeTela {
+  const DecisaoDeTela();
+}
+
+class SemTela extends DecisaoDeTela {
+  const SemTela();
+}
+
+class ExecutarNaTela extends DecisaoDeTela {
+  const ExecutarNaTela(this.comando);
+  final ComandoDeTela comando;
+}
+
+/// Toque novo: nada acontece antes do “sim”.
+class PedirConfirmacao extends DecisaoDeTela {
+  const PedirConfirmacao(this.comando);
+  final TocarNaTela comando;
+}
+
+class CancelarNaTela extends DecisaoDeTela {
+  const CancelarNaTela();
+}
+
+/// Liga o interpretador de tela à conversa: decide quando perguntar, quando
+/// executar e quando a resposta é só conversa.
+class ConversaDeTela {
+  const ConversaDeTela._();
+
+  static final _sim = RegExp(
+      r'^(sim|s|confirmo|confirma|confirmar|pode|pode tocar|claro|isso|manda|executa|ok|beleza)\b');
+  static final _nao = RegExp(
+      r'^(nao|n|cancela|cancelar|deixa|deixa pra la|nao quero|pare|para)\b');
+
+  static DecisaoDeTela decidir(String texto, {TocarNaTela? pendente}) {
+    final limpo = _limpar(texto);
+    if (limpo.isEmpty) return const SemTela();
+    if (pendente != null) {
+      if (_sim.hasMatch(limpo)) return ExecutarNaTela(pendente);
+      if (_nao.hasMatch(limpo)) return const CancelarNaTela();
+    }
+    final comando = InterpretadorTela.interpretar(texto);
+    if (comando == null) return const SemTela();
+    if (comando is TocarNaTela) return PedirConfirmacao(comando);
+    return ExecutarNaTela(comando);
+  }
+
+  static String perguntaDeConfirmacao(TocarNaTela comando) =>
+      'Posso tocar em "${comando.alvo}" na tela atual? Diga "sim" ou cancelar.';
+}
+
 /// Frase do que a leitura encontrou. Repetidos somem e o tamanho é limitado:
 /// a tela fala em voz alta, não despeja a árvore inteira.
 String resumoDaTela({

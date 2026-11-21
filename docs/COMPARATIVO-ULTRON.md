@@ -16,7 +16,7 @@ limite), **Falta** (não existe), **Não se aplica** (decisão do projeto).
 | Discador, vibração, pesquisa web | `JarvisAparelho.kt` (ligar), comandos de risco 2 | **Tem** |
 | Alarmes e lembretes no Relógio | `JarvisAgenda.kt`, `agenda_service.dart` | **Tem** |
 | Controle do Spotify | `JarvisAparelho.kt` + `interpretarSpotify` | **Parcial** (faixa exata só com link) |
-| Acessibilidade (ler a tela, tocar e rolar) | `JarvisAcessibilidade.kt`, `acessibilidade_page.dart` | **Novo no ajuste 095** (escopo estreito, desligado por padrão; não digita) |
+| Acessibilidade (ler a tela, tocar e rolar) | `JarvisAcessibilidade.kt`, `acessibilidade_page.dart` | **Novo nos ajustes 095/096** (escopo estreito, desligado por padrão; toque só com confirmação) |
 
 ## Mensagens e notificações
 

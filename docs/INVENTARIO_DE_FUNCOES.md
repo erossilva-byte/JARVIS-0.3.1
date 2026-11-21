@@ -765,3 +765,19 @@ físico.
 Limite honesto: o serviço não foi compilado nem executado em aparelho nesta
 sessão; apps protegidos contra captura devolvem pouco ou nada, e a tela diz isso
 em vez de fingir que agiu.
+
+## Comandos de tela na conversa — ajuste 096 (2026-11-21)
+
+| Recurso | Entrada | Ação | Onde |
+|---|---|---|---|
+| Voz e texto | comando falado ou digitado na conversa | interpreta leitura, rolagem e toque antes de chamar a IA | `ConversaDeTela`, `VoiceConversationPage._enviar` |
+| Confirmação do toque | “tocar em Enviar” | pergunta antes de agir e espera “sim” ou “cancelar” | `ConversaDeTela.perguntaDeConfirmacao`, `_pedirConfirmacaoTela` |
+| Confirmação por botão | cartão na conversa | `Tocar` executa, `Cancelar` encerra sem tocar | `confirmar-toque-tela`, `cancelar-toque-tela` |
+| Confirmação por fala | “sim”, “confirmo”, “pode”; “não”, “cancela” | executa ou cancela o toque pendente | `ConversaDeTela.decidir` |
+| Mudança de assunto | outra pergunta com toque pendente | o toque é descartado sem executar | `VoiceConversationPage._enviar` |
+| Sem consentimento | toque pedido com o interruptor desligado | recusa antes de perguntar; nada sai do app | `_tela.consentido`, `desligadoPeloApp` |
+| Histórico | execução, recusa ou cancelamento | registra pedido, ação, resultado e origem | `_concluirLocal`, `_cancelarToque` |
+| Limite de comandos | seis comandos seguidos | bloqueia o sexto com explicação, sem fingir execução | `_sequenciaComandos` |
+
+Limite honesto: a confirmação falada depende do reconhecimento de fala do
+aparelho; o botão na tela é o caminho garantido. Nada foi testado em aparelho.

@@ -58,16 +58,23 @@ inventario = ler(RAIZ / "docs" / "INVENTARIO_DE_FUNCOES.md")
 comparativo = ler(RAIZ / "docs" / "COMPARATIVO-ULTRON.md")
 guia = ler(RAIZ / "GUIA-ACESSOS-ANDROID.md")
 pacote = ler(RAIZ / "package.json")
+conversa = ler(APP / "lib" / "services" / "voice_conversation_page.dart")
+teste_conversa = ler(APP / "test" / "conversa_tela_test.dart")
 relatorio = RAIZ / "docs" / "relatorios" / "2026-11-21_095-acessibilidade-de-tela.md"
+relatorio_conversa = (RAIZ / "docs" / "relatorios"
+                      / "2026-11-21_096-tela-na-conversa.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.81.0+18100" in pubspec,
+exigir("version: 1.82.0+18200" in pubspec,
        "versão não atualizada para 1.81.0")
 exigir("1.81.0" in changelog and "acessibilidade" in changelog.lower(),
        "CHANGELOG sem o bloco 1.81.0 da acessibilidade")
+exigir("1.82.0" in changelog and "confirmação" in changelog.lower(),
+       "CHANGELOG sem o bloco 1.82.0 da tela na conversa")
 exigir("tests/test_acessibilidade.py" in pacote,
        "contrato novo fora de package.json test:all")
 exigir(relatorio.is_file(), "relatório 095 ausente")
+exigir(relatorio_conversa.is_file(), "relatório 096 ausente")
 
 # 2. Serviço dedicado, com escopo fechado.
 exigir("class JarvisAcessibilidade : AccessibilityService()" in nativo,
@@ -177,6 +184,35 @@ exigir("**Falta** (o APK é publicado por link)" not in comparativo,
        "comparativo ainda diz que a atualização OTA falta")
 exigir("escopo estreito" in guia.lower() or "consentimento" in guia.lower(),
        "guia de acessos não foi atualizado para a automação consentida")
+
+# 11. Ajuste 096: tela na conversa, com confirmação antes de tocar.
+for termo in ("ConversaDeTela", "PedirConfirmacao", "CancelarNaTela",
+              "perguntaDeConfirmacao"):
+    exigir(termo in nucleo, f"decisor da conversa sem {termo}")
+exigir("por que" in nucleo and "_sim" in nucleo and "_nao" in nucleo,
+       "confirmação falada sem sim/não")
+exigir("ConversaDeTela.decidir(texto, pendente: _telaPendente)" in conversa,
+       "conversa não consulta o decisor de tela")
+exigir("_pedirConfirmacaoTela" in conversa and "_executarNaTela" in conversa,
+       "conversa não pergunta antes de tocar")
+exigir("confirmar-toque-tela" in conversa and "cancelar-toque-tela" in conversa,
+       "conversa sem os botões de confirmação")
+exigir("await _tela.consentido()" in conversa,
+       "conversa não confere o consentimento antes de perguntar")
+exigir("registrarPedido: _telaPendente == null" in conversa,
+       "confirmação pendente não é distinguida de um pedido novo")
+exigir("AcessibilidadeService.desligadoPeloApp" in conversa,
+       "conversa não usa a mesma recusa do serviço")
+exigir("_concluirLocal" in conversa and "_sequenciaComandos" in conversa,
+       "comando de tela fora do limite e do histórico")
+exigir("OrigemExecucao.voz" in conversa,
+       "histórico da conversa perde a origem por voz")
+for termo in ("pede confirmação e não chama o Android",
+              "“não” cancela e nada é tocado",
+              "ler a tela executa direto",
+              "sem consentimento o toque é recusado",
+              "conversa normal não vira ação de tela"):
+    exigir(termo in teste_conversa, f"teste da conversa sem o caso: {termo}")
 
 if falhas:
     print("FALHAS:")

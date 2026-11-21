@@ -1,3 +1,25 @@
+## 1.82.0 — comandos de tela na conversa, com confirmação antes de tocar
+
+### O que mudou
+- **A voz já alcança a tela.** “Ler a tela”, “rolar para baixo” e “tocar em
+  Enviar” passam a ser entendidos no mesmo caminho da conversa por voz e do
+  texto digitado, sem passar por provedor de IA.
+- **Tocar só depois do “sim”.** Um toque nunca executa direto: o JARVIS pergunta
+  (“Posso tocar em "Enviar" na tela atual?”) e espera. A confirmação vale por
+  botão (`Tocar` / `Cancelar`) ou por fala (“sim”, “confirmo”, “não”,
+  “cancelar”).
+- **Qualquer outra frase cancela o toque pendente** e segue como conversa
+  normal: mudar de assunto nunca deixa um toque armado.
+- **Mesmo escopo e mesmo consentimento do ajuste 095**: sem o interruptor
+  ligado, o toque é recusado antes de perguntar — nenhuma chamada chega ao
+  Android. Leitura e rolagem não pedem confirmação; digitar não existe.
+- **Histórico registra a decisão**: execução, recusa e cancelamento aparecem no
+  histórico de execuções do aparelho, com a origem (voz ou digitado).
+
+Limite honesto: nada disto foi compilado nem testado em aparelho nesta sessão;
+a confirmação por voz depende do reconhecimento ouvir “sim” — se a fala não for
+reconhecida, o botão na tela continua valendo.
+
 ## 1.81.0 — acessibilidade de tela com escopo estreito e consentimento
 
 ### O que mudou

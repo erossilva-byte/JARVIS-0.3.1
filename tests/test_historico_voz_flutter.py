@@ -59,7 +59,7 @@ servico_kt = ler(KOTLIN / "KwsForegroundService.kt")
 relatorio = RAIZ / "docs" / "relatorios" / "2026-11-20_081-historico-de-voz.md"
 
 # 1. Versão, changelog, relatório e suíte.
-exigir("version: 1.81.0+18100" in pubspec, "versão não atualizada para 1.68.0")
+exigir("version: 1.82.0+18200" in pubspec, "versão não atualizada para 1.68.0")
 exigir("1.68.0" in changelog and "histórico" in changelog.lower(),
        "CHANGELOG sem o bloco 1.68.0 do histórico")
 exigir(relatorio.is_file(), "relatório 081 ausente")
@@ -129,9 +129,10 @@ exigir("_historico.registrar(" in conversa, "conversa não registra o comando ex
 exigir("origem:\n          widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado"
        in conversa or "widget.fromVoice ? OrigemExecucao.voz" in conversa,
        "origem da voz não é distinguida")
-exigir("ok: comando.ok && !bloqueado" in conversa,
+exigir("ok: ok && !bloqueado" in conversa,
        "comando bloqueado no limite poderia aparecer como executado")
-exigir("acao: comando.acao" in conversa, "registro não guarda a ação decidida")
+exigir("_concluirComando" in conversa and "acao: acao" in conversa,
+       "registro não guarda a ação decidida")
 
 # 8. Caminhos de acesso.
 exigir("abrir-historico-voz" in comandos_tela,

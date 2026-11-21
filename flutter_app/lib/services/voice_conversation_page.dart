@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../core/acessibilidade.dart';
 import '../core/conversa.dart';
 import '../core/habilidades.dart';
 import '../core/historico_voz.dart';
@@ -11,6 +12,7 @@ import '../core/personalidade.dart';
 import '../core/pessoas.dart';
 import '../core/stream_buffer.dart';
 import '../ui_common.dart';
+import 'acessibilidade_service.dart';
 import 'comandos_android_service.dart';
 import 'conversa_store.dart';
 import 'habilidades_service.dart';
@@ -34,7 +36,8 @@ class VoiceConversationPage extends StatefulWidget {
       this.conversa,
       this.voz = const VozJarvis(),
       this.historico,
-      this.habilidadesServico});
+      this.habilidadesServico,
+      this.tela});
 
   final String initialCommand;
 
@@ -53,6 +56,9 @@ class VoiceConversationPage extends StatefulWidget {
   /// Habilidades em Markdown do aparelho; nulo lê a pasta padrão.
   final HabilidadesService? habilidadesServico;
 
+  /// Automação de tela; nulo usa a ponte Android com o consentimento do app.
+  final AcessibilidadeService? tela;
+
   @override
   State<VoiceConversationPage> createState() => _VoiceConversationPageState();
 }
@@ -61,6 +67,11 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   late final ProviderService service =
       ProviderService(secrets: PlatformSecretStore());
   final ExecutorComandosAndroid _comandos = ExecutorComandosAndroid();
+  late final AcessibilidadeService _tela =
+      widget.tela ?? AcessibilidadeService();
+  /// Toque aguardando “sim”: existe enquanto o usuário decide.
+  TocarNaTela? _telaPendente;
+  String _pedidoPendente = '';
   late final HistoricoVozGateway _historico =
       widget.historico ?? HistoricoVozService();
   int _sequenciaComandos = 0;
@@ -159,6 +170,29 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     if (comando != null) {
       _concluirComando(texto, comando);
       return;
+    }
+    // Pedido de tela: ler e rolar executam direto; tocar só depois do “sim”.
+    final decisao = ConversaDeTela.decidir(texto, pendente: _telaPendente);
+    if (decisao is PedirConfirmacao) {
+      await _pedirConfirmacaoTela(texto, decisao.comando);
+      return;
+    }
+    if (decisao is ExecutarNaTela) {
+      final pedido = _telaPendente == null
+          ? texto
+          : (_pedidoPendente.isEmpty ? texto : _pedidoPendente);
+      await _executarNaTela(pedido, decisao.comando,
+          registrarPedido: _telaPendente == null);
+      return;
+    }
+    if (decisao is CancelarNaTela) {
+      _cancelarToque();
+      return;
+    }
+    // Mudou de assunto: a confirmação pendente morre sem executar nada.
+    if (_telaPendente != null) {
+      _telaPendente = null;
+      _pedidoPendente = '';
     }
     _sequenciaComandos = 0;
     AiProvider? selecionado = provedor ?? provedorAtivo;
@@ -303,17 +337,27 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   }
 
   /// Registra a resposta local de um comando sem chamar provedor de IA.
-  void _concluirComando(String texto, ResultadoComando comando) {
+  void _concluirComando(String texto, ResultadoComando comando) => _concluirLocal(
+        texto,
+        ok: comando.ok,
+        mensagemRecebida: comando.mensagem,
+        acao: comando.acao,
+      );
+
+  void _concluirLocal(
+    String texto, {
+    required bool ok,
+    required String mensagemRecebida,
+    required String acao,
+    bool registrarPedido = true,
+  }) {
     unawaited(voz.parar());
-    final ultima = conversa.mensagens.isEmpty ? null : conversa.mensagens.last;
-    if (ultima == null || !ultima.doUsuario || ultima.texto != texto) {
-      conversa.adicionar(MensagemConversa(autor: 'user', texto: texto));
-    }
+    if (registrarPedido) _registrarPedido(texto);
     _sequenciaComandos++;
     final bloqueado = _sequenciaComandos > 5;
     final mensagem = bloqueado
         ? 'Limite de cinco comandos seguidos atingido. Faça uma pergunta ou peça outra coisa para continuar.'
-        : comando.mensagem;
+        : mensagemRecebida;
     conversa.adicionar(MensagemConversa(autor: 'assistant', texto: mensagem));
     composer.clear();
     unawaited(store?.limparRascunho());
@@ -328,9 +372,88 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     // Fica no aparelho para conferir depois: o que foi pedido, a ação e o resultado.
     unawaited(_historico.registrar(
       pedido: texto,
-      acao: comando.acao,
+      acao: acao,
       // No limite de comandos seguidos nada foi executado: o histórico não pode dizer que sim.
-      ok: comando.ok && !bloqueado,
+      ok: ok && !bloqueado,
+      mensagem: mensagem,
+      origem:
+          widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado,
+    ));
+  }
+
+  void _registrarPedido(String texto) {
+    final ultima = conversa.mensagens.isEmpty ? null : conversa.mensagens.last;
+    if (ultima == null || !ultima.doUsuario || ultima.texto != texto) {
+      conversa.adicionar(MensagemConversa(autor: 'user', texto: texto));
+    }
+  }
+
+  /// Pede o “sim” antes de tocar. Sem consentimento no app, nem pergunta: recusa.
+  Future<void> _pedirConfirmacaoTela(String texto, TocarNaTela comando) async {
+    if (!await _tela.consentido()) {
+      _concluirLocal(
+        texto,
+        ok: false,
+        mensagemRecebida: AcessibilidadeService.desligadoPeloApp,
+        acao: comando.resumo,
+      );
+      return;
+    }
+    if (!mounted) return;
+    unawaited(voz.parar());
+    _registrarPedido(texto);
+    final pergunta = ConversaDeTela.perguntaDeConfirmacao(comando);
+    conversa.adicionar(MensagemConversa(autor: 'assistant', texto: pergunta));
+    composer.clear();
+    unawaited(store?.limparRascunho());
+    setState(() {
+      _telaPendente = comando;
+      _pedidoPendente = texto;
+      enviando = false;
+      erro = null;
+      aviso = null;
+      parcial = '';
+    });
+    unawaited(_falar(pergunta));
+    unawaited(_persistir());
+  }
+
+  Future<void> _executarNaTela(
+    String pedido,
+    ComandoDeTela comando, {
+    bool registrarPedido = true,
+  }) async {
+    final resultado = await _tela.executar(comando);
+    if (!mounted) return;
+    setState(() {
+      _telaPendente = null;
+      _pedidoPendente = '';
+    });
+    _concluirLocal(
+      pedido,
+      ok: resultado.ok,
+      mensagemRecebida: resultado.mensagem,
+      acao: resultado.acao,
+      registrarPedido: registrarPedido,
+    );
+  }
+
+  void _cancelarToque() {
+    final pendente = _telaPendente;
+    final pedido = _pedidoPendente;
+    _telaPendente = null;
+    _pedidoPendente = '';
+    if (pendente == null) return;
+    const mensagem = 'Cancelado. Nada foi tocado na tela.';
+    conversa
+        .adicionar(const MensagemConversa(autor: 'assistant', texto: mensagem));
+    if (mounted) setState(() {});
+    unawaited(_falar(mensagem));
+    unawaited(_persistir());
+    unawaited(_historico.registrar(
+      pedido: pedido.isEmpty ? 'cancelar o toque' : pedido,
+      acao: 'cancelar o toque em "${pendente.alvo}"',
+      ok: false,
       mensagem: mensagem,
       origem:
           widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado,
@@ -498,7 +621,54 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
                   _bolha(const MensagemConversa(autor: 'assistant', texto: ''),
                       colors,
                       textoEmCurso: parcial),
-                if (!enviando &&
+                if (_telaPendente != null) ...[
+                  Container(
+                    key: const ValueKey('confirmacao-toque-tela'),
+                    margin: const EdgeInsets.only(top: 10),
+                    padding: const EdgeInsets.all(13),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFC66D).withValues(alpha: .08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: const Color(0xFFFFC66D)
+                              .withValues(alpha: .35)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Tocar em "${_telaPendente!.alvo}" na tela atual?',
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Nada é tocado antes do seu “sim”. Diga “cancelar” para desistir.',
+                          style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 10,
+                              height: 1.4),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          FilledButton(
+                            key: const ValueKey('confirmar-toque-tela'),
+                            onPressed: () => unawaited(_executarNaTela(
+                                _pedidoPendente, _telaPendente!,
+                                registrarPedido: false)),
+                            child: const Text('Tocar'),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            key: const ValueKey('cancelar-toque-tela'),
+                            onPressed: _cancelarToque,
+                            child: const Text('Cancelar'),
+                          ),
+                        ]),
+                      ],
+                    ),
+                  ),
+                ],
+                if (_telaPendente == null &&
+                    !enviando &&
                     conversa.mensagens.isNotEmpty &&
                     !conversa.mensagens.last.doUsuario)
                   Align(
