@@ -40,6 +40,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -120,20 +121,28 @@ public class JarvisVozPlugin extends Plugin {
 
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final Object trava = new Object();
-    private OfflineTts motor;
-    private String motorId;
+    private volatile OfflineTts motor;
+    private volatile String motorId;
     private volatile boolean pararPedido;
     private volatile AudioTrack faixa;
     private final Set<String> cancelados = new HashSet<>();
 
     @Override
     protected void handleOnDestroy() {
-        liberarMotor();
+        worker.shutdownNow();
+        // Só libera o motor depois que a fila parou: liberar enquanto a síntese nativa
+        // roda é use-after-free e derruba o processo (não é exceção Java).
         try {
-            worker.shutdownNow();
-        } catch (Exception e) {
-            // encerramento best-effort
+            if (!worker.awaitTermination(1500, TimeUnit.MILLISECONDS)) {
+                super.handleOnDestroy();
+                return;
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            super.handleOnDestroy();
+            return;
         }
+        liberarMotor();
         super.handleOnDestroy();
     }
 
@@ -547,22 +556,28 @@ public class JarvisVozPlugin extends Plugin {
         worker.execute(() -> {
             try {
                 long t0 = System.currentTimeMillis();
-                OfflineTts m = motorPara(v);
-                GeneratedAudio audio = m.generate(texto, sid, vel);
-                float[] amostras = audio.getSamples();
-                int taxa = audio.getSampleRate();
+                final float[] amostras;
+                final int taxa;
+                // Mesmo cadeado de liberarMotor(): remover a voz ou fechar o app no meio da
+                // síntese não pode soltar o motor nativo debaixo do generate().
+                synchronized (trava) {
+                    OfflineTts m = motorPara(v);
+                    GeneratedAudio audio = m.generate(texto, sid, vel);
+                    amostras = audio.getSamples();
+                    taxa = audio.getSampleRate();
+                }
                 if (amostras == null || amostras.length < 1000) {
                     throw new IOException("o motor não gerou áudio (texto não fonetizável?)");
                 }
-                amostras = mudarTom(amostras, fTom);
-                normalizar(amostras);
+                float[] prontas = mudarTom(amostras, fTom);
+                normalizar(prontas);
                 long sintese = System.currentTimeMillis() - t0;
                 JSObject info = new JSObject();
                 info.put("id", v.id);
                 info.put("sinteseMs", sintese);
-                info.put("segundos", Math.round(amostras.length * 1000.0 / taxa) / 1000.0);
+                info.put("segundos", Math.round(prontas.length * 1000.0 / taxa) / 1000.0);
                 notifyListeners("sintetizado", info);
-                tocar(amostras, taxa);
+                tocar(prontas, taxa);
                 if (pararPedido) {
                     call.reject("fala interrompida");
                 } else {

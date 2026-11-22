@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.31.2",
-  "versionCode": 10312,
+  "version": "1.46.0",
+  "versionCode": 10460,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
-  "gerado": "2026-10-30",
-  "status": "1.31.2: auditoria de consentimento (argumentos no plano), coerência do humor e correções de classificação preservadas.",
+  "gerado": "2026-11-08",
+  "status": "1.46.0 em desenvolvimento: OpenRouter/DeepSeek integrado; KWS acústico local sherpa-onnx implementado no serviço Android; modos AND/OR de PIN, biometria forte e NFC adicionados. O modelo KWS disponível é inglês; precisão PT-BR, CI, build Android, testes físicos, Flutter/Dart, KWS Windows, paridade Windows e CADeSIMU nativo ainda pendentes.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Revisão 1.31.2 (2026-10-30). Terceira fase da evolução baseada nos oito repositórios. O módulo plano.js transforma um objetivo em até seis etapas usando apenas ações reais do catálogo, recusando ação inventada, indisponível, argumentos grandes ou plano recursivo. O usuário confirma o plano antes de qualquer execução. Cada etapa passa pelo executarSeguro e pelo recibo da 1.30.0: ok avança; incerto pausa e exige autorização explícita; falha, bloqueio e cancelamento interrompem o restante. O planejamento usa o provedor de IA já configurado, mas salva e restaura o histórico para não contaminar a conversa. O comando é explícito (planeje..., status do plano, cancelar plano); não há execução autônoma silenciosa. O núcleo (HUD, plasma e órbita 3D), a animação, a personalidade, o humor, a memória, a identificação de pessoas, a visão, o VAD, a voz neural, a IA local e o Windows seguem intactos. O que não foi possível testar aqui: aparelho Android, microfone, câmera, Windows e efeitos nativos reais; o motor de plano foi testado com executor e confirmações injetados, e a geração por IA depende do provedor configurado. Correção 1.31.2: texto de falha (\"não encontrei\", \"sem permissão\", \"indisponível\") vence a marca otimista de verificação; notificações e verificação de arquivo deixam de ser leitura comprovada e podem pausar o plano. Auditoria 1.31.2: a confirmação do plano passa a mostrar os argumentos de cada etapa; o resumo padrão continua sem valores; texto de humor corrigido para 90%.",
+  "notas": "Versão de desenvolvimento, não publicar como estável. Groq continua como principal e OpenRouter/DeepSeek como reserva. KWS sherpa-onnx usa AudioRecord e inferência CPU local, sem envio de áudio ou fallback de rede antes da palavra-chave; o modelo GigaSpeech é inglês e precisa de validação de sotaque PT-BR. Segurança inclui PIN ou biometria, PIN ou NFC e modos com múltiplos fatores obrigatórios; BiometricPrompt usa biometria forte e o Android escolhe o sensor. NFC por UID simples é clonável. Nenhum APK 1.46.0 foi compilado, instalado ou aprovado em aparelho físico; nenhum pacote Windows 1.46.0 foi compilado. Migração Flutter, KWS equivalente no Windows, paridade Windows completa e CADeSIMU nativo validado continuam pendentes. Não declarar recurso concluído sem teste e evidência. A interface preserva o núcleo central, áreas separadas e abertura sem flashes. Os módulos de cognição existentes preservam raciocínio em etapas, personalidade adaptativa e verificação/revisão de respostas.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -15,13 +15,8 @@
     "release/RELEASE-1.21.5-PC.md"
   ],
   "build": {
-    "resultado": "success",
-    "sha256": "89a0c511e1fd0ab720d2927e89a822f76a94ae1e040c08d0b3c9e6192f100c42",
-    "bytes": 81102865,
-    "arquivo": "jarvis-nova-1.31.2-10312.apk",
-    "data": "2026-10-30",
-    "ambiente": "compilação limpa local (JDK 21 + AGP 8.7.3 + Gradle 8.9 + Android SDK 35; npx cap copy + gradlew clean assembleDebug, assinatura ci/debug.keystore)",
-    "observacao": "APK 1.31.2 com plano.js, agentes.js, app.js, escuta.js, identidade.js, identidade_ui.js, voz_motor.js e humor.js; suíte npm run test:all exit 0; build limpo com 151 tarefas. Inclui argumentos na confirmação do plano e correção do texto de humor. Sem aparelho/microfone neste ambiente: efeitos nativos reais, geração por IA e captura de voz precisam ser conferidos no aparelho."
+    "resultado": "pendente",
+    "observacao": "Nenhum APK 1.46.0 foi compilado ou instalado em aparelho físico."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",
@@ -32,19 +27,15 @@
     ],
     "documentacao": "platforms/WINDOWS.md",
     "build": {
-      "resultado": "parcial",
-      "pacote": "release/jarvis-nova-1.21.5-pc-portatil.zip",
-      "sha256": "d18f42eaee0499bf55ea95ee523654ea1d7108f2ba030d2f59884c490dd50ae1",
-      "bytes": 117539692,
-      "ambiente": "Linux · electron-builder --win dir -c.win.signAndEditExecutable=false",
-      "instalador_nsis": "não gerado: electron-builder exige Wine no Linux para o desinstalador; use .github/workflows/release-pc.yml (windows-latest) ou npm run dist:win no Windows",
-      "observacao": "pasta portátil montada a partir do build real; o executável não foi aberto em Windows nesta máquina"
+      "resultado": "pendente",
+      "observacao": "Nenhum pacote Windows 1.46.0 foi compilado ou testado."
     },
     "testes_pc": {
       "arquivos": "node tests/test_pc_arquivos.js — 19/19",
       "cad": "node tests/test_pc_cad.js — 12/12",
       "contrato": "python3 tests/test_pc_windows.py",
-      "suite": "npm run test:all — verde"
+      "suite": "pendente — CI da 1.46.0 ainda não executado"
     }
-  }
+  },
+  "versao": "1.46.0"
 }

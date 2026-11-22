@@ -141,6 +141,28 @@ final class JarvisAtivacao {
         return false;
     }
 
+    /**
+     * Há conteúdo depois da palavra de ativação? Um parcial "Jarvis" isolado não
+     * deve acordar e descartar o comando que ainda está chegando no próximo partial.
+     * O resultado definitivo continua podendo acordar só com o nome, para o app pedir
+     * o comando em seguida.
+     */
+    static boolean temComando(String texto, Config c) {
+        Config cfg = c == null ? config(55, "") : c;
+        String n = norm(texto);
+        if (n.isEmpty()) return false;
+        String[] partes = n.split(" ");
+        for (int i = 0; i < partes.length; i++) {
+            if (casaToken(partes[i], cfg)) {
+                return i + 1 < partes.length && partes[i + 1].length() >= 2;
+            }
+            if (i + 1 < partes.length && casaToken(partes[i] + partes[i + 1], cfg)) {
+                return i + 2 < partes.length && partes[i + 2].length() >= 2;
+            }
+        }
+        return false;
+    }
+
     /** A palavra aparece em algum lugar da transcrição (inclusive partida em duas)? */
     static boolean presente(String texto, Config c) {
         Config cfg = c == null ? config(55, "") : c;

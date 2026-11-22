@@ -82,7 +82,7 @@ checagens = {
         ("## %s" % versao.get("version")) in leituras and ("# J.A.R.V.I.S. Nova %s" % versao.get("version")) in leituras
         and "plasma" in leituras.lower()),
     "Notas da versão descrevem o que foi entregue": (
-        all(t in versao.get("notas", "").lower() for t in ("plasma", "núcleo", "animação"))),
+        all(t in versao.get("notas", "").lower() for t in ("kws", "deepseek", "openrouter", "pin ou biometria", "pin ou nfc"))),
     "Suíte roda o teste novo": "python3 tests/test_v1_15_0.py" in script_teste,
     "Workflows carregam a versão atual": (
         versao.get("version") in build_wf and versao.get("version") in release_wf

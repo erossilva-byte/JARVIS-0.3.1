@@ -8,35 +8,33 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.BroadcastReceiver;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.media.AudioManager;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
+import android.os.PowerManager;
 
 import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
 
-import java.util.ArrayList;
 
 /**
  * Serviço em primeiro plano que mantém a escuta de ativação viva fora da tela.
  *
  * O detector pertence ao serviço (não à tela) e o estado desejado é persistido em
- * JarvisPrefs, junto da calibragem (sensibilidade e palavras extras). Assim, quando o
+ * JarvisPrefs, junto da sensibilidade e das palavras extras do KWS. Assim, quando o
  * Android reinicia o serviço (START_STICKY), reinicia o aparelho ou encerra o app pelos
  * recentes, a escuta volta sozinha e calibrada do jeito que o usuário deixou.
  *
- * A detecção é 100% local: o reconhecimento do Android transcreve e as regras de
- * JarvisAtivacao decidem. Não há chave de terceiro, não há SDK de palavra de ativação e
- * nenhum áudio sai do aparelho.
+ * A detecção usa sherpa-onnx + AudioRecord em CPU, sem SpeechRecognizer, sem fallback
+ * de rede e sem transmitir áudio. O modelo KWS disponível é treinado em inglês; o uso
+ * com sotaques brasileiros exige validação de campo antes de prometer precisão.
  */
 public class JarvisService extends Service {
 
@@ -47,6 +45,8 @@ public class JarvisService extends Service {
     static final String ACAO_ESCUTA_ON = "com.jarvis.nova.ESCUTA_ON";
     static final String ACAO_ESCUTA_PAUSA = "com.jarvis.nova.ESCUTA_PAUSA";
     static final String ACAO_ESCUTA_OFF = "com.jarvis.nova.ESCUTA_OFF";
+    static final String ACAO_PAUSAR = "com.jarvis.nova.ESCUTA_PAUSAR_MANUAL";
+    static final String ACAO_RETOMAR = "com.jarvis.nova.ESCUTA_RETOMAR";
     static final String ACAO_TESTE_ON = "com.jarvis.nova.TESTE_ON";
     static final String ACAO_TESTE_OFF = "com.jarvis.nova.TESTE_OFF";
     static final String EXTRA_MUSICA = "pausarMusica";
@@ -70,6 +70,22 @@ public class JarvisService extends Service {
      */
     private boolean pausadoPelaInterface = false;
     private Runnable rearme;
+    /** Até quando a escuta fica parada depois de o fone ser desconectado. */
+    private long pausaFoneAte = 0;
+    private boolean foneRegistrado = false;
+
+    /**
+     * Rota de áudio mudou (fone Bluetooth caiu, cabo saiu): o Android manda este aviso
+     * para quem está tocando. A escuta para por 5 s e volta sozinha, sem desligar nada.
+     */
+    private final BroadcastReceiver foneReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            if (intent == null) return;
+            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) {
+                main.post(JarvisService.this::pausarPorFone);
+            }
+        }
+    };
 
     // Modo teste: conta ativações em uma janela curta sem abrir o app.
     private long testeAte = 0;
@@ -91,32 +107,31 @@ public class JarvisService extends Service {
         }
     };
 
-    // Detector de ativação próprio: sessões do reconhecimento do Android conferidas no
-    // próprio aparelho pelas regras de JarvisAtivacao (variantes fonéticas + limiar).
-    private SpeechRecognizer rec;
-    private Runnable proximo;
-    private Runnable timeout;
-    private boolean sessao = false;
-    private int falhas = 0;
-    private int errosIdioma = 0;
-    private String parcial = "";
-    private boolean preferirRede = false; // true quando o aparelho não tem o idioma offline
-    private JarvisAtivacao.Config cfg = JarvisAtivacao.config(55, "");
-    // Porteiro de ruído: pico de nível da sessão. Transcrição que só aparece com o som
-    // baixo (televisão ao fundo, conversa de outra sala) não acorda o assistente.
-    private float picoDb = -120f;
-    private int rejeitadasRuido = 0;
-    /** Nome do detector, exposto no diagnóstico e na notificação. */
-    static final String DETECTOR = "proprio";
+    // KWS acústico sherpa-onnx: a inferência e a captura PCM acontecem no processo do serviço.
+    // Não existe fallback para SpeechRecognizer, serviço de reconhecimento Android ou rede.
+    private volatile JarvisKwsEngine kwsEngine;
+    private volatile boolean sessao = false;
+    /** Nome explícito do motor real, exposto no diagnóstico e na notificação. */
+    static final String DETECTOR = "sherpa-onnx-kws-gigaspeech-en";
+
+    /** Tráfego transmitido pelo app no início do processo, para a auditoria de privacidade. */
+    private static long redeNoInicio = -1;
 
     private final Runnable monitorMidia = new Runnable() {
         @Override public void run() {
-            if (!querEscuta) return;
+            if (!querEscuta || JarvisPrefs.pausadoManual(JarvisService.this)) return;
             // Chamada/VoIP nunca divide o microfone com o detector; mídia só pausa se o usuário pediu.
-            boolean ocupado = chamadaAtiva() || (pausarDuranteMusica && musicaAtiva());
+            String microfone = bloqueioMicrofone(JarvisService.this);
+            boolean ocupado = chamadaAtiva() || (pausarDuranteMusica && musicaAtiva()) || !microfone.isEmpty();
             if (ocupado) {
-                if (sessao || proximo != null) pausarMotor();
-            } else if (!sessao && proximo == null) {
+                if (sessao) {
+                    pausarMotor();
+                    String novo = chamadaAtiva()
+                        ? "Escuta pausada durante chamada"
+                        : (pausarDuranteMusica && musicaAtiva() ? "Escuta pausada durante mídia" : "Escuta pausada: " + microfone);
+                    if (!novo.equals(estadoNotificacao)) { estadoNotificacao = novo; notificar(); }
+                }
+            } else if (!sessao) {
                 try { iniciarMotor(); } catch (Exception e) { pararPorFalha(mensagemFalha(e)); return; }
             }
             main.postDelayed(this, 1000);
@@ -168,9 +183,12 @@ public class JarvisService extends Service {
 
     /** Liga o serviço, persiste o estado desejado e começa a escutar. */
     static void iniciarEscuta(Context ctx, boolean pausarMusica) {
+        JarvisPrefs.ultimoErro(ctx, "");
         JarvisPrefs.desejaOuvir(ctx, true);
+        JarvisPrefs.pausadoManual(ctx, false);
         JarvisPrefs.pausarMusica(ctx, pausarMusica);
         JarvisWatchdog.agendar(ctx, 15L * 60L * 1000L);
+        JarvisManutencaoWorker.agendar(ctx);
         Intent i = new Intent(ctx, JarvisService.class)
             .setAction(ACAO_ESCUTA_ON)
             .putExtra(EXTRA_MUSICA, pausarMusica);
@@ -195,6 +213,7 @@ public class JarvisService extends Service {
     /** Desliga de verdade: o vigia para de tentar reiniciar. */
     static void desligar(Context ctx) {
         JarvisPrefs.desejaOuvir(ctx, false);
+        JarvisPrefs.pausadoManual(ctx, false);
         JarvisWatchdog.cancelar(ctx);
         JarvisService s = instancia;
         if (s != null) s.main.post(() -> {
@@ -209,8 +228,225 @@ public class JarvisService extends Service {
         desligar(ctx);
     }
 
+    /* ---------- Perfil de energia e pausa manual (Fase 4B) ---------- */
+
+    /** Pausa pelo botão da notificação: solta o microfone, mantém serviço e vigia. */
+    static void pausarEscutaManual(Context ctx) {
+        JarvisPrefs.pausadoManual(ctx, true);
+        JarvisService s = instancia;
+        if (s == null) return;
+        s.main.post(() -> {
+            s.pausadoPelaInterface = false;
+            s.querEscuta = false;
+            if (s.rearme != null) { s.main.removeCallbacks(s.rearme); s.rearme = null; }
+            s.main.removeCallbacks(s.monitorMidia);
+            s.pausarMotor();
+            s.estadoNotificacao = "Escuta pausada por você — Retomar volta a ouvir";
+            s.notificar();
+        });
+    }
+
+    /** Retoma depois da pausa manual, respeitando o perfil de energia. */
+    static void retomarEscutaManual(Context ctx) {
+        JarvisPrefs.pausadoManual(ctx, false);
+        JarvisPrefs.desejaOuvir(ctx, true);
+        JarvisWatchdog.agendar(ctx, 15L * 60L * 1000L);
+        JarvisService s = instancia;
+        if (s != null) {
+            s.main.post(s::iniciarEscutaInterna);
+        } else {
+            ContextCompat.startForegroundService(ctx,
+                new Intent(ctx, JarvisService.class).setAction(ACAO_RETOMAR));
+        }
+    }
+
+    /**
+     * Motivo pelo qual o perfil de energia impede a escuta agora, ou "" quando permite.
+     * Fica aqui, e não na interface, porque quem inicia o microfone é o serviço.
+     */
+    static String bloqueioPerfil(Context c) {
+        String perfil = JarvisPrefs.perfilEnergia(c);
+        if (JarvisPrefs.PERFIL_DESLIGADO.equals(perfil)) {
+            return "perfil Desligado: a escuta em segundo plano não abre o microfone.";
+        }
+        if (JarvisPrefs.PERFIL_CARREGANDO.equals(perfil) && !carregando(c)) {
+            return "perfil Somente carregando: o aparelho está na bateria.";
+        }
+        if (JarvisPrefs.PERFIL_HORARIO.equals(perfil) && !dentroDoHorario(c)) {
+            return "perfil Horários: fora da janela "
+                + formatarHora(JarvisPrefs.horarioInicio(c)) + "–" + formatarHora(JarvisPrefs.horarioFim(c)) + ".";
+        }
+        return "";
+    }
+
+    /**
+     * Redução automática: economia de energia do sistema ou bateria no limite, sem
+     * carregador. Devolve o motivo, ou "" quando a escuta pode rodar.
+     */
+    static String bloqueioBateria(Context c) {
+        if (economiaEnergia(c)) return "economia de energia do sistema ligada.";
+        int nivel = nivelBateria(c);
+        int limite = JarvisPrefs.limiteBateria(c);
+        if (nivel >= 0 && nivel <= limite && !carregando(c)) {
+            return "bateria em " + nivel + "% (limite " + limite + "%).";
+        }
+        return "";
+    }
+
+    /** Nível da bateria em %, ou -1 quando o Android não informa. */
+    static int nivelBateria(Context c) {
+        try {
+            Intent bat = c.registerReceiver(null, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (bat == null) return -1;
+            int nivel = bat.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+            int escala = bat.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1);
+            if (nivel < 0 || escala <= 0) return -1;
+            return Math.round(nivel * 100f / escala);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    /** Economia de energia do sistema (a que o usuário liga em Configurações ▸ Bateria). */
+    static boolean economiaEnergia(Context c) {
+        try {
+            PowerManager pm = (PowerManager) c.getSystemService(Context.POWER_SERVICE);
+            return pm != null && pm.isPowerSaveMode();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Pausa curta depois de o fone cair; o laço de 1 s retoma quando o tempo passa. */
+    private void pausarPorFone() {
+        if (!querEscuta) return;
+        // Pausa manual vence: o aviso do fone não pode trocar o texto nem fingir que volta sozinho.
+        if (JarvisPrefs.pausadoManual(this)) return;
+        pausaFoneAte = System.currentTimeMillis() + 5000;
+        pausarMotor();
+        estadoNotificacao = "Escuta pausada: o fone foi desconectado";
+        notificar();
+    }
+
+    /**
+     * Bytes que o app transmitiu desde o início do processo, pelo contador do Android.
+     * Serve como evidência de que a escuta parada não gera tráfego; não diz o que era o
+     * tráfego, e o contador do sistema reinicia quando o aparelho reinicia.
+     */
+    static long trafegoTxBytes() {
+        try {
+            long v = android.net.TrafficStats.getUidTxBytes(android.os.Process.myUid());
+            return v < 0 ? -1 : v;
+        } catch (Throwable e) {
+            return -1;
+        }
+    }
+
+    /** Tráfego desde o início do processo; -1 quando o Android não informa. */
+    static long redeDesdeInicioBytes() {
+        long agora = trafegoTxBytes();
+        if (redeNoInicio < 0 || agora < 0) return -1;
+        return Math.max(0, agora - redeNoInicio);
+    }
+
+    /** Quanto falta da pausa do fone, em ms (0 quando não está pausada). */
+    static long pausaFoneRestanteMs() {
+        JarvisService s = instancia;
+        if (s == null) return 0;
+        return Math.max(0, s.pausaFoneAte - System.currentTimeMillis());
+    }
+
+    /**
+     * Outro app gravando agora? Usa as configurações de gravação ativas do sistema, que
+     * não dão acesso ao áudio nem exigem permissão extra. O próprio app é ignorado.
+     */
+    static String bloqueioMicrofone(Context c) {
+        try {
+            AudioManager am = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
+            if (am == null) return "";
+            int nossa = sessaoAudioLocal();
+            int desconhecidas = 0;
+            for (android.media.AudioRecordingConfiguration cfg : am.getActiveRecordingConfigurations()) {
+                // A sessão de áudio identifica o nosso próprio AudioRecord sem depender de
+                // permissão de sistema (o nome do pacote exige MODIFY_AUDIO_ROUTING).
+                int sessao = cfg.getClientAudioSessionId();
+                if (nossa != 0 && sessao == nossa) continue;
+                String pkg = cfg.getClientPackageName();
+                if (pkg != null && !pkg.isEmpty()) {
+                    if (pkg.equals(c.getPackageName())) continue;
+                    return "outro app está usando o microfone (" + pkg + ").";
+                }
+                desconhecidas++;
+            }
+            // Sem MODIFY_AUDIO_ROUTING o pacote vem vazio (AOSP). Enquanto estamos gravando,
+            // uma entrada sem nome é o nosso próprio registro; duas já indicam outro app.
+            if (nossa == 0 && escutando && desconhecidas > 0) desconhecidas--;
+            if (desconhecidas > 0) return "outro app está usando o microfone.";
+        } catch (Throwable ignored) { }
+        return "";
+    }
+
+    /** Sessão do nosso AudioRecord; permite ignorar a própria captura na lista do sistema. */
+    private static int sessaoAudioLocal() {
+        JarvisService s = instancia;
+        JarvisKwsEngine e = s == null ? null : s.kwsEngine;
+        return e == null ? 0 : e.sessaoAudio();
+    }
+
+    /** Carregador conectado agora (bateria cheia conta como conectada). */
+    static boolean carregando(Context c) {
+        try {
+            Intent bat = c.registerReceiver(null, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (bat == null) return false;
+            int status = bat.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1);
+            return status == android.os.BatteryManager.BATTERY_STATUS_CHARGING
+                || status == android.os.BatteryManager.BATTERY_STATUS_FULL;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean dentroDoHorario(Context c) {
+        int inicio = JarvisPrefs.horarioInicio(c);
+        int fim = JarvisPrefs.horarioFim(c);
+        if (inicio == fim) return true; // janela de 24 h
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        int agora = cal.get(java.util.Calendar.HOUR_OF_DAY) * 60 + cal.get(java.util.Calendar.MINUTE);
+        return inicio < fim ? (agora >= inicio && agora < fim) : (agora >= inicio || agora < fim);
+    }
+
+    private static String formatarHora(int minutos) {
+        return String.format(java.util.Locale.ROOT, "%02d:%02d", minutos / 60, minutos % 60);
+    }
+
+    /** Reavalia o perfil agora: usado quando o usuário troca a opção na tela. */
+    static void aplicarPerfil(Context ctx) {
+        JarvisService s = instancia;
+        if (s == null) return;
+        s.main.post(() -> {
+            if (!JarvisPrefs.desejaOuvir(s)) return;
+            if (JarvisPrefs.pausadoManual(s)) {
+                s.pausarMotor();
+                s.estadoNotificacao = "Escuta pausada por você — Retomar volta a ouvir";
+                s.notificar();
+                return;
+            }
+            String bloqueio = bloqueioPerfil(s);
+            if (!bloqueio.isEmpty()) {
+                s.querEscuta = false;
+                s.main.removeCallbacks(s.monitorMidia);
+                s.pausarMotor();
+                s.estadoNotificacao = "Escuta parada pelo perfil — " + bloqueio;
+                s.notificar();
+                return;
+            }
+            s.iniciarEscutaInterna();
+        });
+    }
+
     /** Inicia uma janela de teste: cada "Jarvis" conta como acerto e não abre a tela. */
     static void iniciarTeste(Context ctx, int segundos) {
+        JarvisPrefs.ultimoErro(ctx, "");
         int dur = Math.max(10, Math.min(60, segundos));
         Intent i = new Intent(ctx, JarvisService.class)
             .setAction(ACAO_TESTE_ON)
@@ -228,6 +464,15 @@ public class JarvisService extends Service {
     public void onCreate() {
         super.onCreate();
         instancia = this;
+        if (redeNoInicio < 0) redeNoInicio = trafegoTxBytes();
+        // ContextCompat exige a flag de não-exportado no Android 14+; o aviso de rota de
+        // áudio é do sistema, mas a chamada é a mesma em todas as versões suportadas.
+        try {
+            ContextCompat.registerReceiver(this, foneReceiver,
+                new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
+                ContextCompat.RECEIVER_NOT_EXPORTED);
+            foneRegistrado = true;
+        } catch (Throwable ignored) { }
         // O serviço pode nascer de startForegroundService() (vigia, alarme, notificação ou
         // interface). O Android dá 5 s para startForeground() e mata o processo com
         // ForegroundServiceDidNotStartInTimeException se isso não acontecer. Promover aqui,
@@ -267,6 +512,23 @@ public class JarvisService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+        if (ACAO_PAUSAR.equals(acao)) {
+            JarvisPrefs.pausadoManual(this, true);
+            pausadoPelaInterface = false;
+            querEscuta = false;
+            main.removeCallbacks(monitorMidia);
+            pausarMotor();
+            estadoNotificacao = "Escuta pausada por você — Retomar volta a ouvir";
+            notificar();
+            return START_STICKY;
+        }
+        if (ACAO_RETOMAR.equals(acao)) {
+            JarvisPrefs.pausadoManual(this, false);
+            JarvisPrefs.desejaOuvir(this, true);
+            JarvisWatchdog.agendar(this, 15L * 60L * 1000L);
+            iniciarEscutaInterna();
+            return START_STICKY;
+        }
         if (ACAO_ESCUTA_OFF.equals(acao)) {
             JarvisPrefs.desejaOuvir(this, false);
             JarvisWatchdog.cancelar(this);
@@ -294,8 +556,6 @@ public class JarvisService extends Service {
             testeDetector = DETECTOR;
             main.postDelayed(testeFim, Math.max(10, Math.min(60, segundos)) * 1000L + 300);
             iniciarEscutaInterna();
-            estadoNotificacao = "Teste da palavra de ativação — diga “Jarvis”";
-            notificar();
             return START_NOT_STICKY;
         }
 
@@ -331,6 +591,14 @@ public class JarvisService extends Service {
         JarvisPrefs.desejaOuvir(this, true);
         JarvisWatchdog.agendar(this, 15L * 60L * 1000L);
         pausadoPelaInterface = false;
+        if (JarvisPrefs.pausadoManual(this)) {
+            // A pausa do usuário vence o pedido de ligar, inclusive o do vigia.
+            querEscuta = false;
+            pausarMotor();
+            estadoNotificacao = "Escuta pausada por você — Retomar volta a ouvir";
+            notificar();
+            return START_STICKY;
+        }
         iniciarEscutaInterna();
         return START_STICKY;
     }
@@ -338,6 +606,13 @@ public class JarvisService extends Service {
     private void iniciarEscutaInterna() {
         main.post(() -> {
             try {
+                if (JarvisPrefs.pausadoManual(this)) {
+                    querEscuta = false;
+                    pausarMotor();
+                    estadoNotificacao = "Escuta pausada por você — Retomar volta a ouvir";
+                    notificar();
+                    return;
+                }
                 pausarMotor();
                 pausadoPelaInterface = false;
                 querEscuta = true;
@@ -352,32 +627,92 @@ public class JarvisService extends Service {
 
     private String mensagemFalha(Exception e) {
         String detalhe = e == null || e.getMessage() == null ? "" : " Detalhe: " + e.getMessage();
-        return "o detector de ativação próprio não conseguiu ouvir. Confira a permissão de microfone e, se o aparelho não tiver o reconhecimento de português, instale o pacote de idioma (Configurações ▸ Google ▸ Voz)." + detalhe;
+        return "o detector KWS local não conseguiu iniciar. Confira a permissão de microfone, espaço livre e integridade dos arquivos sherpa-onnx incluídos no APK." + detalhe;
     }
 
-    /* ---------- Motor de escuta (detector próprio) ---------- */
+    /* ---------- Motor de escuta (KWS acústico sherpa-onnx) ---------- */
 
     private void iniciarMotor() throws Exception {
-        if (!querEscuta) return;
-        if (chamadaAtiva() || (pausarDuranteMusica && musicaAtiva())) return;
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            throw new IllegalStateException("o reconhecimento de voz do Android não está disponível neste aparelho.");
+        if (!querEscuta || sessao) return;
+        // Perfil de energia: o microfone nem abre. O laço de 1 s volta a tentar, então
+        // conectar o carregador ou entrar na janela de horário já libera a escuta.
+        String bloqueio = bloqueioPerfil(this);
+        if (!bloqueio.isEmpty()) {
+            String novo = "Escuta aguardando o perfil — " + bloqueio;
+            if (!novo.equals(estadoNotificacao)) { estadoNotificacao = novo; notificar(); }
+            return;
         }
-        // A calibragem é relida no começo de cada sessão: mexer na sensibilidade na tela
-        // passa a valer sem reiniciar o serviço.
-        cfg = JarvisAtivacao.config(JarvisPrefs.sensibilidade(this), JarvisPrefs.variantes(this));
+        String bateria = bloqueioBateria(this);
+        if (!bateria.isEmpty()) {
+            String novo = "Escuta reduzida para poupar bateria — " + bateria;
+            if (!novo.equals(estadoNotificacao)) { estadoNotificacao = novo; notificar(); }
+            return;
+        }
+        if (System.currentTimeMillis() < pausaFoneAte) return;
+        String outroApp = bloqueioMicrofone(this);
+        if (!outroApp.isEmpty()) {
+            String novo = "Escuta pausada: " + outroApp;
+            if (!novo.equals(estadoNotificacao)) { estadoNotificacao = novo; notificar(); }
+            return;
+        }
+        if (chamadaAtiva() || (pausarDuranteMusica && musicaAtiva())) return;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            throw new SecurityException("Permissão de microfone não concedida.");
+        }
+        // A sensibilidade da tela altera o limiar acústico do KWS: alta = mais permissivo;
+        // baixa = mais conservador para reduzir ativações acidentais.
+        int sensibilidade = JarvisPrefs.sensibilidade(this);
         detectorAtual = DETECTOR;
-        escutando = true;
-        estadoNotificacao = testeAtivoInterno()
-            ? "Teste · diga “Jarvis” (" + testeDeteccoes + ")"
-            : "Ouvindo “Jarvis” · detector próprio";
+        sessao = true;
+        escutando = false; // só passa a true depois que AudioRecord confirma gravação ativa
+        estadoNotificacao = "Preparando o detector KWS local…";
         notificar();
-        if (!sessao && proximo == null) agendarSessao(0);
+
+        if (kwsEngine != null) {
+            kwsEngine.stop();
+            kwsEngine = null;
+        }
+        kwsEngine = new JarvisKwsEngine(this, new JarvisKwsEngine.Listener() {
+            @Override public void onDetected(String keyword) {
+                main.post(() -> {
+                    if (!querEscuta) return;
+                    sessao = false;
+                    escutando = false;
+                    disparar(keyword == null || keyword.trim().isEmpty() ? "Jarvis" : keyword);
+                });
+            }
+
+            @Override public void onError(String message) {
+                main.post(() -> {
+                    if (!querEscuta) return;
+                    sessao = false;
+                    escutando = false;
+                    pararPorFalha(message);
+                });
+            }
+
+            @Override public void onState(String state) {
+                main.post(() -> {
+                    if (!querEscuta) return;
+                    escutando = state != null && state.startsWith("KWS local ativo");
+                    // No teste, a mensagem só aparece quando o microfone abriu de verdade:
+                    // assim um perfil/bateria bloqueando não parece uma falha do detector.
+                    estadoNotificacao = testeAtivoInterno() && escutando
+                        ? "Teste da palavra de ativação — diga “Jarvis”"
+                        : state;
+                    notificar();
+                });
+            }
+        }, sensibilidade, JarvisPrefs.variantes(this));
+        kwsEngine.start();
     }
 
     private void pausarMotor() {
-        encerrarSessao(true);
+        sessao = false;
         escutando = false;
+        JarvisKwsEngine atual = kwsEngine;
+        if (atual != null) atual.stop();
     }
 
     private void encerrarEscuta() {
@@ -446,6 +781,7 @@ public class JarvisService extends Service {
         rearme = () -> {
             rearme = null;
             if (!JarvisPrefs.desejaOuvir(this)) return;
+            if (JarvisPrefs.pausadoManual(this)) return;
             if (querEscuta || pausadoPelaInterface || testeAte > 0) return;
             try { iniciarEscutaInterna(); } catch (Exception e) { pararPorFalha(mensagemFalha(e)); }
         };
@@ -486,224 +822,13 @@ public class JarvisService extends Service {
         }
     }
 
-    /* ---------- Detector de ativação próprio ----------
-     * O transcritor do Android não conhece "Jarvis": com voz brasileira ele escreve "já vi",
-     * "javis", "jarvi", "charvis" e variações. Aqui cada sessão devolve até cinco hipóteses,
-     * todas são conferidas pelas regras de JarvisAtivacao e o resultado PARCIAL já vale: o
-     * assistente é chamado antes de a frase terminar — é isso que faz a ativação parecer
-     * instantânea em vez de esperar o silêncio. Duas travas evitam sustos: o porteiro de
-     * ruído (som baixo demais para ser voz dirigida ao aparelho) e o mínimo de caracteres
-     * aceito em resultado parcial.
-     */
-
-    /** Quantas ativações o porteiro de ruído descartou (aparece no diagnóstico). */
-    static int descartesRuido() {
-        JarvisService s = instancia;
-        return s == null ? 0 : s.rejeitadasRuido;
-    }
-
-    /** Calibragem em uso, em uma linha legível, para o diagnóstico e o registro. */
+    /* ---------- Motor KWS acústico local ---------- */
     static String calibragem() {
         JarvisService s = instancia;
-        return s == null ? "" : s.cfg.descricao();
-    }
-
-    private void agendarSessao(long atrasoMs) {
-        if (proximo != null) main.removeCallbacks(proximo);
-        proximo = () -> {
-            proximo = null;
-            iniciarSessao();
-        };
-        main.postDelayed(proximo, Math.max(0, atrasoMs));
-    }
-
-    private boolean temReconhecimentoLocal() {
-        return Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(this);
-    }
-
-    private ArrayList<String> hipoteses(Bundle results) {
-        ArrayList<String> lista = results == null ? null
-            : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-        return lista == null ? new ArrayList<>() : lista;
-    }
-
-    private void iniciarSessao() {
-        if (!querEscuta || sessao) return;
-        if (chamadaAtiva() || (pausarDuranteMusica && musicaAtiva())) return;
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            pararPorFalha("o reconhecimento de voz do Android não está disponível neste aparelho");
-            return;
-        }
-        final boolean noDispositivo = temReconhecimentoLocal() && !preferirRede;
-        try {
-            rec = noDispositivo
-                ? SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
-                : SpeechRecognizer.createSpeechRecognizer(this);
-        } catch (Exception e) {
-            // Muitos aparelhos oferecem o reconhecedor local mas sem o pacote de português.
-            if (noDispositivo) {
-                preferirRede = true;
-                agendarSessao(200);
-                return;
-            }
-            pararPorFalha(e.getMessage());
-            return;
-        }
-        sessao = true;
-        parcial = "";
-        picoDb = -120f;
-        final boolean usouLocal = noDispositivo;
-        final SpeechRecognizer r = rec;
-        r.setRecognitionListener(new RecognitionListener() {
-            @Override public void onReadyForSpeech(Bundle params) { }
-            @Override public void onBeginningOfSpeech() { }
-            /** Nível do áudio: alimenta o porteiro de ruído da ativação. */
-            @Override public void onRmsChanged(float rmsdB) { if (rmsdB > picoDb) picoDb = rmsdB; }
-            @Override public void onBufferReceived(byte[] buffer) { }
-            @Override public void onEndOfSpeech() { }
-            @Override public void onEvent(int eventType, Bundle params) { }
-
-            @Override public void onPartialResults(Bundle results) {
-                conferirEmLote(results, false);
-            }
-
-            @Override public void onResults(Bundle results) {
-                if (conferirEmLote(results, true)) return;
-                if (conferirAtivacao(parcial, true)) return;
-                encerrarSessao(false);
-                if (querEscuta) {
-                    falhas = 0;
-                    agendarSessao(400);
-                }
-            }
-
-            @Override public void onError(int error) {
-                if (conferirAtivacao(parcial, true)) return;
-                boolean tinhaFala = parcial != null && !parcial.trim().isEmpty();
-                encerrarSessao(false);
-                if (!querEscuta) return;
-                switch (error) {
-                    case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                        pararPorFalha("permissão de microfone negada pelo usuário");
-                        return;
-                    case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-                        agendarSessao(1500);
-                        return;
-                    case 12: // ERROR_LANGUAGE_NOT_SUPPORTED
-                    case 13: // ERROR_LANGUAGE_UNAVAILABLE (pacote offline ausente)
-                    case 14: // ERROR_CANNOT_CHECK_SUPPORT
-                        errosIdioma++;
-                        if (usouLocal && errosIdioma < 3) {
-                            preferirRede = true;
-                            agendarSessao(300);
-                            return;
-                        }
-                        pararPorFalha("o Android não tem o reconhecimento de português instalado. Baixe o pacote de idioma (Configurações ▸ Google ▸ Voz) ou cadastre palavras extras do seu jeito de falar em Ajustes ▸ Voz");
-                        return;
-                    case SpeechRecognizer.ERROR_NETWORK:
-                    case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
-                        if (preferirRede && temReconhecimentoLocal()) preferirRede = false;
-                        falhas++;
-                        if (falhas >= 6) {
-                            pararPorFalha("sem conexão e o reconhecimento local não respondeu. O detector próprio precisa de rede quando o aparelho não tem o idioma offline");
-                            return;
-                        }
-                        agendarSessao(Math.min(8000, 600L * falhas));
-                        return;
-                    case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-                    case SpeechRecognizer.ERROR_NO_MATCH:
-                        falhas = 0;
-                        // Reinício curto: quanto menos tempo entre sessões, menor a chance de
-                        // o usuário falar exatamente no intervalo em que ninguém está ouvindo.
-                        agendarSessao(tinhaFala ? 350 : 700);
-                        return;
-                    default:
-                        falhas++;
-                        if (falhas >= 10) {
-                            pararPorFalha("o reconhecimento do Android falhou repetidamente (último código " + error + ")");
-                            return;
-                        }
-                        agendarSessao(Math.min(4000, 300L * falhas));
-                }
-            }
-        });
-        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "pt-BR")
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "pt-BR")
-            .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-            // Sessões longas, com mais silêncio tolerado: o microfone abre menos vezes e a
-            // palavra dita no meio de uma frase tem mais chance de ser transcrita.
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 5000L)
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1600L)
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
-            .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
-        if (usouLocal) intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
-        timeout = () -> {
-            if (!sessao) return;
-            if (conferirAtivacao(parcial, true)) return;
-            encerrarSessao(false);
-            if (querEscuta) agendarSessao(400);
-        };
-        main.postDelayed(timeout, 15000);
-        try {
-            r.startListening(intent);
-        } catch (Exception e) {
-            encerrarSessao(false);
-            pararPorFalha(e.getMessage());
-        }
-    }
-
-    /** Confere todas as hipóteses devolvidas pelo Android, não só a primeira. */
-    private boolean conferirEmLote(Bundle results, boolean definitivo) {
-        if (!querEscuta) return true;
-        ArrayList<String> lista = hipoteses(results);
-        if (lista.isEmpty()) return conferirAtivacao(null, definitivo);
-        String primeiro = lista.get(0) == null ? "" : lista.get(0).trim();
-        if (primeiro.length() > parcial.length()) parcial = primeiro;
-        if (!definitivo && primeiro.length() < cfg.minimoParcial) return false;
-        for (String hip : lista) {
-            if (conferirAtivacao(hip, definitivo)) return true;
-        }
-        return false;
-    }
-
-    /** true quando a palavra foi encontrada (ou quando a ativação já foi encerrada). */
-    private boolean conferirAtivacao(String texto, boolean definitivo) {
-        if (!querEscuta) return true;
-        if (texto == null || texto.trim().isEmpty()) return false;
-        parcial = texto;
-        if (!definitivo && !cfg.aceitaParcial) return false;
-        if (!JarvisAtivacao.presente(texto, cfg)) return false;
-        if (!definitivo && texto.trim().length() < cfg.minimoParcial) return false;
-        if (picoDb < cfg.ruidoDb) {
-            // Porteiro de ruído: a transcrição veio, mas o microfone mal registrou som —
-            // típico de televisão, conversa ao fundo ou ruído que o reconhecimento tentou
-            // interpretar. Não acorda; conta o descarte para a calibragem ficar visível.
-            rejeitadasRuido++;
-            JarvisPrefs.rejeitadas(this, JarvisPrefs.rejeitadas(this) + 1);
-            encerrarSessao(false);
-            if (querEscuta) agendarSessao(250);
-            return true;
-        }
-        String limpo = texto.trim();
-        querEscuta = false;
-        encerrarSessao(true);
-        disparar(limpo);
-        return true;
-    }
-
-    private void encerrarSessao(boolean limparParcial) {
-        if (timeout != null) { main.removeCallbacks(timeout); timeout = null; }
-        if (proximo != null) { main.removeCallbacks(proximo); proximo = null; }
-        sessao = false;
-        SpeechRecognizer r = rec;
-        rec = null;
-        if (r != null) {
-            try { r.cancel(); r.destroy(); } catch (Exception ignored) { }
-        }
-        if (limparParcial) parcial = "";
+        if (s == null) return "";
+        int sens = JarvisPrefs.sensibilidade(s);
+        float limiar = sens >= 75 ? 0.25f : (sens >= 45 ? 0.35f : 0.45f);
+        return "Sherpa-ONNX KWS local · GigaSpeech inglês · limiar " + limiar;
     }
 
     /* ---------- Notificação ---------- */
@@ -727,6 +852,9 @@ public class JarvisService extends Service {
         PendingIntent ouvirPi = PendingIntent.getBroadcast(this, 3,
             new Intent(this, JarvisOuvirReceiver.class).setAction(JarvisOuvirReceiver.ACAO),
             fi | PendingIntent.FLAG_UPDATE_CURRENT);
+        boolean pausado = JarvisPrefs.pausadoManual(this);
+        Intent alternar = new Intent(this, JarvisService.class).setAction(pausado ? ACAO_RETOMAR : ACAO_PAUSAR);
+        PendingIntent alternarPi = PendingIntent.getService(this, 2, alternar, fi | PendingIntent.FLAG_UPDATE_CURRENT);
         Intent parar = new Intent(this, JarvisService.class).setAction(ACAO_PARAR);
         PendingIntent pararPi = PendingIntent.getService(this, 1, parar, fi | PendingIntent.FLAG_UPDATE_CURRENT);
 
@@ -739,6 +867,9 @@ public class JarvisService extends Service {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(abrirPi)
+            .addAction(pausado ? android.R.drawable.ic_media_play : android.R.drawable.ic_media_pause,
+                pausado ? "Retomar" : "Pausar", alternarPi)
+            .addAction(android.R.drawable.ic_menu_view, "Abrir", abrirPi)
             .addAction(android.R.drawable.ic_btn_speak_now, "Ouvir agora", ouvirPi)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Desligar escuta", pararPi);
         return b.build();
@@ -817,7 +948,7 @@ public class JarvisService extends Service {
     public void onTaskRemoved(Intent rootIntent) {
         // O usuário fechou pelos recentes: se a escuta deve continuar, o serviço volta a
         // ouvir na hora e, como garantia, um alarme rápido tenta de novo em 8 s.
-        if (JarvisPrefs.desejaOuvir(this)) {
+        if (JarvisPrefs.desejaOuvir(this) && !JarvisPrefs.pausadoManual(this)) {
             // A interface pausa a escuta para gravar o comando. Se ela morrer no meio (o
             // usuário fecha o app durante a resposta), ninguém religava: o serviço ficava
             // em "Escuta em espera" e o vigia não agia, porque o serviço ainda estava vivo.
@@ -842,6 +973,10 @@ public class JarvisService extends Service {
         main.removeCallbacks(testeFim);
         if (rearme != null) { main.removeCallbacks(rearme); rearme = null; }
         pausarMotor();
+        if (foneRegistrado) {
+            try { unregisterReceiver(foneReceiver); } catch (Throwable ignored) { }
+            foneRegistrado = false;
+        }
         escutando = false;
         instancia = null;
         emPrimeiroPlano = false;

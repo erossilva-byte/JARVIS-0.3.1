@@ -1,0 +1,221 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:jarvis_nova/services/provider_service.dart';
+
+class MemorySecrets implements SecretStore {
+  final values = <String, String>{};
+  @override
+  Future<String?> read(String key) async => values[key];
+  @override
+  Future<void> write(String key, String value) async {
+    values[key] = value;
+  }
+
+  @override
+  Future<void> delete(String key) async {
+    values.remove(key);
+  }
+}
+
+class FakeClient extends http.BaseClient {
+  FakeClient(this.status, this.body);
+  final int status;
+  final String body;
+  http.Request? lastRequest;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    lastRequest = request as http.Request;
+    return http.StreamedResponse(
+      Stream<List<int>>.value(Uint8List.fromList(utf8.encode(body))),
+      status,
+      request: request,
+    );
+  }
+}
+
+class ModelFallbackClient extends http.BaseClient {
+  final List<String> models = [];
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final body = jsonDecode((request as http.Request).body) as Map;
+    models.add(body['model'] as String);
+    final encontrado = models.length > 1;
+    return http.StreamedResponse(
+      Stream<List<int>>.value(Uint8List.fromList(utf8.encode(encontrado
+          ? '{"choices":[{"message":{"content":"OK"}}]}'
+          : '{"error":{"code":404}}'))),
+      encontrado ? 200 : 404,
+      request: request,
+    );
+  }
+}
+
+class SequenceClient extends http.BaseClient {
+  SequenceClient(this.statuses);
+  final List<int> statuses;
+  int index = 0;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final status = statuses[index++];
+    final body = status == 200
+        ? 'data: {"choices":[{"delta":{"content":"OK"}}]}\n\n'
+        : '{"error":"indisponível"}';
+    return http.StreamedResponse(
+      Stream<List<int>>.value(Uint8List.fromList(utf8.encode(body))),
+      status,
+      request: request,
+    );
+  }
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('salva chave normalizada e não a devolve para a interface', () async {
+    final secrets = MemorySecrets();
+    final service = ProviderService(
+        secrets: secrets,
+        client: FakeClient(200, '{"choices":[{"message":{"content":"OK"}}]}'));
+
+    await service.saveKey('groq', 'Bearer gsk_test_12345678');
+    expect(secrets.values['groq'], 'gsk_test_12345678');
+    expect(await service.isConfigured('groq'), isTrue);
+    await service.removeKey('groq');
+    expect(await service.isConfigured('groq'), isFalse);
+    service.close();
+  });
+
+  test('rejeita chave vazia, curta ou com espaços e provedor desconhecido',
+      () async {
+    final service = ProviderService(
+        secrets: MemorySecrets(), client: FakeClient(200, '{}'));
+    await expectLater(service.saveKey('groq', '   '), throwsArgumentError);
+    await expectLater(service.saveKey('groq', 'short'), throwsArgumentError);
+    await expectLater(
+        service.saveKey('groq', 'invalid key 12345'), throwsArgumentError);
+    await expectLater(
+        service.saveKey('unknown', '123456789'), throwsArgumentError);
+    service.close();
+  });
+
+  test('seleciona o primeiro provedor configurado na ordem de prioridade',
+      () async {
+    final secrets = MemorySecrets()
+      ..values['openrouter'] = 'or_test_secret'
+      ..values['gemini'] = 'gem_test_secret';
+    final service =
+        ProviderService(secrets: secrets, client: FakeClient(200, '{}'));
+
+    expect((await service.firstConfiguredProvider())?.id, 'openrouter');
+
+    secrets.values['groq'] = 'gsk_test_secret';
+    expect((await service.firstConfiguredProvider())?.id, 'groq');
+    service.close();
+  });
+
+  test('retorna nulo quando nenhum provedor está configurado', () async {
+    final service = ProviderService(
+        secrets: MemorySecrets(), client: FakeClient(200, '{}'));
+    expect(await service.firstConfiguredProvider(), isNull);
+    service.close();
+  });
+
+  test('testa endpoint real e envia a chave apenas no cabeçalho', () async {
+    final secrets = MemorySecrets()..values['groq'] = 'gsk_secret_test';
+    final client =
+        FakeClient(200, '{"choices":[{"message":{"content":"OK"}}]}');
+    final service = ProviderService(secrets: secrets, client: client);
+
+    final result = await service.testConnection('groq');
+    expect(result.ok, isTrue);
+    expect(result.model, 'openai/gpt-oss-20b');
+    expect(
+        client.lastRequest!.headers['Authorization'], 'Bearer gsk_secret_test');
+    expect(client.lastRequest!.url.toString(), aiProviders.first.endpoint);
+    expect(client.lastRequest!.body, contains('"max_tokens":8'));
+    service.close();
+  });
+
+  test(
+      'Gemini usa modelo atual e tenta o substituto quando o modelo foi retirado',
+      () async {
+    final secrets = MemorySecrets()..values['gemini'] = 'gem_secret_test';
+    final client = ModelFallbackClient();
+    final service = ProviderService(secrets: secrets, client: client);
+
+    final result = await service.testConnection('gemini');
+    expect(result.ok, isTrue);
+    expect(result.model, 'gemini-3.6-flash');
+    expect(client.models, ['gemini-3.8-flash', 'gemini-3.6-flash']);
+    service.close();
+  });
+
+  test('conversa também troca o modelo retirado antes de responder', () async {
+    final secrets = MemorySecrets()..values['gemini'] = 'gem_secret_test';
+    final client = ModelFallbackClient();
+    final service = ProviderService(secrets: secrets, client: client);
+
+    final texto = await service.complete('gemini', [
+      {'role': 'user', 'content': 'oi'},
+    ]);
+    expect(texto, 'OK');
+    expect(client.models, ['gemini-3.8-flash', 'gemini-3.6-flash']);
+    service.close();
+  });
+
+  test('429 explica cota da conta sem culpar a chave', () async {
+    final secrets = MemorySecrets()..values['mistral'] = 'sk_secret_test';
+    final service = ProviderService(
+        secrets: secrets, client: FakeClient(429, '{"error":"rate"}'));
+
+    final result = await service.testConnection('mistral');
+    expect(result.ok, isFalse);
+    expect(result.message, contains('sem cota'));
+    expect(result.message, contains('não é preciso trocar a chave'));
+    service.close();
+  });
+
+  test('não revela corpo de erro nem chave quando o provedor recusa', () async {
+    final secrets = MemorySecrets()..values['mistral'] = 'sk_secret_test';
+    final service = ProviderService(
+        secrets: secrets,
+        client: FakeClient(401, '{"error":"sk_secret_test invalid"}'));
+
+    final result = await service.testConnection('mistral');
+    expect(result.ok, isFalse);
+    expect(result.message, contains('chave foi recusada'));
+    expect(result.message, isNot(contains('sk_secret_test')));
+    service.close();
+  });
+
+  test('troca de provedor quando o primeiro falha antes do primeiro token',
+      () async {
+    final secrets = MemorySecrets()
+      ..values['groq'] = 'gsk_secret_test'
+      ..values['gemini'] = 'gem_secret_test';
+    final client = SequenceClient([500, 200]);
+    final service = ProviderService(secrets: secrets, client: client);
+
+    final texto = await service.streamComplete('groq', [
+      {'role': 'user', 'content': 'oi'},
+    ]).join();
+    expect(texto, 'OK');
+    expect(client.index, 2);
+    service.close();
+  });
+
+  test('não tenta rede quando não há chave cadastrada', () async {
+    final service = ProviderService(
+        secrets: MemorySecrets(), client: FakeClient(200, '{}'));
+    final result = await service.testConnection('gemini');
+    expect(result.ok, isFalse);
+    expect(result.message, contains('Cadastre a chave'));
+    service.close();
+  });
+}

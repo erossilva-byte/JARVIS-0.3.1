@@ -1,7 +1,7 @@
 # J.A.R.V.I.S. Nova no Windows — camada PC
 
 Este documento descreve **o que a versão de PC faz, o que ela não faz e como isso foi
-verificado**. Ele acompanha a versão 1.21.5: o núcleo é o mesmo do Android, e a camada
+verificado**. O núcleo compartilhado está em evolução para a linha 1.46.0: o núcleo é o mesmo do Android, e a camada
 `platforms/desktop` é a única parte específica de computador.
 
 ## 1. Arquitetura: um núcleo, três arquivos de PC
@@ -20,9 +20,7 @@ platforms/desktop
 
 Por que assim:
 
-- **`cad.js` não foi duplicado.** Um `.cad` criado no PC abre no Android e vice-versa,
-  porque a geometria, a malha e os exportadores são os mesmos arquivos. A camada de PC
-  apenas lê o disco e entrega geometria para o canvas.
+- **`cad.js` não foi duplicado.** O arquivo `.cad` desta aplicação é o formato interno do Jarvis CAD; ele abre no PC e no Android porque ambos compartilham o mesmo parser e a mesma geometria. **Não é o formato nativo do CADeSIMU.** Para CADeSIMU, a aplicação deve exportar intercâmbio documentado e validar o redesenho no programa original; não afirmar leitura/gravação nativa até comprovar com amostras reais.
 - **`arquivos.js` e `cad_pc.js` são Node puro, sem `require('electron')`.** Isso permite
   rodar os testes de verdade (`node tests/test_pc_arquivos.js`) fora da janela — e é o
   que garante que o que foi testado é o mesmo código que o app usa.
@@ -77,7 +75,7 @@ Todas as funções resolvem o caminho dentro da pasta do usuário (`app.getPath(
 
 | Formato | Identifica | Abre/visualiza | Cria | Edita (nova versão) | Exporta | Limitação real |
 | --- | --- | --- | --- | --- | --- | --- |
-| `.cad` CadSimu | sim | sim, malha 3D | sim | **sim** (posição, dimensões, raio, altura, nome) | sim | — |
+| `.cad` Jarvis CAD (formato interno) | sim | sim, malha 3D | sim | **sim** (posição, dimensões, raio, altura, nome) | sim | **não é o formato nativo proprietário do CADeSIMU**; não declarar intercâmbio nativo sem teste com arquivos reais |
 | DXF (ASCII) | sim | sim, linhas por camada | sim | não | sim | não edito entidade a entidade; sem hachura, bloco ou cota |
 | STL (binário/ASCII) | sim | sim, malha com profundidade | sim | não | sim | sem unidades no arquivo; malha facetada |
 | 3MF | sim | não no painel | sim | não | sim | visualização pelo `.cad` de origem |
@@ -170,6 +168,26 @@ npm run dist:win       # instalador NSIS em dist/
 - **Sem dependências silenciosas:** o app não instala FreeCAD, LibreCAD ou LibreOffice.
   Se existirem, o diagnóstico os detecta; se não, os formatos que dependem deles são
   recusados com explicação (FCStd, RVT/RFA, DWG).
+
+### Controles móveis adaptados para Windows
+
+O núcleo compartilhado expõe também controles equivalentes a algumas ações do Android,
+adaptados ao computador:
+
+- **Mídia:** alternar reprodução, próxima, anterior e parar por teclas multimídia globais. Pausa e retomada diretas ainda não são suportadas porque a tecla global alterna o estado e poderia fazer o oposto do pedido.
+- **Volume principal:** aumentar, diminuir e silenciar pelas teclas de volume do Windows.
+- **WhatsApp:** abre a conversa via `wa.me`; a pessoa revisa e envia no próprio WhatsApp.
+- **E-mail:** abre um rascunho `mailto:` no cliente padrão; o envio continua manual.
+
+Essas ações são deliberadamente honestas: mídia e volume retornam como **comando enviado,
+efeito não confirmado**, pois o Windows não fornece confirmação confiável de que o player
+ou mixer aplicou a alteração. Percentual exato e canais de volume separados não estão
+implementados. As teclas são enviadas por PowerShell com script fixo e chamadas Win32;
+nenhum texto do usuário é executado como comando.
+
+Não há equivalente físico no PC para a lanterna do celular. Câmera, microfone, brilho e
+notificações dependem do hardware, sistema e permissões do computador; não são marcados
+como concluídos sem suporte real do host.
 
 ### Diferenças em relação ao Android
 

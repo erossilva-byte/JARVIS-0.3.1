@@ -104,8 +104,10 @@
   function criar(especificacao) {
     var e = especificacao || {};
     var unidades = UNIDADES.indexOf(e.unidades) >= 0 ? e.unidades : 'mm';
-    var objetos = Array.isArray(e.objetos) && e.objetos.length ? e.objetos : [objetoPadrao(e.tipo)];
-    return {
+    var objetos = Array.isArray(e.objetos) ? e.objetos.slice() : [objetoPadrao(e.tipo)];
+    // Circuito puro não ganha caixa fantasma: sem objetos, o documento é só o circuito.
+    if (!objetos.length && !e.circuito) objetos = [objetoPadrao(e.tipo)];
+    var doc = {
       formato: FORMATO,
       versao: VERSAO,
       nome: limpar(e.nome, 80) || 'modelo',
@@ -113,6 +115,8 @@
       criado: new Date().toISOString(),
       objetos: objetos
     };
+    if (e.circuito) { var cv = validarCircuito(e.circuito); if (cv.ok && !cv.vazio) doc.circuito = e.circuito; }
+    return doc;
   }
 
   function serializar(doc) {
@@ -180,6 +184,15 @@
       bruto.unidades = 'mm';
     }
     if (!bruto.unidades) bruto.unidades = 'mm';
+    var circuito = null;
+    if (bruto.circuito != null) {
+      var cv = validarCircuito(bruto.circuito);
+      if (!cv.ok) return erro('Circuito inválido: ' + cv.erros[0]);
+      if (!cv.vazio) {
+        circuito = { componentes: bruto.circuito.componentes, conexoes: bruto.circuito.conexoes || [] };
+        avisos = avisos.concat(cv.avisos);
+      }
+    }
     var doc = {
       formato: FORMATO,
       versao: Number.isFinite(versao) && versao > 0 ? versao : VERSAO,
@@ -187,6 +200,7 @@
       unidades: bruto.unidades,
       objetos: bruto.objetos
     };
+    if (circuito) doc.circuito = circuito;
     return { ok: true, doc: doc, avisos: avisos };
   }
 
@@ -225,11 +239,160 @@
     var resumo = 'Arquivo ' + slug(doc.nome) + ': ' + doc.objetos.length + (doc.objetos.length === 1 ? ' objeto' : ' objetos') +
       ' (' + partes.join(', ') + '), unidades ' + doc.unidades + ', caixa envolvente ' +
       formatar(caixa.tamanho[0]) + ' × ' + formatar(caixa.tamanho[1]) + ' × ' + formatar(caixa.tamanho[2]) + ' ' + doc.unidades + '.';
+    var circuito = null;
+    if (doc.circuito) {
+      circuito = validarCircuito(doc.circuito);
+      var nomes = circuito.componentes.map(function (c) { return c.id; }).join(', ');
+      resumo += ' Circuito: ' + circuito.componentes.length + ' componente(s) [' + nomes + '], ' +
+        circuito.conexoes + ' conexão(ões), ' + circuito.redes + ' rede(s)' +
+        (circuito.erros.length ? ', ' + circuito.erros.length + ' erro(s)' : '') + '.';
+      if (circuito.avisos.length) resumo += ' Avisos do circuito: ' + circuito.avisos.join('; ') + '.';
+      if (circuito.erros.length) resumo += ' Erros do circuito: ' + circuito.erros.join('; ') + '.';
+    }
     return {
-      ok: true, doc: doc, avisos: r.avisos, contagem: contagem, caixa: caixa,
+      ok: true, doc: doc, avisos: r.avisos, contagem: contagem, caixa: caixa, circuito: circuito,
       resumo: resumo + (r.avisos.length ? ' Avisos: ' + r.avisos.join('; ') + '.' : '')
     };
   }
+
+  /* ---------- Circuito elétrico (seção opcional do .cad) ----------
+   * O desenho 3D continua sendo o corpo do arquivo; o circuito é a parte elétrica:
+   * componentes com terminais e conexões entre terminais ("R1.1"). A validação é a mesma
+   * do resto do núcleo: erro com motivo, aviso quando o arquivo é aceitável mas o circuito
+   * real pede atenção, e netlist gerada para o PC conferir/importar.
+   */
+  var COMPONENTES = {
+    resistor: { nome: 'Resistor', terminais: 2, unidade: 'Ω', valorObrigatorio: true },
+    capacitor: { nome: 'Capacitor', terminais: 2, unidade: 'F' },
+    indutor: { nome: 'Indutor', terminais: 2, unidade: 'H' },
+    fonte: { nome: 'Fonte', terminais: 2, unidade: 'V', valorObrigatorio: true },
+    led: { nome: 'LED', terminais: 2, unidade: 'V' },
+    diodo: { nome: 'Diodo', terminais: 2, unidade: 'V' },
+    chave: { nome: 'Chave', terminais: 2 },
+    terra: { nome: 'Terra', terminais: 1 },
+    carga: { nome: 'Carga', terminais: 2, unidade: 'Ω' },
+    motor: { nome: 'Motor', terminais: 2, unidade: 'V' },
+    fusivel: { nome: 'Fusível', terminais: 2, unidade: 'A' }
+  };
+  var LIMITE_COMPONENTES = 200;
+  var LIMITE_CONEXOES = 400;
+  var PREFIXO_NETLIST = { resistor: 'R', capacitor: 'C', indutor: 'L', fonte: 'V', led: 'D', diodo: 'D', chave: 'S', carga: 'R', motor: 'M', fusivel: 'F' };
+
+  function validarCircuito(circ) {
+    var erros = [], avisos = [];
+    var vazio = { ok: true, vazio: true, erros: [], avisos: [], componentes: [], conexoes: 0, redes: 0, netlist: '' };
+    if (circ == null) return vazio;
+    if (typeof circ !== 'object' || Array.isArray(circ)) {
+      return { ok: false, vazio: false, erros: ['O campo "circuito" precisa ser um objeto com "componentes" e "conexoes".'], avisos: [], componentes: [], conexoes: 0, redes: 0, netlist: '' };
+    }
+    var comps = Array.isArray(circ.componentes) ? circ.componentes : [];
+    var cons = circ.conexoes == null ? [] : circ.conexoes;
+    if (!comps.length) erros.push('O circuito não tem "componentes": nada para montar.');
+    if (comps.length > LIMITE_COMPONENTES) erros.push('O circuito tem ' + comps.length + ' componentes; o limite é ' + LIMITE_COMPONENTES + '.');
+    if (!Array.isArray(cons)) { erros.push('"conexoes" precisa ser uma lista.'); cons = []; }
+    if (cons.length > LIMITE_CONEXOES) erros.push('O circuito tem ' + cons.length + ' conexões; o limite é ' + LIMITE_CONEXOES + '.');
+
+    var mapa = {}, lista = [];
+    comps.forEach(function (c, i) {
+      if (!c || typeof c !== 'object' || Array.isArray(c)) { erros.push('Componente ' + (i + 1) + ': precisa ser um objeto.'); return; }
+      var tipo = String(c.tipo || '').toLowerCase();
+      if (!COMPONENTES[tipo]) { erros.push('Componente ' + (i + 1) + ': tipo "' + (c.tipo || '?') + '" não existe. Use ' + Object.keys(COMPONENTES).join(', ') + '.'); return; }
+      var id = limpar(c.id, 24).toUpperCase();
+      if (!/^[A-Z][A-Z0-9_-]{0,23}$/.test(id)) { erros.push('Componente ' + (i + 1) + ': "id" precisa começar com letra (ex.: R1, LED2).'); return; }
+      if (mapa[id]) { erros.push('Componente ' + id + ': id repetido.'); return; }
+      var def = COMPONENTES[tipo];
+      var valor = c.valor == null ? null : Number(c.valor);
+      if (valor != null && (!Number.isFinite(valor) || valor < 0)) { erros.push('Componente ' + id + ': "valor" precisa ser número finito e não negativo.'); return; }
+      if (def.valorObrigatorio && valor == null) avisos.push('Componente ' + id + ' (' + def.nome + '): sem "valor"; a simulação não terá o que usar.');
+      if (c.x != null || c.y != null) {
+        var px = Number(c.x), py = Number(c.y);
+        if (!Number.isFinite(px) || !Number.isFinite(py)) { erros.push('Componente ' + id + ': "x"/"y" precisam ser números finitos.'); return; }
+      }
+      var comp = { id: id, tipo: tipo, nome: def.nome, terminais: def.terminais, valor: valor, ligados: {} };
+      mapa[id] = comp; lista.push(comp);
+    });
+
+    var pai = {};
+    function achar(x) { if (pai[x] == null) pai[x] = x; return pai[x] === x ? x : (pai[x] = achar(pai[x])); }
+    function unir(a, b) { var ra = achar(a), rb = achar(b); if (ra !== rb) pai[rb] = ra; }
+    function no(valor, onde) {
+      if (typeof valor !== 'string' || !/^[A-Za-z][A-Za-z0-9_-]{0,23}\.[1-9]$/.test(valor.trim())) { erros.push(onde + ': terminal inválido "' + String(valor) + '". Use ID.terminal, como R1.1.'); return null; }
+      var partes = valor.trim().toUpperCase().split('.');
+      var comp = mapa[partes[0]];
+      var t = Number(partes[1]);
+      if (!comp) { erros.push(onde + ': componente "' + partes[0] + '" não existe.'); return null; }
+      if (t < 1 || t > comp.terminais) { erros.push(onde + ': ' + comp.id + ' tem ' + comp.terminais + ' terminal(is); "' + valor + '" não existe.'); return null; }
+      return comp.id + '.' + t;
+    }
+
+    var vistas = {};
+    cons.forEach(function (c, i) {
+      var de = null, para = null;
+      if (Array.isArray(c) && c.length === 2) { de = c[0]; para = c[1]; }
+      else if (c && typeof c === 'object') { de = c.de; para = c.para; }
+      if (de == null || para == null) { erros.push('Conexão ' + (i + 1) + ': use { "de": "R1.1", "para": "V1.1" }.'); return; }
+      var a = no(de, 'Conexão ' + (i + 1)), b = no(para, 'Conexão ' + (i + 1));
+      if (!a || !b) return;
+      if (a === b) { erros.push('Conexão ' + (i + 1) + ': ' + a + ' ligado nele mesmo.'); return; }
+      var chave = a < b ? a + '|' + b : b + '|' + a;
+      if (vistas[chave]) { avisos.push('Conexão repetida entre ' + a + ' e ' + b + '.'); return; }
+      vistas[chave] = true;
+      unir(a, b);
+      mapa[a.split('.')[0]].ligados[a] = true;
+      mapa[b.split('.')[0]].ligados[b] = true;
+    });
+
+    lista.forEach(function (comp) {
+      if (!Object.keys(comp.ligados).length) avisos.push('Componente ' + comp.id + ' (' + comp.nome + ') está solto: nenhum terminal ligado.');
+    });
+
+    var terras = lista.filter(function (c) { return c.tipo === 'terra'; }).map(function (c) { return c.id + '.1'; });
+    for (var k = 1; k < terras.length; k++) unir(terras[0], terras[k]);
+
+    var numero = {}, n = 0;
+    function numeroRede(no_) {
+      var raiz = achar(no_);
+      if (terras.length && raiz === achar(terras[0])) return '0';
+      if (numero[raiz] == null) numero[raiz] = String(++n);
+      return numero[raiz];
+    }
+
+    lista.forEach(function (comp) {
+      if (comp.tipo !== 'fonte' || comp.terminais < 2) return;
+      if (achar(comp.id + '.1') === achar(comp.id + '.2')) erros.push('Fonte ' + comp.id + ' está em curto: os dois terminais caem na mesma rede.');
+    });
+    if (!lista.some(function (c) { return c.tipo === 'fonte'; })) avisos.push('Circuito sem fonte: não há energia para simular.');
+
+    lista.forEach(function (comp) {
+      if (comp.tipo !== 'led' || comp.terminais < 2) return;
+      var r1 = achar(comp.id + '.1'), r2 = achar(comp.id + '.2');
+      var temResistor = lista.some(function (o) {
+        if (o.tipo !== 'resistor' || o.terminais < 2) return false;
+        var a = achar(o.id + '.1'), b = achar(o.id + '.2');
+        return (a === r1 && b === r2) || (a === r2 && b === r1);
+      });
+      if (!temResistor) avisos.push('LED ' + comp.id + ' sem resistor em série: no circuito real ele pode queimar.');
+    });
+
+    var linhas = ['* J.A.R.V.I.S. Nova — netlist do circuito', '* componentes: ' + lista.length + ' · conexões: ' + cons.length];
+    lista.forEach(function (comp) {
+      if (comp.tipo === 'terra') return;
+      var pre = PREFIXO_NETLIST[comp.tipo] || 'X';
+      var sufixo = comp.id.replace(/^[A-Z]+/, '') || comp.id;
+      var a = numeroRede(comp.id + '.1');
+      var b = comp.terminais > 1 ? numeroRede(comp.id + '.2') : '0';
+      linhas.push(pre + sufixo + ' ' + a + ' ' + b + (comp.valor == null ? '' : ' ' + comp.valor));
+    });
+    linhas.push('.end');
+
+    return {
+      ok: erros.length === 0, vazio: false, erros: erros, avisos: avisos,
+      componentes: lista.map(function (c) { return { id: c.id, tipo: c.tipo, nome: c.nome, valor: c.valor }; }),
+      conexoes: cons.length, redes: n, netlist: linhas.join('\n') + '\n'
+    };
+  }
+
+  function netlist(doc) { return validarCircuito(doc && doc.circuito).netlist; }
 
   /* ---------- Arquivo .cad no aparelho ---------- */
   function lerLista() {
@@ -1281,6 +1444,11 @@
     VERSAO: VERSAO,
     UNIDADES: UNIDADES,
     TIPOS: TIPOS,
+    COMPONENTES: COMPONENTES,
+    LIMITE_COMPONENTES: LIMITE_COMPONENTES,
+    LIMITE_CONEXOES: LIMITE_CONEXOES,
+    validarCircuito: validarCircuito,
+    netlist: netlist,
     LIMITE_OBJETOS: LIMITE_OBJETOS,
     LIMITE_ARQUIVOS: LIMITE_ARQUIVOS,
     LIMITE_BYTES: LIMITE_BYTES,

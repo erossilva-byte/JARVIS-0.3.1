@@ -3,6 +3,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 import json
 import re
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -58,10 +59,10 @@ if 'Compilação Android real' not in readme or 'aparelho físico' not in readme
 if "const bateria = Number(r.bateria)" not in app or "bateria >= 0 ? bateria + '%' : 'indisponível'" not in app:
     issues.append('Comando de estado do dispositivo deve tratar bateria desconhecida sem exibir -1%')
 
-if "'Ouvindo “Jarvis” · detector próprio'" not in app:
-    issues.append('Interface não informa o detector de ativação próprio em uso')
-if 'JarvisAtivacao.presente' not in (ROOT / 'JarvisService.java').read_text(encoding='utf-8'):
-    issues.append('Detector de ativação próprio ausente do serviço em segundo plano')
+if "'Ouvindo “Jarvis” · KWS local'" not in app:
+    issues.append('Interface não informa o KWS local em uso')
+if 'new JarvisKwsEngine(' not in (ROOT / 'JarvisService.java').read_text(encoding='utf-8'):
+    issues.append('Motor KWS acústico ausente do serviço em segundo plano')
 if 'porcupine' in (ROOT / 'JarvisService.java').read_text(encoding='utf-8').lower():
     issues.append('Serviço ainda depende do SDK de palavra de ativação removido')
 if "if (ehAndroid) {\n    if (!s || typeof s.guardarSeguro !== 'function') throw new Error('Cofre seguro do Android indisponível." not in app:
@@ -81,13 +82,31 @@ native_wake = (ROOT / 'JarvisService.java').read_text(encoding='utf-8')
 if 'OpenWakeWord' in native_wake:
     issues.append('Dependência openWakeWord não resolvida ainda está no plugin nativo')
 html_doc = (ROOT / 'index.html').read_text(encoding='utf-8')
-if 'Detector próprio' not in html_doc or 'c-wake-sensibilidade' not in html_doc or 'JarvisAtivacao' not in native_wake:
-    issues.append('Detector de ativação próprio não identificado na interface/código nativo')
+if 'sherpa-onnx KWS' not in html_doc or 'c-wake-sensibilidade' not in html_doc or 'JarvisKwsEngine' not in native_wake:
+    issues.append('KWS acústico não identificado na interface/código nativo')
 if 'painel-visao' not in html_doc or 'pedirVisaoIA' not in app or 'desenharBaloes' not in app:
     issues.append('Reconhecimento de objetos pela câmera com balões não está implementado')
 hermes_src = (ROOT / 'hermes.js').read_text(encoding='utf-8')
 if 'planejarIA' not in hermes_src or 'Hermes.planejarIA' not in app:
     issues.append('Roteador de motores de IA não está ligado ao aplicativo')
+
+# Chaves de assinatura: a de release nunca pode ser versionada; só a de debug do CI fica.
+gitignore = (ROOT / '.gitignore').read_text(encoding='utf-8')
+for padrao in ('*.jks', '*.keystore'):
+    if padrao not in gitignore:
+        issues.append(f'.gitignore precisa ignorar {padrao}: chave de assinatura não entra no repositório')
+release_wf = (ROOT / '.github/workflows/release-apk.yml').read_text(encoding='utf-8')
+if 'debug.keystore' in release_wf:
+    issues.append('Workflow de release não pode referenciar a chave de debug')
+if 'assembleRelease' not in release_wf or 'CN=Android Debug' not in release_wf:
+    issues.append('Workflow de release deve compilar assembleRelease e recusar APK assinado em debug')
+try:
+    rastreados = subprocess.run(['git', 'ls-files'], cwd=ROOT, capture_output=True, text=True, timeout=60).stdout.split()
+    proibidos = [f for f in rastreados if f.endswith('.jks') or (f.endswith('.keystore') and f != 'ci/debug.keystore')]
+    if proibidos:
+        issues.append('Chave de assinatura versionada: ' + ', '.join(proibidos[:3]))
+except (OSError, subprocess.SubprocessError):
+    pass  # fora de um clone git (ZIP exportado) a checagem não se aplica
 
 if issues:
     print('FALHA na auditoria de prontidão:')

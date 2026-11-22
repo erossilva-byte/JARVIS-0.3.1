@@ -67,4 +67,77 @@ B.limpar();
 assert.equal(B.resumo().total, 0);
 assert.equal(B.historico(5).length, 0);
 
-console.log('test_agentes: 30 verificações aprovadas');
+// 7. Delegação entre agentes (Fase 3): quem delegou, para quem, e validação da cadeia.
+const A2 = B;   // mesmo módulo recarregado (a loja foi zerada por limpar() acima)
+const fs = require('node:fs');
+const caminho = require('node:path').join(__dirname, '..', 'agentes.js');
+assert.equal(A2.agenteDe('sandbox_js').id, 'programacao');
+assert.equal(A2.agenteDe('patch_aplicar').id, 'programacao');
+assert.equal(A2.agenteDe('projetista_ladder').id, 'engenharia');
+assert.equal(A2.agenteDe('eletrica_dimensionar').id, 'engenharia');
+assert.equal(A2.agenteDe('cadesimu_importar').id, 'eletronica');
+assert.equal(A2.agenteDe('netlist_gerar').id, 'eletronica');
+assert.equal(A2.agenteDe('status_dispositivo').id, 'dispositivo');
+assert.equal(A2.agenteDe('acessibilidade_clicar').id, 'dispositivo');
+assert.equal(A2.agenteDe('arquivo_editar').id, 'arquivos', 'arquivo não pode virar programação');
+assert.equal(A2.agenteDe('projetista_potencia').id, 'engenharia');
+
+const t = A2.abrirTarefa('organizar a tarde', 'plano');
+assert.match(t.id, /^tr-/);
+const p1 = A2.abrir('pesquisar', {}, { de: 'plano', tarefa: t.id });
+assert.equal(p1.de, 'plano');
+assert.equal(p1.para, 'pesquisa');
+assert.equal(p1.tarefa, t.id);
+const c1 = A2.fechar(p1.id, { verificado: true, info: '2 fontes' });
+assert.equal(c1.tarefa, t.id, 'o recibo precisa guardar a tarefa delegada');
+
+// Recibo ainda aberto já conta como pendência.
+const p2 = A2.abrir('arquivo_criar', {}, { de: 'plano', tarefa: t.id });
+let v = A2.verificarTarefa(t.id);
+assert.equal(v.ok, false);
+assert.equal(v.total, 2);
+assert.equal(v.confirmados, 1);
+assert.equal(v.pendencias[0].estado, 'aberto');
+assert.deepEqual(v.agentes.slice().sort(), ['arquivos', 'pesquisa']);
+
+// Fechado como incerto: continua não concluída, com o motivo.
+A2.fechar(p2.id, { info: 'arquivo criado' });
+v = A2.verificarTarefa(t.id);
+assert.equal(v.ok, false);
+assert.equal(v.pendencias[0].estado, 'incerto');
+assert.ok(v.pendencias[0].motivo.length > 0);
+assert.equal(A2.verificarTarefa('tr-inexistente').ok, false);
+assert.equal(A2.verificarTarefa('tr-inexistente').total, 0);
+
+// Só com todos os elos confirmados a tarefa passa.
+const t2 = A2.abrirTarefa('duas etapas', 'plano');
+A2.fechar(A2.abrir('pesquisar', {}, { de: 'plano', tarefa: t2.id }).id, { verificado: true, info: 'ok' });
+A2.fechar(A2.abrir('arquivo_criar', {}, { de: 'plano', tarefa: t2.id }).id, { ok: true, info: 'arquivo criado e conferido' });
+const v2 = A2.verificarTarefa(t2.id);
+assert.equal(v2.ok, true);
+assert.equal(v2.pendencias.length, 0);
+assert.equal(v2.confirmados, 2);
+
+// Cancelado pelo usuário não é conclusão.
+const t3 = A2.abrirTarefa('cancelada', 'plano');
+A2.cancelar(A2.abrir('abrir_app', {}, { de: 'plano', tarefa: t3.id }).id, 'desisti');
+assert.equal(A2.verificarTarefa(t3.id).ok, false);
+assert.equal(A2.verificarTarefa(t3.id).pendencias[0].estado, 'cancelado');
+
+// Colaboração visível: desempenho por agente.
+const pa = A2.porAgente();
+assert.ok(pa.pesquisa && pa.pesquisa.total >= 2);
+assert.ok(pa.arquivos && pa.arquivos.total >= 2);
+assert.equal(pa.pesquisa.ok, pa.pesquisa.total);
+
+// O app liga a delegação de verdade: abre a tarefa no plano, passa o contexto às etapas
+// e valida a cadeia antes de dizer "concluído".
+const appSrc = fs.readFileSync(require('node:path').join(__dirname, '..', 'app.js'), 'utf8');
+assert.match(appSrc, /AGENTES\.abrirTarefa\(alvo, 'plano'\)/);
+assert.match(appSrc, /AGENTES\.abrir\(nome, acao\.args, delegacao\)/);
+assert.match(appSrc, /AGENTES\.verificarTarefa\(tarefaAgentes\.id\)/);
+assert.match(appSrc, /Não considero a tarefa concluída/);
+assert.match(appSrc, /'Agentes especializados'/);
+
+const totalVerificacoes = (fs.readFileSync(__filename, 'utf8').match(/^assert\./gm) || []).length;
+console.log('test_agentes: ' + totalVerificacoes + ' verificações aprovadas');

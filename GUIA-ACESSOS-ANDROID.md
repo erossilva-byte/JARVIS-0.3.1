@@ -26,7 +26,14 @@ Para segundo plano, habilite a opção correspondente no app e mantenha a notifi
 
 ## 4. O que não é necessário conceder indiscriminadamente
 
-- SMS, histórico de chamadas e acessibilidade não devem ser habilitados sem uma implementação e necessidade específicas. Preparar uma mensagem no app de SMS/WhatsApp ou abrir a tela de chamada é diferente de enviar automaticamente ou controlar outro aplicativo.
+- SMS e histórico de chamadas não devem ser habilitados sem uma implementação e
+  necessidade específicas. Preparar uma mensagem no app de SMS/WhatsApp ou abrir a
+  tela de chamada é diferente de enviar automaticamente.
+- Acessibilidade tem implementação específica desde o ajuste 095, com escopo
+  estreito: ler os textos visíveis, tocar num botão pelo texto e rolar a tela. Fica
+  desligada por padrão e depende do consentimento dentro do app; não digita, não lê
+  campo de senha nem o que você escreveu. Sem esse consentimento, o serviço
+  autorizado nas configurações do Android não executa nada.
 - Não há permissão capaz de dar controle irrestrito sobre todos os aplicativos, desbloquear o aparelho ou contornar as proteções do Android.
 
 ## 5. Validação antes de considerar o APK pronto

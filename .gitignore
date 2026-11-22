@@ -7,3 +7,30 @@ __pycache__/
 .DS_Store
 Thumbs.db
 www/
+
+# Binários de release não entram no repositório (ficam nos assets do GitHub Releases)
+/*.apk
+/*.apk.sha256
+/*.sha256
+/*-fonte.zip
+
+# Chaves de assinatura nunca entram no repositório.
+# A chave de release vive fora do repositório: ~/.jarvis/ ou os secrets do GitHub
+# (JARVIS_KEYSTORE_B64 e companhia). Exceção histórica mantida de propósito:
+# ci/debug.keystore, usado apenas nos artefatos de validação do CI e recusado pela release.
+key.properties
+*.jks
+*.keystore
+!ci/debug.keystore
+
+# Flutter: saídas geradas localmente e recompiláveis, não entram no repositório.
+flutter_app/.dart_tool/
+flutter_app/build/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+
+# Entregas e logs das sessões de trabalho ficam fora do repositório (APKs vão para
+# os assets do GitHub Releases; os logs são regeneráveis). Sem isto, um `git add -A`
+# arrasta APKs de ~118 MB, que o GitHub recusa acima de 100 MB.
+artifacts/
+_logs/

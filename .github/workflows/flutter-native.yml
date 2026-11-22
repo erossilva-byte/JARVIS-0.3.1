@@ -1,0 +1,187 @@
+name: Flutter native UI validation
+
+on:
+  push:
+    branches:
+      - feat/flutter-dart-migration-1.46.0
+      - feat/functional-integration-1.47.0
+      - work/1.48.0-fase2-consolidacao
+  pull_request:
+    branches:
+      - work/1.46.0-auditoria-funcoes-apk
+      - feat/functional-integration-1.47.0
+      - feat/flutter-dart-migration-1.46.0
+      - work/1.48.0-fase2-consolidacao
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Push e pull_request da mesma branch compartilham o mesmo grupo de concorrência.
+concurrency:
+  group: flutter-native-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  flutter-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate native platform runners without touching legacy Android project
+        run: flutter create --project-name jarvis_nova --platforms=android,windows .
+      - name: Set the production Android application identity
+        shell: bash
+        run: python3 tool/prepare_android_identidade.py android/app
+      - name: Install sherpa-onnx model tokenizer
+        if: runner.os == 'Linux'
+        run: python3 -m pip install --disable-pip-version-check sherpa-onnx==1.13.8 sentencepiece pypinyin
+      - name: Download and verify sherpa-onnx Android runtime
+        if: runner.os == 'Linux'
+        run: python3 ../baixar_sherpa.py android/app
+        working-directory: flutter_app
+      - name: Prepare local KWS model assets
+        if: runner.os == 'Linux'
+        run: python3 ../preparar_kws.py android/app
+        working-directory: flutter_app
+      - name: Register native Kotlin KWS plugin and foreground service
+        if: runner.os == 'Linux'
+        run: python3 tool/prepare_android_kws.py android/app
+        working-directory: flutter_app
+      - name: Register Android shortcuts, widget and share target
+        if: runner.os == 'Linux'
+        run: python3 tool/prepare_android_sistema.py android/app
+        working-directory: flutter_app
+      - name: Test Android system integration preparation
+        if: runner.os == 'Linux'
+        run: python3 ../tests/test_sistema_android.py
+        working-directory: flutter_app
+      - run: flutter pub get
+      - run: dart format lib test
+      - run: flutter analyze
+      - run: flutter test
+      - run: dart run tool/stream_buffer_test.dart
+      - run: dart run tool/memoria_test.dart
+      - name: Build debug APK
+        run: flutter build apk --debug
+      - name: Verify the APK carries shortcuts, widget and share target
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-debug.apk
+          test -s "$APK"
+
+          for recurso in res/xml/shortcuts.xml res/xml/jarvis_widget_info.xml res/layout/jarvis_widget.xml; do
+            if ! unzip -Z1 "$APK" | grep -qx "$recurso"; then
+              echo "FALTA no APK: $recurso"
+              exit 1
+            fi
+          done
+
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          AAPT2=$(ls -d "$SDK"/build-tools/*/aapt2 2>/dev/null | tail -1 || true)
+          if [ -n "$AAPT2" ]; then
+            MANIFESTO=$("$AAPT2" dump xmltree --file AndroidManifest.xml "$APK")
+            ATALHOS=$("$AAPT2" dump xmltree --file res/xml/shortcuts.xml "$APK")
+          else
+            echo "aapt2 não encontrado; conferindo o manifesto por strings"
+            MANIFESTO=$(unzip -p "$APK" AndroidManifest.xml | strings)
+            ATALHOS=$(unzip -p "$APK" res/xml/shortcuts.xml | strings)
+          fi
+
+          for marca in JarvisWidgetProvider android.app.shortcuts com.jarvis.nova.ACAO_VOZ android.intent.action.SEND; do
+            if ! grep -q "$marca" <<<"$MANIFESTO"; then
+              echo "FALTA no manifesto do APK: $marca"
+              exit 1
+            fi
+          done
+          for marca in ACAO_VOZ ACAO_CONVERSA ACAO_HISTORICO; do
+            if ! grep -q "$marca" <<<"$ATALHOS"; then
+              echo "FALTA nos atalhos do APK: $marca"
+              exit 1
+            fi
+          done
+          mapfile -t DEXES < <(unzip -Z1 "$APK" | grep -E '^classes[0-9]*\.dex$' || true)
+          if [ "${#DEXES[@]}" -eq 0 ]; then
+            echo "FALTA classes.dex no APK"
+            exit 1
+          fi
+          CODIGO=""
+          for dex in "${DEXES[@]}"; do
+            CODIGO+=$'\n'$(unzip -p "$APK" "$dex" | strings)
+          done
+          for marca in com.jarvis.nova.ACAO_VOZ com.jarvis.nova.ACAO_CONVERSA com.jarvis.nova.ACAO_HISTORICO com.jarvis.nova/sistema com.jarvis.nova/memoria; do
+            if ! grep -q "$marca" <<<"$CODIGO"; then
+              echo "FALTA no código do APK: $marca"
+              exit 1
+            fi
+          done
+          echo "APK contém atalhos, widget, compartilhamento e canal do sistema."
+      - name: Verify APK identity and output
+        shell: bash
+        run: |
+          test -s build/app/outputs/flutter-apk/app-debug.apk
+          echo "APK Flutter gerado: $(du -h build/app/outputs/flutter-apk/app-debug.apk | cut -f1)"
+      - name: Publish debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-flutter-android-debug
+          path: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  flutter-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate native platform runners without touching legacy desktop project
+        run: flutter create --project-name jarvis_nova --platforms=android,windows .
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: dart run tool/stream_buffer_test.dart
+      - run: dart run tool/memoria_test.dart
+      - run: flutter build windows
+      - name: Publish Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-flutter-windows-debug
+          path: flutter_app/build/windows/x64/runner/Release/
+          if-no-files-found: error
+          retention-days: 14
+
+  # Check único para impedir avanço quando Android OU Windows falhar.
+  advance-gate:
+    name: advance-gate (Android + Windows)
+    runs-on: ubuntu-latest
+    needs:
+      - flutter-android
+      - flutter-windows
+    if: always()
+    steps:
+      - name: Require both platform validations
+        env:
+          ANDROID_RESULT: ${{ needs.flutter-android.result }}
+          WINDOWS_RESULT: ${{ needs.flutter-windows.result }}
+        run: |
+          echo "Android: ${ANDROID_RESULT}"
+          echo "Windows: ${WINDOWS_RESULT}"
+          test "${ANDROID_RESULT}" = "success"
+          test "${WINDOWS_RESULT}" = "success"
+          echo "GATE LIBERADO: Android e Windows passaram em análise, testes, build e publicação dos artefatos."

@@ -66,7 +66,7 @@ function exigirCofreDesktop() {
 }
 function guardarChaveDesktop({ nome, valor }) {
   exigirCofreDesktop();
-  if (!/^(groq|cerebras|mistral|gemini)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
+  if (!/^(groq|openrouter|cerebras|mistral|gemini)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
   const dados = lerCofreDesktop();
   if (!valor) delete dados[nome];
   else dados[nome] = safeStorage.encryptString(String(valor)).toString('base64');
@@ -75,13 +75,30 @@ function guardarChaveDesktop({ nome, valor }) {
 }
 function lerChaveDesktop({ nome }) {
   exigirCofreDesktop();
-  if (!/^(groq|cerebras|mistral|gemini)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
+  if (!/^(groq|openrouter|cerebras|mistral|gemini)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
   const cifrado = lerCofreDesktop()[nome];
   if (!cifrado) return '';
   return safeStorage.decryptString(Buffer.from(String(cifrado), 'base64'));
 }
 
 // Só estas ações existem. O renderer NUNCA envia comandos de shell.
+function teclaMultimidiaWindows(codigo) {
+  if (plat !== 'win32') throw new Error('Controle multimídia por tecla está disponível nesta versão apenas no Windows.');
+  const script = [
+    "$src = 'using System; using System.Runtime.InteropServices; public static class JarvisNovaMediaKey { [DllImport(\"user32.dll\")] public static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra); public static void Tap(byte key) { keybd_event(key, 0, 0, UIntPtr.Zero); keybd_event(key, 0, 2, UIntPtr.Zero); } }'",
+    'Add-Type -TypeDefinition $src',
+    '[JarvisNovaMediaKey]::Tap(' + Number(codigo) + ')'
+  ].join('; ');
+  const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script], {
+    encoding: 'utf8', timeout: 5000, windowsHide: true
+  });
+  if (r.error || r.status !== 0) {
+    const detalhe = r.error ? r.error.message : String(r.stderr || r.stdout || 'PowerShell retornou erro').trim();
+    throw new Error('O Windows não aceitou a tecla multimídia: ' + detalhe.slice(0, 240));
+  }
+}
+const TECLAS_MIDIA = { alternar: 0xB3, proxima: 0xB0, anterior: 0xB1, parar: 0xB2 };
+const TECLAS_VOLUME = { aumentar: 0xAF, diminuir: 0xAE, silenciar: 0xAD };
 const acoes = {
   abrir_app: async ({ app: chaveApp }) => {
     const entrada = APPS[chaveApp];
@@ -98,6 +115,36 @@ const acoes = {
     if (!numeroOk(numero)) throw new Error('Número inválido');
     const t = String(texto || '').slice(0, 1000);
     return shell.openExternal(`https://wa.me/${numero.replace('+', '')}?text=${encodeURIComponent(t)}`);
+  },
+  controle_midia_pc: async ({ comando }) => {
+    const c = String(comando || 'pausar').toLowerCase();
+    const tecla = TECLAS_MIDIA[c];
+    if (!tecla) throw new Error('Comando de mídia inválido.');
+    teclaMultimidiaWindows(tecla);
+    return { ok: true, incerto: true, metodo: 'tecla multimídia do Windows', comando: c,
+      info: 'Comando enviado ao controle multimídia do Windows; a resposta do player não pode ser confirmada.' };
+  },
+  volume_pc: async ({ direcao, tipo, percentual }) => {
+    if (percentual != null) throw new Error('Definir percentual exato ainda não é suportado no Windows; use aumentar, diminuir ou silenciar.');
+    if (tipo && tipo !== 'musica') throw new Error('Nesta versão, o controle por tecla altera o volume principal do Windows, não canais separados.');
+    const d = String(direcao || 'aumentar').toLowerCase();
+    const tecla = TECLAS_VOLUME[d];
+    if (!tecla) throw new Error('Direção de volume inválida.');
+    teclaMultimidiaWindows(tecla);
+    return { ok: true, incerto: true, metodo: 'tecla de volume do Windows', direcao: d,
+      info: 'Comando enviado ao volume principal do Windows; o nível exato não foi lido.' };
+  },
+  email_pc: async ({ para, assunto, texto }) => {
+    const destinatario = String(para || '').trim().slice(0, 200);
+    if (destinatario && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(destinatario)) {
+      throw new Error('Informe um endereço de e-mail válido para abrir o rascunho.');
+    }
+    const params = [];
+    if (assunto) params.push('subject=' + encodeURIComponent(String(assunto).slice(0, 200)));
+    if (texto) params.push('body=' + encodeURIComponent(String(texto).slice(0, 4000)));
+    const uri = 'mailto:' + destinatario + (params.length ? '?' + params.join('&') : '');
+    await shell.openExternal(uri);
+    return { ok: true, incerto: true, info: 'Abri o aplicativo de e-mail padrão com o rascunho. Revise e envie manualmente.' };
   },
   bloquear_tela: async () => {
     if (plat === 'win32') rodar('rundll32.exe', ['user32.dll,LockWorkStation']);
@@ -539,7 +586,7 @@ const acoesPC2 = {
       disco ? Math.round(disco.livre / 1073741824 * 10) / 10 + ' de ' + Math.round(disco.total / 1073741824 * 10) / 10 + ' GB livres na pasta do usuário' : 'o sistema não expôs o espaço livre',
       disco && disco.livre <= 2 * 1073741824 ? 'modelos .task grandes podem não caber' : '', '');
     let chaves = [];
-    try { chaves = Object.keys(lerCofreDesktop()).filter((k) => /^(groq|cerebras|mistral|gemini)$/.test(k)); } catch (_) { chaves = []; }
+    try { chaves = Object.keys(lerCofreDesktop()).filter((k) => /^(groq|openrouter|cerebras|mistral|gemini)$/.test(k)); } catch (_) { chaves = []; }
     item('IA', 'Provedores com chave no cofre do SO', chaves.length ? 'ok' : 'nao_configurado',
       chaves.length ? chaves.join(', ') : 'nenhuma chave salva neste computador', '', 'Ajustes ▸ IA Core');
     item('IA', 'Modelo local (.task)', chaves.length || cofreAutorizado ? 'nao_verificado' : 'nao_configurado',

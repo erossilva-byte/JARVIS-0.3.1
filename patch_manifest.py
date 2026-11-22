@@ -15,6 +15,8 @@ permissoes = [
     "android.permission.CAMERA", "android.permission.REQUEST_INSTALL_PACKAGES",
     # Bloqueio OPCIONAL do aplicativo com BiometricPrompt (não substitui o bloqueio do Android).
     "android.permission.USE_BIOMETRIC", "android.permission.USE_FINGERPRINT",
+    # Leitura de tags para o desbloqueio opcional; o hardware NFC é opcional (uses-feature).
+    "android.permission.NFC",
     "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
     # Chamada completada de verdade: sem CALL_PHONE o app só abre o discador.
     "android.permission.CALL_PHONE",
@@ -84,6 +86,15 @@ receiver = '    <receiver android:name=".JarvisAlarmReceiver" android:exported="
 if '.JarvisAlarmReceiver' not in m:
     j = m.rindex('</application>')
     m = m[:j] + receiver + m[j:]
+acessibilidade = ('    <service android:name=".JarvisAcessibilidade" android:exported="true"\n'
+                 '        android:label="J.A.R.V.I.S. Nova — Automação"\n'
+                 '        android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">\n'
+                 '        <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>\n'
+                 '        <meta-data android:name="android.accessibilityservice" android:resource="@xml/jarvis_acessibilidade" />\n'
+                 '    </service>\n')
+if '.JarvisAcessibilidade' not in m:
+    j = m.rindex('</application>')
+    m = m[:j] + acessibilidade + m[j:]
 notification_listener = ('    <service android:name=".JarvisNotificationListener" android:label="J.A.R.V.I.S. Nova" '
                         'android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="true">\n'
                         '        <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>\n'
@@ -186,8 +197,31 @@ try:
     if not caminhos.exists() or caminhos.read_text(encoding="utf-8") != conteudo_caminhos:
         caminhos.write_text(conteudo_caminhos, encoding="utf-8")
         print(f"Caminhos do FileProvider do atualizador gravados: {caminhos}")
+    acess = res_xml / "jarvis_acessibilidade.xml"
+    conteudo_acess = ('<?xml version="1.0" encoding="utf-8"?>\n'
+                      '<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"\n'
+                      '    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"\n'
+                      '    android:accessibilityFeedbackType="feedbackGeneric"\n'
+                      '    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews"\n'
+                      '    android:canRetrieveWindowContent="true"\n'
+                      '    android:notificationTimeout="100" />\n')
+    if not acess.exists() or acess.read_text(encoding="utf-8") != conteudo_acess:
+        acess.write_text(conteudo_acess, encoding="utf-8")
+        print(f"Configuração do serviço de acessibilidade gravada: {acess}")
 except Exception as e:
     raise SystemExit(f"Não consegui criar jarvis_paths.xml: {e}")
+# Recursos opcionais: NFC, rosto e digital não podem excluir o app da loja nem de aparelhos
+# sem o hardware. Quem decide o que usar é a central em Ajustes ▸ Segurança.
+if 'android.hardware.nfc' not in m:
+    feats = (
+        '    <uses-feature android:name="android.hardware.nfc" android:required="false" />\n'
+        '    <uses-feature android:name="android.hardware.face" android:required="false" />\n'
+        '    <uses-feature android:name="android.hardware.fingerprint" android:required="false" />\n'
+    )
+    app_pos = m.find("<application")
+    if app_pos >= 0:
+        m = m[:app_pos] + feats + m[app_pos:]
+
 path.write_text(m, encoding="utf-8")
 
 print(f'Manifesto corrigido: {path}')

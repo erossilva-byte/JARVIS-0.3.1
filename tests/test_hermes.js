@@ -90,6 +90,17 @@ ok('pergunta comum não é capturada por nenhuma habilidade', () => {
   assert.equal(Hermes.planejar('explique a teoria da relatividade'), null);
 });
 
+ok('roteador descarta provedor desconhecido e duplicado', () => {
+  const r = Hermes.planejarIA({ provedores: ['inventado', 'groq', 'groq'], texto: 'oi' });
+  assert.deepEqual(r.ordem, ['groq']);
+  assert.ok(!('inventado' in r.notas));
+});
+ok('roteador não estoura quando só há id inválido', () => {
+  const r = Hermes.planejarIA({ provedores: ['inventado'], texto: 'oi' });
+  assert.deepEqual(r.ordem, []);
+  assert.match(r.motivo, /nenhum provedor disponível/);
+});
+
 // --- 3. Despacho e telemetria -----------------------------------------------
 okAsync('despacho marca a rota da habilidade própria', async () => {
   const m = novo({ briefing_auto: '0' });
@@ -243,6 +254,53 @@ ok('diaDeHoje usa a data local em formato de ordenação', () => {
 ok('periodo acompanha a hora do dia', () => {
   assert.equal(Hermes.periodo(new Date(2026, 0, 5, 8)), 'Bom dia');
   assert.equal(Hermes.periodo(new Date(2026, 0, 5, 20)), 'Boa noite');
+});
+
+// --- 9. Escolha do usuário: motor principal e alternativo -------------------
+ok('escolha do usuário põe o principal na frente do roteador', () => {
+  const r = Hermes.planejarIA({ texto: 'oi', provedores: ['groq', 'cerebras', 'gemini'], principal: 'gemini' });
+  assert.equal(r.ordem[0], 'gemini');
+  assert.match(r.motivo, /preferência do usuário: Gemini/);
+});
+ok('alternativo ocupa a segunda posição', () => {
+  const r = Hermes.planejarIA({ texto: 'oi', provedores: ['groq', 'cerebras', 'gemini'], principal: 'gemini', alternativo: 'cerebras' });
+  assert.deepEqual(r.ordem.slice(0, 2), ['gemini', 'cerebras']);
+  assert.deepEqual(r.ordem.slice().sort(), ['cerebras', 'gemini', 'groq'], 'ninguém pode sumir da fila');
+});
+ok('provedor sem chave na preferência é ignorado', () => {
+  const livre = Hermes.planejarIA({ texto: 'oi', provedores: ['groq', 'cerebras'] });
+  const r = Hermes.planejarIA({ texto: 'oi', provedores: ['groq', 'cerebras'], principal: 'mistral' });
+  assert.deepEqual(r.ordem, livre.ordem);
+  assert.doesNotMatch(r.motivo, /preferência do usuário/);
+});
+ok('mesmo provedor nos dois campos não duplica a fila', () => {
+  const r = Hermes.planejarIA({ texto: 'oi', provedores: ['groq', 'cerebras'], principal: 'groq', alternativo: 'groq' });
+  assert.deepEqual(r.ordem, ['groq', 'cerebras']);
+});
+ok('escolha vale na visão só com quem enxerga', () => {
+  const r = Hermes.planejarIA({ tarefa: 'visao', provedores: ['groq', 'gemini'], principal: 'gemini' });
+  assert.equal(r.ordem[0], 'gemini');
+});
+ok('principal em pausa continua sendo a escolha do usuário', () => {
+  const r = Hermes.planejarIA({ texto: 'oi', provedores: ['groq', 'cerebras'], principal: 'cerebras', indisponiveis: ['cerebras'] });
+  assert.equal(r.ordem[0], 'cerebras');
+  assert.equal(r.ordem[1], 'groq', 'a reserva precisa estar logo atrás');
+});
+ok('sem escolha, o roteador continua mandando', () => {
+  const r = Hermes.planejarIA({ texto: 'oi', provedores: ['groq', 'cerebras'] });
+  assert.doesNotMatch(r.motivo, /preferência do usuário/);
+});
+ok('a interface tem os seletores e o app usa a escolha salva', () => {
+  const fs = require('node:fs');
+  const raiz = require('node:path').join(__dirname, '..');
+  const html = fs.readFileSync(require('node:path').join(raiz, 'index.html'), 'utf8');
+  const app = fs.readFileSync(require('node:path').join(raiz, 'app.js'), 'utf8');
+  assert.match(html, /id="c-prov-principal"/, 'falta o seletor do principal');
+  assert.match(html, /id="c-prov-alternativo"/, 'falta o seletor do alternativo');
+  assert.match(app, /principal: store\.get\('prov_principal', ''\)/, 'o roteador não recebe a escolha');
+  assert.match(app, /alternativo: store\.get\('prov_alternativo', ''\)/, 'o roteador não recebe o alternativo');
+  assert.match(app, /store\.set\('prov_principal', principalValido\)/, 'a escolha não é salva');
+  assert.match(app, /if \(principalValido\) delete pausas\[principalValido\]/, 'escolher precisa liberar a pausa');
 });
 
 console.log(falhas ? '\n' + falhas + ' verificação(ões) do núcleo Hermes falharam.' : '\nTodas as verificações do núcleo Hermes passaram.');

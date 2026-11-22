@@ -270,6 +270,7 @@ public class JarvisUpdatePlugin extends Plugin {
         worker.execute(() -> {
             File destino = arquivoAtualizacao();
             FileOutputStream fos = null;
+            InputStream in = null;
             HttpURLConnection con = null;
             try {
                 JSObject rel = consultarRelease();
@@ -292,7 +293,7 @@ public class JarvisUpdatePlugin extends Plugin {
                 int codigo = con.getResponseCode();
                 if (codigo < 200 || codigo >= 300) throw new RuntimeException("download HTTP " + codigo);
                 long total = con.getContentLength();
-                InputStream in = con.getInputStream();
+                in = con.getInputStream();
                 fos = new FileOutputStream(destino);
                 MessageDigest sha = MessageDigest.getInstance("SHA-256");
                 byte[] buf = new byte[16384];
@@ -340,6 +341,7 @@ public class JarvisUpdatePlugin extends Plugin {
                 call.reject("Não consegui baixar a atualização: " + msg + ".");
             } finally {
                 if (fos != null) { try { fos.close(); } catch (Exception ignored) { } }
+                if (in != null) { try { in.close(); } catch (Exception ignored) { } }
                 if (con != null) con.disconnect();
             }
         });

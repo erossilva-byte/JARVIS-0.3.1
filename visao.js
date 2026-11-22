@@ -181,6 +181,8 @@
       var base = '[' + timestamp(q.t) + '] ' + (q.resumo || '').trim();
       var objs = Array.isArray(q.objetos) ? q.objetos.map(function (x) { return x && x.nome; }).filter(Boolean) : [];
       if (objs.length) base += (base ? ' ' : '') + 'Objetos: ' + objs.join(', ') + '.';
+      var ocr = Array.isArray(q.textoLegivel) ? q.textoLegivel.map(function (x) { return String(x || '').trim(); }).filter(Boolean) : [];
+      if (ocr.length) base += ' Texto legível: ' + ocr.join(' · ').slice(0, 500) + '.';
       return base.trim();
     });
     return linhas.join('\n');

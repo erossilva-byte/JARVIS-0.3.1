@@ -28,6 +28,16 @@ plugin = ler("JarvisBackgroundPlugin.java")
 patch_gradle = ler("patch_gradle.py")
 build_wf = ler(".github/workflows/build-apk.yml")
 release_wf = ler(".github/workflows/release-apk.yml")
+
+
+def linha_www(texto):
+    """Linha única que copia os módulos principais para www/ (deve ser a mesma nos dois workflows)."""
+    for linha in texto.splitlines():
+        limpa = linha.strip()
+        if limpa.startswith("cp index.html") and " www/" in limpa:
+            return limpa
+    return None
+
 versao = json.loads(ler("VERSAO.json"))
 pacote = json.loads(ler("package.json"))
 leituras = ler("LEIA-ME.md") + ler("CHANGELOG.md")
@@ -53,7 +63,7 @@ checagens = {
         "guardarChave" not in prefs and "lerChave" not in prefs and "temChave" not in prefs
         and "AndroidKeyStore" not in prefs),
     "Nomes de chave do desktop sem picovoice": (
-        "groq|cerebras|mistral|gemini" in ler("platforms/desktop/main.js") and "picovoice" not in ler("platforms/desktop/main.js")),
+        "groq|openrouter|cerebras|mistral|gemini" in ler("platforms/desktop/main.js") and "picovoice" not in ler("platforms/desktop/main.js")),
 
     # 2. Detector próprio, nos dois lados, com as mesmas regras
     "JarvisAtivacao.java existe e tem as três regras": (
@@ -65,22 +75,22 @@ checagens = {
     "Trava do v e do j inicial protegem palavras comuns": (
         "t.indexOf('v') < 0" in ativacao_java and "t.charAt(0) != 'j'" in ativacao_java
         and "indexOf('v') < 0" in hermes and "/^j/.test(t)" in hermes),
-    "Serviço confere parcial, todas as hipóteses e ruído": (
-        "conferirEmLote" in servico and "onPartialResults" in servico
-        and "picoDb" in servico and "cfg.ruidoDb" in servico
-        and "JarvisPrefs.rejeitadas(this," in servico),
+    "Serviço executa KWS acústico local por PCM": (
+        "new JarvisKwsEngine(" in servico and "AudioRecord" in ler("JarvisKwsEngine.java")
+        and "new KeywordSpotter(null, config)" in ler("JarvisKwsEngine.java")
+        and "SpeechRecognizer.create" not in servico),
     "Serviço lê a calibragem salva a cada sessão": (
         "JarvisPrefs.sensibilidade(this)" in servico and "JarvisPrefs.variantes(this)" in servico
-        and "iniciarSessao" in servico and "agendarSessao" in servico),
+        and "new JarvisKwsEngine(" in servico),
     "Nenhum resto do motor antigo": (
         "motorPedido" not in servico and "JarvisPrefs.motor" not in servico
         and "wake_motor" not in app and "CHAVE_PICOVOICE" not in app),
     "Calibragem trafega da tela para o serviço": (
         "wakeCalibragem" in app and "sensibilidade: " in app
         and 'getInt("sensibilidade"' in plugin and 'getString("variantes"' in plugin),
-    "Detector próprio aparece no diagnóstico": (
-        "descartesRuido" in plugin and "calibragem" in plugin
-        and "porteiro de ruído" in app),
+    "KWS local aparece no diagnóstico sem contador fictício": (
+        "JarvisService.DETECTOR" in plugin and "calibragem" in plugin
+        and "KWS acústico local" in app and "descartesRuido" not in plugin),
 
     # 3. Roteador de motores de IA
     "Núcleo tem o roteador com nota por tarefa": (
@@ -157,8 +167,10 @@ checagens = {
 
     # 8. Empacotamento e release
     "hermes.js vai para o www nos dois workflows": (
-        build_wf.count("cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/") == 1
-        and release_wf.count("cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/") == 1),
+        linha_www(build_wf) is not None
+        and linha_www(build_wf) == linha_www(release_wf)
+        and "hermes.js" in linha_www(build_wf)
+        and "index.html" in linha_www(build_wf)),
     "JarvisAtivacao.java é exigido no build e no release": (
         "JarvisAtivacao.java" in build_wf and "JarvisAtivacao.java" in release_wf
         and "JarvisAtivacao.java" not in ler(".gitignore")),

@@ -84,6 +84,8 @@ const relato = V.relatoVideo([
 ]);
 assert.ok(relato.indexOf('[0:04] uma mesa') === 0, relato);
 assert.ok(relato.indexOf('[0:18] uma janela') > 0);
+const relatoOcr = V.relatoVideo([{ t: 2, resumo: 'uma etiqueta', objetos: [], textoLegivel: ['TENSÃO 220V'] }]);
+assert.ok(/Texto legível: TENSÃO 220V/.test(relatoOcr), relatoOcr);
 assert.strictEqual(V.relatoVideo([]), 'Nenhum quadro foi analisado.');
 console.log('OK: timestamps e relato do vídeo');
 

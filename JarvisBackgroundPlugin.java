@@ -16,6 +16,7 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
 import androidx.core.content.ContextCompat;
@@ -106,6 +107,78 @@ public class JarvisBackgroundPlugin extends Plugin {
         call.resolve();
     }
 
+    /* ---------- Perfil de energia e pausa manual (Fase 4B) ---------- */
+
+    @PluginMethod
+    public void estadoEnergia(PluginCall call) {
+        call.resolve(estadoEnergia(getContext()));
+    }
+
+    @PluginMethod
+    public void definirPerfilEnergia(PluginCall call) {
+        Context c = getContext();
+        JarvisPrefs.perfilEnergia(c, call.getString("perfil", JarvisPrefs.PERFIL_SEMPRE));
+        Integer inicio = call.getInt("inicio");
+        if (inicio != null) JarvisPrefs.horarioInicio(c, inicio.intValue());
+        Integer fim = call.getInt("fim");
+        if (fim != null) JarvisPrefs.horarioFim(c, fim.intValue());
+        Integer limite = call.getInt("limiteBateria");
+        if (limite != null) JarvisPrefs.limiteBateria(c, limite.intValue());
+        JarvisService.aplicarPerfil(c);
+        call.resolve(estadoEnergia(c));
+    }
+
+    /** Estado leve do microfone, para a tela acompanhar em tempo real. */
+    @PluginMethod
+    public void estadoMicrofone(PluginCall call) {
+        Context c = getContext();
+        JSObject o = new JSObject();
+        o.put("bloqueioMicrofone", JarvisService.bloqueioMicrofone(c));
+        o.put("pausaFoneSegundos", Math.round(JarvisService.pausaFoneRestanteMs() / 1000.0));
+        o.put("escutando", JarvisService.escutando());
+        o.put("servico", JarvisService.ativo());
+        call.resolve(o);
+    }
+
+    /** Roda a manutenção periódica agora, para conferir sem esperar o ciclo. */
+    @PluginMethod
+    public void rodarManutencaoAgora(PluginCall call) {
+        JarvisManutencaoWorker.rodarAgora(getContext());
+        JSObject o = estadoEnergia(getContext());
+        o.put("pedido", true);
+        call.resolve(o);
+    }
+
+    /** Pausa pelo botão da notificação; o estado volta persistido. */
+    @PluginMethod
+    public void pausarEscutaManual(PluginCall call) {
+        JarvisService.pausarEscutaManual(getContext());
+        call.resolve(estadoEnergia(getContext()));
+    }
+
+    @PluginMethod
+    public void retomarEscutaManual(PluginCall call) {
+        JarvisService.retomarEscutaManual(getContext());
+        call.resolve(estadoEnergia(getContext()));
+    }
+
+    private JSObject estadoEnergia(Context c) {
+        JSObject o = new JSObject();
+        o.put("perfil", JarvisPrefs.perfilEnergia(c));
+        o.put("nivelBateria", JarvisService.nivelBateria(c));
+        o.put("economiaEnergia", JarvisService.economiaEnergia(c));
+        o.put("bloqueioBateria", JarvisService.bloqueioBateria(c));
+        o.put("pausadoManual", JarvisPrefs.pausadoManual(c));
+        o.put("horarioInicio", JarvisPrefs.horarioInicio(c));
+        o.put("horarioFim", JarvisPrefs.horarioFim(c));
+        o.put("carregando", JarvisService.carregando(c));
+        o.put("bloqueioPerfil", JarvisService.bloqueioPerfil(c));
+        o.put("limiteBateria", JarvisPrefs.limiteBateria(c));
+        o.put("ultimaManutencao", JarvisPrefs.ultimaManutencao(c));
+        o.put("manutencaoAgendada", JarvisPrefs.manutencaoAgendada(c));
+        return o;
+    }
+
     /* ---------- Palavra de ativação ---------- */
 
     @PluginMethod
@@ -126,8 +199,7 @@ public class JarvisBackgroundPlugin extends Plugin {
     private void iniciarWake(PluginCall call) {
         try {
             boolean pausar = !Boolean.FALSE.equals(call.getBoolean("pausarDuranteMusica", true));
-            // Calibragem do detector próprio: a tela envia o que o usuário acabou de
-            // ajustar, para o serviço ouvir já com a regra nova (sem reiniciar nada).
+            // Sensibilidade e palavras-chave extras são persistidas no serviço nativo.
             if (call.hasOption("sensibilidade")) {
                 JarvisPrefs.sensibilidade(getContext(), call.getInt("sensibilidade", JarvisPrefs.sensibilidade(getContext())));
             }
@@ -236,10 +308,24 @@ public class JarvisBackgroundPlugin extends Plugin {
         o.put("escutando", JarvisService.escutando());
         o.put("detector", JarvisService.detectorAtual());
         o.put("desejada", JarvisPrefs.desejaOuvir(c));
+        o.put("pausadoManual", JarvisPrefs.pausadoManual(c));
+        o.put("perfil", JarvisPrefs.perfilEnergia(c));
+        o.put("horarioInicio", JarvisPrefs.horarioInicio(c));
+        o.put("horarioFim", JarvisPrefs.horarioFim(c));
+        o.put("carregando", JarvisService.carregando(c));
+        o.put("bloqueioPerfil", JarvisService.bloqueioPerfil(c));
+        o.put("nivelBateria", JarvisService.nivelBateria(c));
+        o.put("economiaEnergia", JarvisService.economiaEnergia(c));
+        o.put("bloqueioBateria", JarvisService.bloqueioBateria(c));
+        o.put("limiteBateria", JarvisPrefs.limiteBateria(c));
+        o.put("ultimaManutencao", JarvisPrefs.ultimaManutencao(c));
+        o.put("manutencaoAgendada", JarvisPrefs.manutencaoAgendada(c));
+        o.put("bloqueioMicrofone", JarvisService.bloqueioMicrofone(c));
+        o.put("pausaFoneSegundos", Math.round(JarvisService.pausaFoneRestanteMs() / 1000.0));
+        o.put("redeBytesDesdeInicio", JarvisService.redeDesdeInicioBytes());
         o.put("sensibilidade", JarvisPrefs.sensibilidade(c));
         o.put("variantes", JarvisPrefs.variantes(c));
         o.put("calibragem", JarvisService.calibragem());
-        o.put("descartesRuido", JarvisPrefs.rejeitadas(c));
         o.put("ultimoErro", JarvisPrefs.ultimoErro(c));
         o.put("ultimoEvento", JarvisPrefs.ultimoEvento(c));
         o.put("fabricante", Build.MANUFACTURER == null ? "" : Build.MANUFACTURER);
@@ -419,6 +505,26 @@ public class JarvisBackgroundPlugin extends Plugin {
                 JSObject ret = new JSObject();
                 ret.put("texto", texto.trim());
                 ret.put("mecanismo", local ? "local-no-dispositivo" : "servico-android");
+                // O Android expõe até cinco hipóteses e uma confiança por hipótese (0..1).
+                // Antes o app descartava as duas coisas e não podia recusar um comando duvidoso.
+                float[] confiancas = results == null ? null : results.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES);
+                JSArray alternativas = new JSArray();
+                if (lista != null) {
+                    for (int i = 0; i < lista.size() && i < 5; i++) {
+                        String hipotese = lista.get(i);
+                        if (hipotese == null || hipotese.trim().isEmpty()) continue;
+                        JSObject item = new JSObject();
+                        item.put("texto", hipotese.trim());
+                        if (confiancas != null && i < confiancas.length && confiancas[i] >= 0f) {
+                            item.put("confianca", (double) confiancas[i]);
+                        }
+                        alternativas.put(item);
+                    }
+                }
+                ret.put("alternativas", alternativas);
+                if (confiancas != null && confiancas.length > 0 && confiancas[0] >= 0f) {
+                    ret.put("confianca", (double) confiancas[0]);
+                }
                 atual.resolve(ret);
             }
 

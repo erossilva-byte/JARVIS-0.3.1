@@ -88,6 +88,12 @@ public class JarvisWatchdog extends BroadcastReceiver {
             cancelar(ctx);
             return;
         }
+        if (JarvisPrefs.pausadoManual(ctx)) {
+            // Pausa do usuário sobrevive ao vigia: religar aqui desfaria o botão "Pausar"
+            // a cada 15 minutos e ainda apagaria a pausa salva.
+            agendar(ctx, INTERVALO);
+            return;
+        }
         if (!JarvisService.ativo()) {
             try {
                 JarvisService.iniciarEscuta(ctx, JarvisPrefs.pausarMusica(ctx));

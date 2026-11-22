@@ -1,0 +1,503 @@
+/* J.A.R.V.I.S. Nova — pele visual v3 (camada nova, por cima das anteriores).
+ *
+ * Regra desta camada: ela só pinta e anima. Nenhum identificador é renomeado, nada de
+ * marcação é removida, então todo botão que já funcionava continua ligado ao mesmo
+ * elemento e ao mesmo ouvinte.
+ *
+ * Direção visual: reator de arco. Preto-azulado profundo, ciano de linha fina, vidro
+ * fosco nos painéis, tipografia espaçada em caixa alta e movimento contínuo lento.
+ * Respeita "reduzir movimento": nesse caso, tudo para de girar e fica só o brilho.
+ */
+
+:root {
+  --v3-fundo: #04070d;
+  --v3-fundo-alto: #071120;
+  --v3-linha: rgba(56, 189, 248, .22);
+  --v3-linha-forte: rgba(56, 189, 248, .48);
+  --v3-ciano: #38bdf8;
+  --v3-ciano-claro: #a5f3fc;
+  --v3-ambar: #fbbf24;
+  --v3-verde: #34d399;
+  --v3-vermelho: #f87171;
+  --v3-texto: #dbeafe;
+  --v3-texto-fraco: rgba(219, 234, 254, .62);
+  --v3-vidro: rgba(9, 20, 34, .72);
+  --v3-vidro-alto: rgba(13, 28, 46, .86);
+  --v3-raio: 18px;
+  --v3-sombra: 0 24px 60px rgba(0, 0, 0, .55);
+  --v3-globo: 0 0 0 1px var(--v3-linha), 0 0 34px rgba(56, 189, 248, .10) inset;
+  --v3-curva: cubic-bezier(.22, .61, .36, 1);
+}
+
+/* ---------- Base ---------- */
+
+html { background: var(--v3-fundo); }
+
+body {
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(56, 189, 248, .14), transparent 60%),
+    radial-gradient(90% 60% at 50% 110%, rgba(14, 116, 144, .16), transparent 65%),
+    linear-gradient(180deg, #04070d 0%, #050b14 45%, #04070d 100%);
+  color: var(--v3-texto);
+  letter-spacing: .01em;
+}
+
+/* Grade fina de fundo: dá profundidade sem custar GPU (gradiente, não imagem). */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(56, 189, 248, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, .05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at 50% 22%, #000 0%, transparent 72%);
+  -webkit-mask-image: radial-gradient(circle at 50% 22%, #000 0%, transparent 72%);
+  opacity: .7;
+}
+
+main { position: relative; z-index: 1; }
+
+/* ---------- Cabeçalho ---------- */
+
+header {
+  background: linear-gradient(180deg, rgba(7, 17, 32, .94), rgba(7, 17, 32, .58));
+  border-bottom: 1px solid var(--v3-linha);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+header .marca b { letter-spacing: .16em; font-weight: 650; }
+header #estado-txt { color: var(--v3-ciano); letter-spacing: .12em; text-transform: uppercase; font-size: .68rem; }
+
+header .ponto {
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, .12), 0 0 14px var(--v3-ciano);
+  animation: v3-respira 3.4s var(--v3-curva) infinite;
+}
+
+/* ---------- Núcleo: a tela do reator ---------- */
+
+.topo { padding-top: 18px; }
+
+.hud {
+  position: relative;
+  isolation: isolate;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 42px rgba(56, 189, 248, .18));
+  transition: transform .5s var(--v3-curva), filter .5s var(--v3-curva);
+}
+
+/* O canvas novo cobre o miolo antigo; os enfeites em SVG seguem por baixo, esmaecidos. */
+#nucleo-v3 {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.hud .cam,
+.hud .plas,
+.hud #nucleo-orbita { opacity: .13; z-index: 1; }
+.hud .halo { z-index: 0; opacity: .8; }
+
+/* O centro agora é do reator: a marcação antiga no meio competiria com a esfera. */
+.hud .orb-marca,
+.hud .orb-sub { display: none; }
+
+.hud:is(:hover, :focus-visible) { transform: scale(1.012); filter: drop-shadow(0 0 60px rgba(56, 189, 248, .26)); }
+
+.hud .orb-marca { display: none; }
+.hud .orb-sub { display: none; }
+
+.hud .hud-meta {
+  z-index: 3;
+  color: rgba(165, 243, 252, .42);
+  letter-spacing: .34em;
+  font-size: .5rem;
+  text-transform: uppercase;
+}
+
+/* estados do assistente mudam a temperatura do conjunto */
+body[data-state="listening"] .hud { filter: drop-shadow(0 0 54px rgba(56, 189, 248, .34)); }
+body[data-state="thinking"] .hud,
+body[data-state="processing"] .hud { filter: drop-shadow(0 0 54px rgba(251, 191, 36, .30)); }
+body[data-state="speaking"] .hud { filter: drop-shadow(0 0 54px rgba(52, 211, 153, .30)); }
+body[data-state="error"] .hud { filter: drop-shadow(0 0 54px rgba(248, 113, 113, .32)); }
+
+/* ---------- Chips e status ---------- */
+
+.chip {
+  background: var(--v3-vidro);
+  border: 1px solid var(--v3-linha);
+  border-radius: 999px;
+  color: var(--v3-texto-fraco);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-size: .63rem;
+  padding: 5px 12px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color .3s var(--v3-curva), color .3s var(--v3-curva);
+}
+
+.chip.estado { color: var(--v3-ciano); border-color: var(--v3-linha-forte); }
+.chip.seguro { color: var(--v3-verde); border-color: rgba(52, 211, 153, .4); }
+
+.relogio { font-variant-numeric: tabular-nums; letter-spacing: .12em; }
+.relogio span:first-child { font-weight: 300; font-size: 1.7rem; color: var(--v3-texto); }
+
+/* ---------- Botões de modo ---------- */
+
+.modo-btn {
+  background: linear-gradient(180deg, rgba(13, 28, 46, .8), rgba(7, 17, 32, .8));
+  border: 1px solid var(--v3-linha);
+  border-radius: 12px;
+  color: var(--v3-texto-fraco);
+  transition: transform .24s var(--v3-curva), border-color .24s var(--v3-curva), color .24s var(--v3-curva);
+}
+
+.modo-btn:active { transform: scale(.97); }
+.modo-btn[aria-pressed="true"] {
+  border-color: var(--v3-linha-forte);
+  color: var(--v3-ciano-claro);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, .18) inset, 0 10px 26px rgba(8, 47, 73, .5);
+}
+
+/* ---------- Painéis, cartões e listas ---------- */
+
+.area-card,
+.painel,
+aside,
+.card,
+.nucleo-card,
+.bloco {
+  background: linear-gradient(180deg, var(--v3-vidro-alto), var(--v3-vidro));
+  border: 1px solid var(--v3-linha);
+  border-radius: var(--v3-raio);
+  box-shadow: var(--v3-sombra);
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+}
+
+.area-card { transition: transform .3s var(--v3-curva), border-color .3s var(--v3-curva); }
+.area-card:active { transform: translateY(1px) scale(.995); }
+.area-card:hover { border-color: var(--v3-linha-forte); }
+
+.eyebrow {
+  color: var(--v3-ciano);
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  font-size: .6rem;
+}
+
+h3 { letter-spacing: .04em; font-weight: 600; color: #eaf4ff; }
+.dica { color: var(--v3-texto-fraco); line-height: 1.55; }
+
+/* ---------- Transmissão do turno: legendas ao vivo ---------- */
+
+.resposta-atual {
+  background: linear-gradient(180deg, rgba(13, 28, 46, .9), rgba(7, 17, 32, .72));
+  border: 1px solid var(--v3-linha-forte);
+  border-left: 2px solid var(--v3-ciano);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .45);
+  animation: v3-entra .45s var(--v3-curva) both;
+}
+
+.resposta-atual .ra-eyebrow { color: var(--v3-ciano); letter-spacing: .3em; }
+.resposta-atual p { line-height: 1.6; }
+
+.ra-transcricao {
+  color: var(--v3-ciano);
+  border-color: var(--v3-linha-forte);
+  transition: background .24s var(--v3-curva), color .24s var(--v3-curva);
+}
+
+/* Barra de legendas: acompanha o texto que está sendo falado. */
+#transcricao-lista,
+.transcricao,
+.trans-lista { scrollbar-width: thin; scrollbar-color: rgba(56, 189, 248, .4) transparent; }
+
+#transcricao-lista p,
+.transcricao p {
+  border-left: 2px solid transparent;
+  padding-left: 10px;
+  transition: border-color .3s var(--v3-curva), color .3s var(--v3-curva);
+}
+
+#transcricao-lista p:last-child { border-left-color: var(--v3-ciano); }
+
+/* Ondas de voz: mais finas, mais densas */
+.ondas-voz span {
+  background: linear-gradient(180deg, var(--v3-ciano-claro), rgba(56, 189, 248, .25));
+  border-radius: 3px;
+}
+
+/* ---------- Campos ---------- */
+
+input, textarea, select {
+  background: rgba(4, 10, 18, .72);
+  border: 1px solid var(--v3-linha);
+  border-radius: 10px;
+  color: var(--v3-texto);
+  transition: border-color .2s var(--v3-curva), box-shadow .2s var(--v3-curva);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--v3-linha-forte);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, .14);
+}
+
+button {
+  transition: transform .18s var(--v3-curva), background .2s var(--v3-curva),
+    border-color .2s var(--v3-curva), color .2s var(--v3-curva), box-shadow .2s var(--v3-curva);
+}
+
+button:active { transform: scale(.975); }
+
+button.icone, .wake-toggle, .lat-btn {
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+
+button.icone:hover, .wake-toggle:hover, .lat-btn:hover {
+  border-color: var(--v3-linha);
+  background: rgba(56, 189, 248, .08);
+}
+
+button.parar { border-radius: 10px; }
+button.parar:hover { background: rgba(248, 113, 113, .16); color: #fecaca; }
+
+/* Foco sempre visível, para teclado e leitor de tela */
+:focus-visible { outline: 2px solid var(--v3-ciano); outline-offset: 2px; border-radius: 8px; }
+
+/* ---------- Navegação lateral ---------- */
+
+nav.lat, .lat {
+  background: linear-gradient(180deg, rgba(7, 17, 32, .92), rgba(4, 10, 18, .84));
+  border-right: 1px solid var(--v3-linha);
+}
+
+.lat-rodape { border-top: 1px solid var(--v3-linha); }
+.lat-dot { box-shadow: 0 0 10px var(--v3-verde); }
+
+/* ---------- Diálogos e telas de bloqueio ---------- */
+
+#boot {
+  background:
+    radial-gradient(80% 60% at 50% 30%, rgba(56, 189, 248, .16), transparent 70%),
+    linear-gradient(180deg, #04070d, #02050a);
+}
+
+.boot-marca { letter-spacing: .34em; font-weight: 300; }
+.boot-kicker { letter-spacing: .42em; color: var(--v3-texto-fraco); }
+.boot-barra { border: 1px solid var(--v3-linha); }
+#boot-preenche { background: linear-gradient(90deg, rgba(56, 189, 248, .5), var(--v3-ciano-claro)); }
+
+/* ---------- Movimento ---------- */
+
+@keyframes v3-respira {
+  0%, 100% { opacity: .65; }
+  50% { opacity: 1; }
+}
+
+@keyframes v3-entra {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Reduzir movimento: nada gira, nada pulsa, nada desliza. A tela continua completa. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body.reduzir-efeitos #nucleo-v3 { opacity: .85; }
+
+/* ---------- Transcrição (tela de conversa) ---------- */
+
+#chat-area {
+  background: linear-gradient(180deg, rgba(7, 17, 32, .88), rgba(4, 10, 18, .94));
+  border-top: 1px solid var(--v3-linha);
+  border-radius: var(--v3-raio) var(--v3-raio) 0 0;
+}
+
+/* A transcrição é uma coluna: cabeçalho em cima, falas embaixo. Sem isto o cabeçalho
+ * e a lista ficavam lado a lado, espremendo o texto num bloco estreito. */
+body.modo-conversa .chat-area { flex-direction: column; }
+body.modo-conversa main { align-items: center; }
+body.modo-conversa #chat { width: 100%; }
+body.modo-conversa .chat-cab {
+  width: 100%;
+  background: linear-gradient(180deg, rgba(9, 20, 34, .92), rgba(9, 20, 34, .55));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+body.modo-conversa .context-tools { flex-wrap: wrap; gap: 8px; }
+
+.chat-cab {
+  border-bottom: 1px solid var(--v3-linha);
+  padding: 12px 16px;
+}
+
+.chat-cab b { letter-spacing: .06em; }
+
+#chat { padding: 14px 16px 22px; }
+
+/* Cada fala é um cartão de vidro; a do Jarvis tem a barra ciano à esquerda, como
+ * legenda de transmissão. A do usuário fica um tom acima, para separar os turnos. */
+#chat .msg {
+  background: rgba(9, 20, 34, .78);
+  border: 1px solid var(--v3-linha);
+  border-radius: 14px;
+  padding: 10px 13px;
+  margin: 8px 0;
+  line-height: 1.55;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .35);
+  animation: v3-entra .32s var(--v3-curva) both;
+}
+
+#chat .msg.jarvis,
+#chat .msg.jv { border-left: 2px solid var(--v3-ciano); }
+
+#chat .msg.usuario,
+#chat .msg.user,
+#chat .msg.eu { border-left: 2px solid rgba(165, 243, 252, .55); background: rgba(14, 32, 52, .82); }
+
+#chat .msg.jv.pensando {
+  border-left-color: var(--v3-ambar);
+  color: var(--v3-texto-fraco);
+}
+
+/* O estado precisa ler de longe: o chip muda de cor junto com o núcleo. */
+body[data-state="listening"] .chip.estado {
+  color: #93c5fd;
+  border-color: rgba(96, 165, 250, .62);
+  background: rgba(96, 165, 250, .12);
+}
+
+body[data-state="thinking"] .chip.estado,
+body[data-state="processing"] .chip.estado {
+  color: #fcd34d;
+  border-color: rgba(251, 191, 36, .58);
+  background: rgba(251, 191, 36, .12);
+}
+
+body[data-state="speaking"] .chip.estado {
+  color: #6ee7b7;
+  border-color: rgba(52, 211, 153, .58);
+  background: rgba(52, 211, 153, .12);
+}
+
+body[data-state="error"] .chip.estado {
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, .58);
+  background: rgba(248, 113, 113, .12);
+}
+
+body[data-state="idle"] .hud { filter: drop-shadow(0 0 30px rgba(56, 189, 248, .12)); }
+
+/* ---------- Celular: mesma hierarquia, menos respiro ----------
+ * Núcleo proporcional à largura (não à altura), relógio e chips mais compactos e
+ * campos com altura confortável para o dedo. O que sobe é o conteúdo útil. */
+@media (max-width: 480px) {
+  .topo { padding-top: 10px; }
+  .hud { width: min(60vw, 250px); filter: drop-shadow(0 0 30px rgba(56, 189, 248, .18)); }
+  .relogio { margin-top: 4px; }
+  .relogio span:first-child { font-size: 2.5rem; letter-spacing: .06em; }
+  .relogio span:last-child { font-size: .58rem; letter-spacing: .18em; }
+  .chips { gap: 6px; margin-top: 6px; }
+  .chip { font-size: .56rem; padding: 4px 9px; letter-spacing: .08em; }
+  .chip.estado { margin-top: 6px; }
+  .modos-uso { gap: 6px; }
+  .modo-btn { font-size: .68rem; padding: 6px 10px; border-radius: 10px; }
+  .modo-status, .dica { font-size: .64rem; }
+  main { padding: 0 12px; }
+  .area-card, .atalho-dash { border-radius: 14px; }
+  footer { padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .campo input { padding: 12px 4px; font-size: 15.5px; }
+  .mic { width: 54px; height: 54px; min-height: 54px; }
+  #chat { padding: 10px 12px 18px; }
+  #chat .msg { font-size: 15px; padding: 9px 11px; }
+  /* Área de toque confortável: nenhum botão visível abaixo de 32px de altura. */
+  #dash-atualizar,
+  #dash-abrir-areas,
+  .dash-head button { min-height: 32px; padding: 0 10px; border-radius: 8px; }
+  body.modo-conversa .context-tools { justify-content: flex-start; }
+  body.modo-conversa .context-tools #ctx-limpar { flex-basis: 100%; text-align: center; }
+}
+
+@media (max-width: 380px) {
+  .hud { width: min(58vw, 212px); }
+  .relogio span:first-child { font-size: 2.1rem; }
+  .modo-btn { font-size: .64rem; padding: 5px 8px; }
+  .chip { font-size: .53rem; padding: 3px 8px; }
+}
+
+/* ---------- Painéis em telas estreitas ----------
+ * Medido em 360×740 e 320×740: o selo do topo não encolhia e caía sobre o título, e o
+ * rótulo "Autorizar por 30 minutos" quebrava em duas linhas dentro do botão. Aqui o selo
+ * desce para a própria linha e os botões de autorização cabem em uma linha só. */
+@media (max-width: 420px) {
+  .painel-topo { flex-wrap: wrap; row-gap: 6px; }
+  .painel-topo > div { flex: 1 1 auto; min-width: 0; }
+  .painel-topo .eyebrow { font-size: .5rem; letter-spacing: .14em; line-height: 1.3; }
+  .painel-topo h2 { font-size: 17px; line-height: 1.22; }
+  .painel-topo > div { flex: 1 1 calc(100% - 52px); }
+  .painel-topo .versao-chip {
+    order: 3; flex: 0 0 auto; width: auto; max-width: 100%;
+    font-size: 8px; padding: 3px 7px; white-space: normal; text-align: left;
+  }
+  /* Empilhados, o rótulo não quebra e o toque fica confortável. */
+  .botoes-autorizacao { flex-direction: column; }
+  .botoes-autorizacao button { width: 100%; }
+}
+
+@media (max-width: 340px) {
+  .painel-topo h2 { font-size: 16px; }
+}
+
+/* ---------- Utilidades: o conteúdo encostava nas bordas do painel ----------
+ * As seções usavam só `display:grid`, sem respiro lateral: em 360 px o texto e os campos
+ * começavam no x=0. Aqui elas ganham o mesmo recuo dos outros painéis. */
+.painel-utilidades .util-secao { padding: 14px 18px; }
+/* `display:grid` vencia o atributo hidden: as sete seções apareciam empilhadas e as abas
+ * não filtravam nada. Esta regra devolve o comportamento de aba. */
+.painel-utilidades .util-secao[hidden] { display: none; }
+/* As abas encolhiam (flex-shrink) até o texto transbordar por cima da aba vizinha em 360 px.
+ * Sem encolher, o próprio trilho rola na horizontal, como deve. */
+.painel-utilidades .util-tabs { padding: 2px 12px 10px; }
+.painel-utilidades .util-tabs button { flex: 0 0 auto; }
+
+/* Pessoas: em 360 px "Identificação e reconhecimento" quebrava no meio da palavra dentro de
+ * um botão de 90 px. Aqui os botões dessa faixa ocupam a linha inteira. */
+@media (max-width: 420px) {
+  #painel-pessoas .botoes { flex-wrap: wrap; }
+  #painel-pessoas .botoes button { flex: 1 1 100%; overflow-wrap: normal; word-break: normal; }
+}
+@media (max-width: 420px) {
+  .painel-utilidades .util-secao { padding: 12px 13px; }
+}
+
+/* ---------- Cabeçalho do cartão do núcleo ----------
+ * Em 360 px o selo "APARÊNCIA DO NÚCLEO" (inline, com letter-spacing largo) dividia a
+ * linha com o título em negrito e os dois se sobrepunham: selo em y=740 e título em y=734.
+ * Cada um na sua linha resolve sem mexer no resto do cartão. */
+.nucleo-card-cabecalho > div { min-width: 0; }
+.nucleo-card-cabecalho .eyebrow { display: block; margin: 0 0 3px; line-height: 1.4; }
+.nucleo-card-cabecalho b { display: block; line-height: 1.25; }
+
+@media (max-width: 420px) {
+  .nucleo-card-cabecalho { gap: 8px; }
+  .nucleo-card-cabecalho .eyebrow { font-size: .52rem; letter-spacing: .18em; }
+  .nucleo-card-cabecalho b { font-size: 14px; }
+}

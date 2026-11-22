@@ -11,7 +11,7 @@ boot = (ROOT / "JarvisBootReceiver.java").read_text(encoding="utf-8")
 plugin = (ROOT / "JarvisBackgroundPlugin.java").read_text(encoding="utf-8")
 ouvir = (ROOT / "JarvisOuvirReceiver.java").read_text(encoding="utf-8")
 manifesto = (ROOT / "patch_manifest.py").read_text(encoding="utf-8")
-workflow = (ROOT / ".github/workflows/build-apk.yml").read_text(encoding="utf-8")
+workflow = (ROOT / ".github/workflows/release-apk.yml").read_text(encoding="utf-8")
 css = (ROOT / "style.css").read_text(encoding="utf-8")
 
 checks = {
@@ -23,7 +23,7 @@ checks = {
         "AndroidKeyStore" not in prefs and "cifrar(" not in prefs and "lerChave" not in prefs),
     "Calibragem da ativação persistida": (
         "static int sensibilidade(Context c)" in prefs and "static String variantes(Context c)" in prefs
-        and "static int rejeitadas(Context c)" in prefs),
+        ),
     "Serviço lê a calibragem salva ao abrir sessão": (
         "JarvisPrefs.sensibilidade(this)" in servico and "JarvisPrefs.variantes(this)" in servico),
     # ---- Serviço ----
@@ -75,7 +75,7 @@ checks = {
         "cancelarAvisoTarefa(x)" in app and "cancelarAvisoTarefa(t)" in app),
     # ---- Build ----
     "Workflow copia as novas classes nativas": all(f in workflow for f in (
-        "JarvisPrefs.java", "JarvisWatchdog.java", "JarvisOuvirReceiver.java")),
+        "JarvisPrefs.java", "JarvisWatchdog.java", "JarvisOuvirReceiver.java", "JarvisKwsEngine.java")),
 }
 
 falhas = [nome for nome, ok in checks.items() if not ok]

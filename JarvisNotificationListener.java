@@ -9,7 +9,6 @@ import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Bundle;
 import android.text.TextUtils;
 import android.speech.tts.TextToSpeech;
 import java.util.Locale;
@@ -39,6 +38,16 @@ public class JarvisNotificationListener extends NotificationListenerService {
             }
         });
     }
+    /** Notificação removida: sem isso, "responder à última" podia mirar algo que já saiu. */
+    @Override public void onNotificationRemoved(StatusBarNotification sbn) {
+        if (sbn == null) return;
+        synchronized (RECENTES) {
+            for (int i = RECENTES.size() - 1; i >= 0; i--) {
+                if (RECENTES.get(i).getKey().equals(sbn.getKey())) RECENTES.remove(i);
+            }
+        }
+    }
+
     @Override public void onNotificationPosted(StatusBarNotification sbn) {
         if (sbn == null || getPackageName().equals(sbn.getPackageName())) return;
         synchronized (RECENTES) {
@@ -113,6 +122,9 @@ public class JarvisNotificationListener extends NotificationListenerService {
 
     @Override public void onDestroy() {
         if (tts != null) { try { tts.stop(); tts.shutdown(); } catch (Exception ignored) { } tts = null; }
+        // A lista é estática e guarda notificações alheias: sem limpar, ela sobreviveria ao
+        // serviço e manteria referências (e textos) de notificações antigas.
+        RECENTES.clear();
         super.onDestroy();
     }
 }

@@ -1,18 +1,33 @@
-name: Build e testes do J.A.R.V.I.S. Nova 1.31.2
+name: Build e testes do J.A.R.V.I.S. Nova 1.46.0
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
+      - 'JARVIS-Nova-*-fonte.zip'
       - 'JARVIS-NOVA-*-fonte.zip'
+      - '*.patch'
       - '.github/workflows/build-apk.yml'
       - 'app.js'
+      - 'sandbox.js'
       - 'identidade.js'
+      - 'fala.js'
+      - 'audio_pcm.js'
       - 'identidade_ui.js'
       - 'escuta.js'
       - 'agentes.js'
       - 'plano.js'
+      - 'avatar.js'
+      - 'nucleo_v3.js'
+      - 'consumo_ia.js'
+      - 'modo_dev.js'
+      - 'escuta_voz.js'
+      - 'segundo_plano.js'
+      - 'perfil_energia.js'
+      - 'manutencao.js'
+      - 'privacidade.js'
+      - 'nucleo_v3.css'
       - 'apps.js'
       - 'main.js'
       - 'hermes.js'
@@ -36,9 +51,9 @@ concurrency:
 
 jobs:
   build:
-    name: Testar e compilar APK debug 1.23.1
+    name: Testar e compilar APK debug 1.46.0
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 75
     steps:
       - name: Baixar o repositório
         uses: actions/checkout@v4
@@ -54,15 +69,29 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Garantir Android SDK 35
+      - name: Configurar Python para tokenizer KWS
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Instalar tokenizer sherpa-onnx
+        run: python3 -m pip install --upgrade pip 'click>=8.1.7,<9.0' 'sentencepiece>=0.2,<0.3' 'pypinyin>=0.50,<1.0' sherpa-onnx==1.13.8
+
+      - name: Configurar Android SDK sem pacote legado tools
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - name: Garantir Android SDK 36
         run: |
           SDKM="$(command -v sdkmanager || true)"
           [ -n "$SDKM" ] || SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKM" "platforms;android-35" "build-tools;35.0.0" >/dev/null
+          yes | "$SDKM" "platforms;android-36" "build-tools;36.0.0" >/dev/null
 
       - name: Extrair código-fonte enviado ao repositório
         run: |
-          ZIP="$(find . -maxdepth 1 -type f -name 'JARVIS-NOVA-*-fonte.zip' -print | sort | tail -n 1)"
+          ZIP="$(find . -maxdepth 1 -type f \( -name 'JARVIS-Nova-*-fonte.zip' -o -name 'JARVIS-NOVA-*-fonte.zip' \) -print | sort | tail -n 1)"
           if [ -n "$ZIP" ]; then
             mkdir -p /tmp/jarvis-source
             unzip -q "$ZIP" -d /tmp/jarvis-source
@@ -78,6 +107,16 @@ jobs:
           fi
           test -f package.json || { echo 'Envie JARVIS-NOVA-*-fonte.zip para a raiz do repositório ou mantenha os fontes na raiz.'; exit 1; }
 
+      - name: Ensaio do patch antes da compilação
+        run: |
+          PATCH="$(find . -maxdepth 1 -type f -name '*.patch' -print | sort | tail -n 1)"
+          if [ -z "$PATCH" ]; then
+            echo 'Nenhum patch na raiz: compilando o código do repositório.'
+            exit 0
+          fi
+          echo "Ensaio do patch: $PATCH"
+          python3 ci/rehearsal_gate_a.py "$PATCH" --aplicar
+
       - name: Instalar dependências Node
         run: npm install --ignore-scripts --legacy-peer-deps
 
@@ -87,30 +126,40 @@ jobs:
           mkdir -p "$HOME/.android"
           cp ci/debug.keystore "$HOME/.android/debug.keystore"
 
-      - name: Testes estáticos e regressão
-        run: npm run test:all
-
       - name: Preparar os recursos web do aplicativo
         run: |
           mkdir -p www
-          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js visao.js pessoas.js www/
-          cp identidade.js identidade_ui.js escuta.js agentes.js plano.js www/
+          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js eletrica.js projetista.js pc.js cad_projeto.js visao.js visao_contexto.js seguranca.js pessoas.js utilidades.js cultura.js briefing.js jogos.js utilidades_ui.js www/
+          cp avatar.js nucleo_v3.js consumo_ia.js modo_dev.js escuta_voz.js segundo_plano.js perfil_energia.js manutencao.js privacidade.js www/
+          cp interface.css www/
+          cp core.css www/
+          cp identidade.js identidade_ui.js escuta.js agentes.js sistema.js plano.js interface.js www/
+          cp core.js core_ui.js www/
+          cp aprendizado.js aprendizado_ui.js www/
           cp arquivos_dev.js www/
-          cp voz_motor.js www/
+          cp sandbox.js www/
+          cp voz_motor.js fala.js audio_pcm.js www/
+          cp cognicao.js www/
           cp humor.js www/
           cp identidade.js www/
           cp identidade_ui.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
 
+      - name: Limpar projeto Android gerado
+        run: rm -rf android
+
       - name: Gerar estrutura nativa do Android
         run: |
           npx cap add android
           npx cap sync android
+          python3 preparar_kws.py android/app
 
       - name: Baixar bibliotecas nativas de voz (sherpa-onnx)
         run: python3 baixar_sherpa.py android/app
 
+      - name: Pré-checagem das classes e dependências Android
+        run: python3 ci/preflight_android.py
       - name: Aplicar identidade, permissões, versão e detector local
         id: native-patches
         run: |
@@ -120,13 +169,16 @@ jobs:
           find . -maxdepth 1 -type f -name '*.java' -exec cp -f {} "$D/" \;
           # Falha cedo se algum componente nativo essencial não estiver no código-fonte.
           # Lista alinhada com o workflow de release: toda classe nativa da raiz é obrigatória.
-          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java; do
+          for f in MainActivity.java JarvisAtivacao.java JarvisBackgroundPlugin.java JarvisService.java JarvisKwsEngine.java JarvisUtilPlugin.java JarvisLocalAIPlugin.java JarvisSeguranca.java JarvisUpdatePlugin.java JarvisVozPlugin.java JarvisMusicaPlugin.java JarvisMusicaService.java JarvisAlarmReceiver.java JarvisAlarmScheduler.java JarvisBootReceiver.java JarvisNotificationListener.java JarvisPrefs.java JarvisWatchdog.java JarvisOuvirReceiver.java JarvisWakeBus.java JarvisAcessibilidade.java JarvisAcessibilidadePlugin.java JarvisManutencaoWorker.java; do
             test -s "$D/$f" || { echo "Recurso nativo ausente: $f"; exit 1; }
           done
           python3 patch_manifest.py android/app/src/main/AndroidManifest.xml
           python3 patch_gradle.py android/app/build.gradle
           python3 patch_android_version.py android/app/build.gradle VERSAO.json
           python3 patch_visual.py android
+
+      - name: Testes estáticos e regressão
+        run: npm run test:all
 
       - name: Compilar APK debug
         working-directory: android
@@ -146,7 +198,7 @@ jobs:
       - name: Publicar APK e checksum
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-Nova-1.23.1-APK
+          name: JARVIS-Nova-1.46.0-APK
           if-no-files-found: error
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk

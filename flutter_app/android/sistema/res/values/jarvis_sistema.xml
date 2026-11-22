@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_titulo">J.A.R.V.I.S. NOVA</string>
+    <string name="widget_status_neutro">JARVIS pronto</string>
+    <string name="widget_falar">FALAR</string>
+    <string name="widget_conversa">CONVERSA</string>
+    <string name="widget_descricao">Estado do JARVIS com atalho para falar e para conversar.</string>
+    <string name="atalho_voz_curto">Falar com o Jarvis</string>
+    <string name="atalho_voz_longo">Abrir o modo voz e falar com o Jarvis</string>
+    <string name="atalho_conversa_curto">Nova conversa</string>
+    <string name="atalho_conversa_longo">Começar uma conversa nova com o Jarvis</string>
+    <string name="atalho_historico_curto">Histórico</string>
+    <string name="atalho_historico_longo">Abrir o histórico de conversas</string>
+    <string name="jarvis_acessibilidade_descricao">Leitura da tela autorizada por você: o JARVIS lê os textos visíveis, toca num botão pelo texto e rola a tela. Não digita, não lê senhas nem o que você escreveu.</string>
+</resources>

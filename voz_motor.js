@@ -430,7 +430,10 @@
   function pistaReplay(analise) {
     var m = analise && analise.metricas, q = analise && analise.qualidade;
     if (!m || !q) return { suspeita: false, motivo: '' };
-    var suspeita = q.snrDb > 38 && m.pitchDesvio < 1.5 && m.pausaRatio < 0.08;
+    // A pausa vem da qualidade da captura; `m.pausaRatio` só existe em versões
+    // antigas do analisador. Ler o campo certo evita que o portão nunca dispare.
+    var pausa = q.pausaRatio != null ? q.pausaRatio : m.pausaRatio;
+    var suspeita = q.snrDb > 38 && m.pitchDesvio < 1.5 && pausa != null && pausa < 0.08;
     return {
       suspeita: suspeita,
       motivo: suspeita ? 'Sinal muito limpo e pitch quase sem variação: pode ser reprodução, mas isso não é prova.' : ''

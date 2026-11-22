@@ -23,7 +23,9 @@ check('motor não guarda áudio', 'localStorage' not in mod and 'fetch(' not in 
 
 campos = ['c-voz-consentimento', 'c-voz-nome', 'c-voz-frase', 'c-voz-salvar', 'c-voz-diag',
           'c-voz-perfil-ativo', 'c-voz-limiar', 'c-voz-identificar', 'c-mic-ec', 'c-mic-ns',
-          'c-mic-agc', 'c-voz-qualidade', 'c-voz-perfis']
+          'c-mic-agc', 'c-mic-filtro', 'c-voz-qualidade', 'c-voz-perfis',
+          'c-voz-teste-esperado', 'c-voz-teste-transcrever', 'c-voz-teste-limpar',
+          'c-voz-teste-status', 'c-voz-metricas', 'c-stt-motor', 'c-stt-motor-status']
 for c in campos:
     check('controle %s existe' % c, ('id="%s"' % c) in html)
 
@@ -41,6 +43,13 @@ check('resultado inconclusivo é tratado', "res.estado === 'compativel'" in app 
 check('diagnóstico mostra motor, limiar e microfone', 'Diagnóstico: motor' in app and 'microfone ' in app)
 check('pista de replay é apresentada como indício', 'm.pistaReplay(r)' in app and 'não é prova' in app)
 check('ativação por voz continua usando o perfil', 'capturarVetorVoz()' in app and 'similaridadeVoz(p.v' in app)
+check('filtro de graves/compressor é real na captura', 'ligarFiltrosMicrofone' in app and 'mic_filtro' in app and 'highpass' in app)
+check('teste de transcrição mede esperado, WER e latência', 'c-voz-teste-transcrever' in app and 'F.acerto(esperado, reconhecido)' in app and 'pintarMetricasVoz' in app)
+check('motor de STT é selecionável e tem ajuda', 'function sttMotor()' in app and 'atualizarSttMotorUI' in app and 'c-stt-motor-status' in html)
+check('captura WAV/VAD é o caminho principal', 'return gravarWav()' in app and 'EscutaJarvis' in app and 'criarDetectorRms' in app)
+check('módulos de fala e PCM entram no app e no Electron', 'src="fala.js"' in html and 'src="audio_pcm.js"' in html and 'fala.js' in pkg['build']['files'] and 'audio_pcm.js' in pkg['build']['files'])
+check('WAV de emergência usa o codificador PCM', 'gravarWav' in app and 'AudioPcm.wav' in app and 'audio.wav' in app)
+check('testes de fala entram na suíte', 'tests/test_fala.js' in pkg['scripts']['test:all'] and 'tests/test_audio_pcm.js' in pkg['scripts']['test:all'])
 
 check('motor entra nos arquivos do Electron', 'voz_motor.js' in pkg['build']['files'])
 check('teste do motor registrado', 'tests/test_voz_motor.js' in pkg['scripts']['test:all'])
@@ -48,6 +57,7 @@ check('teste de UI registrado', 'tests/test_voz_ui.py' in pkg['scripts']['test:a
 for w in ['.github/workflows/build-apk.yml', '.github/workflows/release-apk.yml']:
     texto = (RAIZ / w).read_text(encoding='utf-8')
     check('CI copia o motor (%s)' % w, 'voz_motor.js' in texto)
+    check('CI copia fala e PCM (%s)' % w, 'cp voz_motor.js fala.js audio_pcm.js www/' in texto)
 
 if falhas:
     print('\n%d verificação(ões) da voz falharam.' % len(falhas))

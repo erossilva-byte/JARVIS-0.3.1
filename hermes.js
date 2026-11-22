@@ -281,7 +281,7 @@
   function planejarIA(entrada) {
     const e = entrada || {};
     const tarefa = e.tarefa && e.tarefa !== 'auto' ? e.tarefa : tarefaDe(e.texto, e);
-    const ids = (Array.isArray(e.provedores) ? e.provedores : []).filter((id) => CATALOGO[id] || true);
+    const ids = Array.from(new Set((Array.isArray(e.provedores) ? e.provedores : []).filter((id) => !!CATALOGO[id])));
     const latencias = e.latencias || {};
     const erros = e.erros || {};
     const precisaVisao = tarefa === 'visao';
@@ -312,7 +312,16 @@
       }
       notas[id] = Math.round(pontos * 100) / 100;
     });
-    const ordem = elegiveis.slice().sort((a, b) => (notas[b] - notas[a]) || (ids.indexOf(a) - ids.indexOf(b)));
+    const ordemRoteador = elegiveis.slice().sort((a, b) => (notas[b] - notas[a]) || (ids.indexOf(a) - ids.indexOf(b)));
+    // Escolha explícita do usuário (Ajustes ▸ IA): o principal vai na frente e o alternativo
+    // em segundo, mesmo quando o roteador preferiria outro. Provedor sem chave não está em
+    // `elegiveis` e por isso é ignorado; repetir o mesmo id não duplica a fila.
+    const preferidos = [];
+    [e.principal, e.alternativo].forEach((v) => {
+      const id = String(v || '');
+      if (id && elegiveis.indexOf(id) >= 0 && preferidos.indexOf(id) < 0) preferidos.push(id);
+    });
+    const ordem = preferidos.concat(ordemRoteador.filter((id) => preferidos.indexOf(id) < 0));
     const modelo = {};
     ordem.forEach((id) => {
       const c = CATALOGO[id] || {};
@@ -323,7 +332,8 @@
     const motivo = !ordem.length
       ? (precisaVisao ? 'nenhum provedor com chave reconhece imagens' : 'nenhum provedor disponível')
       : CATALOGO[primeira].nome + ' escolhido para tarefa ' + tarefa + ' (' + (razoes[primeira] || 'melhor nota') + ')' +
-        (ordem.length > 1 ? '; reserva: ' + ordem.slice(1, 3).map((id) => CATALOGO[id].nome).join(' → ') : '');
+        (ordem.length > 1 ? '; reserva: ' + ordem.slice(1, 3).map((id) => CATALOGO[id].nome).join(' → ') : '') +
+        (preferidos.length ? ' · preferência do usuário: ' + preferidos.map((id) => CATALOGO[id].nome).join(' → ') : '');
     return {
       tarefa, ordem, modelo, notas, motivo,
       timeoutMs: tarefa === 'rapida' ? 12000 : tarefa === 'raciocinio' ? 30000 : 22000,
@@ -359,8 +369,9 @@
     const o = opcoes || {};
     const t = o.tratamento || 'senhor';
     return 'Você é o J.A.R.V.I.S., assistente pessoal do usuário. Analise a imagem enviada pelo aplicativo e devolva APENAS um objeto JSON, sem markdown e sem texto fora do JSON, no formato: ' +
-      '{"resumo":"uma frase curta do que está vendo","objetos":[{"nome":"nome curto do objeto","info":"uma ou duas frases úteis e concretas sobre esse objeto","caixa":[x,y,largura,altura]}]}. ' +
+      '{"resumo":"uma frase curta do que está vendo","textoLegivel":["trecho de texto exatamente legível"],"objetos":[{"nome":"nome curto do objeto","info":"uma ou duas frases úteis e concretas sobre esse objeto","caixa":[x,y,largura,altura]}]}. ' +
       'As caixas usam coordenadas normalizadas de 0 a 1 em relação à imagem inteira: [x,y] é o canto superior esquerdo. ' +
+      'Em textoLegivel, transcreva fielmente placas, etiquetas, telas, documentos e números que estejam realmente legíveis; mantenha a ordem, não complete palavras cortadas e devolva [] quando não houver texto legível. ' +
       'Liste no máximo 8 objetos, do mais próximo/maior para o menor, ignorando o que for irrelevante ou ilegível. ' +
       'Em "info", informe o que você realmente observa (material, marca visível, estado, para que serve); não invente texto pequeno, etiquetas, preços ou nomes de pessoas que não estejam legíveis — se não estiver legível, diga que não está. ' +
       'O "resumo" é falado em voz alta: no máximo 25 palavras, em português do Brasil, sem emojis e sem listas. ' +
