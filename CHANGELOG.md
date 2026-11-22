@@ -1,3 +1,21 @@
+## 1.88.3 — a agenda do Android também precisava estar no repositório
+
+### O que mudou
+- **O primeiro build de release do Flutter reprovou no Kotlin**, não na chave: os
+  secrets funcionaram e o passo da assinatura passou, mas `:app:compileReleaseKotlin`
+  parou em `Unresolved reference 'JarvisAgenda'` (dois pontos de `JarvisAparelho.kt`).
+- **`JarvisAgenda.kt` existia só neste computador.** A pasta `flutter_app/android/`
+  é ignorada pelo git e o `prepare_android_sistema.py` copia os fontes Kotlin de
+  uma lista explícita para o pacote `com.jarvis.nova`; a agenda ficou fora dessa
+  lista e da lista de conferência, então o CI compilava o app sem ela.
+- **O arquivo foi versionado** (`git add -f`, como os outros 18) e passou a ser
+  copiado e conferido pelo preparo do Android.
+- **O contrato 102 passou a exigir 19 fontes Kotlin versionados**, com
+  `JarvisAgenda.kt` entre os obrigatórios.
+
+Limite honesto: a compilação de release roda no GitHub Actions, não aqui (sem
+Android SDK nesta sessão). Quem confirma é a próxima execução da esteira.
+
 ## 1.88.2 — os fontes Kotlin que o repositório não tinha
 
 ### O que mudou

@@ -108,15 +108,16 @@ exigir(0 <= preparar_sistema < testes, "preparação do sistema Android depois d
 # sem eles versionados, os contratos do segundo plano e dos sensores não têm o
 # que ler no CI — foi o que faltou no segundo run.
 nativos = sorted((RAIZ / "flutter_app" / "android").glob("*.kt"))
-exigir(len(nativos) >= 18, f"fontes Kotlin nativos faltando em flutter_app/android (achei {len(nativos)})")
-for obrigatorio in ("JarvisComandos.kt", "JarvisSensores.kt", "JarvisFundo.kt", "JarvisVoz.kt", "JarvisTimbre.kt"):
+exigir(len(nativos) >= 19, f"fontes Kotlin nativos faltando em flutter_app/android (achei {len(nativos)})")
+for obrigatorio in ("JarvisComandos.kt", "JarvisSensores.kt", "JarvisFundo.kt", "JarvisVoz.kt",
+                    "JarvisTimbre.kt", "JarvisAgenda.kt"):
     exigir((RAIZ / "flutter_app" / "android" / obrigatorio).is_file(), f"{obrigatorio} ausente em flutter_app/android")
 
 rastreados = subprocess.run(
     ["git", "ls-files", "flutter_app/android"], cwd=RAIZ, capture_output=True, text=True
 ).stdout.splitlines()
 exigir(
-    sum(1 for linha in rastreados if linha.endswith(".kt")) >= 18,
+    sum(1 for linha in rastreados if linha.endswith(".kt")) >= 19,
     "os fontes Kotlin nativos de flutter_app/android/ não estão versionados (git add -f)",
 )
 
