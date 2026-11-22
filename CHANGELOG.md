@@ -1,3 +1,22 @@
+## 1.88.2 — os fontes Kotlin que o repositório não tinha
+
+### O que mudou
+- **O segundo run do CI reprovou em 10 contratos Python**, todos por arquivos que
+  existem neste computador e não estavam no repositório: `JarvisComandos.kt`,
+  `JarvisSensores.kt`, `JarvisFundo.kt` e mais nove fontes Kotlin vivem em
+  `flutter_app/android/`, pasta ignorada pelo `.gitignore`, e só 6 dos 18
+  arquivos tinham sido versionados.
+- **Os 12 que faltavam entraram no repositório** (`git add -f`) e o `.gitignore`
+  agora avisa que eles precisam ser versionados assim.
+- **O workflow prepara a integração com o sistema Android** antes dos contratos —
+  é isso que grava atalhos, widget, compartilhamento e canal do sistema que
+  `test_sistema_android.py` confere.
+- **O contrato 102 passou a exigir os 18 fontes Kotlin versionados** e a
+  preparação do sistema antes de `flutter test`.
+
+Limite honesto: o código do app não mudou nesta correção; o que muda é o que o
+repositório contém e o que o CI prepara. Quem confirma é o terceiro run.
+
 ## 1.88.1 — o CI precisava do modelo de ativação
 
 ### O que mudou

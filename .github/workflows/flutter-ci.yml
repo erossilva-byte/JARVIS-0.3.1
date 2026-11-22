@@ -54,6 +54,12 @@ jobs:
           python3 -m pip install --disable-pip-version-check sherpa-onnx==1.13.8 sentencepiece pypinyin
           python3 ../preparar_kws.py android/app
 
+      # Os contratos Python leem o que este passo grava no projeto Android gerado
+      # (atalhos, widget, compartilhamento e canal do sistema).
+      - name: Preparar a integração com o sistema Android
+        working-directory: flutter_app
+        run: python3 tool/prepare_android_sistema.py android/app
+
       - name: Testes Flutter
         working-directory: flutter_app
         run: flutter test

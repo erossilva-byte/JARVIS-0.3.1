@@ -99,6 +99,27 @@ exigir(
     "geração da pasta android/ e do modelo fora de ordem (precisa vir antes de flutter test)",
 )
 
+# Os contratos Python leem o que a preparação do sistema grava no projeto Android.
+preparar_sistema = novo.find("tool/prepare_android_sistema.py android/app")
+exigir(preparar_sistema >= 0, "flutter-ci.yml não prepara a integração com o sistema Android")
+exigir(0 <= preparar_sistema < testes, "preparação do sistema Android depois de flutter test")
+
+# Fontes Kotlin nativos vivem em flutter_app/android/ (pasta ignorada no git):
+# sem eles versionados, os contratos do segundo plano e dos sensores não têm o
+# que ler no CI — foi o que faltou no segundo run.
+nativos = sorted((RAIZ / "flutter_app" / "android").glob("*.kt"))
+exigir(len(nativos) >= 18, f"fontes Kotlin nativos faltando em flutter_app/android (achei {len(nativos)})")
+for obrigatorio in ("JarvisComandos.kt", "JarvisSensores.kt", "JarvisFundo.kt", "JarvisVoz.kt", "JarvisTimbre.kt"):
+    exigir((RAIZ / "flutter_app" / "android" / obrigatorio).is_file(), f"{obrigatorio} ausente em flutter_app/android")
+
+rastreados = subprocess.run(
+    ["git", "ls-files", "flutter_app/android"], cwd=RAIZ, capture_output=True, text=True
+).stdout.splitlines()
+exigir(
+    sum(1 for linha in rastreados if linha.endswith(".kt")) >= 18,
+    "os fontes Kotlin nativos de flutter_app/android/ não estão versionados (git add -f)",
+)
+
 # --------------------------------------------------------------------------
 # 2. As esteiras antigas aposentadas
 # --------------------------------------------------------------------------

@@ -34,3 +34,7 @@ flutter_app/.flutter-plugins-dependencies
 # arrasta APKs de ~118 MB, que o GitHub recusa acima de 100 MB.
 artifacts/
 _logs/
+
+# Os fontes Kotlin de flutter_app/android/ são versionados com `git add -f`,
+# apesar da regra android/ acima: o app e os contratos não funcionam sem eles.
+# Ao criar um .kt novo ali, versionar do mesmo jeito.
