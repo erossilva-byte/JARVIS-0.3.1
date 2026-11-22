@@ -41,6 +41,19 @@ jobs:
         working-directory: flutter_app
         run: flutter analyze
 
+      # A pasta android/ é ignorada no git e o modelo de ativação é baixado, não
+      # versionado: `flutter test` confere o tokens.txt real do APK, então os dois
+      # precisam existir antes dos testes (foi o que faltou no primeiro run).
+      - name: Gerar a pasta nativa do Android
+        working-directory: flutter_app
+        run: flutter create --project-name jarvis_nova --platforms=android .
+
+      - name: Baixar o modelo de ativação local
+        working-directory: flutter_app
+        run: |
+          python3 -m pip install --disable-pip-version-check sherpa-onnx==1.13.8 sentencepiece pypinyin
+          python3 ../preparar_kws.py android/app
+
       - name: Testes Flutter
         working-directory: flutter_app
         run: flutter test

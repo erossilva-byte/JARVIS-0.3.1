@@ -86,6 +86,19 @@ ordem = [
 exigir(all(posicao >= 0 for posicao in ordem), "etapa obrigatória ausente no flutter-ci.yml")
 exigir(ordem == sorted(ordem), "etapas do flutter-ci.yml fora de ordem (pub get → analyze → test → contratos)")
 
+# O teste do hotword em português lê android/app/src/main/assets/kws/tokens.txt.
+# A pasta android/ é ignorada no git e o modelo é baixado: sem preparar os dois
+# antes, `flutter test` falha no CI (foi o que aconteceu no primeiro run).
+gerar_android = novo.find("flutter create --project-name jarvis_nova --platforms=android")
+preparar_modelo = novo.find("../preparar_kws.py android/app")
+testes = novo.find("run: flutter test")
+exigir(gerar_android >= 0, "flutter-ci.yml não gera a pasta android/ antes dos testes")
+exigir(preparar_modelo >= 0, "flutter-ci.yml não prepara o modelo de ativação antes dos testes")
+exigir(
+    0 <= gerar_android < preparar_modelo < testes,
+    "geração da pasta android/ e do modelo fora de ordem (precisa vir antes de flutter test)",
+)
+
 # --------------------------------------------------------------------------
 # 2. As esteiras antigas aposentadas
 # --------------------------------------------------------------------------

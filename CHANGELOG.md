@@ -1,3 +1,19 @@
+## 1.88.1 — o CI precisava do modelo de ativação
+
+### O que mudou
+- **O primeiro run do `flutter-ci.yml` reprovou em `flutter test`**, e o motivo era
+  ambiente, não código: o teste do hotword em português confere o
+  `android/app/src/main/assets/kws/tokens.txt` real do APK, e esse arquivo vem do
+  modelo baixado — a pasta `android/` é ignorada no git.
+- **O workflow agora prepara o que os testes leem**: gera a pasta nativa com
+  `flutter create --platforms=android` e baixa o modelo com `preparar_kws.py`,
+  nessa ordem e antes de `flutter test`.
+- **O contrato 102 passou a prender a ordem**: gerar `android/` → preparar o
+  modelo → `flutter test`.
+
+Limite honesto: a correção foi feita depois do run vermelho; quem confirma é o
+próximo run, não este relatório.
+
 ## 1.88.0 — a esteira de CI passa a ser a do Flutter
 
 ### O que mudou
