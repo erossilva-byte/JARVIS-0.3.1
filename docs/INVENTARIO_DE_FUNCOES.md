@@ -799,3 +799,18 @@ aparelho; o botão na tela é o caminho garantido. Nada foi testado em aparelho.
 Limite honesto: o caminho do fundo depende do reconhecimento offline em
 português e do serviço de acessibilidade autorizado; nada foi executado em
 aparelho nesta sessão.
+
+## Estado dos módulos, voz externa e circuito por prompt — Fase 16 (ajuste 099, 2026-11-22)
+
+| Função | Onde | Estado | Arquivo |
+|---|---|---|---|
+| Estado de cada módulo | tela de módulo (catálogo) | 17 prontos, 2 parciais e 6 ausentes, cada um com motivo próprio | `core/estado_modulos.dart`, `pages.dart` |
+| Aviso genérico “Integração em auditoria” | — | **removido**: não existe mais no código | `pages.dart` |
+| Hermes: plano por agente | tela “Hermes Agent” | rota + passos + aviso, antes de executar | `core/hermes_plano.dart`, `services/hermes_page.dart` |
+| Agentes especializados | tela “Agentes especializados” | 12 domínios e teste de roteamento no texto | `core/agentes.dart` |
+| Modelos locais | tela “Modelos locais” | declara o que roda offline e o que falta; não baixa nada | `services/modelos_locais_page.dart` |
+| Circuito por prompt | “CADeSIMU e elétrica” → “Criar circuito por prompt” | 8 famílias, montagem na grade e validação pela simulação | `core/projetista.dart`, `services/projetista_page.dart` |
+| Recusa do projetista | campo de pedido | fora das famílias, devolve motivo e o que sabe montar | `montarProjetoDe` |
+| Voz externa por ID | tela “Voz externa (ID)” | ID padrão do projeto, validação, chave no cofre e teste | `core/voz_externa.dart`, `services/voz_externa_service.dart` |
+| Reprodução do MP3 | canal `com.jarvis.nova/voz` | `falarAudio`/`pararAudio` pelo MediaPlayer, mesmo volume da voz local | `JarvisVoz.kt`, `MainActivity.kt` |
+| Limites da voz externa | tela da voz externa | texto sai do aparelho, precisa de internet, consome cota | `limitesVozExterna` |

@@ -97,3 +97,14 @@ de **conveniência de mensagens** e **automação**:
 
 Nada nesta lista foi medido em aparelho físico neste repositório; a coluna
 “Tem” significa “existe no código com teste”, não “funciona no seu celular”.
+
+## Bloco 099 — o que o catálogo deixou de esconder
+
+- **Estado honesto por módulo**: o aviso único “Integração em auditoria” foi
+  substituído por estado e motivo por módulo, e as telas que já existiam passaram
+  a abrir a partir do catálogo.
+- **Voz externa por ID**: além do timbre da voz do aparelho, existe a voz de um
+  serviço externo, escolhida por ID e ligada com a chave no cofre do aparelho.
+  É o oposto da voz local: o texto sai do aparelho, e a tela diz isso.
+- **Circuito por prompt**: o projetista por prompt, que era só do núcleo web,
+  existe no Flutter e valida o esquema no simulador antes de entregar.

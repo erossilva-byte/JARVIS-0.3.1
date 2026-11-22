@@ -164,6 +164,15 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                         voz?.parar()
                         result.success(true)
                     }
+                    // Voz externa: o MP3 já gerado é tocado pelo MediaPlayer.
+                    "falarAudio" -> {
+                        val caminho = call.argument<String>("caminho").orEmpty()
+                        result.success(voz?.falarAudio(caminho) == true)
+                    }
+                    "pararAudio" -> {
+                        voz?.pararAudio()
+                        result.success(true)
+                    }
                     "status" -> result.success(voz?.status() ?: mapOf("available" to false))
                     // Perfis de timbre: grave, natural e ágil.
                     "timbre" -> result.success(JarvisTimbre.estado(this))

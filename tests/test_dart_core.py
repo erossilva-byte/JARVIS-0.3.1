@@ -58,6 +58,10 @@ CASOS = (
     ("tool/habilidades_test.dart", "habilidades: caminho, frontmatter, casamento, bloco e registro"),
     ("tool/gestos_test.dart", "gestos: eixos, histerese, brilho, estado, resumo e limites"),
     ("tool/timbre_voz_test.dart", "timbre: perfis, paridade do grave, faixas e limites"),
+    ("tool/estado_modulos_test.dart", "estado dos módulos: cobertura, motivos e contagem"),
+    ("tool/hermes_plano_test.dart", "hermes: agentes, roteamento, planos e mensagens"),
+    ("tool/projetista_test.dart", "projetista: famílias, montagem simulada e recusas"),
+    ("tool/voz_externa_test.dart", "voz externa: ID padrão, validação, URL e limites"),
     ("tool/modo_visita_test.dart", "modo de visita: prompt, respostas locais, ajustes vazios e limites"),
 )
 

@@ -65,7 +65,7 @@ pacote = ler(RAIZ / "package.json")
 relatorio = RAIZ / "docs" / "relatorios" / "2026-11-20_080-microfone-e-segundo-plano.md"
 
 # 1. Versão e suíte.
-exigir("version: 1.84.0+18400" in pubspec, "versão não atualizada para 1.68.0")
+exigir("version: 1.85.0+18500" in pubspec, "versão não atualizada para 1.68.0")
 exigir("1.67.0" in changelog, "CHANGELOG sem 1.67.0")
 exigir("tests/test_microfone_fundo_flutter.py" in pacote,
        "contrato do microfone fora de package.json test:all")

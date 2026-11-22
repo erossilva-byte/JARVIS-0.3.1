@@ -1,3 +1,34 @@
+## 1.85.0 — restos da auditoria, voz externa e circuito por prompt
+
+### O que mudou
+- **Nenhum módulo fica mais no aviso “Integração em auditoria”.** Cada um dos 25
+  módulos do catálogo agora declara o estado real — **funciona**, **funciona em
+  parte** ou **não existe neste APK** — com um motivo próprio. Quem já tinha
+  tela abre por botão: Tarefas, Segurança, CADeSIMU, Habilidades, Visão,
+  Arquivos, Gestos, Timbre, Atualizações e os módulos do Android. Quem não tem
+  tela diz onde ela mora (gaveta); quem não existe diz o que falta.
+- **Hermes Agent e Agentes especializados passaram a existir de verdade.** São
+  12 agentes com roteamento por domínio, o plano de execução em passos (elétrico,
+  código, visão, arquivos, conversa) e a execução pelo provedor configurado.
+  Sem chave, o plano aparece e a tela diz que falta a chave.
+- **Modelos locais agora explica em vez de prometer.** A tela lista o que roda
+  sem internet neste APK e o que seria preciso para um modelo de texto local —
+  runtime, pesos e escolha por tamanho.
+- **“Criar circuito por prompt”.** Você descreve — “lâmpada de 12 V e 5 W com
+  interruptor”, “divisor de tensão de 12 V”, “partida direta de um motor de
+  24 V”, “acender a lâmpada 5 segundos depois de apertar” — e o JARVIS monta o
+  esquema, **simula** e só então oferece abrir no simulador. Oito famílias de
+  circuito; fora delas, ele diz o motivo e o que sabe montar.
+- **Voz externa por ID.** O ID `82d13948027e4be69892dd3d0104e681` é o padrão.
+  A tela “Voz externa (ID)” guarda o ID, guarda a **chave no cofre do aparelho**
+  e toca o áudio pelo MediaPlayer do Android. Sem chave, nada é chamado e a voz
+  do aparelho continua valendo.
+
+Limite honesto: nada disto foi compilado nem rodou em aparelho nesta sessão. O
+Kotlin novo não foi compilado, a voz externa nunca falou (não há chave aqui) e
+o projetista monta oito famílias — trifásico, transistor, corrente alternada e
+o .cad nativo do CADeSIMU continuam fora, agora com motivo escrito na tela.
+
 ## 1.84.0 — hotword em português
 
 ### O que mudou
