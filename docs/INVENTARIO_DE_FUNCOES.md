@@ -826,3 +826,16 @@ aparelho nesta sessão.
 | Recusa | fora das oito famílias | motivo escrito, sem cartão e sem simulador | `RespostaCircuito.ok` |
 | Voz de fundo | app fora da tela | monta e fala a versão curta, sem chave | `PonteIaFundo.responderPergunta` |
 | Histórico | histórico de execuções | registra `circuito por prompt` ou `circuito recusado` | `_concluirCircuito` |
+
+## Edição por prompt — Fase 17 (ajuste 101, 2026-11-22)
+
+| Função | Onde | Estado | Arquivo |
+|---|---|---|---|
+| Circuito em uso | publicado pelo simulador | último esquema aberto ou alterado na tela | `core/circuito_em_uso.dart`, `circuito_page.dart` |
+| Pedido de edição | conversa e voz de fundo | decidido depois de montar e antes do provedor | `core/edicao_circuito.dart` |
+| Mudança de valor | resistor, fonte, lâmpada, motor, temporizador, fusível | aplica e refaz a simulação | `_mudancaDeValor` |
+| Interruptor | “abre o S1” / “fecha o S1” | muda o estado e recalcula | `Elemento.copiarCom(fechado:)` |
+| Recálculo puro | “simula de novo” | nenhuma peça muda, a conta é refeita | `_reSimular` |
+| Resultado no chat | antes e depois | mudanças, potência total, medida da peça e avisos | `RespostaEdicao` |
+| Recusas | sem circuito, peça ambígua, valor faltando | motivo escrito, sem inventar esquema | `RespostaEdicao.ok` |
+| Histórico | histórico de execuções | registra `circuito editado` ou `edição recusada` | `_concluirEdicao` |

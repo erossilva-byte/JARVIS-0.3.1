@@ -117,3 +117,13 @@ comandos do aparelho e **antes** do provedor, montado e simulado no aparelho, e
 respondido com o cartão “Abrir no simulador”. Pergunta sobre eletrônica continua
 indo para a IA. Com o app fora da tela, a voz de fundo responde pelo mesmo
 núcleo — sem chave e sem rede.
+
+## Bloco 101 — editar o circuito aberto por prompt
+
+O circuito em uso passou a ser um só: o simulador publica o que está na tela e a
+conversa edita exatamente esse. “Troca o R1 por 470 ohms” muda a peça no
+aparelho, **refaz a simulação** e responde com o antes e o depois; “simula de
+novo” refaz a conta sem mexer em nada; “abre o S1” abre o interruptor. O que a
+edição não sabe fazer — acrescentar peça, escolher entre dois resistores, mudar
+ligação — é dito com o motivo, não entregue errado. Na voz de fundo vale quando o
+circuito está na memória do motor.

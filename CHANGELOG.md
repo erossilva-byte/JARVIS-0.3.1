@@ -1,3 +1,24 @@
+## 1.87.0 — editar o circuito do simulador por prompt
+
+### O que mudou
+- **O circuito aberto agora aceita ordem.** “Troca o R1 por 470 ohms”, “muda a
+  fonte para 24 V”, “ajusta o KT1 para 5 segundos”, “abre o S1” — a conversa
+  aplica no aparelho, **refaz a simulação** e responde com o antes e o depois:
+  “R1: 1 kΩ → 470 Ω. A potência total foi de 0,144 W para 0,306 W.”
+- **“Simula de novo” também vale**: refaz a conta sem mudar nenhuma peça.
+- **Sabe o que é seu**: o simulador publica o esquema em uso ao abrir e a cada
+  mudança feita na tela; a conversa edita exatamente esse, e o botão “Abrir no
+  simulador” leva o resultado editado.
+- **Recusa honesta**: não acrescenta nem remove peça (mudaria a ligação), não
+  escolhe entre dois resistores quando o pedido é genérico, pede o valor quando
+  falta e avisa quando não há circuito aberto. Nada de inventar esquema.
+- **Voz de fundo**: mesma edição quando o circuito está na memória do motor; sem
+  ele, a fala orienta a abrir o simulador em vez de fingir que editou.
+
+Limite honesto: nada disto foi compilado nem rodou em aparelho nesta sessão. A
+edição mexe em valor de peça e estado de interruptor — não em ligação, posição na
+grade ou contato auxiliar.
+
 ## 1.86.0 — circuito por prompt no chat e na voz
 
 ### O que mudou

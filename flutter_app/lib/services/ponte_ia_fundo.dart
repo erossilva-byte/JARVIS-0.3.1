@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 
+import '../core/circuito_em_uso.dart';
 import '../core/circuito_no_chat.dart';
+import '../core/edicao_circuito.dart';
 import '../core/habilidades.dart';
 import '../core/pergunta_livre.dart';
 import '../core/personalidade.dart';
@@ -64,6 +66,9 @@ class PonteIaFundo {
     // Circuito por prompt: responde no aparelho, sem chave e sem rede.
     final circuito = responderPedidoDeCircuito(texto);
     if (circuito != null) return circuito.textoFalado;
+    // Edição do circuito aberto: vale quando o mesmo motor já o tem na memória.
+    final edicao = responderEdicaoDeCircuito(texto, CircuitoEmUso.atual);
+    if (edicao != null) return edicao.textoFalado;
     final escolhido = await provedor.firstConfiguredProvider();
     if (escolhido == null) {
       throw PlatformException(

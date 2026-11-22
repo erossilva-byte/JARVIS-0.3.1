@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../core/circuito.dart';
+import '../core/circuito_em_uso.dart';
 import '../core/clp.dart';
 import '../core/engenharia.dart';
 import '../ui_common.dart';
@@ -725,6 +726,8 @@ class _CircuitoPageState extends State<CircuitoPage> {
     if (resultado.fusiveisQueimados.isNotEmpty) {
       circuito = circuito.marcarQueimados(resultado.fusiveisQueimados);
     }
+    // A conversa edita o que está aqui: publica o esquema toda vez que abre.
+    CircuitoEmUso.definir(circuito);
   }
 
   @override
@@ -790,6 +793,8 @@ class _CircuitoPageState extends State<CircuitoPage> {
           quedaContatos);
       erroCampo = null;
     });
+    // Cada mudança na tela vira o circuito em uso, para o chat editar este.
+    CircuitoEmUso.definir(base);
   }
 
   /// Guarda os relógios coerentes com o novo resultado: quem voltou a energizar

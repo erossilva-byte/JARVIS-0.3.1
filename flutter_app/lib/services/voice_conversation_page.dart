@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../core/acessibilidade.dart';
+import '../core/circuito.dart';
+import '../core/circuito_em_uso.dart';
 import '../core/circuito_no_chat.dart';
+import '../core/edicao_circuito.dart';
 import '../core/conversa.dart';
-import '../core/projetista.dart';
 import '../core/habilidades.dart';
 import '../core/historico_voz.dart';
 import '../core/memoria_busca.dart';
@@ -74,8 +76,12 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       widget.tela ?? AcessibilidadeService();
   /// Toque aguardando “sim”: existe enquanto o usuário decide.
   TocarNaTela? _telaPendente;
-  /// Circuito montado nesta conversa, à espera do botão de abrir no simulador.
-  ResultadoProjeto? _circuitoPronto;
+  /// Circuito montado ou editado nesta conversa, à espera do atalho do
+  /// simulador.
+  Circuito? _circuitoPronto;
+
+  /// Título curto do circuito do cartão.
+  String _circuitoTitulo = '';
   String _pedidoPendente = '';
   late final HistoricoVozGateway _historico =
       widget.historico ?? HistoricoVozService();
@@ -180,6 +186,12 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     final circuito = responderPedidoDeCircuito(texto);
     if (circuito != null) {
       _concluirCircuito(texto, circuito);
+      return;
+    }
+    // Edição do que já está no simulador: muda, refaz a conta e mostra no chat.
+    final edicao = responderEdicaoDeCircuito(texto, CircuitoEmUso.atual);
+    if (edicao != null) {
+      _concluirEdicao(texto, edicao);
       return;
     }
     // Pedido de tela: ler e rolar executam direto; tocar só depois do “sim”.
@@ -364,8 +376,10 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       erro = null;
       aviso = null;
       parcial = '';
-      _circuitoPronto = resposta.ok ? resposta.projeto : null;
+      _circuitoPronto = resposta.ok ? resposta.projeto.circuito : null;
+      _circuitoTitulo = resposta.ok ? resposta.projeto.titulo : '';
     });
+    if (resposta.ok) CircuitoEmUso.definir(resposta.projeto.circuito);
     unawaited(_falar(resposta.textoFalado));
     unawaited(_persistir());
     unawaited(_historico.registrar(
@@ -378,12 +392,46 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     ));
   }
 
+  /// Registra a edição feita no circuito do simulador, sem chamar provedor.
+  ///
+  /// Só troca o circuito do cartão quando a simulação fechou: um esquema com
+  /// conta quebrada não é oferecido como pronto.
+  void _concluirEdicao(String texto, RespostaEdicao resposta) {
+    unawaited(voz.parar());
+    _registrarPedido(texto);
+    conversa.adicionar(
+        MensagemConversa(autor: 'assistant', texto: resposta.texto));
+    composer.clear();
+    unawaited(store?.limparRascunho());
+    setState(() {
+      enviando = false;
+      erro = null;
+      aviso = null;
+      parcial = '';
+      if (resposta.ok) {
+        _circuitoPronto = resposta.circuito;
+        if (_circuitoTitulo.isEmpty) _circuitoTitulo = 'circuito editado';
+      }
+    });
+    if (resposta.ok) CircuitoEmUso.definir(resposta.circuito);
+    unawaited(_falar(resposta.textoFalado));
+    unawaited(_persistir());
+    unawaited(_historico.registrar(
+      pedido: texto,
+      acao: resposta.ok ? 'circuito editado' : 'edição recusada',
+      ok: resposta.ok,
+      mensagem: resposta.texto,
+      origem:
+          widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado,
+    ));
+  }
+
   /// Abre o circuito montado no simulador, com o esquema já na tela.
   void _abrirCircuito() {
     final pronto = _circuitoPronto;
-    if (pronto?.circuito == null) return;
-    Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => CircuitoPage(inicial: pronto!.circuito)));
+    if (pronto == null) return;
+    Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => CircuitoPage(inicial: pronto)));
   }
 
   /// Registra a resposta local de um comando sem chamar provedor de IA.
@@ -790,7 +838,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
               ],
             ),
           ),
-          if (_circuitoPronto?.circuito != null) _cartaoCircuito(),
+          if (_circuitoPronto != null) _cartaoCircuito(),
           SafeArea(
             top: false,
             child: Padding(
@@ -840,8 +888,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   /// Cartão do circuito montado: título, estado da simulação e o atalho para o
   /// simulador. Fica acima do campo de texto e some quando outra resposta chega.
   Widget _cartaoCircuito() {
-    final pronto = _circuitoPronto!;
-    final circuito = pronto.circuito!;
+    final circuito = _circuitoPronto!;
     final simulado = circuito.simular();
     return Container(
       key: const ValueKey('conversa-circuito-pronto'),
@@ -859,7 +906,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Circuito montado: ${pronto.titulo}',
+                Text('Circuito: $_circuitoTitulo',
                     style: const TextStyle(
                         fontSize: 12, fontWeight: FontWeight.w600)),
                 Text(

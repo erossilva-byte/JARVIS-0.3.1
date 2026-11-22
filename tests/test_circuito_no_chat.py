@@ -45,8 +45,8 @@ def ler(caminho: Path) -> str:
 
 
 # 1. Versão e registro no pacote de testes.
-exigir("version: 1.86.0+18600" in ler(APP / "pubspec.yaml"),
-       "pubspec sem 1.86.0+18600")
+exigir("version: 1.87.0+18700" in ler(APP / "pubspec.yaml"),
+       "pubspec sem 1.87.0+18700")
 pacote = ler(RAIZ / "package.json")
 exigir("tests/test_circuito_no_chat.py" in pacote,
        "contrato fora do npm run test:all")
@@ -77,10 +77,11 @@ exigir(0 <= i_comando < i_circuito,
 exigir(i_circuito < i_provedor or i_provedor == -1,
        "o circuito deveria ser decidido antes de qualquer provedor")
 for termo in ("_concluirCircuito(", "conversa-circuito-pronto",
-              "conversa-abrir-simulador", "CircuitoPage(inicial: pronto!.circuito)",
+              "conversa-abrir-simulador", "CircuitoPage(inicial: pronto)",
               "circuito por prompt", "circuito recusado"):
     exigir(termo in conversa, f"voice_conversation_page.dart sem {termo}")
-exigir("_circuitoPronto = resposta.ok ? resposta.projeto : null" in conversa,
+exigir("_circuitoPronto = resposta.ok ? resposta.projeto.circuito : null"
+       in conversa,
        "a conversa guarda circuito mesmo quando a montagem falhou")
 
 # 4. Voz de fundo responde pelo mesmo núcleo.
