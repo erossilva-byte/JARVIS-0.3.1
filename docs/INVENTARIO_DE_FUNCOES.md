@@ -814,3 +814,15 @@ aparelho nesta sessão.
 | Voz externa por ID | tela “Voz externa (ID)” | ID padrão do projeto, validação, chave no cofre e teste | `core/voz_externa.dart`, `services/voz_externa_service.dart` |
 | Reprodução do MP3 | canal `com.jarvis.nova/voz` | `falarAudio`/`pararAudio` pelo MediaPlayer, mesmo volume da voz local | `JarvisVoz.kt`, `MainActivity.kt` |
 | Limites da voz externa | tela da voz externa | texto sai do aparelho, precisa de internet, consome cota | `limitesVozExterna` |
+
+## Circuito no chat — Fase 17 (ajuste 100, 2026-11-22)
+
+| Função | Onde | Estado | Arquivo |
+|---|---|---|---|
+| Pedido de circuito no texto | conversa (digitada ou falada) | interceptado depois dos comandos do aparelho e antes do provedor | `core/circuito_no_chat.dart`, `voice_conversation_page.dart` |
+| Decisão conservadora | verbo de montagem + substantivo de circuito | pergunta pura (“o que é um resistor”) segue para a IA | `pedidoDeCircuito` |
+| Resposta na conversa | bolha do assistente | veredito, componentes, potência e simulação fechada | `respostaPedidoDeCircuito` |
+| Cartão com atalho | acima do campo de texto | “Abrir no simulador” com o esquema carregado | `_cartaoCircuito`, `CircuitoPage(inicial:)` |
+| Recusa | fora das oito famílias | motivo escrito, sem cartão e sem simulador | `RespostaCircuito.ok` |
+| Voz de fundo | app fora da tela | monta e fala a versão curta, sem chave | `PonteIaFundo.responderPergunta` |
+| Histórico | histórico de execuções | registra `circuito por prompt` ou `circuito recusado` | `_concluirCircuito` |

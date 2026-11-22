@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../core/acessibilidade.dart';
+import '../core/circuito_no_chat.dart';
 import '../core/conversa.dart';
+import '../core/projetista.dart';
 import '../core/habilidades.dart';
 import '../core/historico_voz.dart';
 import '../core/memoria_busca.dart';
@@ -13,6 +15,7 @@ import '../core/pessoas.dart';
 import '../core/stream_buffer.dart';
 import '../ui_common.dart';
 import 'acessibilidade_service.dart';
+import 'circuito_page.dart';
 import 'comandos_android_service.dart';
 import 'conversa_store.dart';
 import 'habilidades_service.dart';
@@ -71,6 +74,8 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       widget.tela ?? AcessibilidadeService();
   /// Toque aguardando “sim”: existe enquanto o usuário decide.
   TocarNaTela? _telaPendente;
+  /// Circuito montado nesta conversa, à espera do botão de abrir no simulador.
+  ResultadoProjeto? _circuitoPronto;
   String _pedidoPendente = '';
   late final HistoricoVozGateway _historico =
       widget.historico ?? HistoricoVozService();
@@ -169,6 +174,12 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     final comando = await _comandos.executar(texto);
     if (comando != null) {
       _concluirComando(texto, comando);
+      return;
+    }
+    // Circuito por prompt: monta e simula no aparelho, antes de gastar provedor.
+    final circuito = responderPedidoDeCircuito(texto);
+    if (circuito != null) {
+      _concluirCircuito(texto, circuito);
       return;
     }
     // Pedido de tela: ler e rolar executam direto; tocar só depois do “sim”.
@@ -334,6 +345,45 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
             Future<void>.value());
       },
     );
+  }
+
+  /// Registra o circuito montado no aparelho, sem chamar provedor de IA.
+  ///
+  /// Não passa pelo contador de comandos do aparelho: montar circuito não toca
+  /// em nada do celular. A conversa guarda o resultado, a voz lê a versão curta e
+  /// o histórico registra o pedido com o mesmo formato dos outros comandos.
+  void _concluirCircuito(String texto, RespostaCircuito resposta) {
+    unawaited(voz.parar());
+    _registrarPedido(texto);
+    conversa.adicionar(
+        MensagemConversa(autor: 'assistant', texto: resposta.texto));
+    composer.clear();
+    unawaited(store?.limparRascunho());
+    setState(() {
+      enviando = false;
+      erro = null;
+      aviso = null;
+      parcial = '';
+      _circuitoPronto = resposta.ok ? resposta.projeto : null;
+    });
+    unawaited(_falar(resposta.textoFalado));
+    unawaited(_persistir());
+    unawaited(_historico.registrar(
+      pedido: texto,
+      acao: resposta.ok ? 'circuito por prompt' : 'circuito recusado',
+      ok: resposta.ok,
+      mensagem: resposta.texto,
+      origem:
+          widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado,
+    ));
+  }
+
+  /// Abre o circuito montado no simulador, com o esquema já na tela.
+  void _abrirCircuito() {
+    final pronto = _circuitoPronto;
+    if (pronto?.circuito == null) return;
+    Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => CircuitoPage(inicial: pronto!.circuito)));
   }
 
   /// Registra a resposta local de um comando sem chamar provedor de IA.
@@ -740,6 +790,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
               ],
             ),
           ),
+          if (_circuitoPronto?.circuito != null) _cartaoCircuito(),
           SafeArea(
             top: false,
             child: Padding(
@@ -783,6 +834,46 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Cartão do circuito montado: título, estado da simulação e o atalho para o
+  /// simulador. Fica acima do campo de texto e some quando outra resposta chega.
+  Widget _cartaoCircuito() {
+    final pronto = _circuitoPronto!;
+    final circuito = pronto.circuito!;
+    final simulado = circuito.simular();
+    return Container(
+      key: const ValueKey('conversa-circuito-pronto'),
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cyan.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cyan.withValues(alpha: .28)),
+      ),
+      child: Row(children: [
+        const Icon(Icons.science_outlined, color: cyan, size: 20),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Circuito montado: ${pronto.titulo}',
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600)),
+                Text(
+                    '${circuito.elementos.length} trechos · '
+                    '${simulado.calculado ? 'simulação fechada' : 'simulação falhou'}',
+                    style: const TextStyle(color: muted, fontSize: 10)),
+              ]),
+        ),
+        TextButton(
+          key: const ValueKey('conversa-abrir-simulador'),
+          onPressed: _abrirCircuito,
+          child: const Text('Abrir no simulador'),
+        ),
+      ]),
     );
   }
 

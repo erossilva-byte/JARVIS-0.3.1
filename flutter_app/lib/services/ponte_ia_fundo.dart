@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 
+import '../core/circuito_no_chat.dart';
 import '../core/habilidades.dart';
 import '../core/pergunta_livre.dart';
 import '../core/personalidade.dart';
@@ -60,6 +61,9 @@ class PonteIaFundo {
       throw PlatformException(
           code: 'ponte_desligada', message: 'A ponte de IA não foi iniciada.');
     }
+    // Circuito por prompt: responde no aparelho, sem chave e sem rede.
+    final circuito = responderPedidoDeCircuito(texto);
+    if (circuito != null) return circuito.textoFalado;
     final escolhido = await provedor.firstConfiguredProvider();
     if (escolhido == null) {
       throw PlatformException(

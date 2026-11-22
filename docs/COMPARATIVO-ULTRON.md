@@ -108,3 +108,12 @@ Nada nesta lista foi medido em aparelho físico neste repositório; a coluna
   É o oposto da voz local: o texto sai do aparelho, e a tela diz isso.
 - **Circuito por prompt**: o projetista por prompt, que era só do núcleo web,
   existe no Flutter e valida o esquema no simulador antes de entregar.
+
+## Bloco 100 — o circuito por prompt chegou ao chat
+
+O projetista do bloco 099 vivia dentro do módulo de CADeSIMU. Agora o pedido
+nasce na conversa: “monta um circuito de 12 V” é decidido **depois** dos
+comandos do aparelho e **antes** do provedor, montado e simulado no aparelho, e
+respondido com o cartão “Abrir no simulador”. Pergunta sobre eletrônica continua
+indo para a IA. Com o app fora da tela, a voz de fundo responde pelo mesmo
+núcleo — sem chave e sem rede.

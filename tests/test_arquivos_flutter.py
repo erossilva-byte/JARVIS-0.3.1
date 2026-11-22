@@ -85,9 +85,14 @@ def problemas() -> list[str]:
         falhas.append("catálogo ainda promete execução isolada")
     if "sandbox e execução não disponíveis" not in catalogo:
         falhas.append("catálogo não declara a ausência de execução")
-    if "Execução de código não disponível" not in pages:
+    # 099: o aviso genérico virou catálogo de estado por módulo; pages.dart
+    # renderiza o texto que hoje mora em core/estado_modulos.dart.
+    estado = (RAIZ / "flutter_app" / "lib" / "core" /
+              "estado_modulos.dart").read_text(encoding="utf-8")
+    tela_modulo = pages + estado
+    if "Execução de código não disponível" not in tela_modulo:
         falhas.append("tela do módulo não declara a ausência de execução")
-    if "Não há sandbox, terminal" not in pages:
+    if "Não há sandbox, terminal" not in tela_modulo:
         falhas.append("tela do módulo não explica a ausência")
     if "Código sem execução" not in drawer:
         falhas.append("gaveta ainda rotula o módulo como sandbox")

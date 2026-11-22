@@ -1,3 +1,26 @@
+## 1.86.0 — circuito por prompt no chat e na voz
+
+### O que mudou
+- **Agora dá para pedir o circuito conversando.** “Monta um circuito de lâmpada
+  de 12 V e 5 W com interruptor”, “faça um divisor de tensão de 12 V” ou
+  “acender a lâmpada 5 segundos depois de apertar o botão” são montados no
+  aparelho, simulados e respondidos na conversa — **sem gastar provedor de IA e
+  sem chave**.
+- **A ordem é segura**: a decisão vem depois dos comandos do aparelho e antes de
+  qualquer provedor. Se o texto for pergunta (“o que é um resistor”, “explica o
+  divisor de tensão”), nada muda: a IA responde como antes.
+- **Cartão com atalho**: quando a simulação fecha, aparece acima do campo de
+  texto “Circuito montado: <título> · N trechos · simulação fechada” com o botão
+  **Abrir no simulador**, já com o esquema carregado.
+- **Recusa honesta**: pedido fora das oito famílias (trifásico, transistor,
+  corrente alternada) responde com o motivo e **não** abre o simulador.
+- **Voz de fundo também**: com o app fora da tela, o mesmo pedido é montado e
+  falado — é o único caminho que responde algo útil sem provedor configurado.
+
+Limite honesto: nada disto foi compilado nem rodou em aparelho nesta sessão. A
+interceptação é por texto (verbo de montagem + substantivo de circuito), não é
+classificador aprendido: pedido escrito de outro jeito continua indo para a IA.
+
 ## 1.85.0 — restos da auditoria, voz externa e circuito por prompt
 
 ### O que mudou
