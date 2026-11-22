@@ -1,15 +1,13 @@
+# Aposentado no bloco 102. Esteira da era JS/Capacitor (www/ + `npx cap add
+# android`); a linha Flutter roda em flutter-ci.yml. Aqui, só execução manual.
 on:
   workflow_dispatch:
-  push:
-    branches: [main, work/1.46.0-auditoria-funcoes-apk]
-  pull_request:
-    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: jarvis-nova-android-${{ github.ref }}
+  group: legado-auditoria-android-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

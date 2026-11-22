@@ -1,52 +1,16 @@
 name: Build e testes do J.A.R.V.I.S. Nova 1.46.0
 
+# Aposentado no bloco 102. Esta esteira é da era JS/Capacitor: copia os módulos
+# para www/ e gera android/ com `npx cap add android`. A `main` é Flutter e roda
+# em flutter-ci.yml; aqui fica só a execução manual, para conferência histórica.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'JARVIS-Nova-*-fonte.zip'
-      - 'JARVIS-NOVA-*-fonte.zip'
-      - '*.patch'
-      - '.github/workflows/build-apk.yml'
-      - 'app.js'
-      - 'sandbox.js'
-      - 'identidade.js'
-      - 'fala.js'
-      - 'audio_pcm.js'
-      - 'identidade_ui.js'
-      - 'escuta.js'
-      - 'agentes.js'
-      - 'plano.js'
-      - 'avatar.js'
-      - 'nucleo_v3.js'
-      - 'consumo_ia.js'
-      - 'modo_dev.js'
-      - 'escuta_voz.js'
-      - 'segundo_plano.js'
-      - 'perfil_energia.js'
-      - 'manutencao.js'
-      - 'privacidade.js'
-      - 'nucleo_v3.css'
-      - 'apps.js'
-      - 'main.js'
-      - 'hermes.js'
-      - 'index.html'
-      - 'style.css'
-      - 'patch_*.py'
-      - 'Jarvis*.java'
-      - 'MainActivity.java'
-      - 'package.json'
-      - 'VERSAO.json'
-      - 'tests/**'
-      - 'ci/**'
-      - 'capacitor.config.json'
 
 permissions:
   contents: read
 
 concurrency:
-  group: jarvis-nova-android-${{ github.ref }}
+  group: legado-build-apk-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

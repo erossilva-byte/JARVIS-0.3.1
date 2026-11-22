@@ -1,3 +1,24 @@
+## 1.88.0 — a esteira de CI passa a ser a do Flutter
+
+### O que mudou
+- **A `main` agora testa o código que tem.** O workflow novo
+  `.github/workflows/flutter-ci.yml` roda a cada push e pull request na `main`:
+  `flutter pub get`, `flutter analyze`, `flutter test` e os contratos Python —
+  a mesma lista do `npm run test:all`, lida do `package.json` por
+  `ci/contratos_python.py`, para o CI não envelhecer em relação à suíte local.
+- **Fim do X vermelho herdado.** `build-apk.yml` e `ci-android-auditoria.yml`
+  (era JS/Capacitor: copiavam módulos para `www/` e geravam `android/` com
+  `npx cap add android`) não disparam mais sozinhas em push nem em pull request;
+  ficam apenas para execução manual.
+- **Fim do cancelamento cruzado.** As duas dividiam o grupo
+  `jarvis-nova-android-${{ github.ref }}` com `cancel-in-progress: true`, então
+  quem começava derrubava a outra na fila. Cada workflow tem grupo próprio — e
+  `tests/test_ci_flutter.py` reprova grupo repetido em qualquer workflow.
+
+Limite honesto: o workflow novo não rodou no GitHub nesta sessão. Verificado
+aqui: `flutter analyze` e `flutter test` verdes, contratos Python verdes e o
+contrato 102 aprovado. A primeira execução real, no push, é o teste de verdade.
+
 ## 1.87.0 — editar o circuito do simulador por prompt
 
 ### O que mudou

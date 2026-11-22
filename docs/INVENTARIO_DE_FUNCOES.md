@@ -839,3 +839,13 @@ aparelho nesta sessão.
 | Resultado no chat | antes e depois | mudanças, potência total, medida da peça e avisos | `RespostaEdicao` |
 | Recusas | sem circuito, peça ambígua, valor faltando | motivo escrito, sem inventar esquema | `RespostaEdicao.ok` |
 | Histórico | histórico de execuções | registra `circuito editado` ou `edição recusada` | `_concluirEdicao` |
+
+## Esteira de CI (1.88.0)
+
+| Peça | Onde | Para que serve |
+| --- | --- | --- |
+| Esteira oficial | `.github/workflows/flutter-ci.yml` | push e PR na `main`: pub get, analyze, test e contratos |
+| Runner dos contratos | `ci/contratos_python.py` | roda os comandos Python do `test:all`, lidos do `package.json` |
+| Contrato | `tests/test_ci_flutter.py` | esteira nova ativa, antigas em modo manual, grupos de concorrência únicos |
+| Esteiras aposentadas | `build-apk.yml`, `ci-android-auditoria.yml` | era JS/Capacitor; agora só execução manual |
+| Grupos de concorrência | `flutter-ci-…`, `legado-build-apk-…`, `legado-auditoria-android-…` | um por workflow, ninguém cancela ninguém |

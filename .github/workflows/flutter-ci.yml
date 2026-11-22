@@ -1,0 +1,51 @@
+name: Flutter CI — análise, testes e contratos
+
+# Esteira oficial da linha Flutter (bloco 102). `build-apk.yml` e
+# `ci-android-auditoria.yml` são da era JS/Capacitor e ficaram apenas para
+# execução manual: elas copiavam arquivos para www/ e geravam android/ com o
+# Capacitor, o que já não corresponde a esta árvore.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Um grupo por workflow. Antes as duas esteiras antigas dividiam
+# `jarvis-nova-android-${{ github.ref }}` com cancel-in-progress e uma derrubava
+# a outra na fila; aqui o grupo é só desta esteira.
+concurrency:
+  group: flutter-ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  analise-e-testes:
+    name: flutter analyze, flutter test e contratos Python
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Instalar as dependências do aplicativo
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Análise estática
+        working-directory: flutter_app
+        run: flutter analyze
+
+      - name: Testes Flutter
+        working-directory: flutter_app
+        run: flutter test
+
+      # A lista vem do package.json (ci/contratos_python.py), então o CI não
+      # diverge do que se roda no computador quando um bloco novo entra.
+      - name: Contratos Python e pré-checagens
+        run: python3 ci/contratos_python.py
