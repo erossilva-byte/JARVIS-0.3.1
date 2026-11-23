@@ -21,6 +21,8 @@ class _NucleoPageState extends State<NucleoPage> {
   bool carregando = true;
   bool ativo = false;
   bool permissao = false;
+  bool pausado = false;
+  bool economico = false;
   int tamanho = 112;
   int intervalo = 7;
   String aviso = '';
@@ -38,6 +40,8 @@ class _NucleoPageState extends State<NucleoPage> {
       setState(() {
         ativo = estado.ativo;
         permissao = estado.permissao;
+        pausado = estado.pausado;
+        economico = estado.economico;
         tamanho = estado.tamanho.clamp(72, 160);
         intervalo = (estado.intervalo / 1000).round().clamp(4, 12);
         carregando = false;
@@ -56,12 +60,16 @@ class _NucleoPageState extends State<NucleoPage> {
     try {
       final estado = ligar
           ? await NucleoControle.iniciar(
-              tamanho: tamanho, intervalo: intervalo * 1000)
+              tamanho: tamanho,
+              intervalo: intervalo * 1000,
+              economico: economico)
           : await NucleoControle.parar();
       if (!mounted) return;
       setState(() {
         ativo = estado.ativo;
         permissao = estado.permissao;
+        pausado = estado.pausado;
+        economico = estado.economico;
         if (ligar && !estado.ativo) {
           aviso = estado.motivo == 'sem_permissao'
               ? 'Para o núcleo aparecer por cima dos outros apps, autorize '
@@ -81,12 +89,53 @@ class _NucleoPageState extends State<NucleoPage> {
     if (!ativo) return;
     try {
       final estado = await NucleoControle.iniciar(
-          tamanho: tamanho, intervalo: intervalo * 1000);
+          tamanho: tamanho, intervalo: intervalo * 1000, economico: economico);
       if (!mounted) return;
-      setState(() => ativo = estado.ativo);
+      setState(() {
+        ativo = estado.ativo;
+        pausado = estado.pausado;
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() => aviso = 'Não consegui aplicar o novo tamanho.');
+    }
+  }
+
+  Future<void> _alternarPausa() async {
+    final novo = !pausado;
+    setState(() => pausado = novo);
+    try {
+      final estado = await NucleoControle.definirPausado(novo);
+      if (!mounted) return;
+      setState(() {
+        pausado = estado.pausado;
+        ativo = estado.ativo;
+        aviso = '';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        pausado = !novo;
+        aviso = 'Não consegui pausar o núcleo.';
+      });
+    }
+  }
+
+  Future<void> _alternarEconomico(bool ligar) async {
+    setState(() => economico = ligar);
+    try {
+      final estado = await NucleoControle.definirEconomico(ligar);
+      if (!mounted) return;
+      setState(() {
+        economico = estado.economico;
+        ativo = estado.ativo;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        economico = !ligar;
+        aviso = 'Não consegui mudar o modo econômico.';
+      });
     }
   }
 
@@ -148,11 +197,21 @@ class _NucleoPageState extends State<NucleoPage> {
               title: const Text('Mostrar sobre os outros apps',
                   style: TextStyle(fontSize: 14)),
               subtitle: Text(
-                ativo
-                    ? 'Ativo · teletransporta a cada ~$intervalo s'
-                    : 'Desligado',
+                !ativo
+                    ? 'Desligado'
+                    : pausado
+                        ? 'Ativo · pausado, parado neste ponto'
+                        : 'Ativo · teletransporta a cada ~$intervalo s',
                 style: const TextStyle(color: muted, fontSize: 11),
               ),
+            ),
+            OutlinedButton.icon(
+              key: const ValueKey('nucleo-pausar'),
+              onPressed: ativo ? _alternarPausa : null,
+              icon: Icon(
+                  pausado ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                  size: 18),
+              label: Text(pausado ? 'Retomar o núcleo' : 'Pausar o núcleo'),
             ),
             const SizedBox(height: 4),
             Text('Tamanho · $tamanho dp', style: const TextStyle(fontSize: 12)),
@@ -180,13 +239,36 @@ class _NucleoPageState extends State<NucleoPage> {
               onChanged: (valor) => setState(() => intervalo = valor.round()),
               onChangeEnd: (_) => unawaited(_aplicarConfiguracao()),
             ),
+            SwitchListTile(
+              key: const ValueKey('nucleo-economico'),
+              contentPadding: EdgeInsets.zero,
+              value: economico,
+              onChanged: carregando ? null : _alternarEconomico,
+              activeThumbColor: cyan,
+              title:
+                  const Text('Modo econômico', style: TextStyle(fontSize: 14)),
+              subtitle: const Text(
+                '20 quadros por segundo, brilho menor, para de desenhar com a '
+                'tela apagada e teletransporta com o dobro do intervalo.',
+                style: TextStyle(color: muted, fontSize: 11, height: 1.4),
+              ),
+            ),
             const SizedBox(height: 6),
             OutlinedButton.icon(
               key: const ValueKey('nucleo-teleportar'),
-              onPressed: ativo ? _teleportar : null,
+              onPressed: ativo && !pausado ? _teleportar : null,
               icon: const Icon(Icons.flash_on_rounded, size: 18),
               label: const Text('Teletransportar agora'),
             ),
+            if (pausado) ...[
+              const SizedBox(height: 6),
+              const Text(
+                'Pausado: o núcleo continua visível e abre o app no toque, mas '
+                'não gira nem troca de lugar. Retome para voltar ao movimento.',
+                key: ValueKey('nucleo-pausado-aviso'),
+                style: TextStyle(color: muted, fontSize: 11, height: 1.45),
+              ),
+            ],
             if (!permissao) ...[
               const SizedBox(height: 10),
               Container(

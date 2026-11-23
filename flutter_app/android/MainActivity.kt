@@ -238,8 +238,21 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                             this,
                             call.argument<Int>("tamanho") ?: 112,
                             (call.argument<Int>("intervalo") ?: 7000).toLong(),
+                            call.argument<Boolean>("economico") ?: false,
                         )
                     )
+                    "definirPausado" -> {
+                        JarvisNucleo.definirPausado(
+                            call.argument<Boolean>("pausado") ?: false
+                        )
+                        result.success(JarvisNucleo.estado(this))
+                    }
+                    "definirEconomico" -> {
+                        JarvisNucleo.definirEconomico(
+                            call.argument<Boolean>("economico") ?: false
+                        )
+                        result.success(JarvisNucleo.estado(this))
+                    }
                     "parar" -> {
                         JarvisNucleo.parar()
                         result.success(JarvisNucleo.estado(this))

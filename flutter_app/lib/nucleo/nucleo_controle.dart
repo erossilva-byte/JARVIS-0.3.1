@@ -7,6 +7,8 @@ class NucleoEstado {
     required this.tamanho,
     required this.intervalo,
     required this.permissao,
+    this.pausado = false,
+    this.economico = false,
     this.motivo = '',
   });
 
@@ -20,6 +22,12 @@ class NucleoEstado {
 
   /// “Exibir sobre outros apps” está autorizado?
   final bool permissao;
+
+  /// Giro e teletransporte congelados, núcleo ainda na tela.
+  final bool pausado;
+
+  /// Menos quadros, brilho menor e teletransporte mais raro.
+  final bool economico;
 
   /// `sem_permissao`, `falhou` ou vazio.
   final String motivo;
@@ -43,6 +51,8 @@ class NucleoEstado {
       tamanho: inteiro('tamanho', 112),
       intervalo: inteiro('intervalo', 7000),
       permissao: dados['permissao'] == true,
+      pausado: dados['pausado'] == true,
+      economico: dados['economico'] == true,
       motivo: dados['motivo']?.toString() ?? '',
     );
   }
@@ -60,11 +70,23 @@ class NucleoControle {
   static Future<NucleoEstado> iniciar({
     int tamanho = 112,
     int intervalo = 7000,
+    bool economico = false,
   }) async =>
       NucleoEstado.deMapa(await canal.invokeMethod<Object?>('iniciar', {
         'tamanho': tamanho,
         'intervalo': intervalo,
+        'economico': economico,
       }));
+
+  /// Congela o giro e o teletransporte; o núcleo continua na tela.
+  static Future<NucleoEstado> definirPausado(bool pausado) async =>
+      NucleoEstado.deMapa(await canal
+          .invokeMethod<Object?>('definirPausado', {'pausado': pausado}));
+
+  /// Liga o modo econômico: menos quadros e teletransporte mais raro.
+  static Future<NucleoEstado> definirEconomico(bool economico) async =>
+      NucleoEstado.deMapa(await canal
+          .invokeMethod<Object?>('definirEconomico', {'economico': economico}));
 
   static Future<NucleoEstado> parar() async =>
       NucleoEstado.deMapa(await canal.invokeMethod<Object?>('parar'));

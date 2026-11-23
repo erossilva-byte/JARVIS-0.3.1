@@ -16,6 +16,11 @@
 - **Palco direto da conversa**: escrever “mostra fotos de…”, “me mostra um
   vídeo sobre…” ou “traz as últimas notícias de…” abre o palco já pesquisando,
   sem passar pelo módulo e sem gastar chamada do provedor.
+- **Núcleo: pausar e modo econômico**: “Pausar o núcleo” congela o giro e o
+  teletransporte sem tirar o núcleo da tela (ele continua visível e abrindo o
+  app no toque); “Modo econômico” cai para 20 quadros por segundo, diminui o
+  brilho, para de redesenhar com a tela apagada e dobra o intervalo entre os
+  teletransportes.
 - **Núcleo flutuante 3D**: como os mascotes de desktop, um núcleo pequeno
   (112 dp por padrão, ajustável de 72 a 160) fica por cima dos outros apps,
   gira e brilha, arrasta com o dedo, abre o app no toque e se teletransporta

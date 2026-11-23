@@ -31,6 +31,18 @@ tela se teletransportando com animação.
 - **Canal** `com.jarvis.nova/nucleo`: estado, iniciar, parar, teletransportar e
   abrir o ajuste de sobreposição.
 
+## Pausar e modo econômico
+
+- **Pausar** congela o tempo do desenho (giro, anéis, partículas e flutuação) e
+  cancela o teletransporte agendado; o núcleo continua visível, arrastável e
+  abrindo o app no toque. Retomar volta do ponto congelado. O estado mora no
+  objeto do serviço: fechar e reabrir a tela do app não despausa. Mudar tamanho
+  ou ritmo recria a janela e preserva a pausa.
+- **Modo econômico** limita o desenho a 20 quadros por segundo (um quadro a cada
+  50 ms), aplica 85% de brilho, para de desenhar quando a tela apaga (volta ao
+  acender) e dobra o intervalo do teletransporte. É uma redução, medida pelo que
+  o código faz, não uma promessa de número de bateria.
+
 ## Limites, sem rodeio
 
 - **O núcleo vive enquanto o processo do JARVIS viver.** Ele não é um serviço
@@ -47,8 +59,9 @@ tela se teletransportando com animação.
 ## Verificação
 
 - `flutter analyze` limpo.
-- `flutter test` — **360 testes** aprovados (357 anteriores + 3 da tela do
-  núcleo, com canal simulado).
+- `flutter test` — **362 testes** aprovados (357 anteriores + 5 da tela do
+  núcleo, com canal simulado: ligar, teletransportar, pausar/retomar,
+  econômico e autorização).
 - `python3 tests/test_nucleo_flutuante.py` aprovado e registrado no `test:all`.
 
 ## O que não foi verificado

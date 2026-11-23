@@ -85,6 +85,26 @@ exigir("this.fundo = true" in holograma and "if (fundo)" in holograma,
 exigir("NucleoPage" in avatar and "avatar-nucleo-flutuante" in avatar,
        "avatar não leva ao núcleo flutuante")
 
+# 6b. Pausar congela sem tirar da tela; modo econômico reduz e suspende.
+for termo in ("fun definirPausado", "fun definirEconomico", "fun pausar()",
+              "fun retomar()", "fun suspender()", "fun acordar()",
+              "ACTION_SCREEN_OFF", "intervaloMs * 2",
+              "ultimoQuadroEconomico", "saveLayerAlpha",
+              "reiniciarAnimacao"):
+    exigir(termo in kotlin, f"pausa/economia sem {termo}")
+exigir("if (!ativo || pausado) return" in kotlin,
+       "teletransporte não respeita a pausa")
+for termo in ('"definirPausado"', '"definirEconomico"', '"economico"'):
+    exigir(termo in principal, f"MainActivity sem {termo}")
+for termo in ("definirPausado", "definirEconomico", "pausado", "economico"):
+    exigir(termo in controle, f"nucleo_controle.dart sem {termo}")
+for termo in ("nucleo-pausar", "Pausar o núcleo", "Retomar o núcleo",
+              "nucleo-economico", "Modo econômico", "nucleo-pausado-aviso"):
+    exigir(termo in pagina, f"nucleo_page.dart sem {termo}")
+teste = ler(APP / "test" / "nucleo_page_test.dart")
+exigir("pausar congela" in teste and "modo econômico" in teste,
+       "teste sem pausar/economia")
+
 # 7. O arquivo Kotlin entra no build e o teste está na esteira.
 exigir("JarvisNucleo.kt" in preparo,
        "preparo do Android não copia JarvisNucleo.kt")

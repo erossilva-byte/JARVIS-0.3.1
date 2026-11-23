@@ -11,11 +11,15 @@ void main() {
   final chamadas = <MethodCall>[];
   var ativo = false;
   var permissao = true;
+  var pausado = false;
+  var economico = false;
 
   setUp(() {
     chamadas.clear();
     ativo = false;
     permissao = true;
+    pausado = false;
+    economico = false;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(NucleoControle.canal, (call) async {
       chamadas.add(call);
@@ -26,23 +30,52 @@ void main() {
             'tamanho': 112,
             'intervalo': 7000,
             'permissao': permissao,
+            'pausado': pausado,
+            'economico': economico,
           };
         case 'iniciar':
           ativo = true;
+          economico = call.arguments['economico'] == true;
           return {
             'ativo': true,
             'tamanho': call.arguments['tamanho'],
             'intervalo': call.arguments['intervalo'],
             'permissao': true,
+            'pausado': pausado,
+            'economico': economico,
             'iniciado': true,
           };
         case 'parar':
           ativo = false;
+          pausado = false;
+          economico = false;
           return {
             'ativo': false,
             'tamanho': 112,
             'intervalo': 7000,
             'permissao': permissao,
+            'pausado': false,
+            'economico': false,
+          };
+        case 'definirPausado':
+          pausado = call.arguments['pausado'] == true;
+          return {
+            'ativo': ativo,
+            'tamanho': 112,
+            'intervalo': 7000,
+            'permissao': permissao,
+            'pausado': pausado,
+            'economico': economico,
+          };
+        case 'definirEconomico':
+          economico = call.arguments['economico'] == true;
+          return {
+            'ativo': ativo,
+            'tamanho': 112,
+            'intervalo': 7000,
+            'permissao': permissao,
+            'pausado': pausado,
+            'economico': economico,
           };
         default:
           return true;
@@ -99,6 +132,75 @@ void main() {
     await tester.pump(const Duration(milliseconds: 40));
 
     expect(chamadas.any((c) => c.method == 'teleportar'), isTrue);
+  });
+
+  testWidgets('pausar congela; retomar volta; teletransporte fica parado',
+      (tester) async {
+    await abrir(tester);
+    await tester.tap(find.byKey(const ValueKey('nucleo-ativo')));
+    await tester.pump(const Duration(milliseconds: 60));
+
+    await tester.ensureVisible(find.byKey(const ValueKey('nucleo-pausar')));
+    await tester.tap(find.byKey(const ValueKey('nucleo-pausar')));
+    await tester.pump(const Duration(milliseconds: 60));
+
+    final pausou = chamadas
+        .where((c) => c.method == 'definirPausado')
+        .last
+        .arguments['pausado'];
+    expect(pausou, isTrue);
+    expect(find.text('Retomar o núcleo'), findsOneWidget);
+    expect(find.byKey(const ValueKey('nucleo-pausado-aviso')), findsOneWidget);
+
+    final botao = tester.widget<OutlinedButton>(find.ancestor(
+      of: find.text('Teletransportar agora'),
+      matching: find.byType(OutlinedButton),
+    ));
+    expect(botao.onPressed, isNull,
+        reason: 'pausado, o teletransporte manual não pode disparar');
+    await tester.tap(find.byKey(const ValueKey('nucleo-teleportar')));
+    await tester.pump(const Duration(milliseconds: 40));
+    expect(chamadas.any((c) => c.method == 'teleportar'), isFalse);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('nucleo-pausar')));
+    await tester.tap(find.byKey(const ValueKey('nucleo-pausar')));
+    await tester.pump(const Duration(milliseconds: 60));
+
+    final retomou = chamadas
+        .where((c) => c.method == 'definirPausado')
+        .last
+        .arguments['pausado'];
+    expect(retomou, isFalse);
+    expect(find.text('Pausar o núcleo'), findsOneWidget);
+    expect(find.byKey(const ValueKey('nucleo-pausado-aviso')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('nucleo-teleportar')));
+    await tester.pump(const Duration(milliseconds: 40));
+    expect(chamadas.any((c) => c.method == 'teleportar'), isTrue);
+  });
+
+  testWidgets('modo econômico manda a escolha e aparece no estado',
+      (tester) async {
+    await abrir(tester);
+    await tester.tap(find.byKey(const ValueKey('nucleo-ativo')));
+    await tester.pump(const Duration(milliseconds: 60));
+
+    await tester.ensureVisible(find.byKey(const ValueKey('nucleo-economico')));
+    await tester.tap(find.byKey(const ValueKey('nucleo-economico')));
+    await tester.pump(const Duration(milliseconds: 60));
+
+    expect(
+        chamadas
+            .where((c) => c.method == 'definirEconomico')
+            .last
+            .arguments['economico'],
+        isTrue);
+    expect(
+        tester
+            .widget<SwitchListTile>(
+                find.byKey(const ValueKey('nucleo-economico')))
+            .value,
+        isTrue);
   });
 
   testWidgets('sem autorização, explica e oferece o ajuste', (tester) async {

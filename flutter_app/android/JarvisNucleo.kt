@@ -1,7 +1,9 @@
 package com.jarvis.nova
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -55,6 +57,19 @@ object JarvisNucleo {
     private var tamanhoDp = TAMANHO_PADRAO_DP
     private var intervaloMs = INTERVALO_PADRAO_MS
     private var arrastando = false
+    private var pausado = false
+    private var economico = false
+    private var receptorRegistrado = false
+
+    /** Tela apagada: para de redesenhar até o Android avisar que acendeu. */
+    private val receptorTela = object : BroadcastReceiver() {
+        override fun onReceive(contexto: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF -> vista?.suspender()
+                Intent.ACTION_SCREEN_ON -> vista?.acordar()
+            }
+        }
+    }
 
     private val principal = Handler(Looper.getMainLooper())
     private val soltar = Runnable {
@@ -74,21 +89,30 @@ object JarvisNucleo {
         "tamanho" to tamanhoDp,
         "intervalo" to intervaloMs.toInt(),
         "permissao" to podeSobrepor(contexto),
+        "pausado" to pausado,
+        "economico" to economico,
     )
 
     /**
      * Sobe a janela flutuante. Devolve o estado com `iniciado` e, quando falha,
      * um `motivo` curto (`sem_permissao`), para a tela dizer o que falta.
      */
-    fun iniciar(contexto: Context, tamanho: Int, intervalo: Long): Map<String, Any> {
+    fun iniciar(
+        contexto: Context,
+        tamanho: Int,
+        intervalo: Long,
+        economicoNovo: Boolean,
+    ): Map<String, Any> {
         tamanhoDp = tamanho.coerceIn(72, 160)
         intervaloMs = intervalo.coerceIn(3_000L, 15_000L)
+        val estavaPausado = pausado
         if (!podeSobrepor(contexto)) {
             return estado(contexto) + mapOf("iniciado" to false, "motivo" to "sem_permissao")
         }
         // Já na tela: recria com o tamanho e o ritmo novos, em vez de ignorar
         // a mudança que a tela acabou de pedir.
         if (ativo) parar()
+        economico = economicoNovo
         return try {
             val base = contexto.applicationContext
             val gerenciador =
@@ -123,8 +147,16 @@ object JarvisNucleo {
             vista = desenho
             parametros = layout
             ativo = true
+            registrarTela(base)
+            desenho.definirEconomico(economico)
             moverParaPontoAleatorio()
-            agendarTeletransporte()
+            if (estavaPausado) {
+                pausado = true
+                desenho.pausar()
+            } else {
+                pausado = false
+                agendarTeletransporte()
+            }
             estado(contexto) + mapOf("iniciado" to true, "motivo" to "")
         } catch (_: Exception) {
             parar()
@@ -138,6 +170,9 @@ object JarvisNucleo {
         principal.removeCallbacks(soltar)
         ativo = false
         arrastando = false
+        pausado = false
+        economico = false
+        removerReceptor()
         val desenho = vista
         val gerenciador = janela
         vista = null
@@ -153,10 +188,33 @@ object JarvisNucleo {
         }
     }
 
+    /** Congela o giro e o teletransporte sem tirar o núcleo da tela. */
+    fun definirPausado(valor: Boolean) {
+        pausado = valor
+        if (!ativo) return
+        val desenho = vista ?: return
+        principal.removeCallbacks(teletransportarSozinho)
+        principal.removeCallbacks(soltar)
+        if (valor) {
+            desenho.reiniciarAnimacao()
+            desenho.pausar()
+        } else {
+            desenho.retomar()
+            agendarTeletransporte()
+        }
+    }
+
+    /** Modo econômico: menos quadros, brilho menor e teletransporte mais raro. */
+    fun definirEconomico(valor: Boolean) {
+        economico = valor
+        vista?.definirEconomico(valor)
+        if (ativo && !pausado) agendarTeletransporte()
+    }
+
     /** Teletransporte pedido pela tela (e pelo toque longo, se houver). */
     fun teletransportar() {
         val desenho = vista ?: return
-        if (!ativo) return
+        if (!ativo || pausado) return
         desenho.animate().cancel()
         desenho.animate()
             .alpha(0f)
@@ -220,8 +278,10 @@ object JarvisNucleo {
         principal.removeCallbacks(teletransportarSozinho)
         if (!ativo) return
         // Uma folga para não parecer metrônomo.
-        val variacao = (intervaloMs * 0.25).toLong()
-        val espera = intervaloMs + if (variacao > 0) {
+        // No modo econômico o núcleo troca de lugar com o dobro do intervalo.
+        val base = if (economico) intervaloMs * 2 else intervaloMs
+        val variacao = (base * 0.25).toLong()
+        val espera = base + if (variacao > 0) {
             Random.nextLong(-variacao, variacao)
         } else {
             0L
@@ -262,6 +322,37 @@ object JarvisNucleo {
         )
         layout.x = layout.x.coerceIn(folga, maxX)
         layout.y = layout.y.coerceIn(folga + topo, maxY)
+    }
+
+    private fun registrarTela(base: Context) {
+        if (receptorRegistrado) return
+        try {
+            val filtro = IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_SCREEN_ON)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                base.registerReceiver(
+                    receptorTela, filtro, Context.RECEIVER_NOT_EXPORTED
+                )
+            } else {
+                base.registerReceiver(receptorTela, filtro)
+            }
+            receptorRegistrado = true
+        } catch (_: Exception) {
+            receptorRegistrado = false
+        }
+    }
+
+    private fun removerReceptor() {
+        if (!receptorRegistrado) return
+        receptorRegistrado = false
+        val base = app ?: return
+        try {
+            base.unregisterReceiver(receptorTela)
+        } catch (_: Exception) {
+            // O sistema já pode ter soltado o receptor.
+        }
     }
 
     private fun alturaBarra(contexto: Context, nome: String): Int {
@@ -307,6 +398,11 @@ private class NucleoView(contexto: Context) : View(contexto) {
     private val profundidade = FloatArray(malha.pontos.size / 3)
     private var brilho = 0f
     private var ultimoQuadro = 0L
+    private var pausado = false
+    private var suspenso = false
+    private var economico = false
+    private var tempoAcumulado = 0f
+    private var ultimoQuadroEconomico = 0L
     private var inicioX = 0f
     private var inicioY = 0f
     private var arrastou = false
@@ -326,24 +422,80 @@ private class NucleoView(contexto: Context) : View(contexto) {
         postInvalidateOnAnimation()
     }
 
+    /** Para o giro e o clarão, mantendo um quadro parado na tela. */
+    fun pausar() {
+        pausado = true
+        postInvalidate()
+    }
+
+    fun retomar() {
+        pausado = false
+        suspenso = false
+        ultimoQuadro = 0L
+        postInvalidateOnAnimation()
+    }
+
+    /** Tela apagada: nenhum quadro é desenhado até acordar. */
+    fun suspender() {
+        suspenso = true
+    }
+
+    fun acordar() {
+        suspenso = false
+        ultimoQuadro = 0L
+        postInvalidateOnAnimation()
+    }
+
+    /** Menos quadros (20 por segundo) e brilho mais contido. */
+    fun definirEconomico(valor: Boolean) {
+        economico = valor
+        postInvalidateOnAnimation()
+    }
+
+    /** Cancela um teletransporte no meio e devolve o tamanho normal. */
+    fun reiniciarAnimacao() {
+        animate().cancel()
+        alpha = 1f
+        scaleX = 1f
+        scaleY = 1f
+    }
+
     override fun onDraw(canvas: Canvas) {
         val agora = SystemClock.uptimeMillis()
-        val delta = if (ultimoQuadro == 0L) 0f else ((agora - ultimoQuadro) / 1000f)
-        ultimoQuadro = agora
-        brilho = (brilho - delta.coerceIn(0f, 0.1f) * 2.4f).coerceAtLeast(0f)
+        if (suspenso) {
+            ultimoQuadro = agora
+            return
+        }
+        if (pausado) {
+            if (ultimoQuadro == 0L) ultimoQuadro = agora
+        } else {
+            val delta =
+                if (ultimoQuadro == 0L) 0f else ((agora - ultimoQuadro) / 1000f)
+            tempoAcumulado += delta.coerceIn(0f, 0.1f)
+            brilho = (brilho - delta.coerceIn(0f, 0.1f) * 2.4f).coerceAtLeast(0f)
+            ultimoQuadro = agora
+            if (economico) {
+                if (agora - ultimoQuadroEconomico < 50L) return
+                ultimoQuadroEconomico = agora
+            }
+        }
 
-        val tempo = agora / 1000f
+        val tempo = tempoAcumulado
         val raio = min(width, height) * 0.30f
         val centroX = width / 2f
         val centroY = height / 2f + sin(tempo * 1.6f) * 3f * densidade
 
+        if (economico) {
+            canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), 210)
+        }
         desenharHalo(canvas, centroX, centroY, raio)
         desenharEsfera(canvas, centroX, centroY, raio, tempo)
         desenharAneis(canvas, centroX, centroY, raio, tempo)
         desenharParticulas(canvas, centroX, centroY, raio, tempo)
         desenharClarao(canvas, centroX, centroY, raio)
+        if (economico) canvas.restore()
 
-        postInvalidateOnAnimation()
+        if (!pausado) postInvalidateOnAnimation()
     }
 
     private fun desenharHalo(canvas: Canvas, cx: Float, cy: Float, raio: Float) {
