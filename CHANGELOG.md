@@ -16,6 +16,11 @@
 - **Palco direto da conversa**: escrever “mostra fotos de…”, “me mostra um
   vídeo sobre…” ou “traz as últimas notícias de…” abre o palco já pesquisando,
   sem passar pelo módulo e sem gastar chamada do provedor.
+- **Núcleo: menu e medição**: toque longo no núcleo abre um menu escuro com
+  pausar/retomar, modo econômico, teletransportar, tamanho P/M/G, abrir o JARVIS
+  e desligar; toque curto continua abrindo o app. A tela ganhou uma medição real
+  de quadros por segundo e tempo em cada modo, com diferença percentual, aviso de
+  amostra curta e botão para zerar.
 - **Núcleo: pausar e modo econômico**: “Pausar o núcleo” congela o giro e o
   teletransporte sem tirar o núcleo da tela (ele continua visível e abrindo o
   app no toque); “Modo econômico” cai para 20 quadros por segundo, diminui o

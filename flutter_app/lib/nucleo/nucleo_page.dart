@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import '../ui_common.dart';
+import 'medicao_nucleo.dart';
 import 'nucleo_controle.dart';
 import 'nucleo_previa.dart';
 
@@ -26,6 +27,7 @@ class _NucleoPageState extends State<NucleoPage> {
   int tamanho = 112;
   int intervalo = 7;
   String aviso = '';
+  MedicaoNucleo medicao = const MedicaoNucleo();
 
   @override
   void initState() {
@@ -47,6 +49,7 @@ class _NucleoPageState extends State<NucleoPage> {
         carregando = false;
         aviso = '';
       });
+      unawaited(_atualizarMedicao());
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -79,6 +82,7 @@ class _NucleoPageState extends State<NucleoPage> {
           aviso = '';
         }
       });
+      unawaited(_atualizarMedicao());
     } catch (_) {
       if (!mounted) return;
       setState(() => aviso = 'Não consegui falar com o serviço do núcleo.');
@@ -95,6 +99,7 @@ class _NucleoPageState extends State<NucleoPage> {
         ativo = estado.ativo;
         pausado = estado.pausado;
       });
+      unawaited(_atualizarMedicao());
     } catch (_) {
       if (!mounted) return;
       setState(() => aviso = 'Não consegui aplicar o novo tamanho.');
@@ -112,6 +117,7 @@ class _NucleoPageState extends State<NucleoPage> {
         ativo = estado.ativo;
         aviso = '';
       });
+      unawaited(_atualizarMedicao());
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -130,6 +136,7 @@ class _NucleoPageState extends State<NucleoPage> {
         economico = estado.economico;
         ativo = estado.ativo;
       });
+      unawaited(_atualizarMedicao());
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -137,6 +144,39 @@ class _NucleoPageState extends State<NucleoPage> {
         aviso = 'Não consegui mudar o modo econômico.';
       });
     }
+  }
+
+  Future<void> _atualizarMedicao() async {
+    try {
+      final nova = await NucleoControle.medicao();
+      if (!mounted) return;
+      setState(() => medicao = nova);
+    } catch (_) {
+      // Sem medição, a seção fica com o último valor; não vira erro da tela.
+    }
+  }
+
+  Future<void> _zerarMedicao() async {
+    try {
+      final nova = await NucleoControle.zerarMedicao();
+      if (!mounted) return;
+      setState(() => medicao = nova);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => aviso = 'Não consegui zerar a medição.');
+    }
+  }
+
+  String _textoDiferenca() {
+    final diferenca = medicao.diferencaPercentual;
+    if (diferenca == null) return 'Sem amostra dos dois modos ainda.';
+    if (!medicao.conclusiva) {
+      return 'Amostra curta: ainda não dá para concluir. Deixe o núcleo '
+          'alguns segundos em cada modo.';
+    }
+    return 'Diferença medida: ${diferenca.toStringAsFixed(0)}% de quadros por '
+        'segundo (negativo = menos no econômico). É redução de trabalho, não '
+        'número de bateria.';
   }
 
   Future<void> _teleportar() async {
@@ -251,6 +291,39 @@ class _NucleoPageState extends State<NucleoPage> {
                 '20 quadros por segundo, brilho menor, para de desenhar com a '
                 'tela apagada e teletransporta com o dobro do intervalo.',
                 style: TextStyle(color: muted, fontSize: 11, height: 1.4),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Eyebrow('MEDIÇÃO'),
+            const SizedBox(height: 6),
+            Text(
+              'Normal · ${medicao.fpsNormal.toStringAsFixed(1)} quadros/s em '
+              '${medicao.segundosNormais.toStringAsFixed(1)} s',
+              key: const ValueKey('nucleo-medicao-normal'),
+              style: const TextStyle(fontSize: 12),
+            ),
+            Text(
+              'Econômico · ${medicao.fpsEconomico.toStringAsFixed(1)} quadros/s '
+              'em ${medicao.segundosEconomicos.toStringAsFixed(1)} s',
+              key: const ValueKey('nucleo-medicao-eco'),
+              style: const TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _textoDiferenca(),
+              key: const ValueKey('nucleo-medicao-diferenca'),
+              style: TextStyle(
+                color: medicao.conclusiva ? cyan : muted,
+                fontSize: 11,
+                height: 1.45,
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                key: const ValueKey('nucleo-medicao-zerar'),
+                onPressed: () => unawaited(_zerarMedicao()),
+                child: const Text('Zerar medição'),
               ),
             ),
             const SizedBox(height: 6),

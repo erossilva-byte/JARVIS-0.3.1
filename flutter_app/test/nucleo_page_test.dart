@@ -67,6 +67,20 @@ void main() {
             'pausado': pausado,
             'economico': economico,
           };
+        case 'medicao':
+          return {
+            'normalQuadros': 600,
+            'normalMs': 10000,
+            'ecoQuadros': 200,
+            'ecoMs': 10000,
+          };
+        case 'zerarMedicao':
+          return {
+            'normalQuadros': 0,
+            'normalMs': 0,
+            'ecoQuadros': 0,
+            'ecoMs': 0,
+          };
         case 'definirEconomico':
           economico = call.arguments['economico'] == true;
           return {
@@ -201,6 +215,24 @@ void main() {
                 find.byKey(const ValueKey('nucleo-economico')))
             .value,
         isTrue);
+  });
+
+  testWidgets('a medição mostra os dois modos, a diferença e zera',
+      (tester) async {
+    await abrir(tester);
+    await tester.pump(const Duration(milliseconds: 60));
+
+    expect(find.textContaining('60.0 quadros/s'), findsOneWidget);
+    expect(find.textContaining('20.0 quadros/s'), findsOneWidget);
+    expect(find.textContaining('-67%'), findsOneWidget);
+
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('nucleo-medicao-zerar')));
+    await tester.tap(find.byKey(const ValueKey('nucleo-medicao-zerar')));
+    await tester.pump(const Duration(milliseconds: 60));
+
+    expect(chamadas.any((c) => c.method == 'zerarMedicao'), isTrue);
+    expect(find.textContaining('Sem amostra'), findsOneWidget);
   });
 
   testWidgets('sem autorização, explica e oferece o ajuste', (tester) async {

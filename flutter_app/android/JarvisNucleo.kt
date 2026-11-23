@@ -11,6 +11,7 @@ import android.graphics.PixelFormat
 import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -22,6 +23,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.animation.OvershootInterpolator
+import android.widget.LinearLayout
+import android.widget.TextView
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
@@ -60,6 +63,8 @@ object JarvisNucleo {
     private var pausado = false
     private var economico = false
     private var receptorRegistrado = false
+    private var menu: View? = null
+    private var menuLayout: WindowManager.LayoutParams? = null
 
     /** Tela apagada: para de redesenhar até o Android avisar que acendeu. */
     private val receptorTela = object : BroadcastReceiver() {
@@ -140,6 +145,7 @@ object JarvisNucleo {
             val desenho = NucleoView(base).apply {
                 aoArrastar = { dx, dy -> arrastarNaTela(dx, dy) }
                 aoTocar = { abrirApp() }
+                aoAbrirMenu = { abrirMenu() }
             }
             gerenciador.addView(desenho, layout)
             app = base
@@ -172,6 +178,7 @@ object JarvisNucleo {
         arrastando = false
         pausado = false
         economico = false
+        fecharMenu()
         removerReceptor()
         val desenho = vista
         val gerenciador = janela
@@ -254,6 +261,215 @@ object JarvisNucleo {
         principal.removeCallbacks(soltar)
         principal.postDelayed(soltar, PAUSA_APOS_ARRASTO_MS)
     }
+
+    /** Medição do desenho: quadros e tempo em cada modo, desde a abertura. */
+    fun medicao(): Map<String, Any> = vista?.medicao() ?: mapOf(
+        "normalQuadros" to 0L,
+        "normalMs" to 0L,
+        "ecoQuadros" to 0L,
+        "ecoMs" to 0L,
+    )
+
+    fun zerarMedicao() {
+        vista?.zerarMedicao()
+    }
+
+    /**
+     * Menu do núcleo: toque longo abre, toque curto continua abrindo o app.
+     * Cada opção chama a mesma função que a tela chama — não há atalho falso.
+     */
+    private fun abrirMenu() {
+        if (!ativo || menu != null) return
+        val base = app ?: return
+        val gerenciador = janela ?: return
+        principal.removeCallbacks(teletransportarSozinho)
+        val painel = LinearLayout(base).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), dp(8), dp(10), dp(10))
+            background = GradientDrawable().apply {
+                setColor(0xF208111C.toInt())
+                cornerRadius = dp(16).toFloat()
+                setStroke(dp(1), 0x5535E6FF)
+            }
+        }
+        painel.addView(tituloMenu(base))
+        painel.addView(
+            itemMenu(base, if (pausado) "Retomar" else "Pausar") {
+                fecharMenu()
+                definirPausado(!pausado)
+            }
+        )
+        painel.addView(
+            itemMenu(
+                base,
+                "Modo econômico: ${if (economico) "ligado" else "desligado"}",
+            ) {
+                fecharMenu()
+                definirEconomico(!economico)
+            }
+        )
+        painel.addView(
+            itemMenu(
+                base,
+                "Teletransportar agora",
+                habilitado = !pausado,
+            ) {
+                fecharMenu()
+                teletransportar()
+            }
+        )
+        painel.addView(linhaTamanhos(base))
+        painel.addView(
+            itemMenu(base, "Abrir o JARVIS") {
+                fecharMenu()
+                abrirApp()
+            }
+        )
+        painel.addView(
+            itemMenu(base, "Desligar o núcleo", destaque = true) {
+                fecharMenu()
+                parar()
+            }
+        )
+        painel.setOnTouchListener { _, evento ->
+            if (evento.action == MotionEvent.ACTION_OUTSIDE) {
+                fecharMenu()
+                true
+            } else {
+                false
+            }
+        }
+        val largura = dp(206)
+        val metricas = base.resources.displayMetrics
+        val margem = dp(8)
+        val nucleo = parametros
+        val aoLado = (nucleo?.x ?: 0) + (nucleo?.width ?: dp(112)) + margem
+        val x = if (aoLado + largura <= metricas.widthPixels) {
+            aoLado
+        } else {
+            max(margem, (nucleo?.x ?: 0) - largura - margem)
+        }
+        val topo = alturaBarra(base, "status_bar_height") + margem
+        val y = ((nucleo?.y ?: dp(120)) - dp(48)).coerceIn(
+            topo, max(topo, metricas.heightPixels - dp(360))
+        )
+        val layout = WindowManager.LayoutParams(
+            largura,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            tipoSobreposicao(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            this.x = x
+            this.y = y
+        }
+        try {
+            gerenciador.addView(painel, layout)
+            menu = painel
+            menuLayout = layout
+        } catch (_: Exception) {
+            menu = null
+            menuLayout = null
+            if (!pausado) agendarTeletransporte()
+        }
+    }
+
+    private fun fecharMenu() {
+        val painel = menu ?: return
+        val gerenciador = janela
+        menu = null
+        menuLayout = null
+        if (gerenciador != null) {
+            try {
+                gerenciador.removeView(painel)
+            } catch (_: Exception) {
+                // O sistema já pode ter removido o menu.
+            }
+        }
+        if (ativo && !pausado) agendarTeletransporte()
+    }
+
+    private fun aplicarTamanho(novoDp: Int) {
+        val base = app ?: return
+        iniciar(base, novoDp, intervaloMs, economico)
+    }
+
+    private fun tituloMenu(base: Context): TextView = TextView(base).apply {
+        text = "JARVIS · núcleo"
+        setTextColor(0xFF7DE9FF.toInt())
+        textSize = 11f
+        setPadding(dp(8), dp(2), dp(8), dp(6))
+    }
+
+    private fun itemMenu(
+        base: Context,
+        rotulo: String,
+        habilitado: Boolean = true,
+        destaque: Boolean = false,
+        aoClicar: () -> Unit,
+    ): TextView = TextView(base).apply {
+        text = rotulo
+        textSize = 13f
+        setTextColor(
+            when {
+                !habilitado -> 0x55E6F7FF
+                destaque -> 0xFFFFB4A9.toInt()
+                else -> 0xFFE6F7FF.toInt()
+            }
+        )
+        setPadding(dp(8), dp(10), dp(8), dp(10))
+        isClickable = habilitado
+        isFocusable = false
+        if (habilitado) setOnClickListener { aoClicar() }
+    }
+
+    private fun linhaTamanhos(base: Context): View {
+        val linha = LinearLayout(base).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        linha.addView(
+            TextView(base).apply {
+                text = "Tamanho"
+                setTextColor(0xFF9FB6C6.toInt())
+                textSize = 12f
+                setPadding(dp(8), dp(8), dp(6), dp(8))
+            }
+        )
+        for ((rotulo, valor) in listOf("P" to 80, "M" to 112, "G" to 150)) {
+            linha.addView(
+                TextView(base).apply {
+                    text = rotulo
+                    gravity = Gravity.CENTER
+                    textSize = 13f
+                    setTextColor(
+                        if (tamanhoDp == valor) 0xFF35E6FF.toInt()
+                        else 0xFFE6F7FF.toInt()
+                    )
+                    setPadding(dp(6), dp(8), dp(6), dp(8))
+                    setOnClickListener {
+                        fecharMenu()
+                        aplicarTamanho(valor)
+                    }
+                },
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+            )
+        }
+        return linha
+    }
+
+    private fun tipoSobreposicao(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+
+    private fun dp(valor: Int): Int =
+        (valor * (app?.resources?.displayMetrics?.density ?: 1f)).toInt()
 
     fun abrirAjuste(contexto: Context) {
         try {
@@ -384,6 +600,7 @@ private class NucleoView(contexto: Context) : View(contexto) {
 
     var aoArrastar: ((Float, Float) -> Unit)? = null
     var aoTocar: (() -> Unit)? = null
+    var aoAbrirMenu: (() -> Unit)? = null
 
     private val densidade = resources.displayMetrics.density
     private val malha = malhaGeodesica()
@@ -403,6 +620,19 @@ private class NucleoView(contexto: Context) : View(contexto) {
     private var economico = false
     private var tempoAcumulado = 0f
     private var ultimoQuadroEconomico = 0L
+    private var quadrosNormal = 0L
+    private var msNormal = 0L
+    private var quadrosEconomico = 0L
+    private var msEconomico = 0L
+    private var ultimoDesenho = 0L
+    private val relogio = Handler(Looper.getMainLooper())
+    private var abriuMenu = false
+    private val abrirMenuAtrasado = Runnable {
+        if (!arrastou) {
+            abriuMenu = true
+            aoAbrirMenu?.invoke()
+        }
+    }
     private var inicioX = 0f
     private var inicioY = 0f
     private var arrastou = false
@@ -425,6 +655,7 @@ private class NucleoView(contexto: Context) : View(contexto) {
     /** Para o giro e o clarão, mantendo um quadro parado na tela. */
     fun pausar() {
         pausado = true
+        ultimoDesenho = 0L
         postInvalidate()
     }
 
@@ -432,18 +663,37 @@ private class NucleoView(contexto: Context) : View(contexto) {
         pausado = false
         suspenso = false
         ultimoQuadro = 0L
+        ultimoDesenho = 0L
         postInvalidateOnAnimation()
     }
 
     /** Tela apagada: nenhum quadro é desenhado até acordar. */
     fun suspender() {
         suspenso = true
+        ultimoDesenho = 0L
     }
 
     fun acordar() {
         suspenso = false
         ultimoQuadro = 0L
+        ultimoDesenho = 0L
         postInvalidateOnAnimation()
+    }
+
+    /** Quadros e tempo desenhados em cada modo, medidos no próprio núcleo. */
+    fun medicao(): Map<String, Any> = mapOf(
+        "normalQuadros" to quadrosNormal,
+        "normalMs" to msNormal,
+        "ecoQuadros" to quadrosEconomico,
+        "ecoMs" to msEconomico,
+    )
+
+    fun zerarMedicao() {
+        quadrosNormal = 0L
+        msNormal = 0L
+        quadrosEconomico = 0L
+        msEconomico = 0L
+        ultimoDesenho = 0L
     }
 
     /** Menos quadros (20 por segundo) e brilho mais contido. */
@@ -477,6 +727,21 @@ private class NucleoView(contexto: Context) : View(contexto) {
             if (economico) {
                 if (agora - ultimoQuadroEconomico < 50L) return
                 ultimoQuadroEconomico = agora
+            }
+            // A medição conta só o que foi desenhado de verdade.
+            if (ultimoDesenho != 0L) {
+                val intervalo = (agora - ultimoDesenho).coerceIn(0L, 1_000L)
+                if (economico) {
+                    msEconomico += intervalo
+                } else {
+                    msNormal += intervalo
+                }
+            }
+            ultimoDesenho = agora
+            if (economico) {
+                quadrosEconomico++
+            } else {
+                quadrosNormal++
             }
         }
 
@@ -633,6 +898,9 @@ private class NucleoView(contexto: Context) : View(contexto) {
                 inicioX = event.rawX
                 inicioY = event.rawY
                 arrastou = false
+                abriuMenu = false
+                relogio.removeCallbacks(abrirMenuAtrasado)
+                relogio.postDelayed(abrirMenuAtrasado, 480L)
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
@@ -640,6 +908,7 @@ private class NucleoView(contexto: Context) : View(contexto) {
                 val dy = event.rawY - inicioY
                 if (!arrastou && abs(dx) + abs(dy) > 6f * densidade) {
                     arrastou = true
+                    relogio.removeCallbacks(abrirMenuAtrasado)
                 }
                 if (arrastou) {
                     aoArrastar?.invoke(dx, dy)
@@ -649,10 +918,16 @@ private class NucleoView(contexto: Context) : View(contexto) {
                 return true
             }
             MotionEvent.ACTION_UP -> {
-                if (!arrastou) aoTocar?.invoke()
+                relogio.removeCallbacks(abrirMenuAtrasado)
+                if (!arrastou && !abriuMenu) aoTocar?.invoke()
+                abriuMenu = false
                 return true
             }
-            MotionEvent.ACTION_CANCEL -> return true
+            MotionEvent.ACTION_CANCEL -> {
+                relogio.removeCallbacks(abrirMenuAtrasado)
+                abriuMenu = false
+                return true
+            }
         }
         return super.onTouchEvent(event)
     }
@@ -661,6 +936,11 @@ private class NucleoView(contexto: Context) : View(contexto) {
         super.performClick()
         aoTocar?.invoke()
         return true
+    }
+
+    override fun onDetachedFromWindow() {
+        relogio.removeCallbacks(abrirMenuAtrasado)
+        super.onDetachedFromWindow()
     }
 }
 

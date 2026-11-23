@@ -43,6 +43,20 @@ tela se teletransportando com animação.
   acender) e dobra o intervalo do teletransporte. É uma redução, medida pelo que
   o código faz, não uma promessa de número de bateria.
 
+## Menu no núcleo e medição da economia
+
+- **Menu**: toque curto abre o app; toque longo (480 ms) abre um menu escuro
+  ancorado ao lado do núcleo, com Pausar/Retomar, Modo econômico, Teletransportar
+  agora (desabilitado quando pausado), Tamanho P/M/G, Abrir o JARVIS e Desligar o
+  núcleo. Tocar fora fecha. Cada item chama a mesma função da tela; nada é
+  decorativo. Enquanto o menu está aberto, o teletransporte agendado fica
+  suspenso.
+- **Medição**: o próprio desenho conta quadros e tempo em cada modo (normal e
+  econômico). A tela mostra quadros/s, segundos medidos, a diferença percentual e
+  um botão para zerar. Com menos de 5 s em um dos modos, a tela diz que a amostra
+  é curta e não conclui. Não há promessa de bateria: a medição diz trabalho de
+  desenho, não consumo elétrico.
+
 ## Limites, sem rodeio
 
 - **O núcleo vive enquanto o processo do JARVIS viver.** Ele não é um serviço
@@ -59,13 +73,15 @@ tela se teletransportando com animação.
 ## Verificação
 
 - `flutter analyze` limpo.
-- `flutter test` — **362 testes** aprovados (357 anteriores + 5 da tela do
-  núcleo, com canal simulado: ligar, teletransportar, pausar/retomar,
-  econômico e autorização).
+- `flutter test` — **368 testes** aprovados (357 anteriores + 6 da tela do
+  núcleo, com canal simulado, e 5 do cálculo da medição).
 - `python3 tests/test_nucleo_flutuante.py` aprovado e registrado no `test:all`.
 
 ## O que não foi verificado
 
+- O menu do núcleo **não foi aberto em aparelho** e não tem teste de toque real:
+  o contrato confere estrutura, itens e chamadas, não o comportamento na janela
+  sobreposta.
 - **Compilação Kotlin/Android**: não há Android SDK nesta sessão. O contrato
   confere o código e o desenho, não o `addView` nem o APK.
 - **Aparência real** do núcleo, do brilho, do teletransporte e do arrasto em

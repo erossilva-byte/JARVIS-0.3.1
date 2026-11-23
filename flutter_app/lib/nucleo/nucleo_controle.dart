@@ -1,5 +1,7 @@
 import 'package:flutter/services.dart';
 
+import 'medicao_nucleo.dart';
+
 /// Estado do núcleo flutuante, como o Android o descreve.
 class NucleoEstado {
   const NucleoEstado({
@@ -93,6 +95,13 @@ class NucleoControle {
 
   static Future<bool> teleportar() async =>
       await canal.invokeMethod<bool>('teleportar') ?? false;
+
+  /// Quadros e tempo desenhados em cada modo, medidos pelo próprio núcleo.
+  static Future<MedicaoNucleo> medicao() async =>
+      MedicaoNucleo.deMapa(await canal.invokeMethod<Object?>('medicao'));
+
+  static Future<MedicaoNucleo> zerarMedicao() async =>
+      MedicaoNucleo.deMapa(await canal.invokeMethod<Object?>('zerarMedicao'));
 
   static Future<void> abrirAjusteSobreposicao() =>
       canal.invokeMethod<void>('abrirAjusteSobreposicao');

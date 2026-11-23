@@ -261,6 +261,11 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                         JarvisNucleo.teletransportar()
                         result.success(true)
                     }
+                    "medicao" -> result.success(JarvisNucleo.medicao())
+                    "zerarMedicao" -> {
+                        JarvisNucleo.zerarMedicao()
+                        result.success(JarvisNucleo.medicao())
+                    }
                     "abrirAjusteSobreposicao" -> {
                         JarvisNucleo.abrirAjuste(this)
                         result.success(true)

@@ -105,6 +105,37 @@ teste = ler(APP / "test" / "nucleo_page_test.dart")
 exigir("pausar congela" in teste and "modo econômico" in teste,
        "teste sem pausar/economia")
 
+# 6c. Menu no núcleo: cada opção executa a função de verdade.
+for termo in ("abrirMenu", "fecharMenu", "aoAbrirMenu", "480L",
+              "ACTION_OUTSIDE", "Pausar", "Retomar",
+              "Modo econômico: ", "Teletransportar agora", "Abrir o JARVIS",
+              "Desligar o núcleo", "linhaTamanhos", "aplicarTamanho"):
+    exigir(termo in kotlin, f"menu do núcleo sem {termo}")
+exigir("definirPausado(!pausado)" in kotlin,
+       "item de pausa não alterna de verdade")
+exigir("definirEconomico(!economico)" in kotlin,
+       "item do modo econômico não alterna de verdade")
+exigir("setOnClickListener" in kotlin and "isClickable = habilitado" in kotlin,
+       "itens do menu não executam ao toque")
+exigir("FLAG_WATCH_OUTSIDE_TOUCH" in kotlin,
+       "menu não fecha ao tocar fora")
+
+# 6d. Medição da economia: quadros e tempo por modo, calculados no aparelho.
+for termo in ("fun medicao()", "fun zerarMedicao()", "quadrosNormal",
+              "msNormal", "quadrosEconomico", "msEconomico",
+              "ultimoDesenho"):
+    exigir(termo in kotlin, f"medição sem {termo}")
+for termo in ('"medicao"', '"zerarMedicao"'):
+    exigir(termo in principal, f"MainActivity sem {termo}")
+for termo in ("medicao()", "zerarMedicao()", "MedicaoNucleo"):
+    exigir(termo in controle, f"nucleo_controle.dart sem {termo}")
+for termo in ("nucleo-medicao-normal", "nucleo-medicao-eco",
+              "nucleo-medicao-diferenca", "nucleo-medicao-zerar",
+              "Amostra curta"):
+    exigir(termo in pagina, f"medição na tela sem {termo}")
+exigir((APP / "test" / "medicao_nucleo_test.dart").is_file(),
+       "teste do cálculo da medição ausente")
+
 # 7. O arquivo Kotlin entra no build e o teste está na esteira.
 exigir("JarvisNucleo.kt" in preparo,
        "preparo do Android não copia JarvisNucleo.kt")
