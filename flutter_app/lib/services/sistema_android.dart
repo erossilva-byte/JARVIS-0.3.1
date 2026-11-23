@@ -80,6 +80,26 @@ class SistemaAndroid {
     }
   }
 
+  /// Abre um link http(s) no navegador do aparelho.
+  ///
+  /// Devolve `false` quando não há integração (Windows/teste) ou quando o
+  /// Android recusa — o palco então mostra o endereço em vez de fingir que
+  /// abriu.
+  static Future<bool> abrirUrl(String url) async {
+    final limpo = url.trim();
+    if (!limpo.startsWith('http://') && !limpo.startsWith('https://')) {
+      return false;
+    }
+    try {
+      final abriu = await canal.invokeMethod<bool>('abrirUrl', {'url': limpo});
+      return abriu ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
   /// Atualiza o texto de estado do widget. Silencioso por desenho: widget é acessório.
   static Future<void> atualizarWidget(String texto) async {
     try {

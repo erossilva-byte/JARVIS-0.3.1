@@ -24,10 +24,15 @@ List<Map<String, String>> mensagensPerguntaLivre(
   String personalidade = '',
   String? pessoas,
   String? habilidades,
+  String? especialidade,
 }) {
   final texto = pergunta.trim();
   final sistema = [
     if (personalidade.trim().isNotEmpty) personalidade.trim(),
+    // CADeSIMU e programação: a instrução da área entra antes da régua de voz,
+    // que continua mandando resumir em três frases.
+    if (especialidade != null && especialidade.trim().isNotEmpty)
+      especialidade.trim(),
     instrucaoPerguntaVoz,
   ].join('\n\n');
   return montarMensagens(

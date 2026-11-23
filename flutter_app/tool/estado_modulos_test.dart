@@ -4,8 +4,8 @@ import 'package:jarvis_nova/core/estado_modulos.dart';
 
 void main() {
   // 1. Um estado por módulo, com nome único.
-  assert(situacoesModulos.length == 25,
-      'esperava 25 módulos, achei ${situacoesModulos.length}');
+  assert(situacoesModulos.length == 26,
+      'esperava 26 módulos, achei ${situacoesModulos.length}');
   final nomes = situacoesModulos.map((s) => s.nome).toList();
   assert(nomes.toSet().length == nomes.length, 'nome de módulo repetido');
 
@@ -21,7 +21,8 @@ void main() {
   // 3. Módulo com tela tem botão; módulo sem tela diz onde ela mora.
   for (final situacao in situacoesModulos) {
     if (situacao.tela == TelaModulo.nenhuma) {
-      assert(situacao.onde.isNotEmpty || situacao.estado == EstadoModulo.ausente,
+      assert(
+          situacao.onde.isNotEmpty || situacao.estado == EstadoModulo.ausente,
           '${situacao.nome} sem tela e sem dizer onde ela mora');
     } else if (situacao.estado == EstadoModulo.ausente) {
       // Ausente também pode abrir tela — desde que a tela seja a explicação do
@@ -50,12 +51,13 @@ void main() {
   for (final parcial in [
     'Programação (sem execução)',
     'Avatar 3D',
+    'Modo palco',
   ]) {
     final situacao = situacaoDe(parcial);
     assert(situacao.estado == EstadoModulo.parcial,
         '$parcial deveria estar como parcial');
-    assert(situacao.tela != TelaModulo.nenhuma,
-        '$parcial deveria abrir uma tela');
+    assert(
+        situacao.tela != TelaModulo.nenhuma, '$parcial deveria abrir uma tela');
   }
 
   // 5. O que o usuário pediu para terminar está como pronto.

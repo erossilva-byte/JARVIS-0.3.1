@@ -30,6 +30,7 @@ enum TelaModulo {
   agentes,
   modelosLocais,
   habilidades,
+  palco,
   kws,
   visao,
   arquivos,
@@ -92,7 +93,8 @@ const situacoesModulos = <SituacaoModulo>[
     nome: 'Hermes Agent',
     estado: EstadoModulo.pronto,
     titulo: 'Plano local e execução pelo provedor',
-    detalhe: 'O Hermes escolhe o agente do domínio, decompõe o pedido em passos '
+    detalhe:
+        'O Hermes escolhe o agente do domínio, decompõe o pedido em passos '
         'e mostra o plano antes de executar. A execução usa o provedor de IA que '
         'você configurou; sem chave, o plano aparece e a tela diz que falta a '
         'chave, em vez de fingir que respondeu.',
@@ -111,7 +113,8 @@ const situacoesModulos = <SituacaoModulo>[
     nome: 'Modelos locais',
     estado: EstadoModulo.ausente,
     titulo: 'Sem motor de modelo local neste APK',
-    detalhe: 'Não há llama.cpp, GGUF nem pesos empacotados: este build responde '
+    detalhe:
+        'Não há llama.cpp, GGUF nem pesos empacotados: este build responde '
         'pelo provedor configurado. A tela mostra o que o aparelho tem e o que '
         'falta para operar offline; nada é baixado sem você mandar.',
     tela: TelaModulo.modelosLocais,
@@ -137,7 +140,8 @@ const situacoesModulos = <SituacaoModulo>[
     nome: 'Obsidian',
     estado: EstadoModulo.parcial,
     titulo: 'Cofre lido e gravado; sincronização tem tela própria',
-    detalhe: 'Ler e gravar o cofre do Obsidian funciona pela pasta escolhida. A '
+    detalhe:
+        'Ler e gravar o cofre do Obsidian funciona pela pasta escolhida. A '
         'sincronização automática, os conflitos e os backups de conflito ficam '
         'na gaveta, em Memória → Sincronização e Conflitos.',
     onde: 'Gaveta → Memória → Sincronização',
@@ -146,9 +150,22 @@ const situacoesModulos = <SituacaoModulo>[
     nome: 'Habilidades em Markdown',
     estado: EstadoModulo.pronto,
     titulo: 'Skills/*.md carregadas do aparelho',
-    detalhe: 'Os procedimentos em Markdown são lidos da pasta do app e entram no '
+    detalhe:
+        'Os procedimentos em Markdown são lidos da pasta do app e entram no '
         'pedido quando casam com a pergunta.',
     tela: TelaModulo.habilidades,
+  ),
+  SituacaoModulo(
+    nome: 'Modo palco',
+    estado: EstadoModulo.parcial,
+    titulo: 'Imagem, capa de vídeo e notícia na tela',
+    detalhe: 'Pesquisa em três fontes públicas sem chave — Wikimedia '
+        'Commons (imagens), Google Notícias (RSS) e Dailymotion (vídeos) — e '
+        'mostra o resultado no palco. A imagem e a capa do vídeo aparecem '
+        'inteiras; o vídeo e a matéria abrem no navegador, porque este APK não '
+        'tem player nem leitor embutido. Sem internet, a tela diz o motivo em '
+        'vez de inventar resultado.',
+    tela: TelaModulo.palco,
   ),
   SituacaoModulo(
     nome: 'Voz e KWS',
@@ -180,7 +197,8 @@ const situacoesModulos = <SituacaoModulo>[
     nome: 'Programação (sem execução)',
     estado: EstadoModulo.parcial,
     titulo: 'Assistência de código; execução não disponível',
-    detalhe: 'Criar, analisar, modificar e explicar código, com área de código e '
+    detalhe:
+        'Criar, analisar, modificar e explicar código, com área de código e '
         'prompt de pedido pronto. A resposta vem do provedor de IA que você '
         'configurou; nada é executado, compilado ou testado aqui, porque não há '
         'sandbox nem terminal neste APK.',
@@ -210,7 +228,8 @@ const situacoesModulos = <SituacaoModulo>[
     nome: 'Perfis de timbre',
     estado: EstadoModulo.pronto,
     titulo: 'Grave, natural e ágil',
-    detalhe: 'Três perfis de tom e ritmo da voz do aparelho, gravados e valendo '
+    detalhe:
+        'Três perfis de tom e ritmo da voz do aparelho, gravados e valendo '
         'também com o app fechado.',
     tela: TelaModulo.timbre,
   ),
@@ -218,7 +237,8 @@ const situacoesModulos = <SituacaoModulo>[
     nome: 'Gestos e modo noturno',
     estado: EstadoModulo.pronto,
     titulo: 'Virar para calar e voz baixa',
-    detalhe: 'Virar o celular cala a fala e o modo noturno baixa o volume da voz '
+    detalhe:
+        'Virar o celular cala a fala e o modo noturno baixa o volume da voz '
         'sem silenciar o assistente.',
     tela: TelaModulo.gestos,
   ),
@@ -242,7 +262,8 @@ const situacoesModulos = <SituacaoModulo>[
     nome: 'Segurança e privacidade',
     estado: EstadoModulo.pronto,
     titulo: 'Bloqueio, PIN e biometria',
-    detalhe: 'Tela de bloqueio com PIN, biometria do aparelho e modos que exigem '
+    detalhe:
+        'Tela de bloqueio com PIN, biometria do aparelho e modos que exigem '
         'mais de um fator. O PIN não é guardado em texto puro.',
     tela: TelaModulo.seguranca,
   ),
@@ -280,7 +301,8 @@ const situacoesModulos = <SituacaoModulo>[
     nome: 'Backup e restauração',
     estado: EstadoModulo.parcial,
     titulo: 'Backup de conflito; pacote completo ainda não',
-    detalhe: 'A memória guarda backup antes de sobrescrever em conflito. Exportar '
+    detalhe:
+        'A memória guarda backup antes de sobrescrever em conflito. Exportar '
         'e restaurar tudo — preferências, pessoas, tarefas e cofre — ainda não '
         'tem tela.',
     onde: 'Gaveta → Memória → Conflitos',
@@ -289,7 +311,8 @@ const situacoesModulos = <SituacaoModulo>[
     nome: 'Atualizações',
     estado: EstadoModulo.pronto,
     titulo: 'Versão, integridade e download',
-    detalhe: 'Confere a versão instalada, o hash do pacote e conduz a atualização '
+    detalhe:
+        'Confere a versão instalada, o hash do pacote e conduz a atualização '
         'pelo APK assinado.',
     tela: TelaModulo.atualizacoes,
   ),
@@ -297,7 +320,8 @@ const situacoesModulos = <SituacaoModulo>[
     nome: 'Personalização',
     estado: EstadoModulo.pronto,
     titulo: 'Tratamento, humor e voz',
-    detalhe: 'Tratamento, humor e preferências de fala. A tela fica na gaveta, em '
+    detalhe:
+        'Tratamento, humor e preferências de fala. A tela fica na gaveta, em '
         'Personalidade.',
     onde: 'Gaveta → Personalidade',
   ),

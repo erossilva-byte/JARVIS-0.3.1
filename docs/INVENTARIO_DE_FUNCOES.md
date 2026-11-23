@@ -864,3 +864,23 @@ aparelho nesta sessão.
 | Avatar no áudio | — | as expressões são prévia; não reagem ao microfone | `services/avatar_page.dart` |
 | Voz externa | Gaveta → Voz → Voz externa (ID) | Fish Audio: `reference_id` no corpo, chave no `Authorization` | `core/voz_externa.dart` |
 | ID padrão da voz | preferências do aparelho | `82d13948027e4be69892dd3d0104e681` | `idVozPadrao` |
+
+## Especialidades, palco e microfone de perguntas — Fase 19 (bloco 105, 2026-11-23)
+
+| Função | Onde | Estado | Arquivo |
+|---|---|---|---|
+| Especialidade CADeSIMU | conversa e voz de fundo | comando, ladder, dimensionamento, `.cad` e limites escritos | `core/especialidades.dart` |
+| Especialidade programação | conversa e voz de fundo | criação, revisão, erro e teste; **sem executar** | `especialidadeProgramacao` |
+| Reconhecimento da área | pedido do usuário | palavra-chave, com CADeSIMU antes de programação | `especialidadeDe` |
+| Instrução no pedido | conversa, pergunta livre e ponte | entra só quando a área casa; conversa comum fica igual | `montarMensagens`, `mensagensPerguntaLivre` |
+| Pedido de palco | texto do usuário | imagem, vídeo ou notícia, com o assunto limpo | `core/palco.dart` |
+| Imagens | palco | Wikimedia Commons, sem chave, miniatura de 1200 px | `lerImagensDoCommons` |
+| Notícias | palco | RSS do Google Notícias em pt-BR, sem chave | `lerNoticiasDoRss` |
+| Vídeos | palco | Dailymotion, sem chave; capa e link | `lerVideosDoDailymotion` |
+| Link direto | palco | imagem por extensão, vídeo conhecido, página | `itemDeLink` |
+| Falha da fonte | palco | tempo, conexão, HTTP e lista vazia viram frase na tela | `PalcoException` |
+| Abrir no navegador | palco | `ACTION_VIEW` só para `http(s)` | `SistemaAndroid.abrirUrl` |
+| Melhor transcrição | microfone da tela e do fundo | escolhe pela nota de confiança | `melhorTranscricao` |
+| Pista de vocabulário | microfone (Android 13+) | elétrica, programação, palco e comandos | `EXTRA_BIASING_STRINGS` |
+| Pergunta no segundo plano | palavra de ativação | até 20 s de fala; comando desconhecido vai para a IA | `JarvisEscutaFundo.LIMITE_MS` |
+| Modo palco no catálogo | módulo | parcial: imagem e notícia na tela; vídeo abre fora | `catalog.dart`, `estado_modulos.dart` |

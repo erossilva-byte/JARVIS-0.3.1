@@ -331,7 +331,7 @@ class KwsForegroundService : Service() {
                                     iniciarComandoEmSegundoPlano(keyword)
                                     return@postDelayed
                                 }
-                                updateNotification("Palavra detectada · ouvindo seu comando")
+                                updateNotification("Palavra detectada · ouvindo sua fala")
                                 // Reabre o app em primeiro plano para o reconhecimento
                                 // do comando. O serviço segue vivo e volta a ouvir.
                                 val launch = packageManager.getLaunchIntentForPackage(packageName)
@@ -390,8 +390,9 @@ class KwsForegroundService : Service() {
     }
 
     /**
-     * Palavra ouvida com o app fechado: mostra que está ativo, escuta o comando,
-     * executa o que é permitido e responde falando. Nada é enviado para a nuvem.
+     * Palavra ouvida com o app fechado: mostra que está ativo, escuta a fala,
+     * executa o que é permitido e responde falando. Pergunta livre vai para o
+     * provedor de IA já configurado; o áudio continua no aparelho até aqui.
      */
     private fun iniciarComandoEmSegundoPlano(palavra: String) {
         if (comandoEmAndamento) {
@@ -409,8 +410,8 @@ class KwsForegroundService : Service() {
      * uma vez antes de desistir — o usuário não precisa chamar de novo.
      */
     private fun ouvirComandoFundo() {
-        updateNotification("JARVIS ativo · ouvindo seu comando")
-        avisarAtivo("JARVIS ativo", "Ouvindo seu comando…")
+        updateNotification("JARVIS ativo · ouvindo sua pergunta ou comando")
+        avisarAtivo("JARVIS ativo", "Pergunte ou dê um comando…")
         escuta?.cancelar()
         val escutaComando = JarvisEscutaFundo(applicationContext)
         escuta = escutaComando

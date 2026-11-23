@@ -53,7 +53,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_085-resposta-em-qualquer-modo-e-resumo-tatico.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.88.4+18804" in pubspec, "versão não atualizada para 1.72.0")
+exigir("version: 1.88.5+18805" in pubspec, "versão não atualizada para 1.72.0")
 exigir("1.72.0" in changelog and "resumo" in changelog.lower(),
        "CHANGELOG sem o bloco 1.72.0 do resumo")
 exigir("tests/test_resumo_tatico_flutter.py" in pacote,

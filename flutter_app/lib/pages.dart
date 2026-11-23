@@ -17,6 +17,7 @@ import 'services/hermes_page.dart';
 import 'services/kws_controller.dart';
 import 'services/kws_settings_page.dart';
 import 'services/modelos_locais_page.dart';
+import 'services/palco_page.dart';
 import 'services/programacao_page.dart';
 import 'services/projetista_page.dart';
 import 'services/segundo_plano_page.dart';
@@ -94,32 +95,31 @@ class ModulePage extends StatelessWidget {
                   color: cor.withValues(alpha: .08),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: cor.withValues(alpha: .28))),
-              child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(_iconeEstado(situacao.estado), color: cor),
-                    const SizedBox(width: 10),
-                    Expanded(
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                          Text(
-                              '${rotuloEstado(situacao.estado)} · '
-                              '${situacao.titulo}',
-                              style: TextStyle(
-                                  color: cor, fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 4),
-                          Text(situacao.detalhe,
-                              style: const TextStyle(
-                                  color: muted, fontSize: 11, height: 1.45)),
-                          if (situacao.onde.isNotEmpty) ...[
-                            const SizedBox(height: 6),
-                            Text(situacao.onde,
-                                style: const TextStyle(
-                                    color: cyan, fontSize: 10.5)),
-                          ],
-                        ])),
-                  ])),
+              child:
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(_iconeEstado(situacao.estado), color: cor),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(
+                          '${rotuloEstado(situacao.estado)} · '
+                          '${situacao.titulo}',
+                          style: TextStyle(
+                              color: cor, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Text(situacao.detalhe,
+                          style: const TextStyle(
+                              color: muted, fontSize: 11, height: 1.45)),
+                      if (situacao.onde.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(situacao.onde,
+                            style:
+                                const TextStyle(color: cyan, fontSize: 10.5)),
+                      ],
+                    ])),
+              ])),
           const SizedBox(height: 18),
           ..._acoes(c, situacao),
         ]));
@@ -131,8 +131,8 @@ class ModulePage extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 10),
         child: FilledButton.icon(
           key: ValueKey(chave),
-          onPressed: () => Navigator.of(c).push(MaterialPageRoute<void>(
-              builder: (_) => destino())),
+          onPressed: () => Navigator.of(c)
+              .push(MaterialPageRoute<void>(builder: (_) => destino())),
           icon: Icon(icone),
           label: Text(rotulo),
         ),
@@ -167,6 +167,11 @@ class ModulePage extends StatelessWidget {
           _botao(c, 'abrir-habilidades', Icons.school_outlined,
               'Abrir habilidades em Markdown', () => const HabilidadesPage()),
         ];
+      case TelaModulo.palco:
+        return [
+          _botao(c, 'abrir-palco', Icons.slideshow_rounded,
+              'Abrir o modo palco', () => const PalcoPage()),
+        ];
       case TelaModulo.kws:
         return [
           _botao(c, 'abrir-kws', Icons.graphic_eq_rounded,
@@ -188,7 +193,10 @@ class ModulePage extends StatelessWidget {
         ];
       case TelaModulo.cadesimu:
         return [
-          _botao(c, 'abrir-importador-cad', Icons.electric_bolt_rounded,
+          _botao(
+              c,
+              'abrir-importador-cad',
+              Icons.electric_bolt_rounded,
               'Abrir importador .cad (somente leitura)',
               () => const CadesimuPage()),
           _botao(c, 'abrir-simulador-circuitos', Icons.science_outlined,
@@ -238,16 +246,28 @@ class ModulePage extends StatelessWidget {
               Icons.smartphone_rounded,
               'Aparelho conectado (mensagens, Spotify, contatos)',
               () => const AparelhoPage()),
-          _botao(c, 'abrir-acessibilidade', Icons.accessibility_new_rounded,
+          _botao(
+              c,
+              'abrir-acessibilidade',
+              Icons.accessibility_new_rounded,
               'Acessibilidade de tela (ler e tocar)',
               () => const AcessibilidadePage()),
-          _botao(c, 'abrir-central-dispositivo', Icons.memory_rounded,
+          _botao(
+              c,
+              'abrir-central-dispositivo',
+              Icons.memory_rounded,
               'Central do aparelho (memória, rede, apps)',
               () => const DispositivoPage()),
-          _botao(c, 'abrir-tarefas-automacoes', Icons.checklist_rounded,
+          _botao(
+              c,
+              'abrir-tarefas-automacoes',
+              Icons.checklist_rounded,
               'Tarefas e automações (agenda do aparelho)',
               () => const TarefasPage()),
-          _botao(c, 'abrir-segundo-plano', Icons.sensors_rounded,
+          _botao(
+              c,
+              'abrir-segundo-plano',
+              Icons.sensors_rounded,
               'Segundo plano (voz com o app fechado)',
               () => const SegundoPlanoPage()),
         ];

@@ -17,6 +17,10 @@ import android.os.Build
  * o mesmo caminho da tela. O áudio não sai do aparelho e não existe fallback de nuvem: se o
  * pacote offline de português não estiver instalado, a resposta é o erro, não uma alternativa
  * silenciosa.
+ *
+ * A mesma captura atende **pergunta livre**, não só comando curto: por isso o limite é maior
+ * (20 s), o silêncio de fim de fala tem folga e o vocabulário de domínio entra como pista no
+ * Android 13+. Quem decide se a frase é comando ou pergunta é o serviço, não o reconhecedor.
  */
 class JarvisEscutaFundo(private val context: Context) {
 
@@ -36,8 +40,26 @@ class JarvisEscutaFundo(private val context: Context) {
     }
 
     companion object {
-        /** Limite para o comando inteiro; depois disso o microfone é liberado. */
-        const val LIMITE_MS = 12_000L
+        /**
+         * Limite para a fala inteira (comando **ou** pergunta); depois disso o microfone é
+         * liberado. Pergunta costuma ser mais longa que comando: 12 s cortavam no meio da
+         * frase e o parcial era o que sobrava.
+         */
+        const val LIMITE_MS = 20_000L
+
+        /**
+         * Vocabulário que o reconhecedor do aparelho usa como pista (Android 13+).
+         *
+         * São os termos que mais voltavam trocados: domínio elétrico, programação, mídia do
+         * palco e os comandos do dia a dia. A pista não muda o pacote offline nem manda
+         * áudio para a nuvem; só ajuda o modelo local a escolher entre palavras parecidas.
+         */
+        val VIES_DE_DOMINIO = listOf(
+            "Jarvis", "CADeSIMU", "disjuntor", "contator", "ladder", "CLP",
+            "motor", "trifásico", "resistor", "circuito", "código", "função",
+            "Python", "Dart", "Kotlin", "teste", "notícia", "vídeo", "imagem",
+            "microfone", "volume", "lanterna",
+        )
 
         /** Erros em que insistir resolve: silêncio, “não entendi” e microfone ocupado. */
         fun valeRepetir(codigo: Int): Boolean = when (codigo) {
@@ -88,7 +110,7 @@ class JarvisEscutaFundo(private val context: Context) {
         recognizer = reconhecedor
         reconhecedor.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {
-                listener.onStatus("Ouvindo seu comando em português…")
+                listener.onStatus("Ouvindo: pergunte ou dê um comando…")
             }
 
             override fun onBeginningOfSpeech() = Unit
@@ -96,7 +118,7 @@ class JarvisEscutaFundo(private val context: Context) {
             override fun onBufferReceived(buffer: ByteArray?) = Unit
 
             override fun onEndOfSpeech() {
-                listener.onStatus("Processando o comando no aparelho…")
+                listener.onStatus("Processando sua fala no aparelho…")
             }
 
             override fun onError(error: Int) {
@@ -118,8 +140,7 @@ class JarvisEscutaFundo(private val context: Context) {
             override fun onResults(results: Bundle?) {
                 if (entregou) return
                 entregou = true
-                val texto = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    ?.firstOrNull()?.trim().orEmpty()
+                val texto = melhorTranscricao(results)
                 encerrar()
                 if (texto.isEmpty()) {
                     listener.onErro("O reconhecimento não identificou palavras. Tente novamente.")
@@ -149,11 +170,12 @@ class JarvisEscutaFundo(private val context: Context) {
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
                 putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
-                // Comando curto precisa de folga: cortar cedo devolvia "não entendi"
-                // mesmo com a fala clara.
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000L)
+                // Folga entre falar e concluir: pergunta tem pausa no meio ("qual é… a").
+                // Com 1,5 s o Android encerrava na pausa e devolvia só o começo.
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2600L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1200L)
+                aplicarViesDeDominio(pedido)
             }
             reconhecedor.startListening(pedido)
             agendarLimite(listener)
@@ -167,6 +189,49 @@ class JarvisEscutaFundo(private val context: Context) {
         }
     }
 
+    /**
+     * Escolhe a melhor alternativa que o Android devolveu.
+     *
+     * O primeiro item nem sempre é o mais fiel: com `EXTRA_MAX_RESULTS` o Android devolve até
+     * três hipóteses e as notas de confiança. Nota negativa quer dizer "não informada", e aí
+     * vale a hipótese mais completa.
+     */
+    private fun melhorTranscricao(results: Bundle?): String {
+        val lista = results
+            ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            .orEmpty()
+        if (lista.isEmpty()) return ""
+        val notas = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
+        if (notas == null || notas.size != lista.size) {
+            return lista.maxByOrNull { it.length }.orEmpty()
+        }
+        var melhor = ""
+        var melhorNota = -1f
+        for (i in lista.indices) {
+            val nota = if (notas[i] < 0f) lista[i].length / 1000f else notas[i]
+            if (nota > melhorNota) {
+                melhorNota = nota
+                melhor = lista[i]
+            }
+        }
+        return melhor
+    }
+
+    /** Vocabulário de domínio como pista, só onde o Android aceita (13+). */
+    private fun aplicarViesDeDominio(pedido: Intent) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        try {
+            pedido.putStringArrayListExtra(
+                RecognizerIntent.EXTRA_BIASING_STRINGS,
+                ArrayList(VIES_DE_DOMINIO)
+            )
+        } catch (_: Exception) {
+            // Sem a pista o reconhecimento continua; não vale derrubar a escuta.
+        }
+    }
+
     private fun agendarLimite(listener: Listener) {
         cancelarLimite()
         val parar = Runnable {
@@ -174,7 +239,7 @@ class JarvisEscutaFundo(private val context: Context) {
             if (entregou) return@Runnable
             entregou = true
             encerrar()
-            listener.onErro("Nenhum comando foi ouvido em 12 segundos.")
+            listener.onErro("Nenhuma fala foi ouvida em 20 segundos.")
         }
         limite = parar
         handler.postDelayed(parar, LIMITE_MS)
@@ -212,7 +277,7 @@ class JarvisEscutaFundo(private val context: Context) {
         SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT ->
             "O mecanismo offline não concluiu a transcrição; nada foi enviado para a nuvem."
         SpeechRecognizer.ERROR_NO_MATCH ->
-            "Não consegui entender o comando. Chame o JARVIS e fale de novo."
+            "Não consegui entender sua fala. Chame o JARVIS e fale de novo."
         SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "O reconhecedor de fala já está ocupado."
         SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Nenhuma fala foi detectada após a ativação."
         SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ->

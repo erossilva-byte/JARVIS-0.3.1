@@ -73,7 +73,7 @@ class _SegundoPlanoPageState extends State<SegundoPlanoPage> {
     if (!mounted) return;
     setState(() => aviso =
         'Autorize “Exibir sobre outros apps” na tela do Android. Ao voltar, toque em '
-        'Atualizar para conferir.');
+            'Atualizar para conferir.');
   }
 
   Future<void> _executar() async {
@@ -123,7 +123,9 @@ class _SegundoPlanoPageState extends State<SegundoPlanoPage> {
           const SizedBox(height: 8),
           const Text(
             'Chame “Jarvis” com o app fechado: o serviço mostra na tela que está ativo, escuta '
-            'o comando e executa o que é de baixo risco — abrir um app, lanterna, volume e alarme.',
+            'sua fala e executa o que é de baixo risco — abrir um app, lanterna, volume e alarme. '
+            'Se o que você disse não for comando, é tratado como pergunta e respondido pelo '
+            'provedor de IA configurado.',
             style: TextStyle(color: muted, fontSize: 12, height: 1.45),
           ),
           const SizedBox(height: 14),
@@ -195,14 +197,16 @@ class _SegundoPlanoPageState extends State<SegundoPlanoPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Executar comandos sem abrir a tela',
+                      Text('Perguntar e executar sem abrir a tela',
                           style: TextStyle(
                               fontSize: 12.5, fontWeight: FontWeight.w600)),
                       SizedBox(height: 3),
                       Text(
                         'Com isto ligado, a palavra de ativação não abre o app: o serviço '
-                        'escuta e executa aqui mesmo.',
-                        style: TextStyle(fontSize: 10.5, color: muted, height: 1.35),
+                        'escuta, responde perguntas no provedor de IA e executa os comandos '
+                        'de baixo risco aqui mesmo.',
+                        style: TextStyle(
+                            fontSize: 10.5, color: muted, height: 1.35),
                       ),
                     ],
                   ),
@@ -210,9 +214,8 @@ class _SegundoPlanoPageState extends State<SegundoPlanoPage> {
                 Switch(
                   key: const ValueKey('fundo-modo-sem-tela'),
                   value: estado.modoSemTela,
-                  onChanged: salvando || !estado.ponteDisponivel
-                      ? null
-                      : _definirModo,
+                  onChanged:
+                      salvando || !estado.ponteDisponivel ? null : _definirModo,
                 ),
               ],
             ),
@@ -220,8 +223,7 @@ class _SegundoPlanoPageState extends State<SegundoPlanoPage> {
           const SizedBox(height: 10),
           OutlinedButton.icon(
             key: const ValueKey('fundo-autorizar-sobreposicao'),
-            onPressed:
-                estado.ponteDisponivel ? _autorizarSobreposicao : null,
+            onPressed: estado.ponteDisponivel ? _autorizarSobreposicao : null,
             icon: const Icon(Icons.open_in_new_rounded, size: 18),
             label: Text(estado.podeAbrirApps
                 ? 'Revisar “Exibir sobre outros apps” (já autorizado)'
@@ -270,15 +272,15 @@ class _SegundoPlanoPageState extends State<SegundoPlanoPage> {
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _executar(),
             decoration: const InputDecoration(
-              hintText: 'Ex.: abrir YouTube · lanterna · volume 30 · alarme 7:30',
+              hintText:
+                  'Ex.: abrir YouTube · lanterna · volume 30 · alarme 7:30',
               border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 8),
           FilledButton.icon(
             key: const ValueKey('fundo-executar'),
-            onPressed:
-                executando || !estado.ponteDisponivel ? null : _executar,
+            onPressed: executando || !estado.ponteDisponivel ? null : _executar,
             icon: executando
                 ? const SizedBox(
                     width: 15,
@@ -356,8 +358,7 @@ class _SegundoPlanoPageState extends State<SegundoPlanoPage> {
           TextButton.icon(
             key: const ValueKey('fundo-ver-historico'),
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                  builder: (_) => const HistoricoVozPage()),
+              MaterialPageRoute<void>(builder: (_) => const HistoricoVozPage()),
             ),
             icon: const Icon(Icons.history_rounded, size: 18),
             label: const Text('Ver histórico completo'),
@@ -395,7 +396,8 @@ class _SegundoPlanoPageState extends State<SegundoPlanoPage> {
             Padding(
               padding: const EdgeInsets.only(bottom: 5),
               child: Text('• $limite',
-                  style: const TextStyle(color: muted, fontSize: 11, height: 1.4)),
+                  style:
+                      const TextStyle(color: muted, fontSize: 11, height: 1.4)),
             ),
           const SizedBox(height: 6),
           const Text(
@@ -411,7 +413,8 @@ class _SegundoPlanoPageState extends State<SegundoPlanoPage> {
   Widget _selo(String rotulo, bool ativo) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: (ativo ? const Color(0xFF54D6A0) : muted).withValues(alpha: .12),
+          color:
+              (ativo ? const Color(0xFF54D6A0) : muted).withValues(alpha: .12),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(

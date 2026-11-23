@@ -60,6 +60,8 @@ CASOS = (
     ("tool/timbre_voz_test.dart", "timbre: perfis, paridade do grave, faixas e limites"),
     ("tool/circuito_no_chat_test.dart", "circuito no chat: decisão, montagem e recusa"),
     ("tool/edicao_circuito_test.dart", "edição do circuito em uso: valor, recálculo e recusas"),
+    ("tool/especialidades_test.dart", "especialidades: CADeSIMU, programação e limites"),
+    ("tool/palco_test.dart", "palco: pedido, fontes sem chave, leitores e links"),
     ("tool/estado_modulos_test.dart", "estado dos módulos: cobertura, motivos e contagem"),
     ("tool/hermes_plano_test.dart", "hermes: agentes, roteamento, planos e mensagens"),
     ("tool/projetista_test.dart", "projetista: famílias, montagem simulada e recusas"),

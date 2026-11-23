@@ -9,6 +9,7 @@ import '../core/circuito_em_uso.dart';
 import '../core/circuito_no_chat.dart';
 import '../core/edicao_circuito.dart';
 import '../core/conversa.dart';
+import '../core/especialidades.dart';
 import '../core/habilidades.dart';
 import '../core/historico_voz.dart';
 import '../core/memoria_busca.dart';
@@ -74,8 +75,10 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   final ExecutorComandosAndroid _comandos = ExecutorComandosAndroid();
   late final AcessibilidadeService _tela =
       widget.tela ?? AcessibilidadeService();
+
   /// Toque aguardando “sim”: existe enquanto o usuário decide.
   TocarNaTela? _telaPendente;
+
   /// Circuito montado ou editado nesta conversa, à espera do atalho do
   /// simulador.
   Circuito? _circuitoPronto;
@@ -280,11 +283,10 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     // leitura não impede a conversa.
     var habilidadesUsadas = const <Habilidade>[];
     try {
-      final carregadas = await (widget.habilidadesServico ??
-              const HabilidadesService())
-          .carregar();
-      habilidadesUsadas =
-          habilidadesQueCasam(carregadas.habilidades, texto);
+      final carregadas =
+          await (widget.habilidadesServico ?? const HabilidadesService())
+              .carregar();
+      habilidadesUsadas = habilidadesQueCasam(carregadas.habilidades, texto);
     } catch (_) {
       habilidadesUsadas = const <Habilidade>[];
     }
@@ -304,6 +306,9 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       _angulosRecentes.add(estilo.angulo!);
       if (_angulosRecentes.length > 8) _angulosRecentes.removeAt(0);
     }
+    // Especialização: CADeSIMU e programação acrescentam a instrução da área;
+    // qualquer outro assunto segue com o prompt normal.
+    final especialidade = blocoDaEspecialidade(especialidadeDe(texto));
     _assinatura = service
         .streamComplete(
       escolhido.id,
@@ -313,6 +318,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
         pessoas: contextoPessoa.bloco,
         personalidade: estilo.prompt,
         habilidades: blocoHabilidades(habilidadesUsadas),
+        especialidade: especialidade,
       ),
     )
         .listen(
@@ -345,8 +351,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
                   contextoMemoria.usados.map((nota) => nota.titulo).toList(),
               fichas: contextoPessoa.nomes,
               contextoPessoas: contextoPessoa.bloco,
-              habilidades:
-                  habilidadesUsadas.map((h) => h.nome).toList(),
+              habilidades: habilidadesUsadas.map((h) => h.nome).toList(),
             ));
           }
         });
@@ -367,8 +372,8 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   void _concluirCircuito(String texto, RespostaCircuito resposta) {
     unawaited(voz.parar());
     _registrarPedido(texto);
-    conversa.adicionar(
-        MensagemConversa(autor: 'assistant', texto: resposta.texto));
+    conversa
+        .adicionar(MensagemConversa(autor: 'assistant', texto: resposta.texto));
     composer.clear();
     unawaited(store?.limparRascunho());
     setState(() {
@@ -387,8 +392,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       acao: resposta.ok ? 'circuito por prompt' : 'circuito recusado',
       ok: resposta.ok,
       mensagem: resposta.texto,
-      origem:
-          widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado,
+      origem: widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado,
     ));
   }
 
@@ -399,8 +403,8 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   void _concluirEdicao(String texto, RespostaEdicao resposta) {
     unawaited(voz.parar());
     _registrarPedido(texto);
-    conversa.adicionar(
-        MensagemConversa(autor: 'assistant', texto: resposta.texto));
+    conversa
+        .adicionar(MensagemConversa(autor: 'assistant', texto: resposta.texto));
     composer.clear();
     unawaited(store?.limparRascunho());
     setState(() {
@@ -421,8 +425,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       acao: resposta.ok ? 'circuito editado' : 'edição recusada',
       ok: resposta.ok,
       mensagem: resposta.texto,
-      origem:
-          widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado,
+      origem: widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado,
     ));
   }
 
@@ -435,7 +438,8 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   }
 
   /// Registra a resposta local de um comando sem chamar provedor de IA.
-  void _concluirComando(String texto, ResultadoComando comando) => _concluirLocal(
+  void _concluirComando(String texto, ResultadoComando comando) =>
+      _concluirLocal(
         texto,
         ok: comando.ok,
         mensagemRecebida: comando.mensagem,
@@ -474,8 +478,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       // No limite de comandos seguidos nada foi executado: o histórico não pode dizer que sim.
       ok: ok && !bloqueado,
       mensagem: mensagem,
-      origem:
-          widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado,
+      origem: widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado,
     ));
   }
 
@@ -553,8 +556,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       acao: 'cancelar o toque em "${pendente.alvo}"',
       ok: false,
       mensagem: mensagem,
-      origem:
-          widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado,
+      origem: widget.fromVoice ? OrigemExecucao.voz : OrigemExecucao.digitado,
     ));
   }
 
@@ -728,8 +730,8 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
                       color: const Color(0xFFFFC66D).withValues(alpha: .08),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                          color: const Color(0xFFFFC66D)
-                              .withValues(alpha: .35)),
+                          color:
+                              const Color(0xFFFFC66D).withValues(alpha: .35)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -741,9 +743,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
                         const Text(
                           'Nada é tocado antes do seu “sim”. Diga “cancelar” para desistir.',
                           style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 10,
-                              height: 1.4),
+                              color: Colors.grey, fontSize: 10, height: 1.4),
                         ),
                         const SizedBox(height: 8),
                         Row(children: [
@@ -903,17 +903,16 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
         const Icon(Icons.science_outlined, color: cyan, size: 20),
         const SizedBox(width: 10),
         Expanded(
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Circuito: $_circuitoTitulo',
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w600)),
-                Text(
-                    '${circuito.elementos.length} trechos · '
-                    '${simulado.calculado ? 'simulação fechada' : 'simulação falhou'}',
-                    style: const TextStyle(color: muted, fontSize: 10)),
-              ]),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Circuito: $_circuitoTitulo',
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(
+                '${circuito.elementos.length} trechos · '
+                '${simulado.calculado ? 'simulação fechada' : 'simulação falhou'}',
+                style: const TextStyle(color: muted, fontSize: 10)),
+          ]),
         ),
         TextButton(
           key: const ValueKey('conversa-abrir-simulador'),

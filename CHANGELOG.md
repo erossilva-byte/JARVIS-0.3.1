@@ -1,3 +1,36 @@
+## 1.88.5 — especialista em CADeSIMU e programação, modo palco e microfone de perguntas
+
+### O que mudou
+- **Especialização em CADeSIMU e programação**: o pedido que fala a língua de
+  uma das duas áreas recebe uma instrução de sistema própria, com foco em
+  comando, ladder, dimensionamento e leitura do `.cad` (CADeSIMU) e em criação,
+  revisão, erro e teste de código (programação). A instrução declara os limites:
+  não gera `.cad` nativo, não simula o CADeSIMU por dentro e **não executa
+  código**. Vale na conversa e na voz de fundo; o resto continua conversa comum.
+- **Modo palco** (`Modo palco`, no catálogo): pesquisa imagens na Wikimedia
+  Commons, notícias no RSS do Google Notícias e vídeos no Dailymotion — as três
+  fontes **sem chave** e sem conta — e exibe o resultado na tela. A imagem e a
+  capa do vídeo aparecem no palco; o vídeo e a matéria abrem no navegador, com
+  botão para copiar o link. Sem internet ou fonte fora do ar, a tela mostra o
+  motivo em vez de inventar resultado.
+- **Microfone com melhor reconhecimento**: escolha da alternativa pela nota de
+  confiança (não mais a primeira), folga de silêncio maior para pergunta com
+  pausa no meio e vocabulário de domínio como pista no Android 13+ (elétrica,
+  CADeSIMU, programação, palco e comandos do dia a dia).
+- **Segundo plano aceita pergunta**: a escuta depois da palavra de ativação vai
+  a 20 segundos (antes 12 s), anuncia “pergunte ou dê um comando” e manda o que
+  não for comando para o provedor de IA já configurado. O aviso de microfone e
+  a tela de segundo plano passaram a dizer isso.
+- **Estado dos módulos**: 26 módulos — 17 prontos, 5 parciais e 4 ausentes. O
+  `Modo palco` entra como **parcial**, porque exibe imagem e notícia, mas vídeo
+  e matéria abrem fora do app.
+
+Limite honesto: nada disto foi aberto em aparelho. `flutter analyze` passou,
+`flutter test` fechou 341 testes e os 107 contratos Python passaram, mas as
+fontes do palco não foram medidas no celular, o microfone novo não foi ouvido
+em aparelho físico e a qualidade do reconhecimento continua não medida. O palco
+depende da internet do aparelho e da política de cada serviço público.
+
 ## 1.88.4 — modo programação e avatar 3D de verdade
 
 ### O que mudou

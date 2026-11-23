@@ -52,7 +52,7 @@ def ler(caminho: Path) -> str:
 
 # 1. Versão e pacote.
 pubspec = ler(APP / "pubspec.yaml")
-exigir("version: 1.88.4+18804" in pubspec, "pubspec sem 1.88.0+18800")
+exigir("version: 1.88.5+18805" in pubspec, "pubspec sem 1.88.0+18800")
 pacote = ler(RAIZ / "package.json")
 exigir("tests/test_restos_099.py" in pacote, "contrato fora do npm run test:all")
 dart_core = ler(RAIZ / "tests" / "test_dart_core.py")
@@ -68,8 +68,8 @@ for ferramenta in (
 catalogo = re.findall(r"JarvisModule\(\s*'([^']+)'", ler(LIB / "catalog.dart"))
 estados_txt = ler(LIB / "core" / "estado_modulos.dart")
 estados = re.findall(r"^\s{4}nome: '([^']+)',", estados_txt, re.M)
-exigir(len(catalogo) == 25, f"catálogo com {len(catalogo)} módulos, esperado 25")
-exigir(len(estados) == 25, f"tabela de estados com {len(estados)} módulos")
+exigir(len(catalogo) == 26, f"catálogo com {len(catalogo)} módulos, esperado 26")
+exigir(len(estados) == 26, f"tabela de estados com {len(estados)} módulos")
 exigir(set(catalogo) == set(estados),
        "catálogo e tabela de estados divergem: "
        f"{sorted(set(catalogo) ^ set(estados))}")
@@ -204,5 +204,5 @@ if falhas:
         print(" -", falha)
     sys.exit(1)
 
-print("OK: ajuste 099 — 25 módulos com estado, voz externa por ID, projetista "
+print("OK: ajuste 099 — 26 módulos com estado, voz externa por ID, projetista "
       "por prompt e documentação conferidos.")

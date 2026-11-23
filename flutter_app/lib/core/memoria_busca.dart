@@ -351,10 +351,15 @@ List<Map<String, String>> montarMensagens(
   String? pessoas,
   String? personalidade,
   String? habilidades,
+  String? especialidade,
 }) =>
     [
       if (personalidade != null && personalidade.trim().isNotEmpty)
         {'role': 'system', 'content': personalidade},
+      // Especialização (CADeSIMU e programação): só entra quando o pedido é
+      // da área; a conversa comum segue sem instrução extra.
+      if (especialidade != null && especialidade.trim().isNotEmpty)
+        {'role': 'system', 'content': especialidade},
       if (!contexto.vazio)
         {'role': 'system', 'content': '$instrucaoMemoria\n\n${contexto.texto}'},
       if (pessoas != null && pessoas.trim().isNotEmpty)

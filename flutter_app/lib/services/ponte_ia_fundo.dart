@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../core/circuito_em_uso.dart';
 import '../core/circuito_no_chat.dart';
 import '../core/edicao_circuito.dart';
+import '../core/especialidades.dart';
 import '../core/habilidades.dart';
 import '../core/pergunta_livre.dart';
 import '../core/personalidade.dart';
@@ -45,9 +46,8 @@ class PonteIaFundo {
       throw MissingPluginException('Método não tratado: ${call.method}');
     }
     final argumentos = call.arguments;
-    final texto = argumentos is Map
-        ? (argumentos['texto']?.toString() ?? '').trim()
-        : '';
+    final texto =
+        argumentos is Map ? (argumentos['texto']?.toString() ?? '').trim() : '';
     if (texto.isEmpty) {
       throw PlatformException(
           code: 'pedido_vazio', message: 'A pergunta chegou vazia.');
@@ -88,14 +88,18 @@ class PonteIaFundo {
     var bloco = '';
     try {
       final carregadas = await const HabilidadesService().carregar();
-      bloco = blocoHabilidades(habilidadesQueCasam(carregadas.habilidades, texto));
+      bloco =
+          blocoHabilidades(habilidadesQueCasam(carregadas.habilidades, texto));
     } catch (_) {
       bloco = '';
     }
     final resposta = await provedor.complete(
       escolhido.id,
       mensagensPerguntaLivre(texto,
-          personalidade: estilo.prompt, habilidades: bloco),
+          personalidade: estilo.prompt,
+          habilidades: bloco,
+          // A mesma especialização da conversa vale na voz de fundo.
+          especialidade: blocoDaEspecialidade(especialidadeDe(texto))),
     );
     return respostaFalada(resposta);
   }

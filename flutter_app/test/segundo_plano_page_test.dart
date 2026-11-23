@@ -93,7 +93,10 @@ void main() {
     final limites = find.text('LIMITES REAIS');
     await revelar(tester, limites);
     expect(limites, findsOneWidget);
-    expect(find.textContaining('reiniciar'), findsOneWidget);
+    // A lista é virtualizada: o último limite só existe quando aparece.
+    final reiniciar = find.textContaining('reiniciar');
+    await revelar(tester, reiniciar);
+    expect(reiniciar, findsOneWidget);
   });
 
   testWidgets('o switch grava a decisão no aparelho', (tester) async {

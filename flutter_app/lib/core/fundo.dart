@@ -20,8 +20,12 @@ const limitesSegundoPlano = <String>[
   'Abrir apps e o alarme a partir do segundo plano exige “Exibir sobre outros apps” '
       'autorizado no Android; sem isso o sistema bloqueia a abertura. O microfone continua '
       'funcionando: lanterna e volume são executados e a abertura avisa que falta a autorização.',
-  'O comando é transcrito pelo reconhecimento offline pt-BR do Android. Se esse pacote '
-      'não estiver instalado, o JARVIS avisa em vez de enviar áudio para a nuvem.',
+  'A fala — comando ou pergunta — é transcrita pelo reconhecimento offline pt-BR do '
+      'Android. Se esse pacote não estiver instalado, o JARVIS avisa em vez de enviar áudio '
+      'para a nuvem.',
+  'A escuta fica aberta por até 20 segundos: a pergunta longa cabe inteira e o microfone '
+      'é liberado se ninguém falar. No Android 13+ o vocabulário de elétrica, programação e '
+      'mídia entra como pista do reconhecedor local.',
   'Perguntas livres usam o provedor de IA configurado, mas a ponte só existe enquanto '
       'o app está vivo na memória. Se o Android tiver encerrado o app, o JARVIS avisa em '
       'vez de inventar a resposta; abrir o app uma vez religa a ponte.',
@@ -88,7 +92,8 @@ class EstadoFundo {
     );
   }
 
-  EstadoFundo copiarCom({bool? modoSemTela, bool? podeAbrirApps}) => EstadoFundo(
+  EstadoFundo copiarCom({bool? modoSemTela, bool? podeAbrirApps}) =>
+      EstadoFundo(
         modoSemTela: modoSemTela ?? this.modoSemTela,
         podeAbrirApps: podeAbrirApps ?? this.podeAbrirApps,
         servicoAtivo: servicoAtivo,
@@ -119,8 +124,8 @@ String resumoFundo(EstadoFundo estado) {
         'para o JARVIS responder com o app fechado.';
   }
   if (estado.ouvindo) {
-    return 'Escutando a palavra de ativação localmente. Chame “Jarvis” para dar um comando '
-        'sem abrir o app.';
+    return 'Escutando a palavra de ativação localmente. Chame “Jarvis” para perguntar ou '
+        'dar um comando sem abrir o app.';
   }
   return 'Detector ativo e em espera. Assim que ele ouvir a palavra, volta a escutar.';
 }
@@ -130,15 +135,16 @@ List<String> pendenciasFundo(EstadoFundo estado) {
   if (!estado.ponteDisponivel) return const [];
   final pendencias = <String>[];
   if (!estado.servicoAtivo) {
-    pendencias.add('Ligar a escuta da palavra de ativação (com o microfone autorizado).');
+    pendencias.add(
+        'Ligar a escuta da palavra de ativação (com o microfone autorizado).');
   }
   if (!estado.modoSemTela) {
-    pendencias.add('Ligar “executar comandos sem abrir a tela”.');
+    pendencias.add('Ligar “responder e executar sem abrir a tela”.');
   }
   if (!estado.podeAbrirApps) {
     pendencias.add(
         'Autorizar “Exibir sobre outros apps” para o JARVIS abrir apps e o alarme sozinho; '
-            'sem isso ele ainda ouve o comando e executa lanterna e volume.');
+        'sem isso ele ainda ouve o comando e executa lanterna e volume.');
   }
   return pendencias;
 }

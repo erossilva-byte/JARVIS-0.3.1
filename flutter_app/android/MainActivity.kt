@@ -43,6 +43,12 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         private const val FOLGA_DEPOIS_DO_MICROFONE_MS = 180L
         /** Quando o microfone não fechou no prazo, abre mais devagar. */
         private const val FOLGA_LONGA_DO_MICROFONE_MS = 600L
+        private val VIES_DE_DOMINIO = listOf(
+            "Jarvis", "CADeSIMU", "disjuntor", "contator", "ladder", "CLP",
+            "motor", "trifásico", "resistor", "circuito", "código", "função",
+            "Python", "Dart", "Kotlin", "teste", "notícia", "vídeo", "imagem",
+            "microfone", "volume", "lanterna",
+        )
         private const val LIMITE_NOTAS = 400
         private const val LIMITE_BYTES = 256 * 1024
 
@@ -197,6 +203,15 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                     } else {
                         compartilharTexto(texto)
                         result.success(true)
+                    }
+                }
+                "abrirUrl" -> {
+                    val url = call.argument<String>("url").orEmpty().trim()
+                    // Só http/https: o palco nunca abre outro esquema.
+                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                        result.success(false)
+                    } else {
+                        result.success(abrirNoNavegador(url))
                     }
                 }
                 "atualizarWidget" -> {
@@ -773,6 +788,17 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         return dados
     }
 
+    /** Abre o endereço no navegador; `false` quando nenhum app aceita o link. */
+    private fun abrirNoNavegador(url: String): Boolean = try {
+        startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+        true
+    } catch (_: Exception) {
+        false
+    }
+
     private fun compartilharTexto(texto: String) {
         val envio = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
@@ -856,7 +882,7 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
             recognitionInProgress = true
             recognizer.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) {
-                    emitEvent(mapOf("type" to "command_status", "message" to "Ouvindo seu comando em português…"))
+                    emitEvent(mapOf("type" to "command_status", "message" to "Ouvindo sua pergunta ou comando em português…"))
                 }
                 override fun onBeginningOfSpeech() = Unit
                 override fun onRmsChanged(rmsdB: Float) = Unit
@@ -893,8 +919,7 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                 override fun onResults(results: Bundle?) {
                     if (!recognitionInProgress) return
                     recognitionInProgress = false
-                    val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        ?.firstOrNull()?.trim().orEmpty()
+                    val text = melhorTranscricaoDoComando(results)
                     if (text.isEmpty()) {
                         emitEvent(mapOf("type" to "command_error", "message" to "O reconhecimento offline não identificou palavras. Tente novamente."))
                     } else {
@@ -922,10 +947,12 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
                 putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
                 // Folga maior entre falar e concluir: comando curto ("abre o WhatsApp")
-                // era cortado cedo demais e voltava como ERROR_NO_MATCH.
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000L)
+                // era cortado cedo demais e voltava como ERROR_NO_MATCH. A mesma folga
+                // deixa a pergunta longa chegar inteira, com pausa no meio da frase.
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2600L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1200L)
+                aplicarViesDeDominio(request)
             }
             recognizer.startListening(request)
         } catch (error: Exception) {
@@ -934,6 +961,53 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
             destroySpeechRecognizer()
             encerrarComando()
         }
+    }
+
+    /**
+     * Vocabulário de domínio como pista do reconhecedor, só no Android 13+.
+     *
+     * Os termos vêm do que o app faz: elétrica/CADeSIMU, programação, palco e os comandos
+     * do dia a dia. Nada de áudio sai do aparelho; a pista só ajuda o modelo local.
+     */
+    private fun aplicarViesDeDominio(pedido: Intent) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        try {
+            pedido.putStringArrayListExtra(
+                RecognizerIntent.EXTRA_BIASING_STRINGS,
+                ArrayList(VIES_DE_DOMINIO)
+            )
+        } catch (_: Exception) {
+            // Sem a pista a escuta continua; não vale derrubar o comando.
+        }
+    }
+
+    /**
+     * Melhor alternativa devolvida pelo Android, pela nota de confiança.
+     *
+     * O primeiro item nem sempre é o mais fiel. Nota negativa é "não informada": aí vale a
+     * hipótese mais completa. Sem lista, devolve vazio (o chamador já trata).
+     */
+    private fun melhorTranscricaoDoComando(results: Bundle?): String {
+        val lista = results
+            ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            .orEmpty()
+        if (lista.isEmpty()) return ""
+        val notas = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
+        if (notas == null || notas.size != lista.size) {
+            return lista.maxByOrNull { it.length }.orEmpty()
+        }
+        var melhor = ""
+        var melhorNota = -1f
+        for (i in lista.indices) {
+            val nota = if (notas[i] < 0f) lista[i].length / 1000f else notas[i]
+            if (nota > melhorNota) {
+                melhorNota = nota
+                melhor = lista[i]
+            }
+        }
+        return melhor
     }
 
     /** Microfone ocupado precisa de mais folga que silêncio. */

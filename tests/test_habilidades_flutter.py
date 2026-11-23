@@ -62,7 +62,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_086-habilidades-em-markdown.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.88.4+18804" in pubspec, "versão não atualizada para 1.73.0")
+exigir("version: 1.88.5+18805" in pubspec, "versão não atualizada para 1.73.0")
 exigir("1.73.0" in changelog and "habilidade" in changelog.lower(),
        "CHANGELOG sem o bloco 1.73.0 das habilidades")
 exigir("tests/test_habilidades_flutter.py" in pacote,
@@ -114,7 +114,7 @@ exigir("{'role': 'system', 'content': habilidades}" in montagem,
        "bloco de habilidades não entra como instrução de sistema")
 exigir("habilidadesQueCasam(" in voz and "blocoHabilidades(" in voz,
        "conversa não carrega nem casa as habilidades")
-exigir("habilidades:\n                  habilidadesUsadas.map((h) => h.nome).toList(),"
+exigir("habilidades: habilidadesUsadas.map((h) => h.nome).toList(),"
        in voz,
        "resposta não registra as habilidades usadas")
 exigir("final List<String> habilidades;" in conversa,
