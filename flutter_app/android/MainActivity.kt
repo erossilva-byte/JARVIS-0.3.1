@@ -764,6 +764,17 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
     /** Traduz a ação Android em um pedido conhecido pelo Flutter; consome a intenção. */
     private fun lerIntencao(intent: Intent?): Map<String, Any>? {
         if (intent == null) return null
+        // Pedido de palco reconhecido na fala com o app fechado: a tela abre a
+        // pesquisa já com o tipo e o assunto que o serviço ouviu.
+        val palcoConsulta = intent.getStringExtra(JarvisPalco.EXTRA_CONSULTA)
+            ?.trim().orEmpty()
+        if (palcoConsulta.isNotEmpty()) {
+            val tipo = intent.getStringExtra(JarvisPalco.EXTRA_TIPO).orEmpty()
+            intent.removeExtra(JarvisPalco.EXTRA_CONSULTA)
+            intent.removeExtra(JarvisPalco.EXTRA_TIPO)
+            intent.action = Intent.ACTION_MAIN
+            return mapOf("acao" to "palco", "texto" to palcoConsulta, "tipo" to tipo)
+        }
         // Palavra de ativação detectada em segundo plano: a tela avisa que o
         // Jarvis está ativo e o reconhecimento segue no onResume.
         val palavra = intent.getStringExtra("jarvis_wake_keyword")

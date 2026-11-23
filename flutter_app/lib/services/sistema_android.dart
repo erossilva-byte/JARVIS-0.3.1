@@ -2,13 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
+import '../core/palco.dart';
+
 /// Pedido vindo do sistema: atalho do ícone, widget ou "compartilhar com" de outro app.
 class IntencaoSistema {
-  const IntencaoSistema(this.acao, [this.texto = '']);
+  const IntencaoSistema(this.acao, [this.texto = '', this.tipo = '']);
 
-  /// `voz`, `conversa`, `historico` ou `compartilhar`.
+  /// `voz`, `conversa`, `historico`, `compartilhar` ou `palco`.
   final String acao;
   final String texto;
+
+  /// Tipo do palco (`imagem`, `video` ou `noticia`), quando a ação é `palco`.
+  final String tipo;
 
   bool get abrirVoz => acao == 'voz';
   bool get abrirConversa => acao == 'conversa';
@@ -16,6 +21,13 @@ class IntencaoSistema {
 
   /// Palavra de ativação detectada com o app em segundo plano.
   bool get abrirAtivo => acao == 'ativo';
+
+  /// Pedido de imagem, vídeo ou notícia reconhecido na voz de fundo.
+  bool get abrirPalco => acao == 'palco' && texto.trim().isNotEmpty;
+
+  /// Pedido pronto para a tela do palco, ou `null` quando o tipo não fecha.
+  PedidoPalco? get pedidoPalco =>
+      abrirPalco ? pedidoDePalcoVoz(tipo, texto) : null;
   bool get textoCompartilhado =>
       acao == 'compartilhar' && texto.trim().isNotEmpty;
 
@@ -24,7 +36,9 @@ class IntencaoSistema {
     final acao = dados['acao'];
     if (acao is! String || acao.isEmpty) return null;
     final texto = dados['texto'];
-    return IntencaoSistema(acao, texto is String ? texto : '');
+    final tipo = dados['tipo'];
+    return IntencaoSistema(
+        acao, texto is String ? texto : '', tipo is String ? tipo : '');
   }
 }
 

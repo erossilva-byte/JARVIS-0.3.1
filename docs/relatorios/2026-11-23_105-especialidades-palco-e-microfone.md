@@ -65,6 +65,11 @@ O usuário pediu quatro coisas:
   verifica `pedidoPalco(texto)` e empurra a tela com o pedido já pesquisando.
   Assim “mostra fotos de…”, “me mostra um vídeo sobre…” e “traz as últimas
   notícias de…” funcionam sem passar pelo módulo e sem chave.
+- O palco abre **por voz com o app fechado**: `JarvisPalco.kt` reconhece o
+  pedido no texto ouvido pelo serviço e entrega ao app uma `Intent` com tipo e
+  assunto; `MainActivity` vira a intenção `palco`, `IntencaoSistema` monta o
+  `PedidoPalco` e a tela inicial abre a pesquisa. Sem “Exibir sobre outros
+  apps”, o serviço recusa com o motivo e registra no histórico.
 - O Android ganhou `abrirUrl` no canal `com.jarvis.nova/sistema`, restrito a
   `http(s)`.
 
@@ -91,8 +96,8 @@ O usuário pediu quatro coisas:
 ## 4. Evidência
 
 - `flutter analyze` sem problemas.
-- `flutter test` — 344 testes, todos aprovados (337 anteriores + 4 do palco +
-  3 da conversa abrindo o palco).
+- `flutter test` — 349 testes, todos aprovados (337 anteriores + 4 do palco +
+  3 da conversa + 5 da intenção de palco vinda do Android).
 - `dart run tool/palco_test.dart` — pedido, endereços sem chave, leitores das
   três fontes, links seguros e entidades.
 - `dart run tool/especialidades_test.dart` — reconhecimento das duas áreas,
@@ -125,3 +130,7 @@ O usuário pediu quatro coisas:
   `http(s)` e a presença do método.
 - O modo palco não foi visto em tela: layout, imagem grande e lista não foram
   conferidos visualmente.
+- O caminho por voz com o app fechado **não foi compilado nem executado**: não
+  há Android SDK nesta sessão. O contrato confere o código, não o `startActivity`
+  a partir do serviço, a autorização de sobreposição nem o reconhecimento da
+  frase falada.

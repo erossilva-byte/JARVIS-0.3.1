@@ -19,6 +19,7 @@ import 'services/habilidades_page.dart';
 import 'services/historico_page.dart';
 import 'services/kws_settings_page.dart';
 import 'services/memoria_page.dart';
+import 'services/palco_page.dart';
 import 'services/memoria_store.dart';
 import 'services/pessoas_page.dart';
 import 'services/personalidade_page.dart';
@@ -73,7 +74,8 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
       }
       if (event.type == 'wake') {
         _marcarAtivo(event.text);
-      } else if (event.type == 'command_result' && event.text.trim().isNotEmpty) {
+      } else if (event.type == 'command_result' &&
+          event.text.trim().isNotEmpty) {
         _desmarcarAtivo();
         _openConversation(event.text.trim(), fromVoice: true);
       } else if (event.type == 'command_error' && event.message.isNotEmpty) {
@@ -168,6 +170,21 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
 
   void _abrirIntencao(IntencaoSistema intencao) {
     if (!mounted) return;
+    if (intencao.abrirPalco) {
+      // A voz de fundo reconheceu “mostra fotos de…” e trouxe o pedido pronto:
+      // a tela abre já pesquisando, sem passar pelo módulo nem pelo provedor.
+      final pedido = intencao.pedidoPalco;
+      if (pedido == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Não entendi o pedido do palco. Tente “mostra fotos de…” ou '
+                '“traz as últimas notícias de…”.')));
+        return;
+      }
+      Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => PalcoPage(pedidoInicial: pedido)));
+      return;
+    }
     if (intencao.abrirAtivo) {
       _marcarAtivo(intencao.texto);
     } else if (intencao.abrirVoz) {
@@ -351,8 +368,8 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
       return;
     }
     if (name == 'Habilidades em Markdown') {
-      Navigator.of(context)
-          .push(MaterialPageRoute<void>(builder: (_) => const HabilidadesPage()));
+      Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const HabilidadesPage()));
       return;
     }
     if (name == 'Atualizações') {
@@ -466,26 +483,26 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
           ),
         Expanded(
             child: tab == 0
-              ? CommandCenter(
-                  animation: motion,
-                  clock: clock,
-                  composer: composer,
-                  moduleCount: modules.length,
-                  onConversation: _openConversation,
-                  onVoiceStart: _startVoice,
-                  onProviders: _openProviderSettings,
-                  onKws: _openKwsSettings,
-                  onSystems: () => setState(() => tab = 1),
-                  holograma: _holoEstado,
-                )
-              : SystemsView(
-                  query: query,
-                  search: search,
-                  onQuery: (value) => setState(() => query = value),
-                  onOpen: (module) => _openModule(module.name),
-                  onProviders: _openProviderSettings,
-                  onKws: _openKwsSettings,
-                )),
+                ? CommandCenter(
+                    animation: motion,
+                    clock: clock,
+                    composer: composer,
+                    moduleCount: modules.length,
+                    onConversation: _openConversation,
+                    onVoiceStart: _startVoice,
+                    onProviders: _openProviderSettings,
+                    onKws: _openKwsSettings,
+                    onSystems: () => setState(() => tab = 1),
+                    holograma: _holoEstado,
+                  )
+                : SystemsView(
+                    query: query,
+                    search: search,
+                    onQuery: (value) => setState(() => query = value),
+                    onOpen: (module) => _openModule(module.name),
+                    onProviders: _openProviderSettings,
+                    onKws: _openKwsSettings,
+                  )),
       ])),
       bottomNavigationBar: NavigationBar(
         height: 66,

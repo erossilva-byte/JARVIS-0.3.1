@@ -122,6 +122,24 @@ PedidoPalco? pedidoPalco(String texto) {
   return PedidoPalco(consulta: consulta, tipo: tipo);
 }
 
+/// Pedido de palco vindo da voz com o app fechado.
+///
+/// O serviço Android manda o assunto já limpo e o tipo reconhecido
+/// (`imagem`, `video` ou `noticia`). Tipo ausente ou desconhecido volta a ser
+/// inferido pelo próprio texto, para a intenção antiga continuar valendo.
+PedidoPalco? pedidoDePalcoVoz(String tipo, String consulta) {
+  final limpo = consulta.trim();
+  if (limpo.isEmpty) return null;
+  final escolhido = switch (tipo.trim().toLowerCase()) {
+    'imagem' => TipoPalco.imagem,
+    'video' => TipoPalco.video,
+    'noticia' => TipoPalco.noticia,
+    _ => _tipoDoPedido(limpo),
+  };
+  if (escolhido == null) return null;
+  return PedidoPalco(consulta: limpo, tipo: escolhido);
+}
+
 TipoPalco? _tipoDoPedido(String texto) {
   // O primeiro verbo de mídia que aparece manda; empate resolve pelo mais
   // específico (vídeo e notícia antes de imagem).

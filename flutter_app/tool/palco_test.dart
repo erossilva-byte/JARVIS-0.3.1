@@ -127,7 +127,23 @@ void main() {
       'duração veio “${achados.first.detalhe}”');
   assert(achados.first.miniatura == 'https://s2.dmcdn.net/x1', 'capa errada');
 
-  // 7. Link direto: imagem, vídeo e página — sem pesquisa.
+  // 7. Pedido vindo da voz de fundo: tipo pronto do Android ou inferido.
+  final voz = pedidoDePalcoVoz('imagem', 'motor trifásico');
+  assert(voz != null && voz.tipo == TipoPalco.imagem,
+      'tipo imagem da voz não foi aceito');
+  assert(voz!.consulta == 'motor trifásico', 'consulta da voz foi alterada');
+  assert(pedidoDePalcoVoz('video', 'partida direta')?.tipo == TipoPalco.video,
+      'tipo vídeo da voz não foi aceito');
+  assert(pedidoDePalcoVoz('noticia', 'eleições')?.tipo == TipoPalco.noticia,
+      'tipo notícia da voz não foi aceito');
+  assert(pedidoDePalcoVoz('', 'mostra fotos de gato')?.tipo == TipoPalco.imagem,
+      'tipo ausente deveria ser inferido do texto');
+  assert(pedidoDePalcoVoz('imagem', '   ') == null,
+      'pedido de voz sem assunto deveria ser recusado');
+  assert(pedidoDePalcoVoz('', 'qual a capital da França') == null,
+      'texto sem mídia não deveria virar palco');
+
+  // 8. Link direto: imagem, vídeo e página — sem pesquisa.
   final direto = itemDeLink('olha https://exemplo.com/foto.png agora');
   assert(direto != null && direto.tipo == TipoPalco.imagem,
       'link de imagem não foi reconhecido');
@@ -139,14 +155,14 @@ void main() {
       'link comum não virou página');
   assert(itemDeLink('sem link aqui') == null, 'texto sem link virou item');
 
-  // 8. Só http/https passa.
+  // 9. Só http/https passa.
   assert(linkSeguro('https://a.com') && linkSeguro('http://a.com'),
       'http(s) deveria passar');
   for (final ruim in ['javascript:alert(1)', 'file:///etc/passwd', 'ftp://x']) {
     assert(!linkSeguro(ruim), 'esquema perigoso passou: $ruim');
   }
 
-  // 9. Entidades e descrição do pedido.
+  // 10. Entidades e descrição do pedido.
   assert(decodificarEntidades('a &amp; b &#233; &#x41;') == 'a & b é A',
       'entidades não foram decodificadas');
   assert(descricaoDoPedido(pedidoImagem).contains('Wikimedia'),

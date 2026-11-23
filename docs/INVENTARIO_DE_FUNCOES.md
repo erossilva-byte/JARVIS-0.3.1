@@ -875,6 +875,7 @@ aparelho nesta sessão.
 | Instrução no pedido | conversa, pergunta livre e ponte | entra só quando a área casa; conversa comum fica igual | `montarMensagens`, `mensagensPerguntaLivre` |
 | Pedido de palco | texto do usuário | imagem, vídeo ou notícia, com o assunto limpo | `core/palco.dart` |
 | Palco na conversa | frase enviada no chat | abre a tela já pesquisando, antes do provedor | `VoiceConversationPage._enviar` |
+| Palco por voz com o app fechado | palavra de ativação + pedido de mídia | reconhece, abre o app e entrega tipo e assunto | `JarvisPalco.kt`, `KwsForegroundService.abrirPalco` |
 | Imagens | palco | Wikimedia Commons, sem chave, miniatura de 1200 px | `lerImagensDoCommons` |
 | Notícias | palco | RSS do Google Notícias em pt-BR, sem chave | `lerNoticiasDoRss` |
 | Vídeos | palco | Dailymotion, sem chave; capa e link | `lerVideosDoDailymotion` |

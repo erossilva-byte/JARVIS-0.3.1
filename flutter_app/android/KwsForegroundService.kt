@@ -456,6 +456,15 @@ class KwsForegroundService : Service() {
                     atenderPedidoDeTela(pedidoTela, texto)
                     return
                 }
+                // Palco: “mostra fotos de…”, “me mostra um vídeo sobre…” e
+                // “traz as últimas notícias de…” abrem o app já pesquisando.
+                val palco = JarvisPalco.interpretar(texto)
+                if (palco != null) {
+                    escuta?.cancelar()
+                    escuta = null
+                    abrirPalco(palco, texto)
+                    return
+                }
                 val comando = JarvisFundo.interpretar(texto)
                 // Pergunta livre (“que horas são”, “quem descobriu o Brasil”):
                 // hora e data são respondidas no aparelho; o resto vai para o
@@ -581,6 +590,59 @@ class KwsForegroundService : Service() {
             )
             handler.post { finalizarComando(resposta.mensagem) }
         }.start()
+    }
+
+    /**
+     * Abre o app no modo palco, com o pedido já reconhecido.
+     *
+     * Abrir atividade a partir do segundo plano depende de “Exibir sobre outros
+     * apps”; sem isso o Android bloqueia e o JARVIS diz o que falta, em vez de
+     * afirmar que abriu. O histórico registra o pedido e o resultado real.
+     */
+    private fun abrirPalco(pedido: JarvisPalco.Pedido, texto: String) {
+        if (!JarvisFundo.podeAbrirApps(applicationContext)) {
+            val aviso = "Para abrir o palco com o app fechado, autorize “Exibir sobre " +
+                "outros apps” no Android. O pedido foi entendido; só falta essa autorização."
+            JarvisFundo.registrarHistorico(
+                applicationContext,
+                origem = JarvisFundo.ORIGEM_SEGUNDO_PLANO,
+                pedido = texto,
+                acao = "abrir o palco",
+                ok = false,
+                mensagem = aviso,
+            )
+            finalizarComando(aviso)
+            return
+        }
+        updateNotification("Abrindo o palco: ${pedido.consulta}")
+        avisarAtivo("JARVIS ativo", "Abrindo o palco com ${pedido.tipo.rotulo}…")
+        val abertura = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(JarvisPalco.EXTRA_TIPO, pedido.tipo.chave)
+            putExtra(JarvisPalco.EXTRA_CONSULTA, pedido.consulta)
+        }
+        val abriu = try {
+            if (abertura == null) false else {
+                startActivity(abertura)
+                true
+            }
+        } catch (_: Exception) {
+            false
+        }
+        val frase = if (abriu) {
+            JarvisPalco.fraseDeAbertura(pedido)
+        } else {
+            "Não consegui abrir o app para mostrar o palco. Abra o JARVIS e peça de novo."
+        }
+        JarvisFundo.registrarHistorico(
+            applicationContext,
+            origem = JarvisFundo.ORIGEM_SEGUNDO_PLANO,
+            pedido = texto,
+            acao = "abrir o palco",
+            ok = abriu,
+            mensagem = frase,
+        )
+        finalizarComando(frase)
     }
 
     /**

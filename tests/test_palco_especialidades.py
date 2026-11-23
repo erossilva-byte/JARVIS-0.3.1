@@ -63,6 +63,9 @@ fundo = ler(LIB / "core" / "fundo.dart")
 segundo_plano = ler(LIB / "services" / "segundo_plano_page.dart")
 sistema = ler(LIB / "services" / "sistema_android.dart")
 escuta = ler(ANDROID / "JarvisEscutaFundo.kt")
+palco_voz = ler(ANDROID / "JarvisPalco.kt")
+preparo = ler(APP / "tool" / "prepare_android_sistema.py")
+home = ler(LIB / "home_screen.dart")
 principal = ler(ANDROID / "MainActivity.kt")
 servico = ler(ANDROID / "KwsForegroundService.kt")
 relatorio = (RAIZ / "docs" / "relatorios"
@@ -115,6 +118,35 @@ exigir("abrir-palco" in paginas and "PalcoPage" in paginas,
 exigir("pedidoPalco(texto)" in conversa
        and "PalcoPage(pedidoInicial: palco)" in conversa,
        "conversa não abre o palco no pedido de mídia")
+
+# 5b. Palco por voz com o app fechado: reconhecimento no Kotlin e abertura no
+# app pela intenção, com o pedido já pesquisando.
+for termo in ("object JarvisPalco", "fun interpretar", "EXTRA_TIPO",
+              "EXTRA_CONSULTA", "consultaDe", "fraseDeAbertura",
+              "fotos?", "v[ií]deos?", "not[ií]cias?"):
+    exigir(termo in palco_voz, f"JarvisPalco.kt sem {termo}")
+exigir("JarvisPalco.interpretar(texto)" in servico,
+       "serviço de fundo não reconhece o pedido de palco")
+exigir(servico.index("JarvisPalco.interpretar(texto)")
+       < servico.index("val comando = JarvisFundo.interpretar(texto)"),
+       "pedido de palco é avaliado depois do comando")
+exigir("abrirPalco(" in servico and "JarvisPalco.EXTRA_CONSULTA" in servico,
+       "serviço não entrega o pedido de palco ao app")
+exigir("podeAbrirApps" in servico,
+       "serviço abre o app sem conferir a autorização de sobreposição")
+exigir("JarvisPalco.EXTRA_CONSULTA" in principal
+       and '"acao" to "palco"' in principal,
+       "Android não transforma o pedido em intenção de palco")
+exigir("JarvisPalco.kt" in preparo,
+       "preparo do Android não copia JarvisPalco.kt")
+exigir("pedidoDePalcoVoz(" in palco,
+       "núcleo do palco não aceita o pedido vindo da voz")
+exigir("abrirPalco" in sistema and "pedidoPalco" in sistema,
+       "IntencaoSistema não carrega o pedido de palco")
+exigir("PalcoPage(pedidoInicial: pedido)" in home,
+       "tela inicial não abre o palco da intenção")
+exigir((APP / "test" / "intencao_palco_test.dart").is_file(),
+       "teste da intenção de palco ausente")
 exigir("conversa_palco_test.dart" in str(pacote.get("scripts", ""))
        or (RAIZ / "flutter_app" / "test" / "conversa_palco_test.dart").is_file(),
        "teste da conversa abrindo o palco ausente")
