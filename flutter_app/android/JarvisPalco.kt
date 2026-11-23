@@ -78,14 +78,16 @@ object JarvisPalco {
         val remover = Regex(
             "^(?:por favor[, ]*)?(?:me )?(?:$VERBOS)\\s+" +
                 "(?:(?:uma|um|uns|umas|a|o|as|os|algumas|alguns)\\s+)?" +
-                "(?:$palavras)?(?:\\s+(?:de|do|da|dos|das|sobre|com|em|no|na|" +
+                "(?:$palavras)?(?:\\s+(?:no palco|na tela))?" +
+                "(?:\\s+(?:de|do|da|dos|das|sobre|com|em|no|na|" +
                 "nos|nas|para|pra|pelo|pela))?\\s*",
             RegexOption.IGNORE_CASE
         )
         var saida = texto.replaceFirst(remover, "")
         saida = saida.replaceFirst(
             Regex(
-                "^(?:$palavras)\\s*(?:de|do|da|dos|das|sobre|com|em|no|na|" +
+                "^(?:$palavras)\\s*(?:no palco|na tela)?\\s*" +
+                    "(?:de|do|da|dos|das|sobre|com|em|no|na|" +
                     "nos|nas|para|pra)?\\s*",
                 RegexOption.IGNORE_CASE
             ),

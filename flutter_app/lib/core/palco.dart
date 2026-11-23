@@ -166,7 +166,8 @@ String consultaDePalco(String texto, [TipoPalco? tipo]) {
   final remover = RegExp(
     '^(?:por favor[, ]*)?(?:me )?(?:$_verbosPalco)\\s+'
     '(?:(?:uma|um|uns|umas|a|o|as|os|algumas|alguns)\\s+)?'
-    '(?:$palavras)?(?:\\s+(?:de|do|da|dos|das|sobre|com|em|no|na|'
+    '(?:$palavras)?(?:\\s+(?:no palco|na tela))?'
+    '(?:\\s+(?:de|do|da|dos|das|sobre|com|em|no|na|'
     'nos|nas|para|pra|pelo|pela))?\\s*',
     caseSensitive: false,
   );
@@ -174,8 +175,8 @@ String consultaDePalco(String texto, [TipoPalco? tipo]) {
   // Sem verbo no começo: “fotos de gato” vira “gato”.
   saida = saida.replaceFirst(
     RegExp(
-        '^(?:$palavras)\\s*(?:de|do|da|dos|das|sobre|com|em|no|na|'
-        'nos|nas|para|pra)?\\s*',
+        '^(?:$palavras)\\s*(?:no palco|na tela)?\\s*'
+        '(?:de|do|da|dos|das|sobre|com|em|no|na|nos|nas|para|pra)?\\s*',
         caseSensitive: false),
     '',
   );

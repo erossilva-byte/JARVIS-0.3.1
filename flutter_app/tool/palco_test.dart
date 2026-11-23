@@ -22,6 +22,10 @@ void main() {
   assert(noticia != null && noticia.tipo == TipoPalco.noticia,
       'notícia não reconhecida');
 
+  final naTela = pedidoPalco('mostra fotos na tela de gato');
+  assert(naTela != null && naTela.consulta == 'gato',
+      '“na tela” sobrou na consulta: “${naTela?.consulta}”');
+
   final curto = pedidoPalco('ver imagens de gato');
   assert(curto != null, '“ver imagens” não reconhecido');
   final pedidoCurto = curto!;
