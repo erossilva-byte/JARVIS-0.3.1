@@ -13,6 +13,7 @@ import '../core/especialidades.dart';
 import '../core/habilidades.dart';
 import '../core/historico_voz.dart';
 import '../core/memoria_busca.dart';
+import '../core/palco.dart';
 import '../core/personalidade.dart';
 import '../core/pessoas.dart';
 import '../core/stream_buffer.dart';
@@ -27,6 +28,7 @@ import 'kws_bridge.dart';
 import 'kws_controller.dart';
 import 'historico_voz_service.dart';
 import 'memoria_store.dart';
+import 'palco_page.dart';
 import 'personalidade_store.dart';
 import 'pessoas_store.dart';
 import 'provider_service.dart';
@@ -180,6 +182,17 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   Future<void> _enviar({AiProvider? provedor}) async {
     final texto = composer.text.trim();
     if (texto.isEmpty || enviando) return;
+    // Modo palco: “mostra fotos de…”, “me mostra um vídeo sobre…” ou “traz as
+    // últimas notícias de…” abrem a tela já pesquisando. Vem antes do provedor
+    // porque a pesquisa do palco não usa chave e não depende da conversa.
+    final palco = pedidoPalco(texto);
+    if (palco != null) {
+      composer.clear();
+      unawaited(store?.limparRascunho());
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => PalcoPage(pedidoInicial: palco)));
+      return;
+    }
     final comando = await _comandos.executar(texto);
     if (comando != null) {
       _concluirComando(texto, comando);

@@ -112,6 +112,12 @@ exigir(re.search(r"nome: 'Modo palco',\s*\n\s*estado: EstadoModulo\.parcial", es
        is not None, "Modo palco não está declarado como parcial")
 exigir("abrir-palco" in paginas and "PalcoPage" in paginas,
        "tela do palco não está ligada ao módulo")
+exigir("pedidoPalco(texto)" in conversa
+       and "PalcoPage(pedidoInicial: palco)" in conversa,
+       "conversa não abre o palco no pedido de mídia")
+exigir("conversa_palco_test.dart" in str(pacote.get("scripts", ""))
+       or (RAIZ / "flutter_app" / "test" / "conversa_palco_test.dart").is_file(),
+       "teste da conversa abrindo o palco ausente")
 
 # 5. Especialidades: reconhecimento, instrução e limites.
 for termo in ("especialidadeCadesimu", "especialidadeProgramacao",

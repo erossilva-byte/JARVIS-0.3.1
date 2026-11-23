@@ -13,6 +13,9 @@
   capa do vídeo aparecem no palco; o vídeo e a matéria abrem no navegador, com
   botão para copiar o link. Sem internet ou fonte fora do ar, a tela mostra o
   motivo em vez de inventar resultado.
+- **Palco direto da conversa**: escrever “mostra fotos de…”, “me mostra um
+  vídeo sobre…” ou “traz as últimas notícias de…” abre o palco já pesquisando,
+  sem passar pelo módulo e sem gastar chamada do provedor.
 - **Microfone com melhor reconhecimento**: escolha da alternativa pela nota de
   confiança (não mais a primeira), folga de silêncio maior para pergunta com
   pausa no meio e vocabulário de domínio como pista no Android 13+ (elétrica,

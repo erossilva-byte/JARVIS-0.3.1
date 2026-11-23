@@ -61,6 +61,10 @@ O usuário pediu quatro coisas:
   anterior/próximo e lista de resultados.
 - Toda falha (tempo, conexão, HTTP, lista vazia) vira frase na tela; nada de
   resultado inventado.
+- O palco também abre **direto da conversa**: antes de pedir provedor, o envio
+  verifica `pedidoPalco(texto)` e empurra a tela com o pedido já pesquisando.
+  Assim “mostra fotos de…”, “me mostra um vídeo sobre…” e “traz as últimas
+  notícias de…” funcionam sem passar pelo módulo e sem chave.
 - O Android ganhou `abrirUrl` no canal `com.jarvis.nova/sistema`, restrito a
   `http(s)`.
 
@@ -87,8 +91,8 @@ O usuário pediu quatro coisas:
 ## 4. Evidência
 
 - `flutter analyze` sem problemas.
-- `flutter test` — 341 testes, todos aprovados (337 anteriores + 4 novos do
-  palco).
+- `flutter test` — 344 testes, todos aprovados (337 anteriores + 4 do palco +
+  3 da conversa abrindo o palco).
 - `dart run tool/palco_test.dart` — pedido, endereços sem chave, leitores das
   três fontes, links seguros e entidades.
 - `dart run tool/especialidades_test.dart` — reconhecimento das duas áreas,
