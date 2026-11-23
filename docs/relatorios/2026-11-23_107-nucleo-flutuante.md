@@ -71,6 +71,20 @@ tela se teletransportando com animação.
   ou bateria sem queda. O texto diz que o Android **não** entrega energia por
   janela sobreposta: isto compara trabalho, não watts.
 
+## Humor do mascote
+
+- **Cor e ritmo por estado**: `HumorNucleo.cor/giro/respiro` define, sem Android,
+  o tom (espera azul, ouvindo verde-água, pensando violeta, falando âmbar), o
+  multiplicador de giro e a frequência da respiração. O desenho interpola a cor
+  a cada quadro e acrescenta a assinatura do estado: ondas de sonar ao ouvir,
+  arco girando ao pensar e barras de boca ao falar.
+- **Prioridade dos estados**: a fala vence o pensamento, que vence a escuta. O
+  controlador conta leituras de voz em paralelo e só volta ao estado anterior
+  quando a última termina; fechar a conversa zera tudo e devolve a escuta.
+- **Ligação real**: a tela principal informa a escuta pelo detector de palavra
+  de ativação; a conversa marca pensamento ao enviar e desmarca ao receber ou
+  falhar; `_falar` marca o início e o fim da síntese no `finally`.
+
 ## Limites, sem rodeio
 
 - **O núcleo vive enquanto o processo do JARVIS viver.** Ele não é um serviço
@@ -87,9 +101,9 @@ tela se teletransportando com animação.
 ## Verificação
 
 - `flutter analyze` limpo.
-- `flutter test` — **383 testes** aprovados (357 anteriores + 7 da tela do
+- `flutter test` — **389 testes** aprovados (357 anteriores + 7 da tela do
   núcleo com canal simulado + 5 da medição de quadros + 6 do posicionamento do
-  menu + 8 do cálculo de consumo).
+  menu + 8 do cálculo de consumo + 6 do humor do mascote).
 - `python3 tests/test_nucleo_flutuante.py` aprovado e registrado no `test:all`.
 
 ## O que não foi verificado

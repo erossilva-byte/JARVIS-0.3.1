@@ -64,6 +64,7 @@ object JarvisNucleo {
     private var arrastando = false
     private var pausado = false
     private var economico = false
+    private var humor = HumorNucleo.ESPERA
     private var receptorRegistrado = false
     private var menu: View? = null
     private var menuLayout: WindowManager.LayoutParams? = null
@@ -109,6 +110,7 @@ object JarvisNucleo {
         "permissao" to podeSobrepor(contexto),
         "pausado" to pausado,
         "economico" to economico,
+        "humor" to humor,
     )
 
     /**
@@ -168,6 +170,7 @@ object JarvisNucleo {
             ativo = true
             registrarTela(base)
             desenho.definirEconomico(economico)
+            desenho.definirHumor(humor)
             moverParaPontoAleatorio()
             if (estavaPausado) {
                 pausado = true
@@ -222,6 +225,16 @@ object JarvisNucleo {
             desenho.retomar()
             agendarTeletransporte()
         }
+    }
+
+    /**
+     * Estado do JARVIS: `espera`, `ouvindo`, `pensando` ou `falando`.
+     * O núcleo muda a cor e o ritmo para parecer um mascote atento.
+     */
+    fun definirHumor(valor: String) {
+        if (!HumorNucleo.valido(valor)) return
+        humor = valor
+        vista?.definirHumor(valor)
     }
 
     /** Modo econômico: menos quadros, brilho menor e teletransporte mais raro. */
@@ -716,6 +729,8 @@ private class NucleoView(contexto: Context) : View(contexto) {
     private var pausado = false
     private var suspenso = false
     private var economico = false
+    private var humor = HumorNucleo.ESPERA
+    private val corAtual = HumorNucleo.cor(HumorNucleo.ESPERA)
     private var tempoAcumulado = 0f
     private var ultimoQuadroEconomico = 0L
     private var quadrosNormal = 0L
@@ -800,6 +815,13 @@ private class NucleoView(contexto: Context) : View(contexto) {
         postInvalidateOnAnimation()
     }
 
+    /** Troca a cor e a cadência conforme o JARVIS ouve, pensa ou fala. */
+    fun definirHumor(valor: String) {
+        if (!HumorNucleo.valido(valor) || valor == humor) return
+        humor = valor
+        postInvalidateOnAnimation()
+    }
+
     /** Cancela um teletransporte no meio e devolve o tamanho normal. */
     fun reiniciarAnimacao() {
         animate().cancel()
@@ -814,11 +836,11 @@ private class NucleoView(contexto: Context) : View(contexto) {
             ultimoQuadro = agora
             return
         }
+        var delta = 0f
         if (pausado) {
             if (ultimoQuadro == 0L) ultimoQuadro = agora
         } else {
-            val delta =
-                if (ultimoQuadro == 0L) 0f else ((agora - ultimoQuadro) / 1000f)
+            delta = if (ultimoQuadro == 0L) 0f else ((agora - ultimoQuadro) / 1000f)
             tempoAcumulado += delta.coerceIn(0f, 0.1f)
             brilho = (brilho - delta.coerceIn(0f, 0.1f) * 2.4f).coerceAtLeast(0f)
             ultimoQuadro = agora
@@ -843,30 +865,51 @@ private class NucleoView(contexto: Context) : View(contexto) {
             }
         }
 
+        // A cor caminha até a do estado em vez de saltar: parece respiração.
+        val alvo = HumorNucleo.cor(humor)
+        if (!pausado) {
+            val passo = (delta * 6f).coerceIn(0f, 1f)
+            for (canal in 0..2) {
+                corAtual[canal] += (alvo[canal] - corAtual[canal]) * passo
+            }
+        }
+        val ritmo = HumorNucleo.giro(humor)
+        val respiro = HumorNucleo.respiro(humor)
+
         val tempo = tempoAcumulado
         val raio = min(width, height) * 0.30f
         val centroX = width / 2f
-        val centroY = height / 2f + sin(tempo * 1.6f) * 3f * densidade
+        val amplitude = if (humor == HumorNucleo.FALANDO) 5f else 3f
+        val centroY =
+            height / 2f + sin(tempo * 1.6f * respiro) * amplitude * densidade
 
         if (economico) {
             canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), 210)
         }
         desenharHalo(canvas, centroX, centroY, raio)
-        desenharEsfera(canvas, centroX, centroY, raio, tempo)
-        desenharAneis(canvas, centroX, centroY, raio, tempo)
-        desenharParticulas(canvas, centroX, centroY, raio, tempo)
+        desenharEsfera(canvas, centroX, centroY, raio, tempo, ritmo)
+        desenharAneis(canvas, centroX, centroY, raio, tempo, ritmo)
+        desenharRitmo(canvas, centroX, centroY, raio, tempo, respiro)
+        desenharParticulas(canvas, centroX, centroY, raio, tempo, ritmo)
         desenharClarao(canvas, centroX, centroY, raio)
         if (economico) canvas.restore()
 
         if (!pausado) postInvalidateOnAnimation()
     }
 
+    private fun tom(alfa: Int, clarear: Int = 0): Int = Color.argb(
+        alfa.coerceIn(0, 255),
+        (corAtual[0].toInt() + clarear).coerceIn(0, 255),
+        (corAtual[1].toInt() + clarear).coerceIn(0, 255),
+        (corAtual[2].toInt() + clarear).coerceIn(0, 255),
+    )
+
     private fun desenharHalo(canvas: Canvas, cx: Float, cy: Float, raio: Float) {
         tintaHalo.shader = RadialGradient(
             cx, cy, raio * 1.55f,
             intArrayOf(
-                Color.argb(70, 53, 230, 255),
-                Color.argb(26, 54, 139, 255),
+                tom(70),
+                tom(28),
                 Color.TRANSPARENT,
             ),
             floatArrayOf(0f, 0.55f, 1f),
@@ -881,9 +924,10 @@ private class NucleoView(contexto: Context) : View(contexto) {
         cy: Float,
         raio: Float,
         tempo: Float,
+        ritmo: Float,
     ) {
-        val giro = tempo * 0.7f
-        val inclinacao = 0.42f + sin(tempo * 0.38f) * 0.10f
+        val giro = tempo * 0.7f * ritmo
+        val inclinacao = 0.42f + sin(tempo * 0.38f * ritmo) * 0.10f
         val cosG = cos(giro)
         val sinG = sin(giro)
         val cosI = cos(inclinacao)
@@ -910,7 +954,7 @@ private class NucleoView(contexto: Context) : View(contexto) {
             val b = arestas[i + 1]
             val frente = ((profundidade[a] + profundidade[b]) / 2f + 1f) / 2f
             val opacidade = (48 + frente.coerceIn(0f, 1f) * 170f).toInt()
-            tintaAresta.color = Color.argb(opacidade, 53, 230, 255)
+            tintaAresta.color = tom(opacidade)
             tintaAresta.strokeWidth =
                 (0.6f + frente.coerceIn(0f, 1f) * 2.1f) * densidade
             canvas.drawLine(
@@ -925,8 +969,8 @@ private class NucleoView(contexto: Context) : View(contexto) {
             cx, cy, raio * 0.58f,
             intArrayOf(
                 Color.WHITE,
-                Color.argb(220, 125, 249, 255),
-                Color.argb(90, 53, 230, 255),
+                tom(220, 60),
+                tom(90),
                 Color.TRANSPARENT,
             ),
             floatArrayOf(0f, 0.35f, 0.72f, 1f),
@@ -941,14 +985,15 @@ private class NucleoView(contexto: Context) : View(contexto) {
         cy: Float,
         raio: Float,
         tempo: Float,
+        ritmo: Float,
     ) {
-        tintaAnel.color = Color.argb(96, 140, 240, 255)
+        tintaAnel.color = tom(96)
         tintaAnel.strokeWidth = 1.1f * densidade
         for (indice in 0..1) {
             val inclinacao = 0.55f + indice * 1.15f
             canvas.save()
             canvas.rotate(
-                (tempo * (indice == 0 ? 18f : -12f)) % 360f,
+                (tempo * (indice == 0 ? 18f : -12f) * ritmo) % 360f,
                 cx,
                 cy,
             )
@@ -963,18 +1008,59 @@ private class NucleoView(contexto: Context) : View(contexto) {
         }
     }
 
+    /** Assinatura do estado: ondas de escuta, arco de raciocínio ou boca falando. */
+    private fun desenharRitmo(
+        canvas: Canvas,
+        cx: Float,
+        cy: Float,
+        raio: Float,
+        tempo: Float,
+        respiro: Float,
+    ) {
+        when (humor) {
+            HumorNucleo.OUVINDO -> {
+                for (indice in 0..2) {
+                    val fase = (tempo * 0.55f + indice / 3f) % 1f
+                    tintaAnel.color = tom((80f * (1f - fase)).toInt())
+                    tintaAnel.strokeWidth = 1.2f * densidade
+                    canvas.drawCircle(cx, cy, raio * (1.08f + fase * 0.55f), tintaAnel)
+                }
+            }
+            HumorNucleo.PENSANDO -> {
+                tintaAnel.color = tom(190)
+                tintaAnel.strokeWidth = 2.1f * densidade
+                oval.set(
+                    cx - raio * 1.20f, cy - raio * 1.20f,
+                    cx + raio * 1.20f, cy + raio * 1.20f,
+                )
+                canvas.drawArc(oval, (tempo * 220f) % 360f, 62f, false, tintaAnel)
+            }
+            HumorNucleo.FALANDO -> {
+                val base = cy + raio * 0.62f
+                tintaParticula.color = tom(150)
+                for (indice in 0..4) {
+                    val altura =
+                        (5f + 9f * abs(sin(tempo * respiro + indice * 0.9f))) * densidade
+                    val x = cx + (indice - 2) * 8f * densidade
+                    canvas.drawLine(x, base - altura, x, base + altura, tintaParticula)
+                }
+            }
+        }
+    }
+
     private fun desenharParticulas(
         canvas: Canvas,
         cx: Float,
         cy: Float,
         raio: Float,
         tempo: Float,
+        ritmo: Float,
     ) {
-        tintaParticula.color = Color.argb(190, 190, 250, 255)
+        tintaParticula.color = tom(190, 80)
         for (indice in 0 until 14) {
             val fase = indice * 0.449f
             val orbita = 0.65f + (indice % 5) * 0.12f
-            val angulo = tempo * (0.5f + indice % 3 * 0.22f) + fase
+            val angulo = tempo * (0.5f + indice % 3 * 0.22f) * ritmo + fase
             val x = cx + cos(angulo) * raio * orbita * 1.25f
             val y = cy + sin(angulo * 1.3f) * raio * orbita * 0.62f
             val tamanho = (indice % 3 == 0) 1.9f else 1.2f
@@ -985,7 +1071,7 @@ private class NucleoView(contexto: Context) : View(contexto) {
     private fun desenharClarao(canvas: Canvas, cx: Float, cy: Float, raio: Float) {
         if (brilho <= 0f) return
         val expansao = 1f + (1f - brilho) * 1.6f
-        tintaClarao.color = Color.argb((brilho * 200).toInt(), 190, 250, 255)
+        tintaClarao.color = tom((brilho * 200).toInt(), 40)
         tintaClarao.strokeWidth = (2.4f * brilho + 0.6f) * densidade
         canvas.drawCircle(cx, cy, raio * expansao, tintaClarao)
     }
@@ -1039,6 +1125,45 @@ private class NucleoView(contexto: Context) : View(contexto) {
     override fun onDetachedFromWindow() {
         relogio.removeCallbacks(abrirMenuAtrasado)
         super.onDetachedFromWindow()
+    }
+}
+
+/**
+ * Cor e cadência do núcleo para cada estado do JARVIS. Sem Android aqui: só
+ * decide o tom, o multiplicador de giro e a frequência da respiração.
+ */
+internal object HumorNucleo {
+    const val ESPERA = "espera"
+    const val OUVINDO = "ouvindo"
+    const val PENSANDO = "pensando"
+    const val FALANDO = "falando"
+
+    private val ESTADOS = setOf(ESPERA, OUVINDO, PENSANDO, FALANDO)
+
+    fun valido(estado: String): Boolean = estado in ESTADOS
+
+    /** Azul calmo em espera, verde-água ouvindo, violeta pensando, âmbar falando. */
+    fun cor(estado: String): FloatArray = when (estado) {
+        OUVINDO -> floatArrayOf(96f, 255f, 200f)
+        PENSANDO -> floatArrayOf(158f, 146f, 255f)
+        FALANDO -> floatArrayOf(255f, 196f, 120f)
+        else -> floatArrayOf(53f, 230f, 255f)
+    }
+
+    /** Quanto mais pensa, mais rápido gira; ouvindo, gira devagar e atento. */
+    fun giro(estado: String): Float = when (estado) {
+        OUVINDO -> 0.85f
+        PENSANDO -> 2.1f
+        FALANDO -> 1.3f
+        else -> 1f
+    }
+
+    /** Frequência da respiração; falando, acompanha o ritmo da boca. */
+    fun respiro(estado: String): Float = when (estado) {
+        OUVINDO -> 1.5f
+        PENSANDO -> 2.2f
+        FALANDO -> 5.2f
+        else -> 1f
     }
 }
 

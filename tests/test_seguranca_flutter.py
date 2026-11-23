@@ -149,7 +149,7 @@ exigir("tests/test_seguranca_flutter.py" in script["scripts"]["test:all"],
 exigir("crypto:" in pubspec, "dependência crypto ausente para a derivação")
 
 # 8. Versão e documentação.
-exigir("version: 1.88.5+18805" in pubspec, "versão não atualizada para 1.65.0")
+exigir("version: 1.88.6+18806" in pubspec, "versão não atualizada para 1.65.0")
 exigir("1.65.0" in changelog and "1.66.0" in changelog, "CHANGELOG sem 1.65.0")
 exigir("Tela de bloqueio" in inventario, "inventário sem a tela de bloqueio")
 exigir(relatorio.is_file(), "relatório 078 ausente")

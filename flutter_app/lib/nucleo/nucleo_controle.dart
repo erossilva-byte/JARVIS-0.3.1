@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 
 import 'consumo_nucleo.dart';
+import 'humor_nucleo.dart';
 import 'medicao_nucleo.dart';
 
 /// Estado do núcleo flutuante, como o Android o descreve.
@@ -93,6 +94,10 @@ class NucleoControle {
 
   static Future<NucleoEstado> parar() async =>
       NucleoEstado.deMapa(await canal.invokeMethod<Object?>('parar'));
+
+  /// Cor e ritmo do núcleo conforme o JARVIS ouve, pensa ou fala.
+  static Future<void> definirHumor(HumorNucleo humor) =>
+      canal.invokeMethod<void>('definirHumor', {'humor': humor.name});
 
   static Future<bool> teleportar() async =>
       await canal.invokeMethod<bool>('teleportar') ?? false;

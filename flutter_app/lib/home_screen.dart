@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'catalog.dart';
 import 'drawer.dart';
 import 'command_center.dart';
+import 'nucleo/humor_nucleo.dart';
 import 'hologram.dart';
 import 'pages.dart';
 import 'provider_settings_page.dart';
@@ -296,6 +297,8 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     if (!mounted) {
       return;
     }
+    HumorNucleoControle.definirEscuta(
+        jarvisKwsController.phase == KwsPhase.listening);
     setState(() {});
     unawaited(SistemaAndroid.atualizarWidget(_kwsLabel));
   }

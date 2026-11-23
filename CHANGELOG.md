@@ -1,3 +1,21 @@
+## 1.88.6 — o núcleo vira mascote: cor e ritmo por estado
+
+### O que mudou
+- **Núcleo vivo**: o flutuante muda de cor e de cadência conforme o JARVIS está
+  **ouvindo** (verde-água, giro devagar e ondas de sonar), **pensando** (violeta,
+  giro rápido e um arco girando) ou **falando** (âmbar, respiração no ritmo da
+  boca e barras de fala). Em espera fica no azul calmo de antes. A cor caminha
+  até a do estado em vez de saltar, então a troca parece respiração.
+- **De onde vem o estado**: a escuta vem do detector de palavra de ativação; o
+  pensamento começa quando a conversa pede a resposta e termina quando o texto
+  chega; a fala é contada durante a síntese de voz (duas leituras em fila não
+  apagam o âmbar cedo). Fechar a conversa devolve o núcleo à escuta.
+
+### Verificação
+- `flutter analyze` limpo; **389 testes**; **109/109 contratos**.
+- Limite: sem Android SDK o Kotlin não foi compilado nem visto em aparelho; a
+  cor e o ritmo nativos não foram observados em tela.
+
 ## 1.88.5 — especialista em CADeSIMU e programação, modo palco e microfone de perguntas
 
 ### O que mudou

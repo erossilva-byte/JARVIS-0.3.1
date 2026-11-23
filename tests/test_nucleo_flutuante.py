@@ -164,6 +164,32 @@ for termo in ("CONSUMO REAL", "nucleo-consumo-iniciar",
 for caminho in ("test/posicao_menu_test.dart", "test/consumo_nucleo_test.dart"):
     exigir((APP / caminho).is_file(), f"teste ausente: {caminho}")
 
+# 6g. Humor do mascote: cor e ritmo seguem escuta, pensamento e fala.
+for termo in ("internal object HumorNucleo", "fun cor(", "fun giro(",
+              "fun respiro(", "const val OUVINDO", "const val PENSANDO",
+              "const val FALANDO", "desenharRitmo", "corAtual",
+              "fun definirHumor"):
+    exigir(termo in kotlin, f"humor do núcleo sem {termo}")
+exigir('"humor" to humor' in kotlin, "estado do núcleo não devolve o humor")
+exigir('"definirHumor"' in principal, "MainActivity sem o canal de humor")
+exigir("definirHumor(" in controle, "nucleo_controle.dart sem definirHumor")
+humor_dart = ler(NUCLEO / "humor_nucleo.dart")
+for termo in ("enum HumorNucleo", "definirEscuta", "definirPensando",
+              "iniciarFala", "terminarFala", "esquecerConversa"):
+    exigir(termo in humor_dart, f"humor_nucleo.dart sem {termo}")
+home = ler(APP / "lib" / "home_screen.dart")
+exigir("HumorNucleoControle.definirEscuta(" in home,
+       "tela principal não liga a escuta ao humor do núcleo")
+conversa = ler(APP / "lib" / "services" / "voice_conversation_page.dart")
+for termo in ("HumorNucleoControle.definirPensando(true)",
+              "HumorNucleoControle.definirPensando(false)",
+              "HumorNucleoControle.iniciarFala()",
+              "HumorNucleoControle.terminarFala()",
+              "HumorNucleoControle.esquecerConversa()"):
+    exigir(termo in conversa, f"conversa sem {termo}")
+exigir((APP / "test" / "humor_nucleo_test.dart").is_file(),
+       "teste do humor do núcleo ausente")
+
 # 7. O arquivo Kotlin entra no build e o teste está na esteira.
 exigir("JarvisNucleo.kt" in preparo,
        "preparo do Android não copia JarvisNucleo.kt")

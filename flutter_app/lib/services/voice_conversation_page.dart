@@ -17,6 +17,7 @@ import '../core/palco.dart';
 import '../core/personalidade.dart';
 import '../core/pessoas.dart';
 import '../core/stream_buffer.dart';
+import '../nucleo/humor_nucleo.dart';
 import '../ui_common.dart';
 import 'acessibilidade_service.dart';
 import 'circuito_page.dart';
@@ -274,6 +275,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     }
     composer.clear();
     unawaited(store?.limparRascunho());
+    HumorNucleoControle.definirPensando(true);
     setState(() {
       enviando = true;
       erro = null;
@@ -352,6 +354,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       cancelOnError: true,
       onError: (Object e) {
         if (!mounted) return;
+        HumorNucleoControle.definirPensando(false);
         setState(() {
           enviando = false;
           parcial = '';
@@ -361,6 +364,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       },
       onDone: () {
         if (!mounted) return;
+        HumorNucleoControle.definirPensando(false);
         buffer.concluir();
         final recebido = buffer.texto;
         setState(() {
@@ -596,6 +600,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     if (!mounted) return;
     final recebido = parcial;
     unawaited(voz.parar());
+    HumorNucleoControle.definirPensando(false);
     setState(() {
       enviando = false;
       if (recebido.trim().isNotEmpty) {
@@ -630,11 +635,16 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
 
   Future<void> _falar(String texto, {bool avisar = false}) async {
     if (!vozAtiva || !mounted) return;
-    final falou = await voz.falar(texto);
-    if (!falou && avisar && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-              'A voz do aparelho não está disponível. Instale ou atualize a síntese de voz do Android.')));
+    HumorNucleoControle.iniciarFala();
+    try {
+      final falou = await voz.falar(texto);
+      if (!falou && avisar && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'A voz do aparelho não está disponível. Instale ou atualize a síntese de voz do Android.')));
+      }
+    } finally {
+      HumorNucleoControle.terminarFala();
     }
   }
 
@@ -677,6 +687,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
 
   @override
   void dispose() {
+    HumorNucleoControle.esquecerConversa();
     unawaited(_calarSub?.cancel() ?? Future<void>.value());
     unawaited(_assinatura?.cancel() ?? Future<void>.value());
     unawaited(voz.parar());

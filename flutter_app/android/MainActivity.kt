@@ -253,6 +253,12 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                         )
                         result.success(JarvisNucleo.estado(this))
                     }
+                    "definirHumor" -> {
+                        JarvisNucleo.definirHumor(
+                            call.argument<String>("humor") ?: "espera"
+                        )
+                        result.success(JarvisNucleo.estado(this))
+                    }
                     "parar" -> {
                         JarvisNucleo.parar()
                         result.success(JarvisNucleo.estado(this))
