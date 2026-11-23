@@ -83,18 +83,29 @@ def problemas() -> list[str]:
     drawer = DRAWER.read_text(encoding="utf-8")
     if "Assistência de código e execução isolada" in catalogo:
         falhas.append("catálogo ainda promete execução isolada")
-    if "sandbox e execução não disponíveis" not in catalogo:
+    if "execução não disponível" not in catalogo:
         falhas.append("catálogo não declara a ausência de execução")
     # 099: o aviso genérico virou catálogo de estado por módulo; pages.dart
     # renderiza o texto que hoje mora em core/estado_modulos.dart.
+    # 104: o módulo ganhou tela de assistência de código, mas continua sem
+    # executar nada — e o estado tem de dizer isso.
     estado = (RAIZ / "flutter_app" / "lib" / "core" /
               "estado_modulos.dart").read_text(encoding="utf-8")
     tela_modulo = pages + estado
-    if "Execução de código não disponível" not in tela_modulo:
+    if "Assistência de código; execução não disponível" not in tela_modulo:
         falhas.append("tela do módulo não declara a ausência de execução")
-    if "Não há sandbox, terminal" not in tela_modulo:
+    if "sandbox nem terminal" not in tela_modulo:
         falhas.append("tela do módulo não explica a ausência")
-    if "Código sem execução" not in drawer:
+    if "TelaModulo.programacao" not in estado or "ProgramacaoPage" not in pages:
+        falhas.append("módulo de programação sem tela própria")
+    programacao = (RAIZ / "flutter_app" / "lib" / "services" /
+                   "programacao_page.dart").read_text(encoding="utf-8")
+    for proibido in ("Process.run", "Runtime.getRuntime", "package:http"):
+        if proibido in programacao:
+            falhas.append(f"a tela de programação usa {proibido}")
+    if "Programação" not in drawer:
+        falhas.append("gaveta não oferece o modo programação")
+    if "Código sem execução" in drawer:
         falhas.append("gaveta ainda rotula o módulo como sandbox")
 
     return falhas

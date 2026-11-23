@@ -6,6 +6,7 @@ import 'services/acessibilidade_page.dart';
 import 'services/aparelho_page.dart';
 import 'services/arquivos_page.dart';
 import 'services/atualizacao_page.dart';
+import 'services/avatar_page.dart';
 import 'services/cadesimu_page.dart';
 import 'services/circuito_page.dart';
 import 'services/comandos_android_page.dart';
@@ -16,6 +17,7 @@ import 'services/hermes_page.dart';
 import 'services/kws_controller.dart';
 import 'services/kws_settings_page.dart';
 import 'services/modelos_locais_page.dart';
+import 'services/programacao_page.dart';
 import 'services/projetista_page.dart';
 import 'services/segundo_plano_page.dart';
 import 'services/seguranca_page.dart';
@@ -258,6 +260,18 @@ class ModulePage extends StatelessWidget {
         return [
           _botao(c, 'abrir-atualizacoes', Icons.system_update_alt_rounded,
               'Abrir atualizações do app', () => const AtualizacaoPage()),
+        ];
+      case TelaModulo.programacao:
+        return [
+          _botao(c, 'abrir-programacao', Icons.terminal_rounded,
+              'Abrir modo programação', () => const ProgramacaoPage()),
+          _botao(c, 'abrir-arquivos-do-codigo', Icons.folder_copy_rounded,
+              'Ver os textos salvos em Arquivos', () => const ArquivosPage()),
+        ];
+      case TelaModulo.avatar:
+        return [
+          _botao(c, 'abrir-avatar-3d', Icons.view_in_ar_rounded,
+              'Abrir o avatar 3D', () => const AvatarPage()),
         ];
       case TelaModulo.nenhuma:
         return const [];

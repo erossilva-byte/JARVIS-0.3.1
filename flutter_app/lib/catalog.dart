@@ -34,14 +34,14 @@ const modules = <JarvisModule>[
       'Programação (sem execução)',
       'Produtividade',
       Icons.terminal_rounded,
-      'Assistência de código; sandbox e execução não disponíveis.'),
+      'Criar, analisar, modificar e explicar código; execução não disponível.'),
   JarvisModule(
       'CADeSIMU e elétrica',
       'Engenharia',
       Icons.electrical_services_rounded,
       'Projetos, circuitos e validação elétrica.'),
   JarvisModule('Avatar 3D', 'Interface', Icons.view_in_ar_rounded,
-      'Avatar e representação visual do assistente.'),
+      'Busto em 3D que gira e muda de expressão com o estado.'),
   JarvisModule('Perfis de timbre', 'Interface', Icons.record_voice_over_rounded,
       'Voz grave, natural ou ágil, gravada no aparelho.'),
   JarvisModule(

@@ -43,6 +43,8 @@ enum TelaModulo {
   android,
   segundoPlano,
   atualizacoes,
+  programacao,
+  avatar,
 }
 
 class SituacaoModulo {
@@ -176,11 +178,13 @@ const situacoesModulos = <SituacaoModulo>[
   ),
   SituacaoModulo(
     nome: 'Programação (sem execução)',
-    estado: EstadoModulo.ausente,
-    titulo: 'Execução de código não disponível',
-    detalhe: 'Não há sandbox, terminal ou permissão para rodar programas. Esta '
-        'interface não executa código; os arquivos de texto ficam em Arquivos, na '
-        'pasta isolada do app.',
+    estado: EstadoModulo.parcial,
+    titulo: 'Assistência de código; execução não disponível',
+    detalhe: 'Criar, analisar, modificar e explicar código, com área de código e '
+        'prompt de pedido pronto. A resposta vem do provedor de IA que você '
+        'configurou; nada é executado, compilado ou testado aqui, porque não há '
+        'sandbox nem terminal neste APK.',
+    tela: TelaModulo.programacao,
   ),
   SituacaoModulo(
     nome: 'CADeSIMU e elétrica',
@@ -194,11 +198,13 @@ const situacoesModulos = <SituacaoModulo>[
   ),
   SituacaoModulo(
     nome: 'Avatar 3D',
-    estado: EstadoModulo.ausente,
-    titulo: 'Holograma em 2D, sem modelo 3D',
-    detalhe: 'A tela desenha o holograma do núcleo em 2D. Não há malha 3D nem '
-        'renderizador 3D neste APK; um avatar articulado exigiria um modelo e um '
-        'motor de renderização que não estão aqui.',
+    estado: EstadoModulo.parcial,
+    titulo: 'Busto 3D desenhado no aparelho',
+    detalhe: 'A tela gira um busto em 3D por projeção própria, com luz, olhos, '
+        'boca e reator que mudam por estado. Não há modelo importado nem motor '
+        '3D de terceiros, e as expressões são prévia: o avatar ainda não reage '
+        'ao microfone.',
+    tela: TelaModulo.avatar,
   ),
   SituacaoModulo(
     nome: 'Perfis de timbre',

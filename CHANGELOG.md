@@ -1,3 +1,35 @@
+## 1.88.4 — modo programação e avatar 3D de verdade
+
+### O que mudou
+- **Modo programação** (`Programação`, no catálogo e na gaveta): criar, analisar,
+  modificar e explicar código, com área de código, contador de linhas, colar,
+  limpar e o botão “Usar na área” nos blocos da resposta. A resposta vem do
+  provedor de IA configurado; sem chave, a tela diz que falta a chave.
+- **Prompt de código montado no aparelho** (`promptDeCodigo`): objetivo,
+  restrições e formato, sem provedor e sem rede. É o único pedaço do modo que
+  funciona sem chave.
+- **Salvar em Arquivos**: grava `codigo_<linguagem>.txt` na pasta isolada, sem
+  sobrescrever arquivo anterior. Texto, não programa.
+- **Avatar 3D**: o módulo deixou de dizer “não existe”. A malha do busto é
+  gerada por revolução do perfil, girada em dois eixos e projetada em
+  perspectiva no próprio Flutter, com luz, olhos que piscam, boca que abre no
+  estado “falando”, reator pulsando e órbitas. Arraste para girar, dois toques
+  para centralizar, cinco estados de prévia.
+- **Voz externa agora é Fish Audio**: o ID
+  `82d13948027e4be69892dd3d0104e681` continua sendo o padrão local, mas a URL
+  (`api.fish.audio/v1/tts`), o corpo (`text`, `reference_id`, `format`) e a
+  autenticação (`Authorization: Bearer`) passaram a ser os do serviço. O ID vai
+  no corpo, não na URL.
+- **Estado dos módulos**: `Programação (sem execução)` e `Avatar 3D` passaram de
+  ausentes a **parciais**, com tela própria — 17 prontos, 4 parciais e 4
+  ausentes.
+
+Limite honesto: nada disto foi aberto em aparelho. `flutter analyze` passou,
+`flutter test` fechou 337 testes e os 106 contratos Python passaram, mas o modo
+programação **não executa código** (por definição), a voz do Fish Audio nunca
+falou aqui (sem chave nesta sessão) e o avatar **não escuta o microfone**: as
+expressões são prévia. O APK de release deste bloco ainda não foi gerado.
+
 ## 1.88.3 — a agenda do Android também precisava estar no repositório
 
 ### O que mudou

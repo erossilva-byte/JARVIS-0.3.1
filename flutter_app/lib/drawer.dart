@@ -75,7 +75,7 @@ class JarvisDrawer extends StatelessWidget {
               Navigator.pop(context);
               onModule('Pessoas e contexto');
             }),
-            _item(Icons.terminal_rounded, 'Código sem execução', () {
+            _item(Icons.terminal_rounded, 'Programação', () {
               Navigator.pop(context);
               onModule('Programação (sem execução)');
             }),

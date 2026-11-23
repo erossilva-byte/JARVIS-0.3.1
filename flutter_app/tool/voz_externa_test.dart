@@ -7,6 +7,7 @@ void main() {
   assert(idVozPadrao == '82d13948027e4be69892dd3d0104e681',
       'o ID padrão mudou: $idVozPadrao');
   assert(idVozValido(idVozPadrao), 'o ID padrão não é aceito pela validação');
+  assert(nomeServicoVoz == 'Fish Audio', 'o serviço mudou: $nomeServicoVoz');
 
   // 2. ID malformado cai no padrão em vez de quebrar a chamada.
   for (final ruim in ['', '   ', 'abc', 'id com espaço', List.filled(41, 'x').join()]) {
@@ -19,17 +20,26 @@ void main() {
   assert(normalizarIdVoz('  21m00Tcm4TlvDq8ikWAM ') == '21m00Tcm4TlvDq8ikWAM',
       'normalização não aparou os espaços');
 
-  // 3. A URL leva o ID e o formato; nada do texto vai para a URL.
-  final url = urlVozExterna(idVozPadrao);
-  assert(url.contains(idVozPadrao), 'URL sem o ID: $url');
-  assert(url.contains('output_format=$formatoVozPadrao'), 'URL sem formato');
+  // 3. A URL é o endereço do Fish Audio e não carrega o ID nem o texto: o ID
+  //    vai no corpo, como o serviço pede.
+  final url = urlVozExterna();
+  assert(url == 'https://api.fish.audio/v1/tts', 'endereço errado: $url');
+  assert(!url.contains(idVozPadrao), 'o ID não deveria ir na URL');
   assert(!url.contains('Bom dia'), 'texto vazou para a URL');
 
-  // 4. O corpo leva o texto e o modelo, e só isso.
+  // 4. O corpo leva o texto, o ID da voz e o formato, e só isso.
   final corpo = corpoVozExterna('  Bom dia.  ');
   assert(corpo['text'] == 'Bom dia.', 'texto não foi aparado');
-  assert(corpo['model_id'] == modeloVozPadrao, 'modelo errado');
+  assert(corpo['reference_id'] == idVozPadrao, 'ID da voz errado no corpo');
+  assert(corpo['format'] == 'mp3', 'formato errado no corpo');
   assert(corpo.length == 3, 'corpo com campo inesperado: ${corpo.keys}');
+  assert(corpoVozExterna('oi', id: 'nao-vale').length == 3,
+      'corpo com ID inválido mudou de formato');
+  assert(corpoVozExterna('oi', id: 'nao-vale')['reference_id'] == idVozPadrao,
+      'ID inválido não caiu no padrão no corpo');
+  final escolhido = corpoVozExterna('oi', id: 'abc123abc123abc1');
+  assert(escolhido['reference_id'] == 'abc123abc123abc1',
+      'ID válido escolhido não foi usado');
 
   // 5. O resumo distingue os três estados, sem prometer voz sem chave.
   final semChave = resumoVozExterna(idVozPadrao, ativa: true, temChave: false);
@@ -45,7 +55,8 @@ void main() {
   for (final termo in ['sai do aparelho', 'internet', 'cota', 'cofre']) {
     assert(texto.contains(termo), 'limite ausente: $termo');
   }
+  assert(texto.contains('fish audio'), 'limite não diz qual é o serviço');
 
-  stdout.writeln('OK: ID padrão validado, ${limitesVozExterna.length} limites '
-      'declarados, URL e corpo conferidos');
+  stdout.writeln('OK: ID padrão validado, serviço $nomeServicoVoz, '
+      '${limitesVozExterna.length} limites declarados, URL e corpo conferidos');
 }

@@ -849,3 +849,18 @@ aparelho nesta sessão.
 | Contrato | `tests/test_ci_flutter.py` | esteira nova ativa, antigas em modo manual, grupos de concorrência únicos |
 | Esteiras aposentadas | `build-apk.yml`, `ci-android-auditoria.yml` | era JS/Capacitor; agora só execução manual |
 | Grupos de concorrência | `flutter-ci-…`, `legado-build-apk-…`, `legado-auditoria-android-…` | um por workflow, ninguém cancela ninguém |
+
+## Modo programação, avatar 3D e voz do Fish Audio — Fase 18 (bloco 104, 2026-11-23)
+
+| Função | Onde | Estado | Arquivo |
+|---|---|---|---|
+| Tarefas de código | criar, analisar, modificar, explicar erro, prompt | instrução própria por tarefa; validação antes de gastar chamada | `core/programacao.dart` |
+| Linguagens | 17 entradas com extensão e cerca | só muda o pedido e o nome do arquivo | `linguagensCodigo` |
+| Área de código | tela de programação | colar, limpar, contador e “Usar na área” a partir de um bloco | `services/programacao_page.dart` |
+| Prompt de código | tela de programação | montado no aparelho, sem provedor e sem rede | `promptDeCodigo` |
+| Salvar código | pasta isolada do app | `codigo_<linguagem>.txt`, sem sobrescrever | `nomeArquivoDeCodigo`, `ArquivoSandbox` |
+| Execução de código | — | **não existe**: sem sandbox, terminal ou permissão | `limitesProgramacao` |
+| Avatar 3D | gaveta → módulo Avatar 3D | malha por revolução, giro, perspectiva, luz e cinco estados | `core/avatar3d_geo.dart`, `avatar3d.dart` |
+| Avatar no áudio | — | as expressões são prévia; não reagem ao microfone | `services/avatar_page.dart` |
+| Voz externa | Gaveta → Voz → Voz externa (ID) | Fish Audio: `reference_id` no corpo, chave no `Authorization` | `core/voz_externa.dart` |
+| ID padrão da voz | preferências do aparelho | `82d13948027e4be69892dd3d0104e681` | `idVozPadrao` |

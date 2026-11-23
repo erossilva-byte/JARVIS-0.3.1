@@ -135,12 +135,15 @@ class VozExternaService {
     try {
       final resposta = await _cliente
           .post(
-            Uri.parse(urlVozExterna(id)),
-            headers: const {
+            Uri.parse(urlVozExterna()),
+            headers: {
               'Content-Type': 'application/json',
               'Accept': 'audio/mpeg',
+              // A chave vai só neste cabeçalho; ela nunca entra na URL nem no
+              // corpo, para não sobrar em log de servidor ou histórico.
+              'Authorization': 'Bearer $chave',
             },
-            body: jsonEncode(corpoVozExterna(limpo)),
+            body: jsonEncode(corpoVozExterna(limpo, id: id)),
           )
           .timeout(const Duration(seconds: 30));
       if (resposta.statusCode == 200 && resposta.bodyBytes.isNotEmpty) {
@@ -150,14 +153,15 @@ class VozExternaService {
         case 401:
         case 403:
           return const ResultadoVozExterna(
-              erro: 'A chave foi recusada pelo serviço de voz.');
+              erro: 'A chave do $nomeServicoVoz foi recusada pelo serviço de '
+                  'voz. Confira a credencial em vez de trocar o ID.');
         case 402:
         case 429:
           return const ResultadoVozExterna(
               erro: 'A cota do serviço de voz acabou ou está limitada agora.');
         case 422:
           return const ResultadoVozExterna(
-              erro: 'O serviço recusou o pedido: confira o ID de voz.');
+              erro: 'O $nomeServicoVoz recusou o pedido: confira o ID de voz.');
         default:
           return ResultadoVozExterna(
               erro: 'O serviço respondeu ${resposta.statusCode} '

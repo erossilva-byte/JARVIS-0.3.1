@@ -37,14 +37,25 @@ void main() {
       .map((s) => s.nome)
       .toList();
   for (final esperado in [
-    'Programação (sem execução)',
     'Pareamento Windows',
     'Controle do Windows',
     'ESP32 e Home Assistant',
-    'Avatar 3D',
     'Modelos locais',
   ]) {
     assert(ausentes.contains(esperado), '$esperado deveria estar como ausente');
+  }
+
+  // Programação e Avatar 3D saíram do “não existe”: têm tela, mas continuam
+  // parciais, porque não executam código nem reagem ao microfone.
+  for (final parcial in [
+    'Programação (sem execução)',
+    'Avatar 3D',
+  ]) {
+    final situacao = situacaoDe(parcial);
+    assert(situacao.estado == EstadoModulo.parcial,
+        '$parcial deveria estar como parcial');
+    assert(situacao.tela != TelaModulo.nenhuma,
+        '$parcial deveria abrir uma tela');
   }
 
   // 5. O que o usuário pediu para terminar está como pronto.
