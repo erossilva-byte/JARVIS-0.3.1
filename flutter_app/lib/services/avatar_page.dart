@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../avatar3d.dart';
+import '../nucleo/nucleo_page.dart';
 import '../ui_common.dart';
 
 /// Avatar 3D do JARVIS: busto desenhado por projeção em perspectiva.
@@ -113,6 +114,21 @@ class _AvatarPageState extends State<AvatarPage>
               ),
             ),
             const SizedBox(height: 10),
+            ListTile(
+              key: const ValueKey('avatar-nucleo-flutuante'),
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.blur_on_rounded, color: cyan),
+              title: const Text('Núcleo flutuante',
+                  style: TextStyle(fontSize: 14)),
+              subtitle: const Text(
+                'Um núcleo 3D pequeno que se move e se teletransporta por cima '
+                'dos outros apps.',
+                style: TextStyle(color: muted, fontSize: 11, height: 1.4),
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded, color: muted),
+              onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const NucleoPage())),
+            ),
             Row(
               children: [
                 Icon(Icons.circle, size: 8, color: _corDoEstado(estado)),
@@ -160,8 +176,8 @@ class _AvatarPageState extends State<AvatarPage>
               value: girarSozinho,
               onChanged: (valor) => setState(() => girarSozinho = valor),
               contentPadding: EdgeInsets.zero,
-              title: const Text('Girar sozinho',
-                  style: TextStyle(fontSize: 12.5)),
+              title:
+                  const Text('Girar sozinho', style: TextStyle(fontSize: 12.5)),
               subtitle: const Text(
                 'Um balanço lento em volta do busto. Desligado, o avatar só '
                 'gira com o dedo.',

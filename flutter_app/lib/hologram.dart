@@ -7,11 +7,15 @@ import 'ui_common.dart';
 enum HologramEstado { espera, ouvindo, processando, falando, erro }
 
 class HologramPainter extends CustomPainter {
-  HologramPainter(this.t, this.pointer, {this.estado = HologramEstado.espera});
+  HologramPainter(this.t, this.pointer,
+      {this.estado = HologramEstado.espera, this.fundo = true});
 
   final double t;
   final Offset pointer;
   final HologramEstado estado;
+
+  /// Malha e vinheta de fundo; desligado na máscara flutuante, que é transparente.
+  final bool fundo;
 
   static final _Esfera _esfera = _criarEsfera();
 
@@ -34,8 +38,10 @@ class HologramPainter extends CustomPainter {
         t * math.pi * 2 * (estado == HologramEstado.processando ? 1.7 : 1);
     final cor = _cor;
 
-    _fundo(canvas, size, centro, raio, cor);
-    _vinheta(canvas, size, centro, raio);
+    if (fundo) {
+      _fundo(canvas, size, centro, raio, cor);
+      _vinheta(canvas, size, centro, raio);
+    }
     _esferaGeodesica(canvas, centro, raio, spin, cor);
     _aneis(canvas, centro, raio, spin, cor);
     _reator(canvas, centro, raio, spin, cor);

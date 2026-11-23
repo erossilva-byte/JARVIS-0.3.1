@@ -878,6 +878,7 @@ aparelho nesta sessão.
 | Palco por voz com o app fechado | palavra de ativação + pedido de mídia | reconhece, abre o app e entrega tipo e assunto | `JarvisPalco.kt`, `KwsForegroundService.abrirPalco` |
 | Ficha por voz e por texto | “crie/salve a ficha de…” | entende nome, idade, apelido e relação; pede consentimento e grava no cofre das fichas | `core/pedido_ficha.dart`, `services/executor_app.dart` |
 | Interruptor duplo no projetista | “circuito de interruptor duplo” | duas lâmpadas com duas teclas em ramos separados, validado pela simulação | `Projetista._interruptorDuplo` |
+| Núcleo flutuante 3D | Avatar 3D → “Núcleo flutuante” | janela sobreposta de 72–160 dp com esfera geodésica, brilho, arrasto e teletransporte animado | `JarvisNucleo.kt`, `lib/nucleo/` |
 | Imagens | palco | Wikimedia Commons, sem chave, miniatura de 1200 px | `lerImagensDoCommons` |
 | Notícias | palco | RSS do Google Notícias em pt-BR, sem chave | `lerNoticiasDoRss` |
 | Vídeos | palco | Dailymotion, sem chave; capa e link | `lerVideosDoDailymotion` |

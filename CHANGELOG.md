@@ -16,6 +16,11 @@
 - **Palco direto da conversa**: escrever “mostra fotos de…”, “me mostra um
   vídeo sobre…” ou “traz as últimas notícias de…” abre o palco já pesquisando,
   sem passar pelo módulo e sem gastar chamada do provedor.
+- **Núcleo flutuante 3D**: como os mascotes de desktop, um núcleo pequeno
+  (112 dp por padrão, ajustável de 72 a 160) fica por cima dos outros apps,
+  gira e brilha, arrasta com o dedo, abre o app no toque e se teletransporta
+  sozinho — some, reaparece em outro ponto com um clarão. A esfera é calculada
+  no aparelho; exige “Exibir sobre outros apps”.
 - **Ficha de pessoa por voz**: “Jarvis, crie a ficha de Murilo, que tem 16
   anos…” é entendido na conversa e no segundo plano. Como o app só guarda
   fichas com consentimento, ele repete os dados e espera um “confirmo” antes de

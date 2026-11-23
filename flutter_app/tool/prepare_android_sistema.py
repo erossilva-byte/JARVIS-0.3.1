@@ -284,6 +284,7 @@ def copiar_codigo(app: Path) -> None:
     shutil.copy2(ANDROID / "JarvisAcessibilidade.kt", kotlin / "JarvisAcessibilidade.kt")
     shutil.copy2(ANDROID / "JarvisTelaVoz.kt", kotlin / "JarvisTelaVoz.kt")
     shutil.copy2(ANDROID / "JarvisPalco.kt", kotlin / "JarvisPalco.kt")
+    shutil.copy2(ANDROID / "JarvisNucleo.kt", kotlin / "JarvisNucleo.kt")
     shutil.copy2(ANDROID / "JarvisAgenda.kt", kotlin / "JarvisAgenda.kt")
 
 

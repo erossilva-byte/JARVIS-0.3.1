@@ -227,6 +227,35 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
         }
         sistemaCanal = sistema
 
+        // Núcleo flutuante: ligar, desligar, tamanho, ritmo do teletransporte e
+        // o atalho para a autorização de “Exibir sobre outros apps”.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.jarvis.nova/nucleo")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "estado" -> result.success(JarvisNucleo.estado(this))
+                    "iniciar" -> result.success(
+                        JarvisNucleo.iniciar(
+                            this,
+                            call.argument<Int>("tamanho") ?: 112,
+                            (call.argument<Int>("intervalo") ?: 7000).toLong(),
+                        )
+                    )
+                    "parar" -> {
+                        JarvisNucleo.parar()
+                        result.success(JarvisNucleo.estado(this))
+                    }
+                    "teleportar" -> {
+                        JarvisNucleo.teletransportar()
+                        result.success(true)
+                    }
+                    "abrirAjusteSobreposicao" -> {
+                        JarvisNucleo.abrirAjuste(this)
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CANAL_VIDEO)
             .setMethodCallHandler { call, result ->
                 if (call.method != "extrairQuadros") {
