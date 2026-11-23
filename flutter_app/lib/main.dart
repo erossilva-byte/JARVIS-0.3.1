@@ -2,16 +2,20 @@ import 'package:material_ui/material_ui.dart';
 import 'home_screen.dart';
 import 'services/bloqueio_gate.dart';
 import 'services/ponte_ia_fundo.dart';
+import 'services/voz_externa_service.dart';
 import 'ui_common.dart';
 
 export 'catalog.dart';
 export 'ui_common.dart' show jarvisKwsController, cyan, bg, panel, muted;
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Perguntas ouvidas com o app fora da tela são respondidas pelo provedor
   // configurado, sem abrir a conversa.
   PonteIaFundo.ligar();
+  // Decide uma vez se as respostas usam o Fish Audio; a conversa não consulta
+  // o cofre a cada frase.
+  await VozExternaConfig.carregar();
   runApp(const JarvisApp());
 }
 

@@ -46,6 +46,8 @@ class _VozExternaPageState extends State<VozExternaPage> {
       temChave = chave != null;
       status = resumoVozExterna(atual, ativa: ligada, temChave: chave != null);
     });
+    // A conversa lê este retrato em vez de consultar o cofre a cada frase.
+    VozExternaConfig.definir(ativa: ligada, temChave: chave != null);
   }
 
   @override
@@ -77,6 +79,8 @@ class _VozExternaPageState extends State<VozExternaPage> {
   Future<void> _alternar(bool valor) async {
     await _servico.definirAtiva(valor);
     await _carregar();
+    VozExternaConfig.definir(
+        ativa: valor, temChave: await _servico.lerChave() != null);
   }
 
   Future<void> _testar() async {
@@ -84,8 +88,8 @@ class _VozExternaPageState extends State<VozExternaPage> {
       ocupado = true;
       status = 'Gerando o áudio…';
     });
-    final resultado = await _servico.gerar(
-        'Bom dia. Eu sou o JARVIS. Esta é a voz externa configurada.');
+    final resultado = await _servico
+        .gerar('Bom dia. Eu sou o JARVIS. Esta é a voz externa configurada.');
     if (!mounted) return;
     if (!resultado.ok) {
       setState(() {
@@ -107,93 +111,96 @@ class _VozExternaPageState extends State<VozExternaPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-          appBar: AppBar(
-              title: const Text('Voz externa (ID)',
-                  style: TextStyle(fontSize: 15))),
-          body: ListView(padding: const EdgeInsets.all(18), children: [
-            const Eyebrow('VOZ EXTERNA'),
-            const SizedBox(height: 8),
-            const Text('Uma voz por ID',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w300)),
-            const SizedBox(height: 7),
-            Text(resumoVozExterna(id, ativa: ativa, temChave: temChave),
-                key: const ValueKey('voz-externa-resumo'),
-                style: const TextStyle(color: muted, height: 1.5, fontSize: 12)),
-            const SizedBox(height: 16),
-            TextField(
-              key: const ValueKey('voz-id-campo'),
-              controller: campoId,
-              decoration: InputDecoration(
-                  labelText: 'ID de voz',
-                  hintText: idVozPadrao,
-                  helperText: 'Padrão do app: $idVozPadrao'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              key: const ValueKey('voz-id-salvar'),
-              onPressed: _salvarId,
-              icon: const Icon(Icons.save_rounded, size: 18),
-              label: const Text('Salvar ID'),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              key: const ValueKey('voz-chave-campo'),
-              controller: campoChave,
-              obscureText: true,
-              autocorrect: false,
-              enableSuggestions: false,
-              decoration: InputDecoration(
-                  labelText: 'Chave do serviço ($nomeServicoVoz)',
-                  helperText: temChave
-                      ? 'Já existe uma chave salva no cofre.'
-                      : 'Sem chave, nada é gerado.'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              key: const ValueKey('voz-chave-salvar'),
-              onPressed: _salvarChave,
-              icon: const Icon(Icons.key_rounded, size: 18),
-              label: const Text('Salvar chave'),
-            ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              key: const ValueKey('voz-externa-ativa'),
-              value: ativa,
-              onChanged: _alternar,
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Usar esta voz nas respostas',
-                  style: TextStyle(fontSize: 12.5)),
-              subtitle: const Text(
-                  'Desligada, o JARVIS fala com a voz do aparelho.',
-                  style: TextStyle(color: muted, fontSize: 10.5)),
-            ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              key: const ValueKey('voz-externa-testar'),
-              onPressed: ocupado ? null : _testar,
-              icon: const Icon(Icons.play_circle_outline_rounded),
-              label: Text(ocupado ? 'Testando…' : 'Testar voz'),
-            ),
-            const SizedBox(height: 12),
-            if (status.isNotEmpty)
-              Text(status,
-                  key: const ValueKey('voz-externa-status'),
-                  style: const TextStyle(color: cyan, fontSize: 11, height: 1.45)),
-            const SizedBox(height: 18),
-            const Eyebrow('O QUE ISSO MUDA'),
-            const SizedBox(height: 6),
-            for (final limite in limitesVozExterna)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 7),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Icon(Icons.info_outline_rounded, size: 14, color: muted),
-                  const SizedBox(width: 7),
-                  Expanded(
-                      child: Text(limite,
-                          key: const ValueKey('voz-externa-limite'),
-                          style: const TextStyle(
-                              color: muted, fontSize: 10.5, height: 1.45))),
-                ]),
-              ),
-          ]));
+      appBar: AppBar(
+          title:
+              const Text('Voz externa (ID)', style: TextStyle(fontSize: 15))),
+      body: ListView(padding: const EdgeInsets.all(18), children: [
+        const Eyebrow('VOZ EXTERNA'),
+        const SizedBox(height: 8),
+        const Text('Uma voz por ID',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w300)),
+        const SizedBox(height: 7),
+        Text(resumoVozExterna(id, ativa: ativa, temChave: temChave),
+            key: const ValueKey('voz-externa-resumo'),
+            style: const TextStyle(color: muted, height: 1.5, fontSize: 12)),
+        const SizedBox(height: 16),
+        TextField(
+          key: const ValueKey('voz-id-campo'),
+          controller: campoId,
+          decoration: InputDecoration(
+              labelText: 'ID de voz (reference_id)',
+              hintText: idVozPadrao,
+              helperText: 'No Fish Audio, abra a voz escolhida e copie o ID. '
+                  'Padrão do app: $idVozPadrao'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          key: const ValueKey('voz-id-salvar'),
+          onPressed: _salvarId,
+          icon: const Icon(Icons.save_rounded, size: 18),
+          label: const Text('Salvar ID'),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          key: const ValueKey('voz-chave-campo'),
+          controller: campoChave,
+          obscureText: true,
+          autocorrect: false,
+          enableSuggestions: false,
+          decoration: InputDecoration(
+              labelText: 'Chave da API ($nomeServicoVoz)',
+              helperText: temChave
+                  ? 'Já existe uma chave salva no cofre; cole outra só para '
+                      'trocar.'
+                  : 'Crie a chave em fish.audio → API keys. Ela fica no '
+                      'cofre do aparelho e não volta para a tela.'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          key: const ValueKey('voz-chave-salvar'),
+          onPressed: _salvarChave,
+          icon: const Icon(Icons.key_rounded, size: 18),
+          label: const Text('Salvar chave'),
+        ),
+        const SizedBox(height: 8),
+        SwitchListTile(
+          key: const ValueKey('voz-externa-ativa'),
+          value: ativa,
+          onChanged: _alternar,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Usar esta voz nas respostas',
+              style: TextStyle(fontSize: 12.5)),
+          subtitle: const Text(
+              'Desligada, o JARVIS fala com a voz do aparelho.',
+              style: TextStyle(color: muted, fontSize: 10.5)),
+        ),
+        const SizedBox(height: 8),
+        FilledButton.icon(
+          key: const ValueKey('voz-externa-testar'),
+          onPressed: ocupado ? null : _testar,
+          icon: const Icon(Icons.play_circle_outline_rounded),
+          label: Text(ocupado ? 'Testando…' : 'Testar voz'),
+        ),
+        const SizedBox(height: 12),
+        if (status.isNotEmpty)
+          Text(status,
+              key: const ValueKey('voz-externa-status'),
+              style: const TextStyle(color: cyan, fontSize: 11, height: 1.45)),
+        const SizedBox(height: 18),
+        const Eyebrow('O QUE ISSO MUDA'),
+        const SizedBox(height: 6),
+        for (final limite in limitesVozExterna)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 7),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.info_outline_rounded, size: 14, color: muted),
+              const SizedBox(width: 7),
+              Expanded(
+                  child: Text(limite,
+                      key: const ValueKey('voz-externa-limite'),
+                      style: const TextStyle(
+                          color: muted, fontSize: 10.5, height: 1.45))),
+            ]),
+          ),
+      ]));
 }

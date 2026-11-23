@@ -61,6 +61,49 @@ class PreferencesVozExterna implements VozExternaStore {
   }
 }
 
+/// Configuração da voz externa carregada uma vez na abertura do app.
+///
+/// Consultar o cofre a cada frase atrasaria a fala e, em teste, prenderia a
+/// conversa esperando um canal que ninguém responde. A tela atualiza este
+/// retrato ao salvar a chave ou o interruptor; [FalaJarvis] só lê o booleano.
+class VozExternaConfig {
+  VozExternaConfig._();
+
+  static bool _carregada = false;
+  static bool _ativa = false;
+  static bool _temChave = false;
+
+  /// Só tenta a rede quando a voz está ligada e existe chave guardada.
+  static bool get pronta => _carregada && _ativa && _temChave;
+
+  static bool get ativa => _ativa;
+  static bool get temChave => _temChave;
+
+  static Future<void> carregar({VozExternaService? servico}) async {
+    final alvo = servico ?? VozExternaService();
+    try {
+      _ativa = await alvo.ativa();
+      _temChave = await alvo.lerChave() != null;
+    } catch (_) {
+      _ativa = false;
+      _temChave = false;
+    }
+    _carregada = true;
+  }
+
+  static void definir({required bool ativa, required bool temChave}) {
+    _ativa = ativa;
+    _temChave = temChave;
+    _carregada = true;
+  }
+
+  static void reiniciarParaTeste() {
+    _carregada = false;
+    _ativa = false;
+    _temChave = false;
+  }
+}
+
 /// Resultado de uma tentativa de falar com a voz externa.
 class ResultadoVozExterna {
   const ResultadoVozExterna({this.audio, this.erro});
@@ -170,6 +213,17 @@ class VozExternaService {
     } catch (e) {
       return ResultadoVozExterna(
           erro: 'Sem resposta do serviço de voz: ${_motivo(e)}');
+    }
+  }
+
+  /// Interrompe o MP3 da voz externa, se houver um tocando.
+  Future<void> parar() async {
+    try {
+      await _canal.invokeMethod<void>('pararAudio');
+    } on MissingPluginException {
+      // Plataforma sem o canal de voz: nada tocando.
+    } on PlatformException {
+      // O MediaPlayer já pode ter terminado sozinho.
     }
   }
 

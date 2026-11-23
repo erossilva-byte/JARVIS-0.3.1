@@ -24,6 +24,7 @@ import 'circuito_page.dart';
 import 'comandos_android_service.dart';
 import 'conversa_store.dart';
 import 'executor_app.dart';
+import 'fala_jarvis.dart';
 import 'habilidades_service.dart';
 import 'historico_page.dart';
 import 'kws_bridge.dart';
@@ -45,6 +46,7 @@ class VoiceConversationPage extends StatefulWidget {
       this.fromVoice = false,
       this.conversa,
       this.voz = const VozJarvis(),
+      this.fala,
       this.historico,
       this.habilidadesServico,
       this.tela});
@@ -59,6 +61,10 @@ class VoiceConversationPage extends StatefulWidget {
 
   /// Voz de resposta; testes podem injetar uma implementação falsa.
   final VozJarvis voz;
+
+  /// Fala completa (Fish Audio com volta para a voz local); nulo monta a
+  /// padrão com [voz]. Injetável para teste, como a voz local.
+  final FalaJarvis? fala;
 
   /// Histórico de execuções; nulo usa o armazenamento do aparelho.
   final HistoricoVozGateway? historico;
@@ -112,6 +118,9 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
 
   VozJarvis get voz => widget.voz;
 
+  /// Fish Audio quando ligado; a voz do aparelho quando ele não pode falar.
+  late final FalaJarvis _fala = widget.fala ?? FalaJarvis(local: widget.voz);
+
   /// Texto parcial da resposta em streaming, já agrupado pelo buffer.
   String parcial = '';
   StreamBuffer? _buffer;
@@ -135,7 +144,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     _calarSub = KwsController.commandBus.listen((evento) {
       if (evento.type != 'calou' || !mounted) return;
       if (_assinatura != null) _parar();
-      unawaited(voz.parar());
+      unawaited(_fala.parar());
     });
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _enviarInicialSeConfigurado());
@@ -268,7 +277,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     }
     final escolhido = selecionado;
     provedorAtivo = escolhido;
-    unawaited(voz.parar());
+    unawaited(_fala.parar());
     final ultima = conversa.mensagens.isEmpty ? null : conversa.mensagens.last;
     if (ultima == null || !ultima.doUsuario || ultima.texto != texto) {
       conversa.adicionar(MensagemConversa(autor: 'user', texto: texto));
@@ -400,7 +409,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   /// em nada do celular. A conversa guarda o resultado, a voz lê a versão curta e
   /// o histórico registra o pedido com o mesmo formato dos outros comandos.
   void _concluirCircuito(String texto, RespostaCircuito resposta) {
-    unawaited(voz.parar());
+    unawaited(_fala.parar());
     _registrarPedido(texto);
     conversa
         .adicionar(MensagemConversa(autor: 'assistant', texto: resposta.texto));
@@ -431,7 +440,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   /// Só troca o circuito do cartão quando a simulação fechou: um esquema com
   /// conta quebrada não é oferecido como pronto.
   void _concluirEdicao(String texto, RespostaEdicao resposta) {
-    unawaited(voz.parar());
+    unawaited(_fala.parar());
     _registrarPedido(texto);
     conversa
         .adicionar(MensagemConversa(autor: 'assistant', texto: resposta.texto));
@@ -483,7 +492,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     required String acao,
     bool registrarPedido = true,
   }) {
-    unawaited(voz.parar());
+    unawaited(_fala.parar());
     if (registrarPedido) _registrarPedido(texto);
     _sequenciaComandos++;
     final bloqueado = _sequenciaComandos > 5;
@@ -531,7 +540,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       return;
     }
     if (!mounted) return;
-    unawaited(voz.parar());
+    unawaited(_fala.parar());
     _registrarPedido(texto);
     final pergunta = ConversaDeTela.perguntaDeConfirmacao(comando);
     conversa.adicionar(MensagemConversa(autor: 'assistant', texto: pergunta));
@@ -599,7 +608,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     _buffer?.concluir();
     if (!mounted) return;
     final recebido = parcial;
-    unawaited(voz.parar());
+    unawaited(_fala.parar());
     HumorNucleoControle.definirPensando(false);
     setState(() {
       enviando = false;
@@ -637,11 +646,14 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     if (!vozAtiva || !mounted) return;
     HumorNucleoControle.iniciarFala();
     try {
-      final falou = await voz.falar(texto);
+      final falou = await _fala.falar(texto);
       if (!falou && avisar && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text(
-                'A voz do aparelho não está disponível. Instale ou atualize a síntese de voz do Android.')));
+        final motivo = _fala.ultimoErro;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(motivo == null
+                ? 'A voz do aparelho não está disponível. Instale ou atualize '
+                    'a síntese de voz do Android.'
+                : '$motivo A voz do aparelho também não respondeu.')));
       }
     } finally {
       HumorNucleoControle.terminarFala();
@@ -690,7 +702,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     HumorNucleoControle.esquecerConversa();
     unawaited(_calarSub?.cancel() ?? Future<void>.value());
     unawaited(_assinatura?.cancel() ?? Future<void>.value());
-    unawaited(voz.parar());
+    unawaited(_fala.parar());
     composer.dispose();
     service.close();
     super.dispose();
@@ -708,7 +720,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
             tooltip: vozAtiva ? 'Silenciar respostas' : 'Falar respostas',
             onPressed: () {
               setState(() => vozAtiva = !vozAtiva);
-              if (!vozAtiva) unawaited(voz.parar());
+              if (!vozAtiva) unawaited(_fala.parar());
             },
             icon: Icon(
                 vozAtiva ? Icons.volume_up_rounded : Icons.volume_off_rounded),

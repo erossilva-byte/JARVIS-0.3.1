@@ -142,6 +142,24 @@ tela = ler(LIB / "services" / "voz_externa_page.dart")
 exigir("texto" in tela and "segredo" not in tela.lower().replace("segredo de", ""),
        "a tela da chave parece guardar o valor")
 
+# 6b. A voz externa é usada nas respostas, com volta para a voz local.
+fala = ler(LIB / "services" / "fala_jarvis.dart")
+for termo in ("class FalaJarvis", "ultimoErro", "_externaPronta()",
+              "_externa.gerar(", "_externa.tocar(", "_local.falar(texto)",
+              "Future<void> parar()"):
+    exigir(termo in fala, f"fala_jarvis.dart sem {termo}")
+conversa = ler(LIB / "services" / "voice_conversation_page.dart")
+for termo in ("FalaJarvis", "_fala.falar(texto)", "_fala.parar()"):
+    exigir(termo in conversa, f"conversa sem {termo}")
+exigir("unawaited(voz.parar())" not in conversa,
+       "a conversa ainda para só a voz local")
+exigir((APP / "test" / "fala_jarvis_test.dart").is_file(),
+       "teste da fala com Fish Audio ausente")
+for termo in ("class VozExternaConfig", "get pronta", "static Future<void> carregar"):
+    exigir(termo in servico, f"voz_externa_service.dart sem {termo}")
+exigir("VozExternaConfig.carregar()" in ler(LIB / "main.dart"),
+       "app não carrega a configuração da voz externa na abertura")
+
 # 7. Kotlin: MediaPlayer e canal.
 voz_kt = ler(ANDROID / "JarvisVoz.kt")
 for termo in ("import android.media.MediaPlayer", "fun falarAudio(",

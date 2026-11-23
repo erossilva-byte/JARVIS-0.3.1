@@ -811,7 +811,7 @@ aparelho nesta sessão.
 | Modelos locais | tela “Modelos locais” | declara o que roda offline e o que falta; não baixa nada | `services/modelos_locais_page.dart` |
 | Circuito por prompt | “CADeSIMU e elétrica” → “Criar circuito por prompt” | 9 famílias (com interruptor duplo), montagem na grade e validação pela simulação | `core/projetista.dart`, `services/projetista_page.dart` |
 | Recusa do projetista | campo de pedido | fora das famílias, devolve motivo e o que sabe montar | `montarProjetoDe` |
-| Voz externa por ID | tela “Voz externa (ID)” | ID padrão do projeto, validação, chave no cofre e teste | `core/voz_externa.dart`, `services/voz_externa_service.dart` |
+| Voz externa por ID | tela “Voz externa (ID)” | ID padrão do projeto, validação, chave no cofre, teste e uso real nas respostas com volta para a voz local | `core/voz_externa.dart`, `services/voz_externa_service.dart`, `services/fala_jarvis.dart` |
 | Reprodução do MP3 | canal `com.jarvis.nova/voz` | `falarAudio`/`pararAudio` pelo MediaPlayer, mesmo volume da voz local | `JarvisVoz.kt`, `MainActivity.kt` |
 | Limites da voz externa | tela da voz externa | texto sai do aparelho, precisa de internet, consome cota | `limitesVozExterna` |
 

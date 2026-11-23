@@ -6,13 +6,19 @@
   giro rápido e um arco girando) ou **falando** (âmbar, respiração no ritmo da
   boca e barras de fala). Em espera fica no azul calmo de antes. A cor caminha
   até a do estado em vez de saltar, então a troca parece respiração.
+- **Fish Audio fala de verdade nas respostas**: a tela de voz externa já
+guardava o ID e a chave, mas a conversa só usava a voz do Android. Agora, com a
+voz externa ligada, o texto vira MP3 no `api.fish.audio/v1/tts` e é tocado pelo
+`MediaPlayer`; sem chave, sem rede, sem cota ou se o áudio não tocar, o JARVIS
+volta para a voz do aparelho em vez de ficar mudo. O botão de silenciar e o
+gesto de virar o celular param as duas vozes.
 - **De onde vem o estado**: a escuta vem do detector de palavra de ativação; o
   pensamento começa quando a conversa pede a resposta e termina quando o texto
   chega; a fala é contada durante a síntese de voz (duas leituras em fila não
   apagam o âmbar cedo). Fechar a conversa devolve o núcleo à escuta.
 
 ### Verificação
-- `flutter analyze` limpo; **389 testes**; **109/109 contratos**.
+- `flutter analyze` limpo; **396 testes**; **109/109 contratos**.
 - Limite: sem Android SDK o Kotlin não foi compilado nem visto em aparelho; a
   cor e o ritmo nativos não foram observados em tela.
 
