@@ -67,6 +67,42 @@ void main() {
             'pausado': pausado,
             'economico': economico,
           };
+        case 'consumo':
+          return {
+            'medindo': false,
+            'modoAtual': '',
+            'normal': <String, Object?>{},
+            'economico': <String, Object?>{},
+          };
+        case 'iniciarConsumo':
+          return {
+            'medindo': true,
+            'modoAtual': 'normal',
+            'normal': <String, Object?>{},
+            'economico': <String, Object?>{},
+          };
+        case 'pararConsumo':
+          return {
+            'medindo': false,
+            'modoAtual': 'normal',
+            'normal': {
+              'modo': 'normal',
+              'duracaoMs': 60000,
+              'cpuMs': 3000,
+              'bateriaInicio': 80,
+              'bateriaFim': 79,
+              'carregando': false,
+              'telaApagou': false,
+            },
+            'economico': <String, Object?>{},
+          };
+        case 'zerarConsumo':
+          return {
+            'medindo': false,
+            'modoAtual': '',
+            'normal': <String, Object?>{},
+            'economico': <String, Object?>{},
+          };
         case 'medicao':
           return {
             'normalQuadros': 600,
@@ -233,6 +269,37 @@ void main() {
 
     expect(chamadas.any((c) => c.method == 'zerarMedicao'), isTrue);
     expect(find.textContaining('Sem amostra'), findsOneWidget);
+  });
+
+  testWidgets('consumo: inicia, para com amostra e zera', (tester) async {
+    await abrir(tester);
+    await tester.tap(find.byKey(const ValueKey('nucleo-ativo')));
+    await tester.pump(const Duration(milliseconds: 60));
+
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('nucleo-consumo-iniciar')));
+    await tester.tap(find.byKey(const ValueKey('nucleo-consumo-iniciar')));
+    await tester.pump(const Duration(milliseconds: 60));
+
+    expect(chamadas.any((c) => c.method == 'iniciarConsumo'), isTrue);
+    expect(
+        find.byKey(const ValueKey('nucleo-consumo-medindo')), findsOneWidget);
+
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('nucleo-consumo-parar')));
+    await tester.tap(find.byKey(const ValueKey('nucleo-consumo-parar')));
+    await tester.pump(const Duration(milliseconds: 60));
+
+    expect(chamadas.any((c) => c.method == 'pararConsumo'), isTrue);
+    expect(find.textContaining('50.0 ms de CPU/s'), findsOneWidget);
+
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('nucleo-consumo-zerar')));
+    await tester.tap(find.byKey(const ValueKey('nucleo-consumo-zerar')));
+    await tester.pump(const Duration(milliseconds: 60));
+
+    expect(chamadas.any((c) => c.method == 'zerarConsumo'), isTrue);
+    expect(find.textContaining('Normal · sem amostra'), findsOneWidget);
   });
 
   testWidgets('sem autorização, explica e oferece o ajuste', (tester) async {

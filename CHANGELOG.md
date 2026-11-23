@@ -16,6 +16,11 @@
 - **Palco direto da conversa**: escrever “mostra fotos de…”, “me mostra um
   vídeo sobre…” ou “traz as últimas notícias de…” abre o palco já pesquisando,
   sem passar pelo módulo e sem gastar chamada do provedor.
+- **Núcleo: menu acompanha e consumo real**: o menu agora reposiciona junto com
+  o arrasto, trocando de lado quando não cabe, e a tela mede CPU do processo e
+  variação de bateria em janelas controladas por modo — com aviso de amostra
+  curta, tela apagada, aparelho carregando ou bateria sem queda, e sem prometer
+  watts por núcleo.
 - **Núcleo: menu e medição**: toque longo no núcleo abre um menu escuro com
   pausar/retomar, modo econômico, teletransportar, tamanho P/M/G, abrir o JARVIS
   e desligar; toque curto continua abrindo o app. A tela ganhou uma medição real

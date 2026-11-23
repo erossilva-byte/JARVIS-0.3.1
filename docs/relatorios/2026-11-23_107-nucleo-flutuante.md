@@ -57,6 +57,20 @@ tela se teletransportando com animação.
   é curta e não conclui. Não há promessa de bateria: a medição diz trabalho de
   desenho, não consumo elétrico.
 
+## Menu acompanhando e consumo real
+
+- **Menu acompanha o núcleo**: o arrasto atualiza a posição do menu com a mesma
+  geometria isolada em `PosicaoMenu.calcular` (à direita quando cabe, à esquerda
+  quando não, limitado às barras). O menu mede a própria altura depois de
+  montado e se reposiciona; a regra é espelhada em Dart e testada nos quatro
+  cantos, no menu maior que a tela e no deslocamento junto com o núcleo.
+- **Consumo real**: janelas controladas medem `Process.getElapsedCpuTime()` e a
+  variação de `BATTERY_PROPERTY_CAPACITY` em cada modo. A tela mostra CPU (ms/s),
+  bateria (%/h), duração e a diferença entre os modos, com motivo explícito
+  quando a amostra não conclui: menos de 20 s, tela apagada, aparelho carregando
+  ou bateria sem queda. O texto diz que o Android **não** entrega energia por
+  janela sobreposta: isto compara trabalho, não watts.
+
 ## Limites, sem rodeio
 
 - **O núcleo vive enquanto o processo do JARVIS viver.** Ele não é um serviço
@@ -73,8 +87,9 @@ tela se teletransportando com animação.
 ## Verificação
 
 - `flutter analyze` limpo.
-- `flutter test` — **368 testes** aprovados (357 anteriores + 6 da tela do
-  núcleo, com canal simulado, e 5 do cálculo da medição).
+- `flutter test` — **383 testes** aprovados (357 anteriores + 7 da tela do
+  núcleo com canal simulado + 5 da medição de quadros + 6 do posicionamento do
+  menu + 8 do cálculo de consumo).
 - `python3 tests/test_nucleo_flutuante.py` aprovado e registrado no `test:all`.
 
 ## O que não foi verificado

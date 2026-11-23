@@ -261,6 +261,13 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                         JarvisNucleo.teletransportar()
                         result.success(true)
                     }
+                    "iniciarConsumo" -> result.success(JarvisNucleo.iniciarConsumo(this))
+                    "pararConsumo" -> result.success(JarvisNucleo.pararConsumo(this))
+                    "consumo" -> result.success(JarvisNucleo.estadoConsumo())
+                    "zerarConsumo" -> {
+                        JarvisNucleo.zerarConsumo()
+                        result.success(JarvisNucleo.estadoConsumo())
+                    }
                     "medicao" -> result.success(JarvisNucleo.medicao())
                     "zerarMedicao" -> {
                         JarvisNucleo.zerarMedicao()

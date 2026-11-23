@@ -136,6 +136,34 @@ for termo in ("nucleo-medicao-normal", "nucleo-medicao-eco",
 exigir((APP / "test" / "medicao_nucleo_test.dart").is_file(),
        "teste do cálculo da medição ausente")
 
+# 6e. O menu acompanha o núcleo no arrasto, com a geometria isolada.
+for termo in ("internal object PosicaoMenu", "fun calcular(",
+              "aplicarPosicaoMenu", "if (menu != null) aplicarPosicaoMenu()",
+              "updateViewLayout(painel, layout)", "cabeDireita"):
+    exigir(termo in kotlin, f"menu acompanhando o núcleo sem {termo}")
+exigir("if (menu != null) aplicarPosicaoMenu()" in kotlin[kotlin.index("fun arrastarNaTela"):kotlin.index("fun aplicarPosicaoMenu")],
+       "arrasto não reposiciona o menu")
+
+# 6f. Consumo real: CPU do processo e bateria em janelas controladas.
+for termo in ("fun iniciarConsumo", "fun pararConsumo", "fun estadoConsumo",
+              "fun zerarConsumo", "Process.getElapsedCpuTime",
+              "BATTERY_PROPERTY_CAPACITY", "isCharging", "telaApagou"):
+    exigir(termo in kotlin, f"consumo sem {termo}")
+for termo in ('"iniciarConsumo"', '"pararConsumo"', '"consumo"',
+              '"zerarConsumo"'):
+    exigir(termo in principal, f"MainActivity sem {termo}")
+for termo in ("iniciarConsumo", "pararConsumo", "consumo()",
+              "zerarConsumo"):
+    exigir(termo in controle, f"nucleo_controle.dart sem {termo}")
+for termo in ("CONSUMO REAL", "nucleo-consumo-iniciar",
+              "nucleo-consumo-parar", "nucleo-consumo-zerar",
+              "nucleo-consumo-normal", "nucleo-consumo-eco",
+              "nucleo-consumo-diferenca",
+              "não entrega energia por janela sobreposta"):
+    exigir(termo in pagina, f"consumo na tela sem {termo}")
+for caminho in ("test/posicao_menu_test.dart", "test/consumo_nucleo_test.dart"):
+    exigir((APP / caminho).is_file(), f"teste ausente: {caminho}")
+
 # 7. O arquivo Kotlin entra no build e o teste está na esteira.
 exigir("JarvisNucleo.kt" in preparo,
        "preparo do Android não copia JarvisNucleo.kt")

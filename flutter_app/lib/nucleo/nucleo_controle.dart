@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 
+import 'consumo_nucleo.dart';
 import 'medicao_nucleo.dart';
 
 /// Estado do núcleo flutuante, como o Android o descreve.
@@ -102,6 +103,20 @@ class NucleoControle {
 
   static Future<MedicaoNucleo> zerarMedicao() async =>
       MedicaoNucleo.deMapa(await canal.invokeMethod<Object?>('zerarMedicao'));
+
+  /// Começa uma janela de consumo no modo atual do núcleo.
+  static Future<ConsumoNucleo> iniciarConsumo() async =>
+      ConsumoNucleo.deMapa(await canal.invokeMethod<Object?>('iniciarConsumo'));
+
+  /// Fecha a janela e devolve a amostra do modo.
+  static Future<ConsumoNucleo> pararConsumo() async =>
+      ConsumoNucleo.deMapa(await canal.invokeMethod<Object?>('pararConsumo'));
+
+  static Future<ConsumoNucleo> consumo() async =>
+      ConsumoNucleo.deMapa(await canal.invokeMethod<Object?>('consumo'));
+
+  static Future<ConsumoNucleo> zerarConsumo() async =>
+      ConsumoNucleo.deMapa(await canal.invokeMethod<Object?>('zerarConsumo'));
 
   static Future<void> abrirAjusteSobreposicao() =>
       canal.invokeMethod<void>('abrirAjusteSobreposicao');

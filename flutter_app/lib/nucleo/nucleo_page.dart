@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import '../ui_common.dart';
+import 'consumo_nucleo.dart';
 import 'medicao_nucleo.dart';
 import 'nucleo_controle.dart';
 import 'nucleo_previa.dart';
@@ -28,6 +29,7 @@ class _NucleoPageState extends State<NucleoPage> {
   int intervalo = 7;
   String aviso = '';
   MedicaoNucleo medicao = const MedicaoNucleo();
+  ConsumoNucleo consumo = const ConsumoNucleo();
 
   @override
   void initState() {
@@ -50,6 +52,7 @@ class _NucleoPageState extends State<NucleoPage> {
         aviso = '';
       });
       unawaited(_atualizarMedicao());
+      unawaited(_atualizarConsumo());
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -177,6 +180,76 @@ class _NucleoPageState extends State<NucleoPage> {
     return 'Diferença medida: ${diferenca.toStringAsFixed(0)}% de quadros por '
         'segundo (negativo = menos no econômico). É redução de trabalho, não '
         'número de bateria.';
+  }
+
+  Future<void> _atualizarConsumo() async {
+    try {
+      final novo = await NucleoControle.consumo();
+      if (!mounted) return;
+      setState(() => consumo = novo);
+    } catch (_) {
+      // Sem leitura, fica a última amostra; não vira erro da tela.
+    }
+  }
+
+  Future<void> _iniciarConsumo() async {
+    try {
+      final novo = await NucleoControle.iniciarConsumo();
+      if (!mounted) return;
+      setState(() {
+        consumo = novo;
+        aviso = '';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => aviso = 'Não consegui iniciar a medição de consumo.');
+    }
+  }
+
+  Future<void> _pararConsumo() async {
+    try {
+      final novo = await NucleoControle.pararConsumo();
+      if (!mounted) return;
+      setState(() => consumo = novo);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => aviso = 'Não consegui parar a medição de consumo.');
+    }
+  }
+
+  Future<void> _zerarConsumo() async {
+    try {
+      final novo = await NucleoControle.zerarConsumo();
+      if (!mounted) return;
+      setState(() => consumo = novo);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => aviso = 'Não consegui zerar a medição de consumo.');
+    }
+  }
+
+  String _textoAmostra(AmostraConsumo? amostra) {
+    if (amostra == null) return 'sem amostra';
+    final cpu = '${amostra.cpuMsPorSegundo.toStringAsFixed(1)} ms de CPU/s';
+    final bateria = amostra.bateriaPorHora == null
+        ? 'bateria sem queda medível'
+        : '${amostra.bateriaPorHora!.toStringAsFixed(2)}%/h';
+    final janela = '${(amostra.duracaoMs / 1000).toStringAsFixed(0)} s';
+    final motivo = amostra.conclusiva ? '' : ' · ${amostra.motivoInconclusivo}';
+    return '$cpu · $bateria · $janela$motivo';
+  }
+
+  String _textoDiferencaConsumo() {
+    final diferenca = consumo.diferencaCpuPercentual;
+    if (diferenca == null) {
+      return 'Meça uma janela em cada modo para comparar.';
+    }
+    if (!consumo.comparacaoConclusiva) {
+      return 'CPU: ${diferenca.toStringAsFixed(0)}% no econômico, mas alguma '
+          'amostra não conclui — repita com janelas de pelo menos 20 s.';
+    }
+    return 'CPU: ${diferenca.toStringAsFixed(0)}% no econômico (negativo = '
+        'menos trabalho).';
   }
 
   Future<void> _teleportar() async {
@@ -324,6 +397,70 @@ class _NucleoPageState extends State<NucleoPage> {
                 key: const ValueKey('nucleo-medicao-zerar'),
                 onPressed: () => unawaited(_zerarMedicao()),
                 child: const Text('Zerar medição'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Eyebrow('CONSUMO REAL'),
+            const SizedBox(height: 6),
+            const Text(
+              'O Android não entrega energia por janela sobreposta. Medimos o CPU '
+              'do processo e a variação da bateria do aparelho: serve para '
+              'comparar os modos, não para prometer watts por núcleo.',
+              key: ValueKey('nucleo-consumo-aviso'),
+              style: TextStyle(color: muted, fontSize: 11, height: 1.45),
+            ),
+            if (consumo.medindo) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Medindo agora: '
+                '${consumo.modoAtual == "economico" ? "econômico" : "normal"}. '
+                'Pare para calcular.',
+                key: const ValueKey('nucleo-consumo-medindo'),
+                style: const TextStyle(color: cyan, fontSize: 12),
+              ),
+            ],
+            Wrap(
+              spacing: 4,
+              runSpacing: 2,
+              children: [
+                OutlinedButton(
+                  key: const ValueKey('nucleo-consumo-iniciar'),
+                  onPressed: ativo && !consumo.medindo
+                      ? () => unawaited(_iniciarConsumo())
+                      : null,
+                  child: const Text('Iniciar medição'),
+                ),
+                OutlinedButton(
+                  key: const ValueKey('nucleo-consumo-parar'),
+                  onPressed:
+                      consumo.medindo ? () => unawaited(_pararConsumo()) : null,
+                  child: const Text('Parar'),
+                ),
+                TextButton(
+                  key: const ValueKey('nucleo-consumo-zerar'),
+                  onPressed: () => unawaited(_zerarConsumo()),
+                  child: const Text('Zerar consumo'),
+                ),
+              ],
+            ),
+            Text(
+              'Normal · ${_textoAmostra(consumo.normal)}',
+              key: const ValueKey('nucleo-consumo-normal'),
+              style: const TextStyle(fontSize: 11, height: 1.45),
+            ),
+            Text(
+              'Econômico · ${_textoAmostra(consumo.economico)}',
+              key: const ValueKey('nucleo-consumo-eco'),
+              style: const TextStyle(fontSize: 11, height: 1.45),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _textoDiferencaConsumo(),
+              key: const ValueKey('nucleo-consumo-diferenca'),
+              style: TextStyle(
+                color: consumo.comparacaoConclusiva ? cyan : muted,
+                fontSize: 11,
+                height: 1.45,
               ),
             ),
             const SizedBox(height: 6),

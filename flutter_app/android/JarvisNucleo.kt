@@ -13,9 +13,11 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.Process
 import android.os.SystemClock
 import android.provider.Settings
 import android.view.Gravity
@@ -65,12 +67,23 @@ object JarvisNucleo {
     private var receptorRegistrado = false
     private var menu: View? = null
     private var menuLayout: WindowManager.LayoutParams? = null
+    private var alturaMenu = 0
+    private var consumoInicioMs = 0L
+    private var consumoCpuInicio = 0L
+    private var consumoBateriaInicio = -1
+    private var consumoModo = ""
+    private var consumoCarregando = false
+    private var consumoTelaApagou = false
+    private val consumoAmostras = mutableMapOf<String, Map<String, Any>>()
 
     /** Tela apagada: para de redesenhar até o Android avisar que acendeu. */
     private val receptorTela = object : BroadcastReceiver() {
         override fun onReceive(contexto: Context?, intent: Intent?) {
             when (intent?.action) {
-                Intent.ACTION_SCREEN_OFF -> vista?.suspender()
+                Intent.ACTION_SCREEN_OFF -> {
+                    if (consumoInicioMs != 0L) consumoTelaApagou = true
+                    vista?.suspender()
+                }
                 Intent.ACTION_SCREEN_ON -> vista?.acordar()
             }
         }
@@ -257,6 +270,8 @@ object JarvisNucleo {
         } catch (_: Exception) {
             return
         }
+        // O menu anda junto com o núcleo durante o arrasto.
+        if (menu != null) aplicarPosicaoMenu()
         arrastando = true
         principal.removeCallbacks(soltar)
         principal.postDelayed(soltar, PAUSA_APOS_ARRASTO_MS)
@@ -272,6 +287,69 @@ object JarvisNucleo {
 
     fun zerarMedicao() {
         vista?.zerarMedicao()
+    }
+
+    /**
+     * Consumo real: janelas controladas de CPU do processo e bateria do
+     * aparelho. O Android não informa energia por janela sobreposta, então a
+     * tela trata os números como estimativa de comparação, com motivo quando
+     * não dá para concluir.
+     */
+    fun iniciarConsumo(contexto: Context): Map<String, Any> {
+        if (consumoInicioMs != 0L) return estadoConsumo()
+        consumoModo = if (economico) "economico" else "normal"
+        consumoInicioMs = SystemClock.elapsedRealtime()
+        consumoCpuInicio = Process.getElapsedCpuTime()
+        consumoBateriaInicio = bateria(contexto)
+        consumoCarregando = carregando(contexto)
+        consumoTelaApagou = false
+        return estadoConsumo()
+    }
+
+    fun pararConsumo(contexto: Context): Map<String, Any> {
+        if (consumoInicioMs == 0L) return estadoConsumo()
+        val duracao = SystemClock.elapsedRealtime() - consumoInicioMs
+        val cpu = (Process.getElapsedCpuTime() - consumoCpuInicio).coerceAtLeast(0L)
+        val amostra = mapOf(
+            "modo" to consumoModo,
+            "duracaoMs" to duracao,
+            "cpuMs" to cpu,
+            "bateriaInicio" to consumoBateriaInicio,
+            "bateriaFim" to bateria(contexto),
+            "carregando" to (consumoCarregando || carregando(contexto)),
+            "telaApagou" to consumoTelaApagou,
+        )
+        consumoAmostras[consumoModo] = amostra
+        consumoInicioMs = 0L
+        return estadoConsumo()
+    }
+
+    fun estadoConsumo(): Map<String, Any> = mapOf(
+        "medindo" to (consumoInicioMs != 0L),
+        "modoAtual" to consumoModo,
+        "normal" to (consumoAmostras["normal"] ?: emptyMap<String, Any>()),
+        "economico" to (consumoAmostras["economico"] ?: emptyMap<String, Any>()),
+    )
+
+    fun zerarConsumo() {
+        consumoAmostras.clear()
+        consumoInicioMs = 0L
+    }
+
+    private fun bateria(contexto: Context): Int = try {
+        val gerenciador =
+            contexto.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        gerenciador.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+    } catch (_: Exception) {
+        -1
+    }
+
+    private fun carregando(contexto: Context): Boolean = try {
+        val gerenciador =
+            contexto.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        gerenciador.isCharging
+    } catch (_: Exception) {
+        false
     }
 
     /**
@@ -339,22 +417,8 @@ object JarvisNucleo {
                 false
             }
         }
-        val largura = dp(206)
-        val metricas = base.resources.displayMetrics
-        val margem = dp(8)
-        val nucleo = parametros
-        val aoLado = (nucleo?.x ?: 0) + (nucleo?.width ?: dp(112)) + margem
-        val x = if (aoLado + largura <= metricas.widthPixels) {
-            aoLado
-        } else {
-            max(margem, (nucleo?.x ?: 0) - largura - margem)
-        }
-        val topo = alturaBarra(base, "status_bar_height") + margem
-        val y = ((nucleo?.y ?: dp(120)) - dp(48)).coerceIn(
-            topo, max(topo, metricas.heightPixels - dp(360))
-        )
         val layout = WindowManager.LayoutParams(
-            largura,
+            dp(206),
             WindowManager.LayoutParams.WRAP_CONTENT,
             tipoSobreposicao(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
@@ -363,17 +427,50 @@ object JarvisNucleo {
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            this.x = x
-            this.y = y
         }
         try {
             gerenciador.addView(painel, layout)
             menu = painel
             menuLayout = layout
+            alturaMenu = dp(280)
+            aplicarPosicaoMenu()
+            painel.post {
+                alturaMenu = painel.height.coerceAtLeast(dp(1))
+                aplicarPosicaoMenu()
+            }
         } catch (_: Exception) {
             menu = null
             menuLayout = null
             if (!pausado) agendarTeletransporte()
+        }
+    }
+
+    /** Coloca o menu ao lado do núcleo, trocando de lado quando não cabe. */
+    private fun aplicarPosicaoMenu() {
+        val painel = menu ?: return
+        val layout = menuLayout ?: return
+        val gerenciador = janela ?: return
+        val base = app ?: return
+        val nucleo = parametros ?: return
+        val metricas = base.resources.displayMetrics
+        val posicao = PosicaoMenu.calcular(
+            nucleoX = nucleo.x,
+            nucleoY = nucleo.y,
+            nucleoLado = nucleo.width,
+            menuLargura = layout.width,
+            menuAltura = alturaMenu,
+            telaLargura = metricas.widthPixels,
+            telaAltura = metricas.heightPixels,
+            topo = alturaBarra(base, "status_bar_height"),
+            base = alturaBarra(base, "navigation_bar_height"),
+            folga = dp(8),
+        )
+        layout.x = posicao.x
+        layout.y = posicao.y
+        try {
+            gerenciador.updateViewLayout(painel, layout)
+        } catch (_: Exception) {
+            // Se a janela sumiu no meio, o próximo arrasto tenta de novo.
         }
     }
 
@@ -382,6 +479,7 @@ object JarvisNucleo {
         val gerenciador = janela
         menu = null
         menuLayout = null
+        alturaMenu = 0
         if (gerenciador != null) {
             try {
                 gerenciador.removeView(painel)
@@ -941,6 +1039,42 @@ private class NucleoView(contexto: Context) : View(contexto) {
     override fun onDetachedFromWindow() {
         relogio.removeCallbacks(abrirMenuAtrasado)
         super.onDetachedFromWindow()
+    }
+}
+
+/**
+ * Geometria do menu em volta do núcleo, sem Android: entra posição e tamanho,
+ * sai onde o menu cabe. À direita quando há espaço; à esquerda quando não há;
+ * sempre dentro da tela, descontando as barras.
+ */
+internal object PosicaoMenu {
+    data class Ponto(val x: Int, val y: Int, val aDireita: Boolean)
+
+    fun calcular(
+        nucleoX: Int,
+        nucleoY: Int,
+        nucleoLado: Int,
+        menuLargura: Int,
+        menuAltura: Int,
+        telaLargura: Int,
+        telaAltura: Int,
+        topo: Int,
+        base: Int,
+        folga: Int,
+    ): Ponto {
+        val direita = nucleoX + nucleoLado + folga
+        val cabeDireita = direita + menuLargura <= telaLargura - folga
+        val bruto = if (cabeDireita) direita else nucleoX - menuLargura - folga
+        val x = bruto.coerceIn(
+            folga,
+            (telaLargura - menuLargura - folga).coerceAtLeast(folga),
+        )
+        val desejado = nucleoY + nucleoLado / 2 - menuAltura / 2
+        val y = desejado.coerceIn(
+            topo + folga,
+            (telaAltura - base - menuAltura - folga).coerceAtLeast(topo + folga),
+        )
+        return Ponto(x, y, cabeDireita)
     }
 }
 
