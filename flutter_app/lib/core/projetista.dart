@@ -17,6 +17,7 @@ import 'texto_ptbr.dart';
 /// Famílias que o projetista sabe montar na grade.
 enum FamiliaCircuito {
   lampada,
+  interruptorDuplo,
   led,
   serie,
   paralelo,
@@ -32,6 +33,8 @@ String nomeFamilia(FamiliaCircuito familia) {
   switch (familia) {
     case FamiliaCircuito.lampada:
       return 'Lâmpada com interruptor';
+    case FamiliaCircuito.interruptorDuplo:
+      return 'Interruptor duplo (duas lâmpadas)';
     case FamiliaCircuito.led:
       return 'LED com resistor de limitação';
     case FamiliaCircuito.serie:
@@ -105,8 +108,7 @@ class PedidoCircuito {
     } else if (normal.contains(RegExp(r'\d+\s*k(?:ohm|ohms)?\b'))) {
       ohms = ohms * 1000;
     }
-    var quantidade =
-        numero(r'(\d+)\s*(?:lampadas?|leds?|motores?|cargas?)\b');
+    var quantidade = numero(r'(\d+)\s*(?:lampadas?|leds?|motores?|cargas?)\b');
     // “duas lâmpadas” não tem dígito: o pedido em português costuma escrever.
     if (quantidade == null) {
       if (RegExp(r'\bduas\b').hasMatch(normal)) quantidade = 2;
@@ -114,7 +116,8 @@ class PedidoCircuito {
       if (RegExp(r'\bquatro\b').hasMatch(normal)) quantidade = 4;
     }
 
-    final trifasico = RegExp(r'(trifas|3 fases|tres fases|380)').hasMatch(normal);
+    final trifasico =
+        RegExp(r'(trifas|3 fases|tres fases|380)').hasMatch(normal);
     final familia = _familiaDe(normal, tensao ?? 12);
 
     return PedidoCircuito(
@@ -152,6 +155,12 @@ FamiliaCircuito _familiaDe(String normal, double tensao) {
   if (tem(r'\bled\b|diodo emissor')) return FamiliaCircuito.led;
   if (tem(r'serie')) return FamiliaCircuito.serie;
   if (tem(r'paralel')) return FamiliaCircuito.paralelo;
+  // Duas teclas comandam duas cargas; sem esta família o pedido cairia na
+  // lâmpada com um interruptor só e a resposta ficaria errada.
+  if (tem(r'interruptor duplo|duplo interruptor|interruptor de duas teclas|'
+      r'duas teclas|dois interruptores')) {
+    return FamiliaCircuito.interruptorDuplo;
+  }
   if (tem(r'lampada|luz|interruptor|luminaria|farol|iluminacao')) {
     return FamiliaCircuito.lampada;
   }
@@ -181,7 +190,9 @@ class ResultadoProjeto {
 }
 
 /// Texto que explica o que o projetista monta — usado na recusa e na tela.
-const familiasSuportadas = 'lâmpada com interruptor, LED com resistor, lâmpadas '
+const familiasSuportadas =
+    'lâmpada com interruptor, interruptor duplo, LED com '
+    'resistor, lâmpadas '
     'em série, lâmpadas em paralelo, divisor de tensão, partida direta com selo '
     '(corrente contínua), reversão com intertravamento e ligação temporizada';
 
@@ -209,6 +220,8 @@ ResultadoProjeto montarProjetoDe(String texto) {
   }
 
   switch (pedido.familia) {
+    case FamiliaCircuito.interruptorDuplo:
+      return _interruptorDuplo(pedido);
     case FamiliaCircuito.lampada:
       return _validar(
         pedido,
@@ -236,7 +249,8 @@ ResultadoProjeto montarProjetoDe(String texto) {
       return ResultadoProjeto(
         ok: false,
         pedido: pedido,
-        motivo: 'Não identifiquei o circuito no pedido. Eu monto $familiasSuportadas. '
+        motivo:
+            'Não identifiquei o circuito no pedido. Eu monto $familiasSuportadas. '
             'Diga a tensão e a carga — por exemplo: “divisor de tensão de 12 V”.',
       );
   }
@@ -261,11 +275,15 @@ Elemento _lampada(int a, int b, double watts, double volts) => Elemento(
     valor: watts,
     tensaoNominal: volts);
 
-Elemento _interruptor(int a, int b) => Elemento(
-    id: chaveTrecho(a, b), tipo: TipoElemento.interruptor, a: a, b: b);
+Elemento _interruptor(int a, int b) =>
+    Elemento(id: chaveTrecho(a, b), tipo: TipoElemento.interruptor, a: a, b: b);
 
 Elemento _resistor(int a, int b, double ohms) => Elemento(
-    id: chaveTrecho(a, b), tipo: TipoElemento.resistor, a: a, b: b, valor: ohms);
+    id: chaveTrecho(a, b),
+    tipo: TipoElemento.resistor,
+    a: a,
+    b: b,
+    valor: ohms);
 
 Elemento _botoeira(int a, int b, {bool normalmenteFechado = false}) => Elemento(
     id: chaveTrecho(a, b),
@@ -296,12 +314,13 @@ Elemento _contatoNf(int a, int b, {required String contatoDe}) => Elemento(
     b: b,
     contatoDe: contatoDe);
 
-Elemento _contatoPotencia(int a, int b, {required String contatoDe}) => Elemento(
-    id: chaveTrecho(a, b),
-    tipo: TipoElemento.contatoPotencia,
-    a: a,
-    b: b,
-    contatoDe: contatoDe);
+Elemento _contatoPotencia(int a, int b, {required String contatoDe}) =>
+    Elemento(
+        id: chaveTrecho(a, b),
+        tipo: TipoElemento.contatoPotencia,
+        a: a,
+        b: b,
+        contatoDe: contatoDe);
 
 Elemento _motor(int a, int b, double watts, double volts) => Elemento(
     id: chaveTrecho(a, b),
@@ -355,6 +374,48 @@ Circuito _lampadaComInterruptor(PedidoCircuito pedido) {
     _fio(n(2, 2), n(1, 2)),
     _fio(n(1, 2), n(0, 2)),
   ]);
+}
+
+/// Duas lâmpadas, cada uma com o seu interruptor, em paralelo na fonte.
+///
+/// A topologia repete a da lâmpada com interruptor em dois ramos: a fonte
+/// alimenta os dois ramos e cada tecla fecha só o seu. É o que se desenha para
+/// um interruptor de duas teclas comandando duas lâmpadas.
+ResultadoProjeto _interruptorDuplo(PedidoCircuito pedido) {
+  const c = 5;
+  int n(int x, int y) => y * c + x;
+  final v = pedido.tensao;
+  final elementos = <Elemento>[
+    _fonte(n(0, 2), n(0, 3), v),
+    // Barra do polo positivo, à esquerda.
+    _fio(n(0, 2), n(1, 2)),
+    _fio(n(1, 2), n(1, 1)),
+    _fio(n(1, 1), n(1, 0)),
+    // Ramo 1: tecla 1 e lâmpada 1.
+    _interruptor(n(1, 0), n(2, 0)),
+    _lampada(n(2, 0), n(3, 0), pedido.potencia, v),
+    _fio(n(3, 0), n(4, 0)),
+    // Ramo 2: tecla 2 e lâmpada 2.
+    _interruptor(n(1, 1), n(2, 1)),
+    _lampada(n(2, 1), n(3, 1), pedido.potencia, v),
+    _fio(n(3, 1), n(4, 1)),
+    // Barra do polo negativo, à direita.
+    _fio(n(4, 0), n(4, 1)),
+    _fio(n(4, 1), n(4, 2)),
+    _fio(n(4, 2), n(4, 3)),
+    _fio(n(0, 3), n(1, 3)),
+    _fio(n(1, 3), n(2, 3)),
+    _fio(n(2, 3), n(3, 3)),
+    _fio(n(3, 3), n(4, 3)),
+  ];
+  return _validar(
+    pedido,
+    _montar(colunas: c, linhas: 4, elementos: elementos),
+    'Interruptor duplo',
+    'Fonte de ${_v(v)} alimentando duas lâmpadas de ${_w(pedido.potencia)}; '
+        'cada tecla fecha o seu ramo, então dá para acender uma sem a outra.',
+    const [],
+  );
 }
 
 ResultadoProjeto _led(PedidoCircuito pedido) {
@@ -654,8 +715,7 @@ ResultadoProjeto _temporizado(PedidoCircuito pedido) {
     _fio(n(3, 2), n(3, 3)),
     _fio(n(3, 3), n(3, 4)),
     _fio(n(3, 1), n(4, 1)),
-    _temporizador(n(4, 1), n(4, 2), pedido.segundos,
-        ohms: bobina, nominal: v),
+    _temporizador(n(4, 1), n(4, 2), pedido.segundos, ohms: bobina, nominal: v),
     _fio(n(4, 2), n(4, 3)),
     _fio(n(4, 3), n(4, 4)),
     _fio(n(4, 0), n(5, 0)),

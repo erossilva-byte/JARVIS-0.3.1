@@ -7,6 +7,7 @@ void main() {
   // 1. Cada família tem um texto que a identifica.
   final casos = <String, FamiliaCircuito>{
     'lâmpada de 12 V e 5 W com interruptor': FamiliaCircuito.lampada,
+    'interruptor duplo com duas lâmpadas': FamiliaCircuito.interruptorDuplo,
     'LED de 12 V com resistor': FamiliaCircuito.led,
     'duas lâmpadas de 12 V em série': FamiliaCircuito.serie,
     'duas lâmpadas de 12 V em paralelo': FamiliaCircuito.paralelo,
@@ -40,7 +41,8 @@ void main() {
     assert(projeto.circuito != null, 'exemplo sem circuito: $exemplo');
     final simulacao = projeto.circuito!.simular();
     assert(simulacao.calculado, 'simulação não fechou: $exemplo');
-    assert(!simulacao.avisos.any((a) => a.gravidade == GravidadeAviso.erro),
+    assert(
+        !simulacao.avisos.any((a) => a.gravidade == GravidadeAviso.erro),
         'simulação com erro: $exemplo → '
         '${simulacao.avisos.map((a) => a.texto).join('; ')}');
     assert(projeto.explicacao.isNotEmpty, 'exemplo sem explicação: $exemplo');
@@ -59,19 +61,38 @@ void main() {
   assert(divisor.explicacao.contains('8 V'),
       'divisor não anunciou 8 V: ${divisor.explicacao}');
 
+  // 5b. Interruptor duplo: duas teclas, duas lâmpadas, simulação fechada.
+  final duplo = montarProjetoDe('faça um circuito de interruptor duplo');
+  assert(duplo.ok, 'interruptor duplo não montou: ${duplo.motivo}');
+  final duploCircuito = duplo.circuito!;
+  assert(duploCircuito.simular().calculado,
+      'interruptor duplo entregue sem simulação fechada');
+  assert(
+      duploCircuito.elementos
+              .where((e) => e.tipo == TipoElemento.interruptor)
+              .length ==
+          2,
+      'interruptor duplo deveria ter duas teclas');
+  assert(
+      duploCircuito.elementos
+              .where((e) => e.tipo == TipoElemento.lampada)
+              .length ==
+          2,
+      'interruptor duplo deveria ter duas lâmpadas');
+
   // 6. Recusas honestas: nada de circuito inventado.
   final vazio = montarProjetoDe('   ');
   assert(!vazio.ok && vazio.motivo.contains('Descreva'),
       'pedido vazio não foi recusado');
   final trifasico = montarProjetoDe('painel industrial trifásico qualquer');
-  assert(!trifasico.ok,
-      'pedido fora das famílias foi entregue como pronto');
+  assert(!trifasico.ok, 'pedido fora das famílias foi entregue como pronto');
   assert(trifasico.motivo.contains('Eu monto'), 'recusa sem o que ele monta');
 
   // 7. Pedido com tensão impossível para o LED é recusado com motivo.
   final ledImpossivel = montarProjetoDe('LED em 2 V');
   assert(!ledImpossivel.ok, 'LED em 2 V deveria ser recusado');
 
-  stdout.writeln('OK: ${casos.length} famílias, ${exemplosDePedido.length} exemplos '
+  stdout.writeln(
+      'OK: ${casos.length} famílias, ${exemplosDePedido.length} exemplos '
       'montados e simulados, recusas honestas conferidas');
 }

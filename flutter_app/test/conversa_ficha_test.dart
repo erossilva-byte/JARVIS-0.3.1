@@ -1,0 +1,76 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:jarvis_nova/core/historico_voz.dart';
+import 'package:jarvis_nova/services/executor_app.dart';
+import 'package:jarvis_nova/services/historico_voz_service.dart';
+import 'package:jarvis_nova/services/voice_conversation_page.dart';
+import 'package:jarvis_nova/services/voz_jarvis.dart';
+import 'package:material_ui/material_ui.dart';
+
+class VozFalsa extends VozJarvis {
+  @override
+  Future<bool> falar(String texto) async => true;
+
+  @override
+  Future<void> parar() async {}
+}
+
+class HistoricoFalso implements HistoricoVozGateway {
+  @override
+  Future<List<RegistroExecucao>> carregar() async => const [];
+
+  @override
+  Future<bool> limpar() async => true;
+
+  @override
+  Future<bool> registrar({
+    required String pedido,
+    required String acao,
+    required bool ok,
+    required String mensagem,
+    required OrigemExecucao origem,
+  }) async =>
+      true;
+}
+
+Future<void> abrirConversa(WidgetTester tester, String comando) async {
+  tester.view.physicalSize = const Size(500, 2200);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await tester.pumpWidget(MaterialApp(
+    home: VoiceConversationPage(
+      initialCommand: comando,
+      fromVoice: true,
+      voz: VozFalsa(),
+      historico: HistoricoFalso(),
+    ),
+  ));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 600));
+}
+
+void main() {
+  setUp(ExecutorApp.esquecerPendente);
+  tearDown(ExecutorApp.esquecerPendente);
+
+  testWidgets('“crie a ficha de…” entende os dados e pede consentimento',
+      (tester) async {
+    await abrirConversa(
+        tester,
+        'Jarvis, crie a ficha de Murilo, que tem 16 anos, seu apelido é '
+        'Murilin e ele é meu melhor amigo');
+
+    expect(find.textContaining('Entendi a ficha de Murilo'), findsOneWidget);
+    expect(find.textContaining('confirmo'), findsWidgets);
+    expect(find.textContaining('Nenhum provedor configurado'), findsNothing);
+    expect(ExecutorApp.pendente?.apelido, 'Murilin');
+  });
+
+  testWidgets('pergunta sobre ficha segue o caminho normal, sem interceptar',
+      (tester) async {
+    await abrirConversa(tester, 'qual é a ficha de Murilo?');
+
+    expect(ExecutorApp.pendente, isNull);
+    expect(find.textContaining('Entendi a ficha'), findsNothing);
+  });
+}

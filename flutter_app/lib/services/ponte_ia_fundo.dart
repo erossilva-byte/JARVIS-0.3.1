@@ -7,6 +7,7 @@ import '../core/especialidades.dart';
 import '../core/habilidades.dart';
 import '../core/pergunta_livre.dart';
 import '../core/personalidade.dart';
+import 'executor_app.dart';
 import 'habilidades_service.dart';
 import 'personalidade_store.dart';
 import 'provider_service.dart';
@@ -69,6 +70,11 @@ class PonteIaFundo {
     // Edição do circuito aberto: vale quando o mesmo motor já o tem na memória.
     final edicao = responderEdicaoDeCircuito(texto, CircuitoEmUso.atual);
     if (edicao != null) return edicao.textoFalado;
+    // Ação no app pedida de viva voz (ficha de pessoa): executa antes de
+    // gastar provedor. A confirmação de consentimento vem na fala seguinte,
+    // enquanto este motor está de pé.
+    final acao = await ExecutorApp.executar(texto);
+    if (acao != null) return acao.mensagemFalada;
     final escolhido = await provedor.firstConfiguredProvider();
     if (escolhido == null) {
       throw PlatformException(

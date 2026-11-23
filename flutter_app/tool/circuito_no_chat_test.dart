@@ -12,6 +12,7 @@ void main() {
     'quero um circuito para acender uma lâmpada',
     'preciso de um circuito de reversão com intertravamento',
     'como monto um circuito com resistor de 1k',
+    'faça um circuito de interruptor duplo no CADeSIMU',
   ]) {
     assert(pedidoDeCircuito(pedido), 'não reconheceu o pedido: “$pedido”');
     assert(responderPedidoDeCircuito(pedido) != null,
@@ -40,7 +41,8 @@ void main() {
     'lembra que o R1 é de 1k',
     'ler a tela',
   ]) {
-    assert(!pedidoDeCircuito(outro), 'interceptou o que não é pedido: “$outro”');
+    assert(
+        !pedidoDeCircuito(outro), 'interceptou o que não é pedido: “$outro”');
   }
 
   // 4. Circuito montado: texto completo, versão falada e simulação fechada.
@@ -52,8 +54,10 @@ void main() {
       'resultado entregue sem simulação fechada');
   assert(pronto.texto.contains('Montei o circuito'), 'texto sem o veredito');
   assert(pronto.texto.contains('simulação fechada'), 'texto sem a simulação');
-  assert(pronto.texto.contains('Abrir no simulador') ||
-      pronto.texto.contains('Abra no simulador'), 'texto sem o atalho');
+  assert(
+      pronto.texto.contains('Abrir no simulador') ||
+          pronto.texto.contains('Abra no simulador'),
+      'texto sem o atalho');
   assert(!pronto.texto.contains('**') && !pronto.texto.contains('`'),
       'texto com markdown (a voz leria os símbolos)');
   assert(pronto.textoFalado.length < pronto.texto.length,
@@ -68,6 +72,15 @@ void main() {
   assert(recusa.texto.startsWith('Não montei o circuito.'),
       'recusa sem frase honesta: ${recusa.texto}');
   assert(recusa.textoFalado.startsWith('Não montei'), 'fala da recusa errada');
+
+  // 5b. Interruptor duplo monta de verdade, não como interruptor simples.
+  final duplo = responderPedidoDeCircuito(
+      'Jarvis, faça um circuito de interruptor duplo no CADeSIMU')!;
+  assert(duplo.ok, 'interruptor duplo recusado: ${duplo.texto}');
+  assert(duplo.projeto.circuito!.simular().calculado,
+      'interruptor duplo sem simulação fechada');
+  assert(duplo.texto.contains('Interruptor duplo'),
+      'texto não nomeia o interruptor duplo: ${duplo.texto}');
 
   // 6. Texto vazio não é pedido.
   assert(!pedidoDeCircuito('   '), 'texto vazio virou pedido');

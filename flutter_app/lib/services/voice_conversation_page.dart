@@ -22,6 +22,7 @@ import 'acessibilidade_service.dart';
 import 'circuito_page.dart';
 import 'comandos_android_service.dart';
 import 'conversa_store.dart';
+import 'executor_app.dart';
 import 'habilidades_service.dart';
 import 'historico_page.dart';
 import 'kws_bridge.dart';
@@ -191,6 +192,18 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       unawaited(store?.limparRascunho());
       await Navigator.of(context).push(MaterialPageRoute<void>(
           builder: (_) => PalcoPage(pedidoInicial: palco)));
+      return;
+    }
+    // Ficha de pessoa: entende os dados e pede o consentimento antes de
+    // gravar. Vale igual para o texto e para a voz, sem provedor de IA.
+    final acaoApp = await ExecutorApp.executar(texto);
+    if (acaoApp != null) {
+      _concluirLocal(
+        texto,
+        ok: acaoApp.ok,
+        mensagemRecebida: acaoApp.mensagem,
+        acao: acaoApp.acao,
+      );
       return;
     }
     final comando = await _comandos.executar(texto);

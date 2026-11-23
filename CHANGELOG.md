@@ -16,6 +16,13 @@
 - **Palco direto da conversa**: escrever “mostra fotos de…”, “me mostra um
   vídeo sobre…” ou “traz as últimas notícias de…” abre o palco já pesquisando,
   sem passar pelo módulo e sem gastar chamada do provedor.
+- **Ficha de pessoa por voz**: “Jarvis, crie a ficha de Murilo, que tem 16
+  anos…” é entendido na conversa e no segundo plano. Como o app só guarda
+  fichas com consentimento, ele repete os dados e espera um “confirmo” antes de
+  gravar; a ficha entra no mesmo cofre da tela de Pessoas.
+- **Interruptor duplo no circuito por prompt**: agora é uma família própria —
+  duas lâmpadas, cada uma com sua tecla, montadas e validadas pela simulação,
+  em vez de virar uma lâmpada com um interruptor só.
 - **Palco por voz com o app fechado**: “Jarvis, mostra fotos de…” é reconhecido
   pelo serviço de segundo plano (`JarvisPalco.kt`), que abre o app com o tipo e
   o assunto já prontos. Exige “Exibir sobre outros apps”; sem essa autorização

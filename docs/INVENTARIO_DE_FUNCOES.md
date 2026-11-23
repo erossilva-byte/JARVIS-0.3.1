@@ -809,7 +809,7 @@ aparelho nesta sessão.
 | Hermes: plano por agente | tela “Hermes Agent” | rota + passos + aviso, antes de executar | `core/hermes_plano.dart`, `services/hermes_page.dart` |
 | Agentes especializados | tela “Agentes especializados” | 12 domínios e teste de roteamento no texto | `core/agentes.dart` |
 | Modelos locais | tela “Modelos locais” | declara o que roda offline e o que falta; não baixa nada | `services/modelos_locais_page.dart` |
-| Circuito por prompt | “CADeSIMU e elétrica” → “Criar circuito por prompt” | 8 famílias, montagem na grade e validação pela simulação | `core/projetista.dart`, `services/projetista_page.dart` |
+| Circuito por prompt | “CADeSIMU e elétrica” → “Criar circuito por prompt” | 9 famílias (com interruptor duplo), montagem na grade e validação pela simulação | `core/projetista.dart`, `services/projetista_page.dart` |
 | Recusa do projetista | campo de pedido | fora das famílias, devolve motivo e o que sabe montar | `montarProjetoDe` |
 | Voz externa por ID | tela “Voz externa (ID)” | ID padrão do projeto, validação, chave no cofre e teste | `core/voz_externa.dart`, `services/voz_externa_service.dart` |
 | Reprodução do MP3 | canal `com.jarvis.nova/voz` | `falarAudio`/`pararAudio` pelo MediaPlayer, mesmo volume da voz local | `JarvisVoz.kt`, `MainActivity.kt` |
@@ -823,7 +823,7 @@ aparelho nesta sessão.
 | Decisão conservadora | verbo de montagem + substantivo de circuito | pergunta pura (“o que é um resistor”) segue para a IA | `pedidoDeCircuito` |
 | Resposta na conversa | bolha do assistente | veredito, componentes, potência e simulação fechada | `respostaPedidoDeCircuito` |
 | Cartão com atalho | acima do campo de texto | “Abrir no simulador” com o esquema carregado | `_cartaoCircuito`, `CircuitoPage(inicial:)` |
-| Recusa | fora das oito famílias | motivo escrito, sem cartão e sem simulador | `RespostaCircuito.ok` |
+| Recusa | fora das nove famílias | motivo escrito, sem cartão e sem simulador | `RespostaCircuito.ok` |
 | Voz de fundo | app fora da tela | monta e fala a versão curta, sem chave | `PonteIaFundo.responderPergunta` |
 | Histórico | histórico de execuções | registra `circuito por prompt` ou `circuito recusado` | `_concluirCircuito` |
 
@@ -876,6 +876,8 @@ aparelho nesta sessão.
 | Pedido de palco | texto do usuário | imagem, vídeo ou notícia, com o assunto limpo | `core/palco.dart` |
 | Palco na conversa | frase enviada no chat | abre a tela já pesquisando, antes do provedor | `VoiceConversationPage._enviar` |
 | Palco por voz com o app fechado | palavra de ativação + pedido de mídia | reconhece, abre o app e entrega tipo e assunto | `JarvisPalco.kt`, `KwsForegroundService.abrirPalco` |
+| Ficha por voz e por texto | “crie/salve a ficha de…” | entende nome, idade, apelido e relação; pede consentimento e grava no cofre das fichas | `core/pedido_ficha.dart`, `services/executor_app.dart` |
+| Interruptor duplo no projetista | “circuito de interruptor duplo” | duas lâmpadas com duas teclas em ramos separados, validado pela simulação | `Projetista._interruptorDuplo` |
 | Imagens | palco | Wikimedia Commons, sem chave, miniatura de 1200 px | `lerImagensDoCommons` |
 | Notícias | palco | RSS do Google Notícias em pt-BR, sem chave | `lerNoticiasDoRss` |
 | Vídeos | palco | Dailymotion, sem chave; capa e link | `lerVideosDoDailymotion` |
