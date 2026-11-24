@@ -1,3 +1,32 @@
+## 1.90.0 — voz mais rápida, tarefas por voz e mudo na tela principal
+
+### O que mudou
+- **Voz mais veloz**: todos os perfis falam mais rápido e chegou o perfil
+  **Rápida**. O padrão (Grave) saiu de 0,88 para 1,12 de ritmo — cerca de 27%
+  mais rápido sem abrir nada.
+- **Tarefas por voz no app**: pausar, continuar, avançar e voltar a música,
+  mandar mensagem por WhatsApp/Telegram/SMS/e-mail, ligar para um contato e
+  ativar ou desativar o núcleo flutuante agora acontecem quando você pede
+  falando, não só pelas telas.
+- **Tarefas por voz no segundo plano**: o serviço entendeu música (qualquer app
+  tocando, não só o Spotify) e o núcleo flutuante. O palco e a automação de tela
+  continuam como estavam.
+- **Botão de mudo na tela principal**: o cartão MICROFONE da Central de Comando
+  para o detector de palavra de verdade, interrompe a fala e mostra a faixa
+  “JARVIS MUDO”. Desligar volta a escutar na hora.
+- **Modo de visita mais claro**: cabeçalho com avatar, selo “SEM DADOS”,
+  sugestões de perguntas que ele responde sem provedor, balões novos e ajustes
+  em cartões.
+
+### Limites declarados
+- Música em segundo plano depende do acesso a notificações do JARVIS: sem ele,
+  o Android não entrega a sessão de mídia e a resposta diz que não encontrou
+  app tocando.
+- Mandar mensagem e ligar continuam valendo com o app aberto; abrir a conversa
+  de outro app a partir do segundo plano depende de “Exibir sobre outros apps”.
+- Ritmo 1,60 pode picar palavras em sintetizadores antigos; Natural e Grave
+  continuam disponíveis.
+
 ## 1.89.2 — um chat só, fala mais cedo e fundo que não desiste
 
 ### O que mudou

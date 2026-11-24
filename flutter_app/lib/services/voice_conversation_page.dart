@@ -37,6 +37,7 @@ import 'personalidade_store.dart';
 import 'pessoas_store.dart';
 import 'provider_service.dart';
 import 'sistema_android.dart';
+import 'tarefas_da_voz.dart';
 import 'voz_jarvis.dart';
 import 'voz_tela_cheia_page.dart';
 
@@ -50,7 +51,8 @@ class VoiceConversationPage extends StatefulWidget {
       this.fala,
       this.historico,
       this.habilidadesServico,
-      this.tela});
+      this.tela,
+      this.tarefas});
 
   final String initialCommand;
 
@@ -76,6 +78,10 @@ class VoiceConversationPage extends StatefulWidget {
   /// Automação de tela; nulo usa a ponte Android com o consentimento do app.
   final AcessibilidadeService? tela;
 
+  /// Tarefas do aparelho pedidas por voz (música, mensagem, ligação, núcleo);
+  /// nulo usa a ponte Android real. Injetável para teste.
+  final TarefasDaVoz? tarefas;
+
   @override
   State<VoiceConversationPage> createState() => _VoiceConversationPageState();
 }
@@ -86,6 +92,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   final ExecutorComandosAndroid _comandos = ExecutorComandosAndroid();
   late final AcessibilidadeService _tela =
       widget.tela ?? AcessibilidadeService();
+  late final TarefasDaVoz _tarefas = widget.tarefas ?? TarefasDaVoz();
 
   /// Toque aguardando “sim”: existe enquanto o usuário decide.
   TocarNaTela? _telaPendente;
@@ -234,9 +241,33 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       );
       return;
     }
+    // “Ativa o núcleo” tem de vir antes de abrir app, senão o Android
+    // procuraria um aplicativo chamado “núcleo”.
+    final nucleo = TarefasDaVoz.pedidoDeNucleo(texto);
+    if (nucleo != null) {
+      final tarefa = await _tarefas.nucleo(nucleo, texto);
+      _concluirLocal(
+        texto,
+        ok: tarefa.ok,
+        mensagemRecebida: tarefa.mensagem,
+        acao: tarefa.acao,
+      );
+      return;
+    }
     final comando = await _comandos.executar(texto);
     if (comando != null) {
       _concluirComando(texto, comando);
+      return;
+    }
+    // Tarefas do aparelho que já existiam em telas: música, mensagem, ligação.
+    final tarefa = await _tarefas.executar(texto);
+    if (tarefa != null) {
+      _concluirLocal(
+        texto,
+        ok: tarefa.ok,
+        mensagemRecebida: tarefa.mensagem,
+        acao: tarefa.acao,
+      );
       return;
     }
     // Circuito por prompt: monta e simula no aparelho, antes de gastar provedor.

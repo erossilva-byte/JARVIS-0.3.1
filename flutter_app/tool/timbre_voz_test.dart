@@ -3,19 +3,24 @@ import 'dart:io';
 import 'package:jarvis_nova/core/timbre_voz.dart';
 
 void main() {
-  // 1. São três perfis, com ids únicos e os nomes do comparativo.
-  assert(perfisTimbre.length == 3, 'deveriam existir três perfis');
+  // 1. São quatro perfis, com ids únicos e os nomes do comparativo.
+  assert(perfisTimbre.length == 4, 'deveriam existir quatro perfis');
   final ids = perfisTimbre.map((p) => p.id).toSet();
-  assert(ids.length == 3, 'id repetido entre perfis');
+  assert(ids.length == 4, 'id repetido entre perfis');
   final nomes = perfisTimbre.map((p) => p.nome).toList();
-  assert(nomes.contains('Grave') &&
-      nomes.contains('Natural') &&
-      nomes.contains('Ágil'), 'nomes dos perfis errados');
+  assert(
+      nomes.contains('Grave') &&
+          nomes.contains('Natural') &&
+          nomes.contains('Ágil') &&
+          nomes.contains('Rápida'),
+      'nomes dos perfis errados');
 
-  // 2. O grave é o timbre original do app: 0,72 de tom e 0,88 de ritmo.
+  // 2. O grave é o timbre original do app: 0,72 de tom, agora com ritmo 1,12.
   final grave = timbreDe('grave');
   assert(grave.pitch == 0.72, 'tom do grave mudou');
-  assert(grave.velocidade == 0.88, 'ritmo do grave mudou');
+  assert(grave.velocidade == 1.12, 'ritmo do grave mudou');
+  assert(grave.velocidade > 0.88,
+      'o ritmo do grave precisa ter ficado mais rápido que o antigo 0,88');
 
   // 3. Id desconhecido ou vazio cai no padrão, sem quebrar a tela.
   assert(timbreDe(null).id == timbrePadrao, 'nulo deveria usar o padrão');
@@ -25,15 +30,21 @@ void main() {
   assert(timbreDe(' NATURAL ').id == 'natural',
       'caixa e espaços deveriam ser tolerados');
 
-  // 4. Ágil é mais agudo e mais rápido que o natural; natural é neutro.
+  // 4. Ágil é mais agudo e mais rápido que o natural; o natural mantém o tom
+  //    nativo, mas também fala mais rápido do que 1,0.
   final natural = timbreDe('natural');
   final agil = timbreDe('agil');
-  assert(natural.pitch == 1.0 && natural.velocidade == 1.0,
-      'natural deveria ser o tom e o ritmo nativos');
+  final rapida = timbreDe('rapida');
+  assert(natural.pitch == 1.0, 'natural deveria ser o tom nativo');
+  assert(natural.velocidade > 1.0,
+      'natural deveria ter ficado mais rápido que o ritmo nativo');
   assert(agil.pitch > natural.pitch, 'ágil deveria ser mais agudo');
-  assert(agil.velocidade > natural.velocidade,
-      'ágil deveria ser mais rápido');
+  assert(agil.velocidade > natural.velocidade, 'ágil deveria ser mais rápido');
   assert(grave.pitch < natural.pitch, 'grave deveria ser mais baixo');
+  assert(rapida.velocidade > agil.velocidade,
+      'rápida deveria ser o perfil mais veloz');
+  assert(rapida.velocidade <= 1.6,
+      'acima de 1,6 a síntese costuma picar palavras');
 
   // 5. Todo perfil fica na faixa aceita pelo Android.
   for (final perfil in perfisTimbre) {
@@ -54,7 +65,7 @@ void main() {
   // 6. O resumo mostra o que está sendo usado, não só o nome.
   final resumo = resumoTimbre(agil);
   assert(resumo.contains('Ágil'), 'resumo sem o nome do perfil');
-  assert(resumo.contains('1.15') && resumo.contains('1.12'),
+  assert(resumo.contains('1.15') && resumo.contains('1.45'),
       'resumo sem tom e ritmo');
 
   // 7. Os limites não escondem que a voz é a do aparelho.
@@ -67,9 +78,11 @@ void main() {
 
   // 8. A frase de exemplo é curta e sem marcação que a voz leria.
   assert(fraseExemploTimbre.length <= 90, 'frase de exemplo longa demais');
-  assert(!fraseExemploTimbre.contains('*') &&
-      !fraseExemploTimbre.contains('#') &&
-      !fraseExemploTimbre.contains('['), 'frase de exemplo com marcação');
+  assert(
+      !fraseExemploTimbre.contains('*') &&
+          !fraseExemploTimbre.contains('#') &&
+          !fraseExemploTimbre.contains('['),
+      'frase de exemplo com marcação');
 
   stdout.writeln(
       'OK: timbre — perfis, paridade do grave, faixas, resumo e limites');

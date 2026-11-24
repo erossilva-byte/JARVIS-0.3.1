@@ -9,8 +9,9 @@ import android.content.Context
  * `tests/test_timbre_flutter.py` confere a paridade para a tela não prometer um
  * timbre diferente do que a síntese usa.
  *
- * O grave é o timbre original do app (0,72 / 0,88). Nada aqui envia dados e
- * nenhum perfil cria voz nova: só ajusta `setPitch` e `setSpeechRate`.
+ * O grave é o timbre original do app (0,72) com ritmo acelerado (1,12): a fala
+ * antiga, a 0,88, ficava lenta demais. Nada aqui envia dados e nenhum perfil
+ * cria voz nova: só ajusta `setPitch` e `setSpeechRate`.
  */
 object JarvisTimbre {
     const val PREFS = "jarvis_voz"
@@ -26,9 +27,10 @@ object JarvisTimbre {
     )
 
     val PERFIS = listOf(
-        Perfil("grave", "Grave", 0.72f, 0.88f),
-        Perfil("natural", "Natural", 1.0f, 1.0f),
-        Perfil("agil", "Ágil", 1.15f, 1.12f),
+        Perfil("grave", "Grave", 0.72f, 1.12f),
+        Perfil("natural", "Natural", 1.0f, 1.28f),
+        Perfil("agil", "Ágil", 1.15f, 1.45f),
+        Perfil("rapida", "Rápida", 1.0f, 1.6f),
     )
 
     private fun prefs(context: Context) =

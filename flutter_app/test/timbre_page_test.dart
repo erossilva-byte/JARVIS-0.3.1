@@ -59,6 +59,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(enviado, 'agil');
+    // Com quatro perfis a lista rola: volta ao topo para ler o cartão "VOZ ATUAL".
+    await tester.drag(find.byType(ListView), const Offset(0, 600));
+    await tester.pumpAndSettle();
     expect(find.textContaining('Ágil: tom 1.15'), findsOneWidget);
     expect(find.byKey(const ValueKey('timbre-aplicado')), findsNothing);
     expect(find.byKey(const ValueKey('timbre-erro')), findsNothing);

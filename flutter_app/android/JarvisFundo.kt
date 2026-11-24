@@ -1,10 +1,15 @@
 package com.jarvis.nova
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
+import android.media.MediaMetadata
+import android.media.session.MediaController
+import android.media.session.MediaSessionManager
+import android.media.session.PlaybackState
 import android.provider.AlarmClock
 import android.provider.Settings
 import java.util.Calendar
@@ -16,10 +21,10 @@ import kotlin.math.roundToInt
 /**
  * Comandos executados sem abrir a tela do JARVIS.
  *
- * O interpretador é o mesmo conjunto fechado do registro da Fase 10B (abrir app,
- * lanterna, volume e alarme). Nada aqui recebe código, shell ou intent arbitrária:
- * o texto reconhecido é comparado com regras fixas e cada ação é conferida depois
- * de executada.
+ * O interpretador é um conjunto fechado (abrir app, lanterna, volume, alarme,
+ * hora, data, música e núcleo flutuante). Nada aqui recebe código, shell ou
+ * intent arbitrária: o texto reconhecido é comparado com regras fixas e cada
+ * ação é conferida depois de executada.
  *
  * Abrir outro app a partir do segundo plano é bloqueado pelo Android desde a
  * versão 10, exceto quando o app tem "Exibir sobre outros apps" autorizado. Por
@@ -43,7 +48,12 @@ object JarvisFundo {
     const val ORIGEM_DIGITADO = "digitado"
     const val ORIGEM_TESTE = "teste"
 
-    enum class Tipo { ABRIR_APP, LANTERNA, VOLUME, ALARME, HORA, DATA, DESCONHECIDO }
+    enum class Tipo {
+        ABRIR_APP, LANTERNA, VOLUME, ALARME, HORA, DATA, MIDIA, NUCLEO, DESCONHECIDO
+    }
+
+    /** Controles de música enviados ao app que estiver tocando. */
+    enum class AcaoMidia { PAUSAR, CONTINUAR, PROXIMA, ANTERIOR }
 
     data class Comando(
         val tipo: Tipo,
@@ -53,6 +63,7 @@ object JarvisFundo {
         val delta: Int? = null,
         val hora: Int = -1,
         val minuto: Int = -1,
+        val acaoMidia: AcaoMidia = AcaoMidia.PAUSAR,
     ) {
         /** Texto curto para o histórico e para o aviso na tela. */
         fun resumo(): String = when (tipo) {
@@ -67,6 +78,13 @@ object JarvisFundo {
             Tipo.ALARME -> "alarme para %02d:%02d".format(hora, minuto)
             Tipo.HORA -> "informar as horas"
             Tipo.DATA -> "informar a data de hoje"
+            Tipo.MIDIA -> when (acaoMidia) {
+                AcaoMidia.PAUSAR -> "pausar a música"
+                AcaoMidia.CONTINUAR -> "continuar a música"
+                AcaoMidia.PROXIMA -> "passar para a próxima música"
+                AcaoMidia.ANTERIOR -> "voltar para a música anterior"
+            }
+            Tipo.NUCLEO -> if (ligar == false) "desativar o núcleo" else "ativar o núcleo"
             Tipo.DESCONHECIDO -> "pergunta livre"
         }
     }
@@ -256,6 +274,21 @@ object JarvisFundo {
     )
     private val DIMINUIR =
         Regex("\\b(diminuir|diminui|diminua|baixar|baixa|abaixar|abaixa|abaixe)\\b.*\\bvolume\\b")
+    private val NUCLEO = Regex("\\bnucleo\\b")
+    private val NUCLEO_LIGAR = Regex(
+        "\\b(ativar|ativa|ative|ligar|liga|ligue|abrir|abre|abra|mostrar|mostra|" +
+            "mostre|chamar|chama|chame|aparecer|aparece)\\b"
+    )
+    private val MIDIA_PAUSAR =
+        Regex("\\b(pausa|pausar|pause|para a musica|parar a musica)\\b")
+    private val MIDIA_CONTINUAR =
+        Regex("\\b(continua|continuar|retoma|retomar|despausa|volta a tocar)\\b")
+    private val MIDIA_PROXIMA =
+        Regex("\\b(proxima|proximo|avanca|avancar|pula|pular|passa a musica)\\b")
+    private val MIDIA_ANTERIOR =
+        Regex("\\b(anterior|volta a musica|voltar a musica|volta uma)\\b")
+    private val FALA_DE_MUSICA =
+        Regex("\\b(musica|spotify|faixa|som|playlist|album|tocando|tocar)\\b")
 
     /** Decide o que foi pedido. Texto vazio ou fora do registro vira [Tipo.DESCONHECIDO]. */
     fun interpretar(frase: String): Comando {
@@ -300,6 +333,32 @@ object JarvisFundo {
             }
         }
 
+        // Núcleo flutuante antes de abrir app: “abrir o núcleo” não é um app.
+        if (NUCLEO.containsMatchIn(limpo) &&
+            !limpo.contains("como ") && !limpo.contains("por que")
+        ) {
+            if (DESLIGAR.containsMatchIn(limpo)) return Comando(Tipo.NUCLEO, ligar = false)
+            if (NUCLEO_LIGAR.containsMatchIn(limpo)) return Comando(Tipo.NUCLEO, ligar = true)
+            if (Regex("^(o |meu )?nucleo( flutuante)?$").matches(limpo)) {
+                return Comando(Tipo.NUCLEO, ligar = true)
+            }
+        }
+
+        // Música: o app que estiver tocando é quem recebe os controles.
+        val falaDeMusica = FALA_DE_MUSICA.containsMatchIn(limpo)
+        if (MIDIA_PAUSAR.containsMatchIn(limpo) && (falaDeMusica || limpo.length <= 16)) {
+            return Comando(Tipo.MIDIA, acaoMidia = AcaoMidia.PAUSAR)
+        }
+        if (MIDIA_CONTINUAR.containsMatchIn(limpo) && (falaDeMusica || limpo.length <= 16)) {
+            return Comando(Tipo.MIDIA, acaoMidia = AcaoMidia.CONTINUAR)
+        }
+        if (MIDIA_PROXIMA.containsMatchIn(limpo) && (falaDeMusica || limpo.length <= 16)) {
+            return Comando(Tipo.MIDIA, acaoMidia = AcaoMidia.PROXIMA)
+        }
+        if (MIDIA_ANTERIOR.containsMatchIn(limpo)) {
+            return Comando(Tipo.MIDIA, acaoMidia = AcaoMidia.ANTERIOR)
+        }
+
         ABRIR.find(limpo)?.let { achado ->
             val nome = achado.groupValues[1].trim()
             if (nome.isNotEmpty()) {
@@ -322,6 +381,8 @@ object JarvisFundo {
         Tipo.ALARME -> alarme(context, comando.hora, comando.minuto)
         Tipo.HORA -> Resultado(true, horaFalada())
         Tipo.DATA -> Resultado(true, dataFalada())
+        Tipo.MIDIA -> midia(context, comando.acaoMidia)
+        Tipo.NUCLEO -> nucleo(context, comando.ligar)
         // Pergunta livre: quem chama (o serviço) envia o texto ao provedor de IA.
         Tipo.DESCONHECIDO -> Resultado(
             false,
@@ -351,6 +412,147 @@ object JarvisFundo {
         val mes = MESES[(agora.get(Calendar.MONTH)).coerceIn(0, 11)]
         return "Hoje é $dia, ${agora.get(Calendar.DAY_OF_MONTH)} de $mes de " +
             "${agora.get(Calendar.YEAR)}."
+    }
+
+    /**
+     * Sessão de mídia ativa: a que está tocando, a do Spotify ou a primeira.
+     *
+     * Exige acesso a notificações (o mesmo componente que já lê as mensagens),
+     * que é o que permite ao Android entregar as sessões de outros apps. Sem
+     * esse acesso, devolve `null` e quem chamou explica o que falta.
+     */
+    private fun controladorMidia(context: Context): MediaController? {
+        val gerenciador = context.getSystemService(Context.MEDIA_SESSION_SERVICE)
+            as? MediaSessionManager ?: return null
+        val componente = ComponentName(context, JarvisNotificacaoListener::class.java)
+        return try {
+            val sessoes = gerenciador.getActiveSessions(componente)
+            sessoes.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+                ?: sessoes.firstOrNull { it.packageName.contains("spotify") }
+                ?: sessoes.firstOrNull()
+        } catch (_: SecurityException) {
+            null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Nome da faixa atual, para a resposta não ser genérica. */
+    private fun faixaDe(controlador: MediaController?): String {
+        val titulo = controlador?.metadata
+            ?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty().trim()
+        if (titulo.isEmpty()) return ""
+        val artista = controlador?.metadata
+            ?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty().trim()
+        return if (artista.isEmpty()) " \"$titulo\"" else " \"$titulo\" — $artista"
+    }
+
+    /**
+     * Pausa, retoma, avança ou volta a música que estiver tocando, em qualquer
+     * app de música — não só no Spotify.
+     *
+     * O comando é enviado pelo controle de sessão do Android. A confirmação é
+     * lida do estado real depois de uma espera curta (no máximo 900 ms): se o
+     * app não mudar de estado, a resposta diz que não confirmou, em vez de
+     * afirmar que pausou.
+     */
+    private fun midia(context: Context, acao: AcaoMidia): Resultado {
+        val controlador = controladorMidia(context)
+            ?: return Resultado(
+                false,
+                "Não encontrei nenhum app de música ativo. Abra o app, toque algo uma " +
+                    "vez e depois peça para pausar ou continuar. Se o app estiver " +
+                    "tocando e ainda assim eu não achar, confira o acesso a " +
+                    "notificações do JARVIS."
+            )
+        val tocandoAntes = controlador.playbackState?.state == PlaybackState.STATE_PLAYING
+        if (acao == AcaoMidia.PAUSAR && !tocandoAntes) {
+            return Resultado(true, "Nada está tocando agora${faixaDe(controlador)}.")
+        }
+        if (acao == AcaoMidia.CONTINUAR && tocandoAntes) {
+            return Resultado(true, "A música já está tocando${faixaDe(controlador)}.")
+        }
+        try {
+            when (acao) {
+                AcaoMidia.PAUSAR -> controlador.transportControls.pause()
+                AcaoMidia.CONTINUAR -> controlador.transportControls.play()
+                AcaoMidia.PROXIMA -> controlador.transportControls.skipToNext()
+                AcaoMidia.ANTERIOR -> controlador.transportControls.skipToPrevious()
+            }
+        } catch (_: Exception) {
+            return Resultado(false, "O app de música recusou o comando agora.")
+        }
+
+        val esperado: Boolean? = when (acao) {
+            AcaoMidia.PAUSAR -> false
+            AcaoMidia.CONTINUAR -> true
+            else -> null
+        }
+        if (esperado != null) {
+            val limite = System.currentTimeMillis() + 900
+            while (System.currentTimeMillis() < limite) {
+                val estado = controladorMidia(context)?.playbackState?.state
+                    ?: controlador.playbackState?.state
+                if ((estado == PlaybackState.STATE_PLAYING) == esperado) break
+                try {
+                    Thread.sleep(120)
+                } catch (_: InterruptedException) {
+                    break
+                }
+            }
+        }
+
+        val depois = controladorMidia(context) ?: controlador
+        val tocando = depois.playbackState?.state == PlaybackState.STATE_PLAYING
+        val faixa = faixaDe(depois)
+        return when (acao) {
+            AcaoMidia.PAUSAR -> if (!tocando) {
+                Resultado(true, "Pausado$faixa.")
+            } else {
+                Resultado(
+                    false,
+                    "Pedi a pausa, mas o app de música não confirmou: $faixa continua tocando."
+                )
+            }
+            AcaoMidia.CONTINUAR -> if (tocando) {
+                Resultado(true, "Tocando$faixa.")
+            } else {
+                Resultado(
+                    false,
+                    "Pedi para continuar, mas o app de música não confirmou a reprodução."
+                )
+            }
+            AcaoMidia.PROXIMA -> Resultado(true, "Próxima faixa pedida ao app de música$faixa.")
+            AcaoMidia.ANTERIOR -> Resultado(true, "Faixa anterior pedida ao app de música$faixa.")
+        }
+    }
+
+    /** Liga ou desliga o núcleo flutuante por voz, com o motivo real. */
+    private fun nucleo(context: Context, ligar: Boolean?): Resultado {
+        if (ligar == false) {
+            val estavaAtivo = JarvisNucleo.estado(context)["ativo"] == true
+            JarvisNucleo.parar()
+            if (!estavaAtivo) {
+                return Resultado(true, "O núcleo flutuante já estava desligado.")
+            }
+            val aindaAtivo = JarvisNucleo.estado(context)["ativo"] == true
+            return if (aindaAtivo) {
+                Resultado(false, "O núcleo continua na tela; o Android não confirmou a saída.")
+            } else {
+                Resultado(true, "Núcleo flutuante desativado.")
+            }
+        }
+        val estado = JarvisNucleo.iniciar(context, 112, 7_000L, false)
+        return when {
+            estado["ativo"] == true ->
+                Resultado(true, "Núcleo flutuante ativo por cima dos outros apps.")
+            estado["motivo"] == "sem_permissao" -> Resultado(
+                false,
+                "Para o núcleo aparecer por cima dos outros apps, autorize " +
+                    "“Exibir sobre outros apps” nas configurações do Android."
+            )
+            else -> Resultado(false, "O Android não abriu o núcleo flutuante.")
+        }
     }
 
     private fun abrirApp(context: Context, nome: String): Resultado {

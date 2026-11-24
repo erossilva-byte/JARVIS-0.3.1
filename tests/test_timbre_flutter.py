@@ -7,8 +7,9 @@ natural e ágil, aplicados pela síntese do próprio aparelho.
 
 O que este contrato prende, sem aparelho:
 
-1. os três perfis existem com os mesmos valores no Dart e no Kotlin;
-2. o grave continua sendo o timbre original (0,72 / 0,88), sem regressão;
+1. os quatro perfis existem com os mesmos valores no Dart e no Kotlin;
+2. o grave continua com o tom original (0,72) e ganhou ritmo mais rápido
+   (1,12): a fala a 0,88 era lenta demais;
 3. id desconhecido cai no padrão em vez de quebrar a tela;
 4. o perfil é gravado no aparelho e aplicado à síntese assim que possível;
 5. a tela mostra o timbre real, deixa ouvir um exemplo e explica quando não há
@@ -62,7 +63,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_088-perfis-de-timbre.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.89.2+18902" in pubspec, "versão não atualizada para 1.75.0")
+exigir("version: 1.90.0+19000" in pubspec, "versão não atualizada para 1.75.0")
 exigir("1.75.0" in changelog and "timbre" in changelog.lower(),
        "CHANGELOG sem o bloco 1.75.0 do timbre")
 exigir("tests/test_timbre_flutter.py" in pacote,
@@ -74,13 +75,15 @@ exigir(relatorio.is_file(), "relatório 088 ausente")
 # 2. Perfis no Kotlin e no Dart, com paridade de valores.
 for termo in ('PREFS = "jarvis_voz"', 'PADRAO = "grave"',
               'Perfil("grave"', 'Perfil("natural"', 'Perfil("agil"',
+              'Perfil("rapida"',
               "fun perfil(", "fun definir(", "fun estado("):
     exigir(termo in timbre_kt, f"JarvisTimbre.kt sem {termo}")
-for termo in ("id: 'grave'", "id: 'natural'", "id: 'agil'", "timbrePadrao",
+for termo in ("id: 'grave'", "id: 'natural'", "id: 'agil'", "id: 'rapida'",
+              "timbrePadrao",
               "PerfilTimbre timbreDe(", "pitchSeguro", "velocidadeSegura",
               "resumoTimbre", "fraseExemploTimbre", "limitesTimbre"):
     exigir(termo in nucleo, f"core/timbre_voz.dart sem {termo}")
-for valor in ("0.72", "0.88", "1.15", "1.12"):
+for valor in ("0.72", "1.12", "1.15", "1.45", "1.6"):
     exigir(valor in timbre_kt, f"Kotlin sem o valor {valor}")
     exigir(valor in nucleo, f"Dart sem o valor {valor} (paridade quebrada)")
 exigir("grave" in timbre_kt and "timbrePadrao" in nucleo,

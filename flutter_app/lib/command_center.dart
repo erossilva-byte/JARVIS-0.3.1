@@ -15,6 +15,8 @@ class CommandCenter extends StatelessWidget {
     required this.onProviders,
     required this.onKws,
     required this.onSystems,
+    required this.mudo,
+    required this.onMute,
     this.holograma = HologramEstado.espera,
   });
 
@@ -27,6 +29,10 @@ class CommandCenter extends StatelessWidget {
   final VoidCallback onProviders;
   final VoidCallback onKws;
   final VoidCallback onSystems;
+
+  /// Mudo do microfone: o botão da tela principal para de escutar de verdade.
+  final bool mudo;
+  final VoidCallback onMute;
   final HologramEstado holograma;
 
   @override
@@ -161,6 +167,50 @@ class CommandCenter extends StatelessWidget {
               side: const BorderSide(color: Colors.white12),
             ),
         ]),
+        const SizedBox(height: 16),
+        _sectionHeader('MICROFONE', mudo ? 'SEM ESCUTA' : 'PRONTO'),
+        const SizedBox(height: 9),
+        Container(
+          key: const ValueKey('mute-cartao'),
+          padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+          decoration: BoxDecoration(
+            color:
+                (mudo ? const Color(0xFFFFC66D) : cyan).withValues(alpha: .08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: (mudo ? const Color(0xFFFFC66D) : cyan)
+                    .withValues(alpha: .28)),
+          ),
+          child: Row(children: [
+            Icon(mudo ? Icons.mic_off_rounded : Icons.mic_rounded,
+                color: mudo ? const Color(0xFFFFC66D) : cyan, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(mudo ? 'Microfone desligado' : 'Microfone ligado',
+                        style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(
+                        mudo
+                            ? 'O JARVIS não escuta nem fala enquanto o mudo estiver ligado.'
+                            : 'A palavra de ativação e o botão de voz ficam disponíveis.',
+                        style: const TextStyle(color: muted, fontSize: 10)),
+                  ]),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.tonalIcon(
+              key: const ValueKey('mute-button'),
+              onPressed: onMute,
+              icon: Icon(mudo ? Icons.mic_rounded : Icons.mic_off_rounded,
+                  size: 16),
+              label: Text(mudo ? 'Tirar mudo' : 'Mudo',
+                  style: const TextStyle(fontSize: 10.5)),
+            ),
+          ]),
+        ),
         const SizedBox(height: 16),
         _sectionHeader('CONVERSA', 'CHAT'),
         const SizedBox(height: 9),

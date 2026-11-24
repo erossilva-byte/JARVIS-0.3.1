@@ -32,6 +32,7 @@ import 'services/timbre_page.dart';
 import 'services/voice_conversation_page.dart';
 import 'services/visao_page.dart';
 import 'services/voz_externa_page.dart';
+import 'services/voz_jarvis.dart';
 import 'services/voz_tela_cheia_page.dart';
 
 // Interface clássica restaurada: HUD central, barra superior, painel lateral,
@@ -58,6 +59,9 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
   /// Jarvis acordado pela palavra de ativação: a tela mostra que ele está
   /// ativo e o microfone já está aberto pelo serviço em primeiro plano.
   bool ativo = false;
+
+  /// Mudo ligado: o JARVIS para de escutar e de falar até o usuário desligar.
+  bool mudo = false;
   Timer? ativoTimer;
   String clock = '';
   Timer? clockTimer;
@@ -95,6 +99,7 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
   /// o microfone, o serviço em primeiro plano continua ouvindo em segundo plano;
   /// na primeira vez o Android mostra o pedido de permissão.
   Future<void> _ativarKwsAoAbrir() async {
+    if (mudo) return;
     final status = await jarvisKwsController.initialize();
     if (!mounted || !status.available || status.listening || !status.ok) return;
     // A tela abriu porque o JARVIS foi chamado: o microfone é do comando agora.
@@ -147,6 +152,39 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     ativoTimer?.cancel();
     if (!mounted || !ativo) return;
     setState(() => ativo = false);
+  }
+
+  /// Liga e desliga o mudo do microfone pela tela principal.
+  ///
+  /// Com o mudo ligado o detector de palavra é parado de verdade (não é só um
+  /// selo na tela) e a fala em andamento é interrompida. Desligar volta a
+  /// escutar pelo mesmo caminho do botão de voz, com o motivo real quando falha.
+  Future<void> _alternarMudo() async {
+    final novo = !mudo;
+    setState(() => mudo = novo);
+    if (novo) {
+      ativoTimer?.cancel();
+      setState(() => ativo = false);
+      try {
+        await jarvisKwsController.stop();
+      } catch (_) {
+        // Sem o serviço nativo o microfone já não estava escutando.
+      }
+      try {
+        await const VozJarvis().parar();
+      } catch (_) {
+        // Nada falando: nada a interromper.
+      }
+      if (mounted) {
+        _mostrarAvisoVoz(
+            'Mudo ligado: o microfone está desligado e o JARVIS não escuta nem fala.');
+      }
+      return;
+    }
+    if (mounted) {
+      _mostrarAvisoVoz('Mudo desligado: o JARVIS voltou a escutar.');
+    }
+    await _startVoice();
   }
 
   @override
@@ -476,7 +514,24 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
       ),
       body: SafeArea(
           child: Column(children: [
-        if (ativo)
+        if (mudo)
+          Container(
+            key: const ValueKey('jarvis-mudo'),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            color: const Color(0xFFFFC66D).withValues(alpha: .14),
+            child: const Row(children: [
+              Icon(Icons.mic_off_rounded, color: Color(0xFFFFC66D), size: 16),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'JARVIS MUDO · microfone desligado e fala interrompida',
+                  style: TextStyle(fontSize: 10.5, color: Color(0xFFFFC66D)),
+                ),
+              ),
+            ]),
+          ),
+        if (ativo && !mudo)
           Container(
             key: const ValueKey('jarvis-ativo'),
             width: double.infinity,
@@ -506,6 +561,8 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
                     onKws: _openKwsSettings,
                     onSystems: () => setState(() => tab = 1),
                     holograma: _holoEstado,
+                    mudo: mudo,
+                    onMute: _alternarMudo,
                   )
                 : SystemsView(
                     query: query,
