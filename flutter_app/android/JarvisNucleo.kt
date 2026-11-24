@@ -23,6 +23,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.animation.OvershootInterpolator
 import android.widget.LinearLayout
@@ -993,7 +994,7 @@ private class NucleoView(contexto: Context) : View(contexto) {
             val inclinacao = 0.55f + indice * 1.15f
             canvas.save()
             canvas.rotate(
-                (tempo * (indice == 0 ? 18f : -12f) * ritmo) % 360f,
+                (tempo * (if (indice == 0) 18f else -12f) * ritmo) % 360f,
                 cx,
                 cy,
             )
@@ -1063,7 +1064,7 @@ private class NucleoView(contexto: Context) : View(contexto) {
             val angulo = tempo * (0.5f + indice % 3 * 0.22f) * ritmo + fase
             val x = cx + cos(angulo) * raio * orbita * 1.25f
             val y = cy + sin(angulo * 1.3f) * raio * orbita * 0.62f
-            val tamanho = (indice % 3 == 0) 1.9f else 1.2f
+            val tamanho = if (indice % 3 == 0) 1.9f else 1.2f
             canvas.drawCircle(x, y, tamanho * densidade, tintaParticula)
         }
     }

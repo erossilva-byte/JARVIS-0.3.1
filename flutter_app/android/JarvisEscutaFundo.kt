@@ -175,7 +175,7 @@ class JarvisEscutaFundo(private val context: Context) {
                 putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2600L)
                 putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
                 putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1200L)
-                aplicarViesDeDominio(pedido)
+                aplicarViesDeDominio(this)
             }
             reconhecedor.startListening(pedido)
             agendarLimite(listener)
