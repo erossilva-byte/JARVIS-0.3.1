@@ -50,14 +50,26 @@ void main() {
       (tester) async {
     final resultado = await abrirEditor(tester);
 
+    await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('regra-tipo-capaVideo')), 220,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('regra-tipo-capaVideo')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Vídeo ·'), findsOneWidget);
 
+    await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('regra-inteira')), 220,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('regra-inteira')));
     await tester.pumpAndSettle();
     expect(find.textContaining('inteira'), findsWidgets);
 
+    await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('regra-salvar')), 220,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('regra-salvar')));
     await tester.pumpAndSettle();
 
@@ -76,11 +88,23 @@ void main() {
       ),
     );
 
+    await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('regra-tipo-capaVideo')), 220,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('regra-tipo-capaVideo')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('regra-padrao')), 220,
+        scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('regra-padrao')));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('regra-salvar')), 220,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('regra-salvar')));
     await tester.pumpAndSettle();
 
