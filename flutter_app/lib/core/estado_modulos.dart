@@ -171,8 +171,8 @@ const situacoesModulos = <SituacaoModulo>[
     nome: 'Voz e KWS',
     estado: EstadoModulo.pronto,
     titulo: 'Fala, timbre e palavra de ativação',
-    detalhe: 'A voz fala no aparelho, o timbre tem três perfis, a palavra de '
-        'ativação aceita frases em português e existe a voz externa por ID. O '
+    detalhe: 'A voz fala no aparelho, o timbre tem quatro perfis, a palavra '
+        'de ativação aceita frases em português e existe a voz externa por ID. O '
         'detector acústico continua sendo um modelo inglês: isso está escrito na '
         'tela.',
     tela: TelaModulo.kws,
@@ -227,9 +227,9 @@ const situacoesModulos = <SituacaoModulo>[
   SituacaoModulo(
     nome: 'Perfis de timbre',
     estado: EstadoModulo.pronto,
-    titulo: 'Grave, natural e ágil',
+    titulo: 'Grave, natural, ágil e rápida',
     detalhe:
-        'Três perfis de tom e ritmo da voz do aparelho, gravados e valendo '
+        'Quatro perfis de tom e ritmo da voz do aparelho, gravados e valendo '
         'também com o app fechado.',
     tela: TelaModulo.timbre,
   ),
@@ -272,7 +272,8 @@ const situacoesModulos = <SituacaoModulo>[
     estado: EstadoModulo.pronto,
     titulo: 'Comandos, aparelho e acessibilidade',
     detalhe: 'Comandos do Android, central do aparelho, leitura de tela por '
-        'acessibilidade e voz com o app fechado.',
+        'acessibilidade, música, mensagem, ligação e núcleo flutuante por voz, e '
+        'voz com o app fechado.',
     tela: TelaModulo.android,
   ),
   SituacaoModulo(
