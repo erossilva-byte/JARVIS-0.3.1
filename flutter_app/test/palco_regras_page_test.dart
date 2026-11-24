@@ -4,13 +4,13 @@ import 'package:jarvis_nova/core/palco.dart';
 import 'package:jarvis_nova/services/palco_regras_page.dart';
 
 /// Guarda o que o editor devolveu; o botão só preenche depois do "Salvar".
-class _Resultado {
+class ResultadoEditor {
   RegrasPalco? valor;
 }
 
-Future<_Resultado> abrirEditor(WidgetTester tester,
+Future<ResultadoEditor> abrirEditor(WidgetTester tester,
     {RegrasPalco regras = RegrasPalco.padrao}) async {
-  final resultado = _Resultado();
+  final resultado = ResultadoEditor();
   await tester.pumpWidget(MaterialApp(
     home: Builder(
       builder: (context) => Center(

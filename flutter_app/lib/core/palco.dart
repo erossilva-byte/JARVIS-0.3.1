@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 /// Modo palco — contrato puro, sem Flutter e sem rede.
 ///
 /// O palco pesquisa imagens, vídeos ou notícias e mostra o resultado na tela.
