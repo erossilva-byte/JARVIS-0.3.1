@@ -16,7 +16,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 APP = RAIZ / "flutter_app"
 LIB = APP / "lib"
-KOTLIN = APP / "android" / "app" / "src" / "main" / "kotlin" / "com" / "jarvis" / "nova"
+KOTLIN = APP / "android"
 
 
 def ler(caminho: Path) -> str:
