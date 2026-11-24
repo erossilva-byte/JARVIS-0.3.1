@@ -10,6 +10,7 @@ import '../core/circuito_no_chat.dart';
 import '../core/edicao_circuito.dart';
 import '../core/conversa.dart';
 import '../core/especialidades.dart';
+import '../core/fala_em_fluxo.dart';
 import '../core/habilidades.dart';
 import '../core/historico_voz.dart';
 import '../core/memoria_busca.dart';
@@ -125,6 +126,18 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   String parcial = '';
   StreamBuffer? _buffer;
 
+  /// Fala em fluxo: as frases saem enquanto a resposta ainda está chegando.
+  FalasEmFluxo _falasEmFluxo = FalasEmFluxo();
+
+  /// Fila da fala: uma frase de cada vez, na ordem em que chegou.
+  Future<void> _filaFala = Future<void>.value();
+
+  /// Já foi falado algo desta resposta?
+  bool _falouEmFluxo = false;
+
+  /// Muda a cada resposta; fala enfileirada de uma resposta antiga é descartada.
+  int _geracaoFala = 0;
+
   /// Bloco de pessoas da requisição em andamento, para anexar à resposta (inclusive se parar).
   ContextoPessoasConversa _contextoPessoaAtual =
       const ContextoPessoasConversa.nenhum();
@@ -136,11 +149,15 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   @override
   void initState() {
     super.initState();
+    // Um único chat por sessão: sair e voltar continua nele; só fechar e abrir
+    // o JARVIS começa outra conversa (o processo é novo).
     conversa = widget.conversa ??
+        ConversaStore.conversaAberta ??
         Conversa.nova(
             id: DateTime.now().microsecondsSinceEpoch.toString(),
             agora: DateTime.now());
-    _preparar();
+    ConversaStore.conversaAberta = conversa;
+    unawaited(_preparar());
     _calarSub = KwsController.commandBus.listen((evento) {
       if (evento.type != 'calou' || !mounted) return;
       if (_assinatura != null) _parar();
@@ -159,7 +176,8 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
           store!.rascunho.trim().isNotEmpty) {
         composer.text = store!.rascunho;
       }
-      await store!.salvar(conversa);
+      // Abrir a tela não é assunto: conversa sem mensagem não entra no histórico.
+      if (conversa.mensagens.isNotEmpty) await store!.salvar(conversa);
     } catch (_) {
       // Sem armazenamento disponível (teste ou plataforma sem plugin), a tela segue em memória.
       store = null;
@@ -278,12 +296,18 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     final escolhido = selecionado;
     provedorAtivo = escolhido;
     unawaited(_fala.parar());
+    // Resposta nova: a fala em fluxo recomeça do zero.
+    _falasEmFluxo = FalasEmFluxo();
+    _falouEmFluxo = false;
+    _geracaoFala++;
     final ultima = conversa.mensagens.isEmpty ? null : conversa.mensagens.last;
     if (ultima == null || !ultima.doUsuario || ultima.texto != texto) {
       conversa.adicionar(MensagemConversa(autor: 'user', texto: texto));
     }
     composer.clear();
     unawaited(store?.limparRascunho());
+    // A pergunta também precisa sobreviver a uma falha do provedor.
+    unawaited(_persistir());
     HumorNucleoControle.definirPensando(true);
     setState(() {
       enviando = true;
@@ -295,7 +319,9 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
 
     final buffer = StreamBuffer(
       aoAtualizar: (atual) {
-        if (mounted) setState(() => parcial = atual);
+        if (!mounted) return;
+        setState(() => parcial = atual);
+        _falarEmFluxo(atual);
       },
     );
     _buffer = buffer;
@@ -364,6 +390,10 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       onError: (Object e) {
         if (!mounted) return;
         HumorNucleoControle.definirPensando(false);
+        // Resposta falhou: a fala enfileirada é descartada, não lida pela metade.
+        _falasEmFluxo = FalasEmFluxo();
+        _geracaoFala++;
+        unawaited(_fala.parar());
         setState(() {
           enviando = false;
           parcial = '';
@@ -394,7 +424,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
             ));
           }
         });
-        if (recebido.trim().isNotEmpty) unawaited(_falar(recebido));
+        if (recebido.trim().isNotEmpty) _encerrarFalaEmFluxo(recebido);
         unawaited(_persistir());
         unawaited(memoria
                 ?.registrarUso(contextoMemoria.usados.map((nota) => nota.id)) ??
@@ -606,6 +636,10 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     _assinatura = null;
     unawaited(assinatura.cancel());
     _buffer?.concluir();
+    // O que já estava na fila morre junto com a geração interrompida.
+    _falasEmFluxo = FalasEmFluxo();
+    _falouEmFluxo = false;
+    _geracaoFala++;
     if (!mounted) return;
     final recebido = parcial;
     unawaited(_fala.parar());
@@ -660,6 +694,47 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     }
   }
 
+  /// Fala o que já está pronto, sem esperar a resposta inteira.
+  void _falarEmFluxo(String parcial) {
+    if (!vozAtiva) return;
+    for (final frase in _falasEmFluxo.acrescentar(parcial)) {
+      _enfileirarFala(frase);
+    }
+  }
+
+  /// Fecha a resposta: o resto entra na fila e, se nada falou ainda, a resposta
+  /// inteira é lida de uma vez (resposta curta sem pontuação, por exemplo).
+  void _encerrarFalaEmFluxo(String texto) {
+    if (!vozAtiva) return;
+    for (final frase in _falasEmFluxo.acrescentar(texto, finalizar: true)) {
+      _enfileirarFala(frase);
+    }
+    if (!_falouEmFluxo) _enfileirarFala(texto);
+  }
+
+  /// Coloca a frase na fila: a voz de resposta é uma de cada vez.
+  void _enfileirarFala(String frase) {
+    if (frase.trim().isEmpty) return;
+    _falouEmFluxo = true;
+    final geracao = _geracaoFala;
+    _filaFala = _filaFala.then((_) async {
+      if (!mounted || !vozAtiva || geracao != _geracaoFala) return;
+      await _falarFrase(frase);
+    });
+  }
+
+  /// Fala uma frase do fluxo sem cortar a anterior: a voz externa espera o
+  /// MP3 terminar e a local entra na fila do sintetizador.
+  Future<void> _falarFrase(String texto) async {
+    if (!vozAtiva || !mounted) return;
+    HumorNucleoControle.iniciarFala();
+    try {
+      await _fala.falarEmFluxo(texto);
+    } finally {
+      HumorNucleoControle.terminarFala();
+    }
+  }
+
   Future<void> _copiar(String texto) async {
     await Clipboard.setData(ClipboardData(text: texto));
     if (!mounted) return;
@@ -693,6 +768,11 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     await Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => HistoricoPage(store: atual)));
     if (!mounted) return;
+    // Abrir outra conversa no histórico troca o chat desta sessão; esta tela
+    // passa a mostrar a escolhida em vez de uma cópia velha.
+    final id = ConversaStore.conversaAberta?.id;
+    final salva = id == null ? null : atual.buscar(id);
+    if (salva != null) conversa = salva;
     setState(() {});
     await _persistir();
   }

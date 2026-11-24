@@ -2,8 +2,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jarvis_nova/main.dart';
 import 'package:jarvis_nova/services/voice_conversation_page.dart';
+import 'package:jarvis_nova/services/conversa_store.dart';
 
 void main() {
+  setUp(ConversaStore.reiniciarSessaoParaTeste);
   testWidgets('comando digitado nao se apresenta como captura de voz',
       (tester) async {
     await tester.pumpWidget(

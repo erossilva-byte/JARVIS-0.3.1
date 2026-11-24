@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 
 import '../core/circuito_em_uso.dart';
@@ -11,6 +13,7 @@ import 'executor_app.dart';
 import 'habilidades_service.dart';
 import 'personalidade_store.dart';
 import 'provider_service.dart';
+import 'voz_externa_service.dart';
 
 /// Ponte que responde perguntas livres vindas do serviço de segundo plano.
 ///
@@ -43,6 +46,13 @@ class PonteIaFundo {
   }
 
   static Future<Object?> _atender(MethodCall call) async {
+    if (call.method == 'falarResposta') {
+      final argumentos = call.arguments;
+      final texto = argumentos is Map
+          ? (argumentos['texto']?.toString() ?? '').trim()
+          : '';
+      return falarComVozExterna(texto);
+    }
     if (call.method != 'responderPergunta') {
       throw MissingPluginException('Método não tratado: ${call.method}');
     }
@@ -56,8 +66,56 @@ class PonteIaFundo {
     return responderPergunta(texto);
   }
 
+  /// Fala pelo Fish Audio a resposta do segundo plano.
+  ///
+  /// O serviço de palavra de ativação não tem a chave no lado Android: quem
+  /// guarda a chave é o cofre do Flutter. Por isso o MP3 é gerado aqui e tocado
+  /// pelo canal de voz do serviço. `false` devolve a fala para a voz do
+  /// aparelho — nunca deixa o JARVIS mudo.
+  static Future<bool> falarComVozExterna(String texto) async {
+    final limpo = texto.trim();
+    if (limpo.isEmpty || !VozExternaConfig.pronta) return false;
+    try {
+      final servico = VozExternaService();
+      final resultado = await servico.gerar(limpo);
+      if (!resultado.ok) return false;
+      return await servico.tocar(resultado.audio!);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Enquanto a resposta não chega, avisa o serviço de que o pedido está vivo.
+  ///
+  /// Sem isso o prazo do segundo plano vencia durante uma resposta legítima e
+  /// o usuário ouvia "o provedor demorou demais" mesmo com a IA respondendo.
+  static Timer? _batida;
+
+  static void _iniciarBatida() {
+    _pararBatida();
+    _batida = Timer.periodic(const Duration(seconds: 8), (_) {
+      unawaited(
+          canal.invokeMethod<void>('progresso').catchError((Object _) => null));
+    });
+  }
+
+  static void _pararBatida() {
+    _batida?.cancel();
+    _batida = null;
+  }
+
   /// Resposta curta e falável para [texto]; lança quando não há provedor.
   static Future<String> responderPergunta(String texto,
+      {ProviderService? servico}) async {
+    _iniciarBatida();
+    try {
+      return await _responder(texto, servico: servico);
+    } finally {
+      _pararBatida();
+    }
+  }
+
+  static Future<String> _responder(String texto,
       {ProviderService? servico}) async {
     final provedor = servico ?? _servico;
     if (provedor == null) {

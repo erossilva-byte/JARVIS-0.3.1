@@ -24,11 +24,14 @@ Future<void> main() async {
 /// Com o app encerrado, o Android derruba o motor do Flutter e não há quem
 /// responda as perguntas livres. `JarvisPonteIa.kt` sobe então um motor só do
 /// serviço com esta entrada: ela liga a mesma ponte de IA (mesmos provedores,
-/// mesmas chaves, mesma personalidade) sem abrir tela nenhuma. O motor é
-/// desligado depois de três minutos ocioso.
+/// mesmas chaves, mesma personalidade) sem abrir tela nenhuma, e carrega a voz
+/// externa para o Fish Audio também falar no segundo plano. O motor é desligado
+/// depois de três minutos ocioso.
 @pragma('vm:entry-point')
-void mainFundo() {
+Future<void> mainFundo() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // A mesma decisão da tela: só tenta a rede com a voz ligada e a chave no cofre.
+  await VozExternaConfig.carregar();
   PonteIaFundo.ligar();
 }
 

@@ -170,10 +170,22 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
                         voz?.parar()
                         result.success(true)
                     }
+                    // Frase do fluxo: entra na fila sem cortar a anterior.
+                    "falarEmFila" -> {
+                        val texto = call.argument<String>("texto").orEmpty().trim()
+                        result.success(voz?.falarEmFila(texto) == true)
+                    }
                     // Voz externa: o MP3 já gerado é tocado pelo MediaPlayer.
                     "falarAudio" -> {
                         val caminho = call.argument<String>("caminho").orEmpty()
                         result.success(voz?.falarAudio(caminho) == true)
+                    }
+                    // Fala em fluxo com voz externa: responde quando o MP3 termina,
+                    // para a próxima frase não cortar esta pela metade.
+                    "falarAudioAguardar" -> {
+                        val caminho = call.argument<String>("caminho").orEmpty()
+                        val tocou = voz?.falarAudio(caminho) { result.success(true) } == true
+                        if (!tocou) result.success(false)
                     }
                     "pararAudio" -> {
                         voz?.pararAudio()

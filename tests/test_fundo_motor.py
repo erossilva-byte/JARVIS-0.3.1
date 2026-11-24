@@ -58,7 +58,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_089-segundo-plano-sem-app-aberto.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.89.1+18901" in pubspec, "versão não atualizada para 1.75.1")
+exigir("version: 1.89.2+18902" in pubspec, "versão não atualizada para 1.75.1")
 exigir("1.75.1" in changelog, "CHANGELOG sem o ajuste 1.75.1")
 exigir("tests/test_fundo_motor.py" in pacote,
        "contrato novo fora de package.json test:all")
@@ -67,8 +67,9 @@ exigir(relatorio.is_file(), "relatório 089 ausente")
 # 2. Entrada Dart sem tela.
 exigir("@pragma('vm:entry-point')" in principal,
        "main.dart sem marcação de entrypoint")
-exigir("void mainFundo()" in principal, "main.dart sem a entrada mainFundo")
-trecho = principal.split("void mainFundo()")[-1]
+exigir("Future<void> mainFundo() async" in principal,
+       "main.dart sem a entrada mainFundo")
+trecho = principal.split("mainFundo() async")[-1]
 exigir("PonteIaFundo.ligar();" in trecho,
        "mainFundo não liga a ponte de IA")
 exigir("runApp(" not in trecho.split("}")[0],

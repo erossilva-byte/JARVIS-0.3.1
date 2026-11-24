@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jarvis_nova/services/comandos_android_page.dart';
 import 'package:jarvis_nova/services/comandos_android_service.dart';
 import 'package:jarvis_nova/services/voice_conversation_page.dart';
+import 'package:jarvis_nova/services/conversa_store.dart';
 import 'package:material_ui/material_ui.dart';
 
 class ExecutorFalso extends ExecutorComandosAndroid {
@@ -19,6 +20,7 @@ class ExecutorFalso extends ExecutorComandosAndroid {
 }
 
 void main() {
+  setUp(ConversaStore.reiniciarSessaoParaTeste);
   testWidgets('executa pelo campo e mostra a confirmação', (tester) async {
     final executor = ExecutorFalso();
     await tester

@@ -8,12 +8,20 @@ class _LocalFalso extends VozJarvis {
   _LocalFalso() : super(channel: const MethodChannel('teste/sem_canal'));
 
   int falas = 0;
+  int filas = 0;
   bool parou = false;
   String ultimoTexto = '';
 
   @override
   Future<bool> falar(String texto) async {
     falas++;
+    ultimoTexto = texto;
+    return true;
+  }
+
+  @override
+  Future<bool> falarEmFila(String texto) async {
+    filas++;
     ultimoTexto = texto;
     return true;
   }
@@ -30,9 +38,17 @@ class _ExternaFalsa extends VozExternaService {
   String? erro;
   bool toca;
   int gerados = 0;
+  int aguardados = 0;
   bool parou = false;
   String ultimoTexto = '';
   Uint8List? tocado;
+
+  @override
+  Future<bool> tocarEAguardar(Uint8List audio) async {
+    aguardados++;
+    tocado = audio;
+    return toca;
+  }
 
   @override
   Future<ResultadoVozExterna> gerar(String texto) async {
@@ -104,6 +120,28 @@ void main() {
     expect(await fala.falar('olá'), isTrue);
     expect(local.falas, 1);
     expect(fala.ultimoErro, contains('não conseguiu tocar'));
+  });
+
+  test('fala em fluxo espera o áudio externo terminar', () async {
+    final local = _LocalFalso();
+    final externa = _ExternaFalsa();
+    final fala =
+        FalaJarvis(local: local, externa: externa, externaPronta: () => true);
+
+    expect(await fala.falarEmFluxo('primeira frase'), isTrue);
+    expect(externa.aguardados, 1);
+    expect(local.filas, 0);
+  });
+
+  test('fala em fluxo sem voz externa entra na fila do aparelho', () async {
+    final local = _LocalFalso();
+    final externa = _ExternaFalsa();
+    final fala =
+        FalaJarvis(local: local, externa: externa, externaPronta: () => false);
+
+    expect(await fala.falarEmFluxo('primeira frase'), isTrue);
+    expect(local.filas, 1);
+    expect(externa.gerados, 0);
   });
 
   test('parar interrompe as duas vozes', () async {

@@ -248,6 +248,28 @@ class VozExternaService {
     }
   }
 
+  /// Toca o MP3 e só responde quando o áudio termina.
+  ///
+  /// A fala em fluxo usa este caminho: a frase seguinte espera esta acabar, em
+  /// vez de cortá-la. Sem o canal (desktop ou teste), devolve `false` e a voz
+  /// do aparelho assume.
+  Future<bool> tocarEAguardar(Uint8List audio) async {
+    try {
+      final pasta = await getTemporaryDirectory();
+      final arquivo = File('${pasta.path}/jarvis_voz_externa.mp3');
+      await arquivo.writeAsBytes(audio, flush: true);
+      final falou = await _canal.invokeMethod<bool>(
+          'falarAudioAguardar', {'caminho': arquivo.path});
+      return falou == true;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static String _motivo(Object erro) {
     final texto = erro.toString();
     if (texto.contains('TimeoutException')) return 'tempo esgotado';

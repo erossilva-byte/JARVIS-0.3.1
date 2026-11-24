@@ -451,6 +451,11 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
                           VozTelaCheiaPage(controller: jarvisKwsController))),
               icon: const Icon(Icons.fullscreen_rounded, color: cyan)),
           IconButton(
+              key: const ValueKey('historico-button'),
+              tooltip: 'Histórico de conversas',
+              onPressed: _abrirHistorico,
+              icon: const Icon(Icons.history_rounded, color: cyan)),
+          IconButton(
               key: const ValueKey('settings-button'),
               tooltip: 'Configurações',
               onPressed: _openSettings,

@@ -46,6 +46,29 @@ class FalaJarvis {
     return _local.falar(texto);
   }
 
+  /// Fala uma frase do fluxo, sem esperar a resposta inteira.
+  ///
+  /// A voz externa espera o MP3 terminar (a frase seguinte não corta esta) e a
+  /// voz do aparelho entra na fila do sintetizador.
+  Future<bool> falarEmFluxo(String texto) async {
+    ultimoErro = null;
+    final limpo = VozJarvis.limparParaFala(texto);
+    if (limpo.isEmpty) return false;
+
+    if (_externaPronta()) {
+      final resultado = await _externa.gerar(limpo);
+      if (resultado.ok) {
+        final tocou = await _externa.tocarEAguardar(resultado.audio!);
+        if (tocou) return true;
+        ultimoErro = 'O áudio do Fish Audio foi gerado, mas o aparelho não '
+            'conseguiu tocar o MP3.';
+      } else {
+        ultimoErro = resultado.erro;
+      }
+    }
+    return _local.falarEmFila(texto);
+  }
+
   /// Interrompe as duas vozes: a externa também precisa calar no gesto de
   /// virar o celular para baixo.
   Future<void> parar() async {

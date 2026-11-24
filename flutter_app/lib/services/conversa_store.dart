@@ -14,6 +14,19 @@ class ConversaStore {
   static const chaveConversas = 'jarvis.conversas.v1';
   static const chaveRascunho = 'jarvis.rascunho.v1';
 
+  /// Conversa aberta nesta sessão do app.
+  ///
+  /// Fica só na memória de propósito: sair da conversa e voltar continua nela,
+  /// mas fechar e abrir o JARVIS começa outra. O que fica para trás já está
+  /// salvo no histórico. Em memória também evita esperar o disco para o
+  /// primeiro comando da sessão entrar logo na conversa certa.
+  static Conversa? conversaAberta;
+
+  /// Só para teste: cada caso começa com a sessão limpa.
+  static void reiniciarSessaoParaTeste() {
+    conversaAberta = null;
+  }
+
   final SharedPreferences _prefs;
 
   static Future<ConversaStore> abrir() async =>
@@ -33,6 +46,14 @@ class ConversaStore {
     } catch (_) {
       return [];
     }
+  }
+
+  /// Conversa salva com este [id]; nulo quando ela não existe mais.
+  Conversa? buscar(String id) {
+    for (final conversa in listar()) {
+      if (conversa.id == id) return conversa;
+    }
+    return null;
   }
 
   List<Conversa> ordenadas() {

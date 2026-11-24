@@ -5,6 +5,7 @@ import 'package:jarvis_nova/services/acessibilidade_store.dart';
 import 'package:jarvis_nova/services/historico_voz_service.dart';
 import 'package:jarvis_nova/services/voice_conversation_page.dart';
 import 'package:jarvis_nova/services/voz_jarvis.dart';
+import 'package:jarvis_nova/services/conversa_store.dart';
 import 'package:material_ui/material_ui.dart';
 
 class ConsentimentoFalso implements ConsentimentoAcessibilidade {
@@ -114,6 +115,7 @@ Future<(CanalFalso, VozFalsa)> abrir(
 }
 
 void main() {
+  setUp(ConversaStore.reiniciarSessaoParaTeste);
   testWidgets('tocar pede confirmação e não chama o Android antes do sim',
       (tester) async {
     final (canal, voz) = await abrir(tester, 'tocar em Enviar');

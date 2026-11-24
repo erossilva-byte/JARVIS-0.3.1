@@ -28,6 +28,12 @@ class JarvisVoz(context: Context) : TextToSpeech.OnInitListener {
     private val principal = Handler(Looper.getMainLooper())
     /** MP3 da voz externa em reprodução; nulo quando a voz local é a que fala. */
     private var mp3: MediaPlayer? = null
+
+    /** Quem espera o fim do MP3 atual (a fala em fluxo espera para não cortar). */
+    private var audioPendente: (() -> Unit)? = null
+
+    /** Rede de segurança: MP3 travado não segura a fala para sempre. */
+    private var limiteAudio: Runnable? = null
     /** Quem avisar quando a fala terminar (o microfone volta depois disso). */
     private val aoTerminar = ConcurrentHashMap<String, () -> Unit>()
 
@@ -104,6 +110,35 @@ class JarvisVoz(context: Context) : TextToSpeech.OnInitListener {
     }
 
     /**
+     * Fala uma frase do fluxo sem cortar a anterior: entra no fim da fila do
+     * sintetizador. É o caminho da voz do aparelho quando a resposta é falada
+     * por partes.
+     */
+    fun falarEmFila(texto: String): Boolean {
+        val limpo = texto.trim()
+        if (limpo.isEmpty()) return false
+        if (!pronto) {
+            pendente = limpo
+            return erro.isEmpty()
+        }
+        val motor = tts ?: return false
+        val volume = if (JarvisSensores.modoNoturno(appContext)) {
+            JarvisSensores.VOLUME_NOTURNO
+        } else {
+            1f
+        }
+        val parametros = android.os.Bundle().apply {
+            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volume)
+        }
+        return motor.speak(
+            limpo,
+            TextToSpeech.QUEUE_ADD,
+            parametros,
+            "jarvis-" + UUID.randomUUID().toString()
+        ) == TextToSpeech.SUCCESS
+    }
+
+    /**
      * Fala o texto e, opcionalmente, avisa quando o áudio termina de sair.
      * `aoTerminar` roda na thread principal e também é chamado quando a síntese
      * falha, para o serviço nunca ficar parado esperando.
@@ -173,10 +208,11 @@ class JarvisVoz(context: Context) : TextToSpeech.OnInitListener {
      * fechada: devolve `false` e não deixa o aparelho mudo — quem chamou decide
      * voltar para a voz do aparelho.
      */
-    fun falarAudio(caminho: String): Boolean {
+    fun falarAudio(caminho: String, aoTerminar: (() -> Unit)? = null): Boolean {
         val arquivo = java.io.File(caminho)
         if (!arquivo.isFile || arquivo.length() <= 0L) return false
         return try {
+            // Um MP3 por vez: parar o anterior também avisa quem o esperava.
             pararAudio()
             val player = MediaPlayer()
             player.setDataSource(arquivo.absolutePath)
@@ -186,6 +222,7 @@ class JarvisVoz(context: Context) : TextToSpeech.OnInitListener {
                 1f
             }
             player.setVolume(volume, volume)
+            audioPendente = aoTerminar
             player.setOnCompletionListener { encerrarAudio() }
             player.setOnErrorListener { _, _, _ ->
                 encerrarAudio()
@@ -194,6 +231,15 @@ class JarvisVoz(context: Context) : TextToSpeech.OnInitListener {
             player.prepare()
             player.start()
             mp3 = player
+            val duracao = try {
+                player.duration.toLong()
+            } catch (_: Exception) {
+                0L
+            }
+            cancelarLimiteAudio()
+            val limite = Runnable { pararAudio() }
+            limiteAudio = limite
+            principal.postDelayed(limite, (if (duracao > 0L) duracao else 60_000L) + 5_000L)
             true
         } catch (_: Exception) {
             encerrarAudio()
@@ -202,11 +248,21 @@ class JarvisVoz(context: Context) : TextToSpeech.OnInitListener {
     }
 
     private fun encerrarAudio() {
+        cancelarLimiteAudio()
         try {
             mp3?.release()
         } catch (_: Exception) {
         }
         mp3 = null
+        // Quem esperava o fim recebe agora: a fala em fluxo não fica travada.
+        val pendente = audioPendente
+        audioPendente = null
+        pendente?.invoke()
+    }
+
+    private fun cancelarLimiteAudio() {
+        limiteAudio?.let(principal::removeCallbacks)
+        limiteAudio = null
     }
 
     fun pararAudio() {

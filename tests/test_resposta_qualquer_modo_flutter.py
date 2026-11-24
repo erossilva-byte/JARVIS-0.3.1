@@ -65,7 +65,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_085-resposta-em-qualquer-modo-e-resumo-tatico.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.89.1+18901" in pubspec, "versão não atualizada para 1.72.0")
+exigir("version: 1.89.2+18902" in pubspec, "versão não atualizada para 1.72.0")
 exigir("1.72.0" in changelog, "CHANGELOG sem o bloco 1.72.0")
 exigir("tests/test_resposta_qualquer_modo_flutter.py" in pacote,
        "contrato novo fora de package.json test:all")
@@ -109,7 +109,7 @@ exigir('"pergunta livre"' in servico_kt,
 # 5. Ponte Kotlin: canal, prazo e registro na Activity.
 exigir('const val CANAL = "com.jarvis.nova/fundo_ia"' in ponte_kt,
        "ponte sem o canal combinado")
-exigir("ESPERA_MS" in ponte_kt and "50_000L" in ponte_kt,
+exigir("ESPERA_MS" in ponte_kt and "90_000L" in ponte_kt,
        "ponte sem prazo de espera")
 exigir("AtomicBoolean" in ponte_kt,
        "ponte pode responder duas vezes à mesma pergunta")

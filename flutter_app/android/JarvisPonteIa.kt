@@ -30,15 +30,22 @@ import java.util.concurrent.atomic.AtomicBoolean
 object JarvisPonteIa {
     const val CANAL = "com.jarvis.nova/fundo_ia"
 
+    /** Mesmo canal de voz do app: no motor sem tela ele toca o MP3 do Fish Audio. */
+    private const val CANAL_VOZ = "com.jarvis.nova/voz"
+
+    /** Preferência pública do interruptor da voz externa (o prefixo é do plugin). */
+    private const val PREF_VOZ_EXTERNA = "flutter.jarvis.voz.externa.ativa"
+
     /** Entrada Dart do motor sem tela (ver `main.dart`). */
     private const val BIBLIOTECA_FUNDO = "package:jarvis_nova/main.dart"
     private const val ENTRADA_FUNDO = "mainFundo"
 
     /**
-     * Tempo máximo de espera pela IA antes de desistir e avisar. Cobre a subida
-     * do motor sem tela (até 12 s) mais a resposta do provedor (até 35 s).
+     * Tempo máximo de silêncio antes de desistir e avisar. Não é o tempo total
+     * da resposta: enquanto o Dart manda sinal de vida ("progresso"), o prazo
+     * recomeça. Cobre uma consulta lenta de lista de modelos e a resposta.
      */
-    private const val ESPERA_MS = 50_000L
+    private const val ESPERA_MS = 90_000L
 
     /** Tempo para o motor sem tela terminar de subir e registrar o canal. */
     private const val ESPERA_MOTOR_MS = 12_000L
@@ -56,15 +63,98 @@ object JarvisPonteIa {
     /** Motor sem tela criado por esta ponte (o do app é de outro dono). */
     @Volatile private var motorProprio: FlutterEngine? = null
 
+    /** Voz do serviço de palavra de ativação, usada para tocar o MP3 de fundo. */
+    @Volatile private var vozServico: JarvisVoz? = null
+
     private val principal = Handler(Looper.getMainLooper())
     private val desligarOcioso = Runnable { encerrarMotor() }
 
+    /** Prazo que o Dart renova com o sinal de vida enquanto a resposta chega. */
+    private var cobranca: Runnable? = null
+
     fun registrar(engine: FlutterEngine) {
         if (motorProprio != null) encerrarMotor()
-        canal = MethodChannel(engine.dartExecutor.binaryMessenger, CANAL)
+        canal = abrirCanal(engine)
     }
 
     fun disponivel(): Boolean = canal != null
+
+    /** O serviço entrega a voz local para o motor sem tela tocar o áudio. */
+    fun usarVoz(voz: JarvisVoz?) {
+        vozServico = voz
+    }
+
+    /** A voz externa está ligada na preferência pública (a chave fica no cofre). */
+    fun vozExternaLigada(contexto: Context): Boolean =
+        try {
+            contexto.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                .getBoolean(PREF_VOZ_EXTERNA, false)
+        } catch (_: Exception) {
+            false
+        }
+
+    /**
+     * Sobe o motor sem tela adiantado quando a voz externa está ligada.
+     *
+     * Chamado na detecção da palavra: quando a resposta fica pronta o motor já
+     * está de pé, e o Fish Audio consegue falar sem abrir o app.
+     */
+    fun preparar(contexto: Context) {
+        if (canal != null || !vozExternaLigada(contexto)) return
+        val app = contexto.applicationContext
+        principal.post { subirMotor(app) }
+    }
+
+    /**
+     * Fala pelo Fish Audio com o motor do serviço (mesma chave segura do app).
+     *
+     * [retorno] recebe `false` quando não há motor, a voz está desligada ou o
+     * MP3 não tocou; quem chamou volta para a voz do aparelho.
+     */
+    fun falarFundo(texto: String, retorno: (Boolean) -> Unit) {
+        val ativo = canal
+        val limpo = texto.trim()
+        if (ativo == null || limpo.isEmpty()) {
+            retorno(false)
+            return
+        }
+        try {
+            ativo.invokeMethod(
+                "falarResposta",
+                mapOf("texto" to limpo),
+                object : MethodChannel.Result {
+                    override fun success(result: Any?) {
+                        principal.post { retorno(result == true) }
+                    }
+
+                    override fun error(codigo: String, mensagem: String?, detalhe: Any?) {
+                        principal.post { retorno(false) }
+                    }
+
+                    override fun notImplemented() {
+                        principal.post { retorno(false) }
+                    }
+                }
+            )
+        } catch (_: Exception) {
+            retorno(false)
+        }
+    }
+
+    /** Canal do motor com as duas direções: perguntar e receber "progresso". */
+    private fun abrirCanal(engine: FlutterEngine): MethodChannel {
+        val novo = MethodChannel(engine.dartExecutor.binaryMessenger, CANAL)
+        novo.setMethodCallHandler { chamada, resultado ->
+            when (chamada.method) {
+                "progresso" -> {
+                    renovarCobranca()
+                    resultado.success(true)
+                }
+                else -> resultado.notImplemented()
+            }
+        }
+        return novo
+    }
 
     /**
      * Envia a pergunta ao Flutter. [retorno] é chamado uma única vez, na thread
@@ -88,13 +178,14 @@ object JarvisPonteIa {
         val respondido = AtomicBoolean(false)
         val entregar: (String?, String?) -> Unit = { resposta, motivo ->
             if (respondido.compareAndSet(false, true)) {
+                cancelarCobranca()
                 if (resposta.isNullOrBlank()) marcarOcioso()
                 principal.post {
                     retorno(resposta?.trim()?.takeIf { it.isNotEmpty() }, motivo)
                 }
             }
         }
-        principal.postDelayed({ entregar(null, MOTIVO_TEMPO) }, ESPERA_MS)
+        armarCobranca(entregar)
         principal.post {
             if (canal == null) subirMotor(app)
             esperarCanal(pedido, tentativas = restantesDoMotor(), entregar = entregar)
@@ -104,7 +195,31 @@ object JarvisPonteIa {
     /** Desliga o motor sem tela (fim do serviço ou fim da inatividade). */
     fun encerrar() {
         principal.removeCallbacks(desligarOcioso)
+        cancelarCobranca()
         encerrarMotor()
+    }
+
+    /** Começa a contar o silêncio máximo de uma pergunta. */
+    private fun armarCobranca(entregar: (String?, String?) -> Unit) {
+        cancelarCobranca()
+        val prazo = Runnable { entregar(null, MOTIVO_TEMPO) }
+        cobranca = prazo
+        principal.postDelayed(prazo, ESPERA_MS)
+    }
+
+    /**
+     * Reinicia o prazo: o Dart avisa a cada passo que a resposta ainda está a
+     * caminho. Assim uma resposta lenta não vira "demorou demais".
+     */
+    private fun renovarCobranca() {
+        val prazo = cobranca ?: return
+        principal.removeCallbacks(prazo)
+        principal.postDelayed(prazo, ESPERA_MS)
+    }
+
+    private fun cancelarCobranca() {
+        cobranca?.let(principal::removeCallbacks)
+        cobranca = null
     }
 
     private fun restantesDoMotor(): Int =
@@ -138,7 +253,33 @@ object JarvisPonteIa {
                 DartEntrypoint(BIBLIOTECA_FUNDO, ENTRADA_FUNDO)
             )
             motorProprio = motor
-            canal = MethodChannel(motor.dartExecutor.binaryMessenger, CANAL)
+            // O motor sem tela também precisa tocar o MP3 do Fish Audio: a voz
+            // do serviço é quem conhece o volume e o modo noturno.
+            MethodChannel(motor.dartExecutor.binaryMessenger, CANAL_VOZ)
+                .setMethodCallHandler { chamada, resultado ->
+                    when (chamada.method) {
+                        "falarEmFila" -> {
+                            val texto = chamada.argument<String>("texto").orEmpty()
+                            resultado.success(vozServico?.falarEmFila(texto) == true)
+                        }
+                        "falarAudio" -> {
+                            val caminho = chamada.argument<String>("caminho").orEmpty()
+                            resultado.success(vozServico?.falarAudio(caminho) == true)
+                        }
+                        "falarAudioAguardar" -> {
+                            val caminho = chamada.argument<String>("caminho").orEmpty()
+                            val tocou =
+                                vozServico?.falarAudio(caminho) { resultado.success(true) } == true
+                            if (!tocou) resultado.success(false)
+                        }
+                        "pararAudio" -> {
+                            vozServico?.pararAudio()
+                            resultado.success(true)
+                        }
+                        else -> resultado.notImplemented()
+                    }
+                }
+            canal = abrirCanal(motor)
             true
         } catch (_: Throwable) {
             motorProprio = null

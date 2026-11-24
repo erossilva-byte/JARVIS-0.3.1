@@ -4,6 +4,7 @@ import 'package:jarvis_nova/services/executor_app.dart';
 import 'package:jarvis_nova/services/historico_voz_service.dart';
 import 'package:jarvis_nova/services/voice_conversation_page.dart';
 import 'package:jarvis_nova/services/voz_jarvis.dart';
+import 'package:jarvis_nova/services/conversa_store.dart';
 import 'package:material_ui/material_ui.dart';
 
 class VozFalsa extends VozJarvis {
@@ -50,6 +51,7 @@ Future<void> abrirConversa(WidgetTester tester, String comando) async {
 }
 
 void main() {
+  setUp(ConversaStore.reiniciarSessaoParaTeste);
   setUp(ExecutorApp.esquecerPendente);
   tearDown(ExecutorApp.esquecerPendente);
 

@@ -1,3 +1,27 @@
+## 1.89.2 — um chat só, fala mais cedo e fundo que não desiste
+
+### O que mudou
+- **Um chat por sessão**: sair da conversa e voltar continua no mesmo chat; a
+  conversa só recomeça depois de fechar e abrir o JARVIS. A anterior fica
+  guardada no histórico, e conversa vazia não aparece na lista.
+- **Histórico na tela inicial**: o ícone de relógio, ao lado de Configurações,
+  abre as conversas passadas — com busca, fixar e apagar.
+- **Fala enquanto a resposta chega**: o JARVIS fala por frases assim que elas
+  ficam prontas, em vez de esperar a resposta inteira. Parar a geração cala o
+  que ainda estava na fila.
+- **Segundo plano sem falso aviso**: durante uma resposta legítima o serviço
+  recebe um sinal de vida e renova o prazo. Antes, uma resposta lenta virava
+  "o provedor demorou demais" mesmo com a IA respondendo.
+- **Fish Audio no segundo plano**: com o app fechado, a resposta é gerada com a
+  chave que está no cofre e tocada pelo serviço. Se não der, a voz do aparelho
+  fala em vez de deixar o JARVIS mudo.
+
+### Limites declarados
+- Cada frase falada é uma chamada ao Fish Audio: começa mais cedo, mas consome
+  mais cota.
+- Nada foi testado em aparelho físico nesta sessão (fala em fluxo, fundo com o
+  app fechado e reinício do chat ao reabrir).
+
 ## 1.89.1 — as regras do palco ficam nas suas mãos
 
 ### O que mudou

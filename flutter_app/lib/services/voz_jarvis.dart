@@ -33,6 +33,22 @@ class VozJarvis {
     }
   }
 
+  /// Fala uma frase do fluxo sem cortar a anterior: entra na fila do
+  /// sintetizador. Não espera o fim — a fila do próprio Android ordena o áudio.
+  Future<bool> falarEmFila(String texto) async {
+    final limpo = limparParaFala(texto);
+    if (limpo.isEmpty) return false;
+    try {
+      return await channel
+              .invokeMethod<bool>('falarEmFila', {'texto': limpo}) ??
+          false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
   Future<void> parar() async {
     try {
       await channel.invokeMethod<void>('parar');

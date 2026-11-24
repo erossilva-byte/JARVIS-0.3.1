@@ -210,6 +210,8 @@ class KwsForegroundService : Service() {
         super.onCreate()
         createNotificationChannel()
         voz = JarvisVoz(applicationContext)
+        // A mesma voz toca o MP3 do Fish Audio quando o motor sem tela responde.
+        JarvisPonteIa.usarVoz(voz)
         val notification = buildNotification("Preparando detector acústico local…")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
@@ -401,6 +403,9 @@ class KwsForegroundService : Service() {
         }
         comandoEmAndamento = true
         tentativasFundo = 0
+        // Com a voz externa ligada, o motor sobe enquanto você fala: a resposta
+        // já sai pelo Fish Audio, sem depender de o app estar aberto.
+        JarvisPonteIa.preparar(applicationContext)
         ouvirComandoFundo()
     }
 
@@ -685,8 +690,32 @@ class KwsForegroundService : Service() {
         escuta = null
         updateNotification("JARVIS: $mensagem")
         avisarAtivo("JARVIS", mensagem)
-        // O microfone volta só quando a resposta termina: ouvir enquanto o próprio
-        // JARVIS fala fazia ele se ativar com a própria voz.
+        // Com a voz externa ligada, o Fish Audio fala primeiro — inclusive com o
+        // app fechado. Se ele não puder falar, a voz do aparelho assume.
+        if (JarvisPonteIa.vozExternaLigada(applicationContext)) {
+            JarvisPonteIa.falarFundo(mensagem) { falou ->
+                if (falou) {
+                    // O MediaPlayer não avisa o fim: espera proporcional ao texto.
+                    handler.postDelayed(
+                        { if (!comandoEmAndamento) scheduleRearme(700L) },
+                        atrasoResposta(mensagem)
+                    )
+                } else {
+                    falarLocal(mensagem)
+                }
+            }
+        } else {
+            falarLocal(mensagem)
+        }
+    }
+
+    /**
+     * Voz do aparelho com o microfone devolvido no fim da fala.
+     *
+     * O microfone volta só quando a resposta termina: ouvir enquanto o próprio
+     * JARVIS fala fazia ele se ativar com a própria voz.
+     */
+    private fun falarLocal(mensagem: String) {
         val falou = voz?.falar(mensagem) {
             if (!comandoEmAndamento) scheduleRearme(700L)
         } ?: false
@@ -811,6 +840,7 @@ class KwsForegroundService : Service() {
         comandoAtivo = false
         voz?.shutdown()
         voz = null
+        JarvisPonteIa.usarVoz(null)
         engine = null
         // O motor sem tela da ponte de IA não deve sobreviver ao serviço.
         JarvisPonteIa.encerrar()

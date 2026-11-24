@@ -62,7 +62,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_086-habilidades-em-markdown.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.89.1+18901" in pubspec, "versão não atualizada para 1.73.0")
+exigir("version: 1.89.2+18902" in pubspec, "versão não atualizada para 1.73.0")
 exigir("1.73.0" in changelog and "habilidade" in changelog.lower(),
        "CHANGELOG sem o bloco 1.73.0 das habilidades")
 exigir("tests/test_habilidades_flutter.py" in pacote,
