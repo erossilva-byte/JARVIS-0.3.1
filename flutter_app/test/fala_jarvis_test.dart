@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jarvis_nova/services/fala_jarvis.dart';
@@ -68,6 +70,29 @@ class _ExternaFalsa extends VozExternaService {
   Future<void> parar() async {
     parou = true;
   }
+}
+
+/// Voz externa que nunca responde no prazo: simula a nuvem lenta.
+class _ExternaLenta extends VozExternaService {
+  int gerados = 0;
+  final pendentes = <Completer<ResultadoVozExterna>>[];
+
+  @override
+  Future<ResultadoVozExterna> gerar(String texto) {
+    gerados++;
+    final espera = Completer<ResultadoVozExterna>();
+    pendentes.add(espera);
+    return espera.future;
+  }
+
+  @override
+  Future<bool> tocar(Uint8List audio) async => true;
+
+  @override
+  Future<bool> tocarEAguardar(Uint8List audio) async => true;
+
+  @override
+  Future<void> parar() async {}
 }
 
 void main() {
@@ -163,6 +188,55 @@ void main() {
     expect(VozExternaConfig.pronta, isTrue);
     VozExternaConfig.definir(ativa: false, temChave: true);
     expect(VozExternaConfig.pronta, isFalse);
+  });
+
+  test('preparar já gera a frase seguinte, sem chamar duas vezes', () async {
+    final local = _LocalFalso();
+    final externa = _ExternaFalsa();
+    final fala =
+        FalaJarvis(local: local, externa: externa, externaPronta: () => true);
+
+    fala.preparar('primeira frase');
+    expect(await fala.falarEmFluxo('primeira frase'), isTrue);
+    expect(externa.gerados, 1, reason: 'a geração adiantada foi refeita');
+    expect(externa.aguardados, 1);
+  });
+
+  test('nuvem lenta não segura a fala: o aparelho fala e explica', () async {
+    final local = _LocalFalso();
+    final externa = _ExternaLenta();
+    final fala = FalaJarvis(
+      local: local,
+      externa: externa,
+      externaPronta: () => true,
+      prazoExterna: const Duration(milliseconds: 40),
+    );
+
+    expect(await fala.falarEmFluxo('primeira frase'), isTrue);
+    expect(local.filas, 1, reason: 'a voz do aparelho não falou na hora');
+    expect(fala.ultimoErro, contains('prazo'));
+
+    // O resto da mesma resposta fica na voz do aparelho, sem trocar no meio.
+    expect(await fala.falarEmFluxo('segunda frase'), isTrue);
+    expect(externa.gerados, 1, reason: 'tentou a nuvem de novo na mesma resposta');
+    expect(local.filas, 2);
+  });
+
+  test('parar volta a tentar a voz externa na resposta seguinte', () async {
+    final local = _LocalFalso();
+    final externa = _ExternaLenta();
+    final fala = FalaJarvis(
+      local: local,
+      externa: externa,
+      externaPronta: () => true,
+      prazoExterna: const Duration(milliseconds: 30),
+    );
+
+    await fala.falar('olá');
+    expect(externa.gerados, 1);
+    await fala.parar();
+    await fala.falar('olá');
+    expect(externa.gerados, 2, reason: 'parar deveria liberar a nuvem de novo');
   });
 
   test('texto vazio não chama serviço nenhum', () async {

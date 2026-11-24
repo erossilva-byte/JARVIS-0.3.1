@@ -31,8 +31,22 @@ void main() {
   final texto = List.filled(60, 'palavra').join(' ');
   prontas = longo.acrescentar(texto);
   assert(prontas.isNotEmpty, 'texto longo sem corte');
-  assert(prontas.first.length <= 220, 'corte grande demais: ${prontas.first.length}');
+  assert(prontas.first.length <= 140, 'corte grande demais: ${prontas.first.length}');
   assert(!prontas.first.endsWith(' '), 'corte deixou espaço no fim');
+
+  // 5b. Frase longa sem ponto fala na vírgula, em vez de esperar o fim.
+  final comVirgula = FalasEmFluxo();
+  final fraseLonga = 'Primeiro eu verifico o que está acontecendo com o '
+      'aparelho, depois explico cada passo com calma e sem pressa nenhuma';
+  prontas = comVirgula.acrescentar(fraseLonga);
+  assert(prontas.length == 1, 'vírgula longa não liberou a fala: $prontas');
+  assert(prontas.first.endsWith(','), 'corte não terminou na vírgula: ${prontas.first}');
+  assert(prontas.first.length < 100, 'pausa tardia demais: ${prontas.first.length}');
+
+  // 5c. Frase curta com vírgula continua esperando o ponto: nada de picar.
+  final curta = FalasEmFluxo();
+  prontas = curta.acrescentar('Sim, posso ajudar');
+  assert(prontas.isEmpty, 'picou uma frase curta na vírgula: $prontas');
 
   // 6. Parcial que encolhe é resposta nova: não repete o que já foi lido.
   final outra = FalasEmFluxo();

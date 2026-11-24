@@ -14,6 +14,11 @@
 - **Botão de mudo na tela principal**: o cartão MICROFONE da Central de Comando
   para o detector de palavra de verdade, interrompe a fala e mostra a faixa
   “JARVIS MUDO”. Desligar volta a escutar na hora.
+- **Fala começa na hora**: a voz externa não segura mais a resposta. A frase
+  seguinte é gerada enquanto a atual toca, a primeira tem prazo de 2,5 s e, se
+  a nuvem não responder, a voz do aparelho assume na hora — o resto da mesma
+  resposta continua nela. Frases longas sem ponto agora falam na vírgula, em
+  vez de esperar o parágrafo inteiro.
 - **Modo de visita mais claro**: cabeçalho com avatar, selo “SEM DADOS”,
   sugestões de perguntas que ele responde sem provedor, balões novos e ajustes
   em cartões.
@@ -26,6 +31,9 @@
   de outro app a partir do segundo plano depende de “Exibir sobre outros apps”.
 - Ritmo 1,60 pode picar palavras em sintetizadores antigos; Natural e Grave
   continuam disponíveis.
+- O prazo da voz externa é uma escolha de velocidade: uma nuvem lenta troca o
+  Fish Audio pela voz do aparelho em vez de atrasar a resposta. Se a conexão
+  for boa, o Fish Audio continua falando normalmente.
 
 ## 1.89.2 — um chat só, fala mais cedo e fundo que não desiste
 

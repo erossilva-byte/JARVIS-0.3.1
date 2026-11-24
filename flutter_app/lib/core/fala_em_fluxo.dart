@@ -9,13 +9,18 @@
 library;
 
 class FalasEmFluxo {
-  FalasEmFluxo({this.minimo = 6, this.maximo = 220});
+  FalasEmFluxo(
+      {this.minimo = 6, this.maximo = 140, this.minimoRespiro = 90});
 
   /// Antes disso nenhuma frase é entregue: evita falar "Ok." e picar a fala.
   final int minimo;
 
   /// Sem pontuação, a frase é cortada aqui para a fala não travar.
   final int maximo;
+
+  /// A partir deste tamanho, uma vírgula ou dois-pontos vale como pausa: falar
+  /// cedo é melhor do que esperar o ponto final de uma frase longa.
+  final int minimoRespiro;
 
   String _pendente = '';
   int _lido = 0;
@@ -73,6 +78,15 @@ class FalasEmFluxo {
       if (temProximo && proximo != ' ' && proximo != '\n') continue;
       if (caractere == '.' && i > 0 && _ehDigito(texto[i - 1])) continue;
       return i + 1;
+    }
+    // Frase longa sem ponto: uma vírgula ou dois-pontos já serve de pausa.
+    // Sem isso, um parágrafo inteiro (até 140 caracteres) atrasaria a fala
+    // mesmo com o texto já aparecendo na tela.
+    if (texto.length >= minimoRespiro) {
+      for (var i = minimo - 1; i < texto.length; i++) {
+        final caractere = texto[i];
+        if (caractere == ',' || caractere == ':') return i + 1;
+      }
     }
     if (texto.length >= maximo) {
       final espaco = texto.lastIndexOf(' ', maximo);

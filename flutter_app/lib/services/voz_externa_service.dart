@@ -188,7 +188,9 @@ class VozExternaService {
             },
             body: jsonEncode(corpoVozExterna(limpo, id: id)),
           )
-          .timeout(const Duration(seconds: 30));
+          // Prazo curto: quem chama já aplica um limite menor para a voz do
+          // aparelho assumir; 30 s só deixava a requisição pendurada.
+          .timeout(const Duration(seconds: 12));
       if (resposta.statusCode == 200 && resposta.bodyBytes.isNotEmpty) {
         return ResultadoVozExterna(audio: resposta.bodyBytes);
       }

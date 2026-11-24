@@ -744,23 +744,30 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   }
 
   /// Coloca a frase na fila: a voz de resposta é uma de cada vez.
+  ///
+  /// A primeira frase tem prazo curto (a nuvem não pode segurar a resposta) e
+  /// as seguintes já são geradas enquanto a atual toca: o áudio não fica atrás
+  /// do texto na tela.
   void _enfileirarFala(String frase) {
     if (frase.trim().isEmpty) return;
+    final primeira = !_falouEmFluxo;
     _falouEmFluxo = true;
+    _fala.preparar(frase);
     final geracao = _geracaoFala;
     _filaFala = _filaFala.then((_) async {
       if (!mounted || !vozAtiva || geracao != _geracaoFala) return;
-      await _falarFrase(frase);
+      await _falarFrase(frase, primeira: primeira);
     });
   }
 
   /// Fala uma frase do fluxo sem cortar a anterior: a voz externa espera o
   /// MP3 terminar e a local entra na fila do sintetizador.
-  Future<void> _falarFrase(String texto) async {
+  Future<void> _falarFrase(String texto, {bool primeira = false}) async {
     if (!vozAtiva || !mounted) return;
     HumorNucleoControle.iniciarFala();
     try {
-      await _fala.falarEmFluxo(texto);
+      await _fala.falarEmFluxo(texto,
+          prazo: primeira ? const Duration(milliseconds: 2500) : null);
     } finally {
       HumorNucleoControle.terminarFala();
     }

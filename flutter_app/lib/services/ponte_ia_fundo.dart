@@ -27,6 +27,9 @@ class PonteIaFundo {
 
   static const canal = MethodChannel('com.jarvis.nova/fundo_ia');
 
+  /// Prazo da voz externa no segundo plano, antes de a voz do aparelho falar.
+  static const prazoVozExternaFundo = Duration(milliseconds: 3000);
+
   static bool _ligada = false;
   static ProviderService? _servico;
 
@@ -77,7 +80,13 @@ class PonteIaFundo {
     if (limpo.isEmpty || !VozExternaConfig.pronta) return false;
     try {
       final servico = VozExternaService();
-      final resultado = await servico.gerar(limpo);
+      // Com o app fechado ninguém vê o texto aparecer: a nuvem tem pouco tempo
+      // para entregar o áudio antes de a voz do aparelho assumir a resposta.
+      final resultado = await servico
+          .gerar(limpo)
+          .timeout(prazoVozExternaFundo,
+              onTimeout: () => const ResultadoVozExterna(
+                  erro: 'A voz externa passou do prazo em segundo plano.'));
       if (!resultado.ok) return false;
       return await servico.tocar(resultado.audio!);
     } catch (_) {

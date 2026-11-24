@@ -77,7 +77,35 @@ Data: 2026-11-24
   escutar pelo mesmo caminho do botão de voz, com o motivo real quando falha.
 - Abrir o app com o mudo ligado não religa o detector sozinho.
 
-### 3.4 Visual do modo de visita
+### 3.4 Fala que começa na hora
+
+- **Causa da demora**: com a voz externa ligada, cada frase era gerada na
+  nuvem só na hora de falar (uma ida ao Fish Audio por frase), e a frase
+  seguinte só era pedida quando a anterior acabava. O texto já estava na tela e
+  o áudio ficava para trás, somando as esperas; o tempo limite da requisição era
+  de 30 s antes de cair para a voz local.
+- `services/fala_jarvis.dart`: a geração é **adiantada** (`preparar`) enquanto a
+  frase atual toca, com até 4 frases à frente. A primeira frase tem prazo de
+  2,5 s (3 s no caminho de resposta única). Se a nuvem não responder, a voz do
+  aparelho fala na hora e o resto da mesma resposta continua nela, sem trocar de
+  voz no meio. `parar()` zera esse estado: a próxima resposta tenta o Fish Audio
+  de novo.
+- `services/voice_conversation_page.dart`: a fila de fala passa o prazo curto na
+  primeira frase e pede a geração adiantada ao enfileirar.
+- `services/ponte_ia_fundo.dart`: no segundo plano a voz externa tem 3 s; sem
+  isso o serviço ficava em silêncio esperando a nuvem antes de usar a voz do
+  aparelho.
+- `services/voz_externa_service.dart`: o tempo limite da requisição caiu de
+  30 s para 12 s.
+- `core/fala_em_fluxo.dart`: frases longas sem ponto final agora falam na
+  primeira vírgula ou dois-pontos (a partir de 90 caracteres) e o corte sem
+  pontuação caiu de 220 para 140 caracteres — o áudio não espera o parágrafo
+  inteiro.
+- `tool/fala_em_fluxo_test.dart` e `test/fala_jarvis_test.dart` prendem o novo
+  comportamento: geração adiantada sem pedir duas vezes, nuvem lenta caindo
+  para o aparelho e retomada depois de `parar()`.
+
+### 3.5 Visual do modo de visita
 
 - Cabeçalho novo com avatar com brilho, selo "MODO DE VISITA", etiqueta "SEM
   DADOS" e a frase de que nada fica visível e nada sai do telefone.
@@ -91,6 +119,9 @@ Data: 2026-11-24
   real.
 
 ## 4. Evidência
+
+- `flutter analyze` sem nenhum problema, 412 testes Flutter (incluindo os novos
+  de fala adiantada e de pausa na vírgula) e todos os contratos Python.
 
 - `flutter analyze` sem nenhum problema.
 - `flutter test` com toda a suíte Flutter.
