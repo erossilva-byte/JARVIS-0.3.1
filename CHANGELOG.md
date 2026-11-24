@@ -1,3 +1,34 @@
+## 1.89.0 — contatos para fora, rotinas que repetem e palco que se ajusta
+
+### O que mudou
+- **Exportar contatos**: a tela do aparelho ganhou "Exportar todos (.vcf)". O
+  app lê os contatos do Android (com a permissão que você já autoriza para
+  buscar), monta um arquivo vCard 3.0 com nome, telefones e e-mails e grava em
+  `Android/data/com.jarvis.nova/files/exports`. O botão "Enviar o arquivo
+  para…" abre o compartilhamento do Android, e quem escolhe o destino é você.
+  Nada sai do telefone sozinho.
+- **Rotinas, automações e tarefas que repetem**: o gatilho de horário passou a
+  ter repetição — **todo dia, toda semana (com os dias marcados), todo mês (dia
+  do mês) e uma vez por ano (dia e mês)** — e as tarefas ganharam "Repetir".
+  Tarefa concluída que repete já cria a próxima data com o mesmo horário e
+  agenda o lembrete novo. Mês curto não quebra: dia 31 em fevereiro vira o
+  último dia do mês.
+- **Editar o que existe**: automações e tarefas têm botão "Editar", com os
+  campos preenchidos, em vez de só apagar e criar de novo.
+- **Palco que se ajusta à mídia**: a moldura deixou de ser uma caixa fixa de 210
+  px. Foto larga vira capa recortada; foto em pé aparece inteira, sem corte;
+  imagem quadrada fica em caixa média; notícia usa capa baixa para o texto
+  aparecer; vídeo tem capa com botão de play; item sem imagem ocupa menos
+  espaço. A altura tem teto de 62% da tela.
+
+### Limites declarados
+- Repetição diária e semanal é reprogramada pelo próprio Android a cada
+  disparo; mensal e anual são agendadas para a próxima data e reprogramadas
+  quando o app abre.
+- O `.vcf` fica na pasta do app (não em Downloads); para guardar fora, use
+  "Enviar o arquivo para…" e escolha o destino.
+- Nada disso foi aberto em aparelho nesta sessão.
+
 ## 1.88.7 — a voz externa e o núcleo saem de dentro do módulo
 
 ### O que mudou

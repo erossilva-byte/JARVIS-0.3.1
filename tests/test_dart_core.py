@@ -68,6 +68,8 @@ CASOS = (
     ("tool/voz_externa_test.dart", "voz externa: ID padrão, validação, URL e limites"),
     ("tool/modo_visita_test.dart", "modo de visita: prompt, respostas locais, ajustes vazios e limites"),
     ("tool/programacao_test.dart", "programação: tarefas, validação, blocos, arquivo e prompt"),
+    ("tool/recorrencia_test.dart", "recorrência: dia da semana, mês, ano e próxima data"),
+    ("tool/palco_enquadramento_test.dart", "palco: moldura por forma da imagem, vídeo e notícia"),
     ("tool/avatar3d_test.dart", "avatar 3D: giro, perspectiva, malha, rosto e órbitas"),
 )
 

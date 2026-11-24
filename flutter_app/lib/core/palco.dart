@@ -64,6 +64,8 @@ class ItemPalco {
     this.miniatura = '',
     this.fonte = '',
     this.detalhe = '',
+    this.largura = 0,
+    this.altura = 0,
   });
 
   final TipoPalco tipo;
@@ -82,6 +84,97 @@ class ItemPalco {
 
   /// Informação curta da fonte: autoria, duração ou data.
   final String detalhe;
+
+  /// Tamanho declarado da imagem, quando a fonte informa. Zero é "não sei".
+  final int largura;
+  final int altura;
+
+  /// Proporção da mídia; 0 quando não há imagem nem tamanho declarado.
+  double get proporcao {
+    if (largura > 0 && altura > 0) return largura / altura;
+    return miniatura.isEmpty ? 0 : 4 / 3;
+  }
+}
+
+/// Como a mídia cabe no palco. Muda com a forma da imagem, do vídeo e da
+/// notícia — antes tudo era uma caixa de 210 px com recorte.
+enum MolduraPalco { capaLarga, retratoAlto, quadrada, capaVideo, capaNoticia, semImagem }
+
+class Moldura {
+  const Moldura({
+    required this.tipo,
+    required this.proporcao,
+    required this.alturaRelativa,
+    required this.cabeInteira,
+  });
+
+  final MolduraPalco tipo;
+
+  /// Proporção usada na caixa (largura / altura).
+  final double proporcao;
+
+  /// Altura em fração da tela (0 a 1).
+  final double alturaRelativa;
+
+  /// `true` mostra a mídia inteira (contain); `false` recorta para preencher.
+  final bool cabeInteira;
+
+  /// Altura em pixels para a tela informada, com teto de 62% da tela.
+  double alturaEm(double alturaTela) =>
+      (alturaTela * alturaRelativa).clamp(110.0, alturaTela * 0.62);
+}
+
+/// Escolhe a moldura pela forma real da mídia. Imagem declarada em pé fica
+/// inteira; foto larga vira capa; notícia e vídeo têm tratamento próprio.
+Moldura molduraDoItem(ItemPalco item) {
+  if (item.miniatura.isEmpty) {
+    return const Moldura(
+      tipo: MolduraPalco.semImagem,
+      proporcao: 16 / 9,
+      alturaRelativa: 0.24,
+      cabeInteira: false,
+    );
+  }
+  switch (item.tipo) {
+    case TipoPalco.video:
+      return const Moldura(
+        tipo: MolduraPalco.capaVideo,
+        proporcao: 16 / 9,
+        alturaRelativa: 0.34,
+        cabeInteira: false,
+      );
+    case TipoPalco.noticia:
+      return const Moldura(
+        tipo: MolduraPalco.capaNoticia,
+        proporcao: 16 / 9,
+        alturaRelativa: 0.26,
+        cabeInteira: false,
+      );
+    case TipoPalco.imagem:
+      final proporcao = item.proporcao;
+      if (proporcao >= 1.5) {
+        return const Moldura(
+          tipo: MolduraPalco.capaLarga,
+          proporcao: 16 / 9,
+          alturaRelativa: 0.38,
+          cabeInteira: false,
+        );
+      }
+      if (proporcao <= 0.8) {
+        return Moldura(
+          tipo: MolduraPalco.retratoAlto,
+          proporcao: proporcao,
+          alturaRelativa: 0.56,
+          cabeInteira: true,
+        );
+      }
+      return Moldura(
+        tipo: MolduraPalco.quadrada,
+        proporcao: proporcao,
+        alturaRelativa: 0.44,
+        cabeInteira: true,
+      );
+  }
 }
 
 /// Verbos que pedem para trazer algo à tela.
@@ -286,10 +379,15 @@ List<ItemPalco> lerImagensDoCommons(String corpo) {
       miniatura: imagem,
       resumo: _creditoDaImagem(primeira['extmetadata']),
       fonte: 'Wikimedia Commons',
+      largura: _inteiro(primeira['width']),
+      altura: _inteiro(primeira['height']),
     ));
   }
   return itens;
 }
+
+int _inteiro(Object? valor) =>
+    valor is num ? valor.toInt().clamp(0, 100000) : 0;
 
 /// “File:Motor elétrico 01.jpg” vira “Motor elétrico 01”.
 String _tituloDeArquivo(String bruto) => bruto

@@ -117,6 +117,29 @@ class AparelhoService {
     return ResultadoAparelho.deMapa(dados);
   }
 
+  /// Exporta todos os contatos em vCard para a pasta do app e devolve o
+  /// caminho do arquivo. Quem decide para onde enviar é o usuário, no
+  /// compartilhamento do Android.
+  Future<ResultadoAparelho> exportarContatos() async {
+    final dados = await _chamar('exportarContatos');
+    return ResultadoAparelho(
+      ok: dados?['ok'] == true,
+      mensagem: (dados?['mensagem'] ?? 'O Android não respondeu à exportação.')
+          .toString(),
+      detalhes: {
+        'quantidade': dados?['quantidade'],
+        'nome': dados?['nome'],
+        'caminho': dados?['caminho'],
+        'bytes': dados?['bytes'],
+      },
+    );
+  }
+
+  /// Abre a folha de compartilhamento do Android com um arquivo exportado.
+  Future<ResultadoAparelho> compartilharArquivo(String caminho) async =>
+      ResultadoAparelho.deMapa(
+          await _chamar('compartilharArquivo', {'caminho': caminho}));
+
   Future<List<ContatoAparelho>> buscarContatos(String nome) async {
     final dados = await _chamar('buscarContatos', {'nome': nome});
     final lista = dados?['itens'];

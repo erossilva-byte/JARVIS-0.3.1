@@ -701,6 +701,15 @@ class _AparelhoPageState extends State<AparelhoPage> {
                         style: TextStyle(fontSize: 10)),
                   ),
                   OutlinedButton.icon(
+                    key: const ValueKey('contatos-exportar'),
+                    onPressed: ocupado
+                        ? null
+                        : () => _executar(() => servico.exportarContatos()),
+                    icon: const Icon(Icons.ios_share_rounded, size: 18),
+                    label: const Text('Exportar todos (.vcf)',
+                        style: TextStyle(fontSize: 10)),
+                  ),
+                  OutlinedButton.icon(
                     key: const ValueKey('contato-pedir-permissao'),
                     onPressed: ocupado
                         ? null
@@ -710,6 +719,31 @@ class _AparelhoPageState extends State<AparelhoPage> {
                         style: TextStyle(fontSize: 10)),
                   ),
                 ]),
+                if (resultado?.detalhes['caminho'] is String)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${resultado!.detalhes['quantidade'] ?? 0} contato(s) '
+                          'exportado(s) para ${resultado!.detalhes['nome']}.',
+                          key: const ValueKey('contatos-exportados'),
+                          style: const TextStyle(fontSize: 10, color: muted),
+                        ),
+                        TextButton.icon(
+                          key: const ValueKey('contatos-compartilhar'),
+                          onPressed: ocupado
+                              ? null
+                              : () => _executar(() => servico.compartilharArquivo(
+                                  resultado!.detalhes['caminho'].toString())),
+                          icon: const Icon(Icons.send_rounded, size: 16),
+                          label: const Text('Enviar o arquivo para…',
+                              style: TextStyle(fontSize: 10)),
+                        ),
+                      ],
+                    ),
+                  ),
                 for (final c in contatos.take(6))
                   ListTile(
                     dense: true,

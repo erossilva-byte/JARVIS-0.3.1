@@ -1,5 +1,7 @@
 import 'package:flutter/services.dart';
 
+import '../core/tarefas.dart' show Recorrencia;
+
 /// Agendamento real no Android (`AlarmManager` via canal do aparelho).
 ///
 /// Devolve `false` quando o canal não existe ou o Android recusou: a tela mostra
@@ -17,6 +19,7 @@ class AgendaService {
     required String texto,
     required DateTime quando,
     bool repetirDiario = false,
+    Recorrencia repeticao = Recorrencia.umaVez,
   }) async {
     try {
       final dados = await _canal.invokeMapMethod<Object?, Object?>(
@@ -26,7 +29,8 @@ class AgendaService {
           'titulo': titulo,
           'texto': texto,
           'quando': quando.millisecondsSinceEpoch,
-          'repetirDiario': repetirDiario,
+          'repetirDiario': repetirDiario || repeticao == Recorrencia.diaria,
+          'repeticao': repeticao.name,
         },
       );
       return dados?['ok'] == true;

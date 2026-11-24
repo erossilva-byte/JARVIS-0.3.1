@@ -34,7 +34,8 @@ object JarvisAgenda {
         quando: Long,
         titulo: String,
         texto: String,
-        repetirDiario: Boolean
+        repetirDiario: Boolean,
+        repeticao: String = "umaVez"
     ): Map<String, Any> {
         if (id < 1) {
             return mapOf("ok" to false, "mensagem" to "Identificador de lembrete inválido.")
@@ -48,6 +49,7 @@ object JarvisAgenda {
             put("titulo", titulo.ifBlank { "Jarvis" })
             put("texto", texto)
             put("repetirDiario", repetirDiario)
+            put("repeticao", normalizarRepeticao(repeticao))
         }
         return try {
             preferencias(contexto).edit().putString(PREFIXO + id, registro.toString()).commit()
@@ -99,8 +101,11 @@ object JarvisAgenda {
                 continue
             }
             if (quando <= agora) {
-                if (registro.optBoolean("repetirDiario", false)) {
-                    registro.put("quando", proximoDia(quando))
+                val repeticao = registro.optString("repeticao").ifEmpty {
+                    if (registro.optBoolean("repetirDiario", false)) "diaria" else "umaVez"
+                }
+                if (repeticao != "umaVez") {
+                    registro.put("quando", proximoCiclo(quando, repeticao))
                     sp.edit().putString(chave, registro.toString()).apply()
                     try {
                         programar(contexto, registro)
@@ -120,14 +125,22 @@ object JarvisAgenda {
         }
     }
 
-    fun repetir(contexto: Context, id: Int, titulo: String, texto: String): Boolean {
-        val quando = proximoDia(System.currentTimeMillis())
+    fun repetir(
+        contexto: Context,
+        id: Int,
+        titulo: String,
+        texto: String,
+        repeticao: String = "diaria"
+    ): Boolean {
+        val ciclo = normalizarRepeticao(repeticao)
+        val quando = proximoCiclo(System.currentTimeMillis(), ciclo)
         val registro = JSONObject().apply {
             put("id", id)
             put("quando", quando)
             put("titulo", titulo.ifBlank { "Jarvis" })
             put("texto", texto)
-            put("repetirDiario", true)
+            put("repetirDiario", ciclo == "diaria")
+            put("repeticao", ciclo)
         }
         return try {
             preferencias(contexto).edit().putString(PREFIXO + id, registro.toString()).commit()
@@ -191,6 +204,7 @@ object JarvisAgenda {
             putExtra("titulo", registro.optString("titulo", "Jarvis"))
             putExtra("texto", registro.optString("texto", ""))
             putExtra("repetirDiario", registro.optBoolean("repetirDiario", false))
+            putExtra("repeticao", registro.optString("repeticao", "umaVez"))
         }
         val pendente = PendingIntent.getBroadcast(contexto, id, intencao, flagsPendente())
 
@@ -202,6 +216,27 @@ object JarvisAgenda {
             contexto.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
                 ?: throw IllegalStateException("AlarmManager indisponível")
         gerenciador.setAlarmClock(AlarmManager.AlarmClockInfo(quando, mostrar), pendente)
+    }
+
+    /** Aceita só os nomes que o Dart manda; qualquer outra coisa vira uma vez só. */
+    private fun normalizarRepeticao(valor: String): String =
+        when (valor.trim().lowercase()) {
+            "diaria", "semanal", "mensal", "anual" -> valor.trim().lowercase()
+            else -> "umaVez"
+        }
+
+    /** Próximo ciclo depois de [quando]: dia, semana, mês ou ano. */
+    private fun proximoCiclo(quando: Long, repeticao: String): Long {
+        val calendario = Calendar.getInstance().apply { timeInMillis = quando }
+        do {
+            when (repeticao) {
+                "semanal" -> calendario.add(Calendar.DAY_OF_YEAR, 7)
+                "mensal" -> calendario.add(Calendar.MONTH, 1)
+                "anual" -> calendario.add(Calendar.YEAR, 1)
+                else -> calendario.add(Calendar.DAY_OF_YEAR, 1)
+            }
+        } while (calendario.timeInMillis <= System.currentTimeMillis())
+        return calendario.timeInMillis
     }
 
     private fun proximoDia(quando: Long): Long {
@@ -233,10 +268,19 @@ class JarvisAgendaReceiver : BroadcastReceiver() {
                 if (id < 1) return
                 val titulo = intencao.getStringExtra("titulo") ?: "Jarvis"
                 val texto = intencao.getStringExtra("texto") ?: ""
-                val repetir = intencao.getBooleanExtra("repetirDiario", false)
+                val repeticao = intencao.getStringExtra("repeticao").orEmpty()
+                    .ifEmpty {
+                        if (intencao.getBooleanExtra("repetirDiario", false)) {
+                            "diaria"
+                        } else {
+                            "umaVez"
+                        }
+                    }
                 JarvisAgenda.concluir(ctx, id)
                 JarvisAgenda.notificar(ctx, id, titulo, texto)
-                if (repetir) JarvisAgenda.repetir(ctx, id, titulo, texto)
+                if (repeticao != "umaVez") {
+                    JarvisAgenda.repetir(ctx, id, titulo, texto, repeticao)
+                }
             }
         }
     }

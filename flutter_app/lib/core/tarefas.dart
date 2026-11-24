@@ -28,6 +28,23 @@ enum PrioridadeTarefa { baixa, normal, alta }
 
 enum TipoGatilho { horario, bateriaAbaixo }
 
+/// Como o horário volta a acontecer.
+///
+/// Fica na mesma máquina dos gatilhos para a tela poder oferecer semana, mês e
+/// dia do ano sem inventar um segundo agendador.
+enum Recorrencia { diaria, semanal, mensal, anual, umaVez }
+
+const nomesDiasSemana = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
+
+String nomeDoDia(int diaSemana) =>
+    nomesDiasSemana[(diaSemana.clamp(1, 7)) - 1];
+
+String listaDeDias(Iterable<int> dias) {
+  final ordenados = dias.where((d) => d >= 1 && d <= 7).toList()..sort();
+  if (ordenados.isEmpty) return 'nenhum dia escolhido';
+  return ordenados.map(nomeDoDia).join(', ');
+}
+
 enum TipoAcaoAutomacao { avisar, criarTarefa, abrirApp, mensagem }
 
 enum EstadoEvento { executada, aguardandoConfirmacao, falhou, ignorada }
@@ -49,9 +66,22 @@ extension RotuloPrioridade on PrioridadeTarefa {
 
 extension RotuloGatilho on TipoGatilho {
   String get rotulo => switch (this) {
-        TipoGatilho.horario => 'Todo dia em um horário',
+        TipoGatilho.horario => 'Em um horário marcado',
         TipoGatilho.bateriaAbaixo => 'Quando a bateria estiver baixa',
       };
+}
+
+extension RotuloRecorrencia on Recorrencia {
+  String get rotulo => switch (this) {
+        Recorrencia.diaria => 'Todo dia',
+        Recorrencia.semanal => 'Toda semana',
+        Recorrencia.mensal => 'Todo mês',
+        Recorrencia.anual => 'Uma vez por ano',
+        Recorrencia.umaVez => 'Uma vez só',
+      };
+
+  /// Tarefa ou automação que se repete.
+  bool get repete => this != Recorrencia.umaVez;
 }
 
 extension RotuloAcao on TipoAcaoAutomacao {
@@ -123,6 +153,7 @@ class Tarefa {
     this.prioridade = PrioridadeTarefa.normal,
     this.feita = false,
     this.origem = 'manual',
+    this.recorrencia = Recorrencia.umaVez,
     required this.criadaEm,
     this.concluidaEm,
   });
@@ -136,6 +167,9 @@ class Tarefa {
 
   /// `manual` ou `automacao`.
   final String origem;
+
+  /// Quando concluída, gera a próxima data com o mesmo horário.
+  final Recorrencia recorrencia;
   final DateTime criadaEm;
   final DateTime? concluidaEm;
 
@@ -159,6 +193,7 @@ class Tarefa {
     PrioridadeTarefa? prioridade,
     bool? feita,
     String? origem,
+    Recorrencia? recorrencia,
     DateTime? criadaEm,
     DateTime? concluidaEm,
     bool limparConclusao = false,
@@ -171,6 +206,7 @@ class Tarefa {
         prioridade: prioridade ?? this.prioridade,
         feita: feita ?? this.feita,
         origem: origem ?? this.origem,
+        recorrencia: recorrencia ?? this.recorrencia,
         criadaEm: criadaEm ?? this.criadaEm,
         concluidaEm: limparConclusao ? null : (concluidaEm ?? this.concluidaEm),
       );
@@ -183,6 +219,7 @@ class Tarefa {
         'prioridade': prioridade.name,
         'feita': feita,
         'origem': origem,
+        'recorrencia': recorrencia.name,
         'criadaEm': criadaEm.toIso8601String(),
         'concluidaEm': concluidaEm?.toIso8601String(),
       };
@@ -203,6 +240,10 @@ class Tarefa {
       ),
       feita: dados['feita'] == true,
       origem: _texto(dados['origem']).isEmpty ? 'manual' : _texto(dados['origem']),
+      recorrencia: Recorrencia.values.firstWhere(
+        (r) => r.name == dados['recorrencia'],
+        orElse: () => Recorrencia.umaVez,
+      ),
       criadaEm: _data(dados['criadaEm']) ??
           DateTime.fromMillisecondsSinceEpoch(0),
       concluidaEm: _data(dados['concluidaEm']),
@@ -218,6 +259,11 @@ class Automacao {
     this.gatilho = TipoGatilho.horario,
     this.hora = 8,
     this.minuto = 0,
+    this.recorrencia = Recorrencia.diaria,
+    this.diasSemana = const [],
+    this.diaDoMes = 1,
+    this.mesAno = 1,
+    this.diaAno = 1,
     this.bateriaLimite = 20,
     this.acao = TipoAcaoAutomacao.avisar,
     this.texto = '',
@@ -234,6 +280,19 @@ class Automacao {
   final TipoGatilho gatilho;
   final int hora;
   final int minuto;
+
+  /// Como o horário volta: todo dia, certos dias da semana, dia do mês,
+  /// dia do ano ou uma vez só.
+  final Recorrencia recorrencia;
+
+  /// Dias da semana (1 = segunda … 7 = domingo) no modo semanal.
+  final List<int> diasSemana;
+
+  /// Dia do mês (1–31) no modo mensal; dia e mês no modo anual.
+  final int diaDoMes;
+  final int mesAno;
+  final int diaAno;
+
   final int bateriaLimite;
   final TipoAcaoAutomacao acao;
   final String texto;
@@ -245,9 +304,19 @@ class Automacao {
 
   bool get sensivel => acao.sensivel;
 
+  /// Frase do gatilho com a recorrência, do jeito que aparece na lista.
+  String get descricaoRecorrencia => switch (recorrencia) {
+        Recorrencia.diaria => 'Todo dia',
+        Recorrencia.semanal => 'Toda semana (${listaDeDias(diasSemana)})',
+        Recorrencia.mensal => 'Todo dia $diaDoMes do mês',
+        Recorrencia.anual =>
+          'Todo ano em ${doisDigitos(diaAno)}/${doisDigitos(mesAno)}',
+        Recorrencia.umaVez => 'Uma vez só',
+      };
+
   String get descricaoGatilho => switch (gatilho) {
         TipoGatilho.horario =>
-          'Todo dia às ${horarioRotulo(hora, minuto)}',
+          '$descricaoRecorrencia às ${horarioRotulo(hora, minuto)}',
         TipoGatilho.bateriaAbaixo =>
           'Quando a bateria estiver em $bateriaLimite% ou menos',
       };
@@ -268,6 +337,11 @@ class Automacao {
     TipoGatilho? gatilho,
     int? hora,
     int? minuto,
+    Recorrencia? recorrencia,
+    List<int>? diasSemana,
+    int? diaDoMes,
+    int? mesAno,
+    int? diaAno,
     int? bateriaLimite,
     TipoAcaoAutomacao? acao,
     String? texto,
@@ -285,6 +359,11 @@ class Automacao {
         gatilho: gatilho ?? this.gatilho,
         hora: hora ?? this.hora,
         minuto: minuto ?? this.minuto,
+        recorrencia: recorrencia ?? this.recorrencia,
+        diasSemana: diasSemana ?? this.diasSemana,
+        diaDoMes: diaDoMes ?? this.diaDoMes,
+        mesAno: mesAno ?? this.mesAno,
+        diaAno: diaAno ?? this.diaAno,
         bateriaLimite: bateriaLimite ?? this.bateriaLimite,
         acao: acao ?? this.acao,
         texto: texto ?? this.texto,
@@ -303,6 +382,11 @@ class Automacao {
         'gatilho': gatilho.name,
         'hora': hora,
         'minuto': minuto,
+        'recorrencia': recorrencia.name,
+        'diasSemana': diasSemana,
+        'diaDoMes': diaDoMes,
+        'mesAno': mesAno,
+        'diaAno': diaAno,
         'bateriaLimite': bateriaLimite,
         'acao': acao.name,
         'texto': texto,
@@ -333,6 +417,22 @@ class Automacao {
       ),
       hora: inteiro(dados['hora'], 8, 0, 23),
       minuto: inteiro(dados['minuto'], 0, 0, 59),
+      recorrencia: Recorrencia.values.firstWhere(
+        (r) => r.name == dados['recorrencia'],
+        orElse: () => Recorrencia.diaria,
+      ),
+      diasSemana: (dados['diasSemana'] is List)
+          ? (dados['diasSemana'] as List)
+              .whereType<num>()
+              .map((n) => n.toInt())
+              .where((d) => d >= 1 && d <= 7)
+              .toSet()
+              .toList()
+            ..sort()
+          : const [],
+      diaDoMes: inteiro(dados['diaDoMes'], 1, 1, 31),
+      mesAno: inteiro(dados['mesAno'], 1, 1, 12),
+      diaAno: inteiro(dados['diaAno'], 1, 1, 31),
       bateriaLimite: inteiro(dados['bateriaLimite'], 20, 1, 100),
       acao: TipoAcaoAutomacao.values.firstWhere(
         (a) => a.name == dados['acao'],
@@ -524,6 +624,70 @@ ItemFila itemFilaDeAutomacao(Automacao automacao, DateTime quando) => ItemFila(
           : EstadoFila.pendente,
     );
 
+/// O dia informado faz parte da recorrência desta automação?
+///
+/// Mês e ano respeitam o fim do mês: dia 31 em fevereiro cai no dia 28 (ou 29).
+/// `umaVez` não é usada por automação — para isso existe a tarefa com prazo.
+bool diaCombinaCom(Automacao automacao, DateTime dia) {
+  final d = DateTime(dia.year, dia.month, dia.day);
+  switch (automacao.recorrencia) {
+    case Recorrencia.diaria:
+      return true;
+    case Recorrencia.semanal:
+      final dias = automacao.diasSemana.isEmpty
+          ? {d.weekday}
+          : automacao.diasSemana.toSet();
+      return dias.contains(d.weekday);
+    case Recorrencia.mensal:
+      final ultimo = DateTime(d.year, d.month + 1, 0).day;
+      return d.day == automacao.diaDoMes.clamp(1, ultimo);
+    case Recorrencia.anual:
+      final ultimo = DateTime(d.year, automacao.mesAno + 1, 0).day;
+      return d.month == automacao.mesAno &&
+          d.day == automacao.diaAno.clamp(1, ultimo);
+    case Recorrencia.umaVez:
+      return false;
+  }
+}
+
+/// Próxima vez que esta automação vai disparar, ou `null` se nunca mais.
+DateTime? proximaOcorrenciaAutomacao(Automacao automacao, DateTime apos) {
+  if (automacao.gatilho != TipoGatilho.horario) return null;
+  for (var i = 0; i < 800; i++) {
+    final dia =
+        DateTime(apos.year, apos.month, apos.day).add(Duration(days: i));
+    if (!diaCombinaCom(automacao, dia)) continue;
+    final alvo =
+        DateTime(dia.year, dia.month, dia.day, automacao.hora, automacao.minuto);
+    if (alvo.isAfter(apos)) return alvo;
+  }
+  return null;
+}
+
+/// Próximo prazo de uma tarefa que se repete, mantendo o horário do dia.
+DateTime proximaDataTarefa(DateTime prazo, Recorrencia recorrencia) {
+  switch (recorrencia) {
+    case Recorrencia.diaria:
+      return prazo.add(const Duration(days: 1));
+    case Recorrencia.semanal:
+      return prazo.add(const Duration(days: 7));
+    case Recorrencia.mensal:
+      final mes = prazo.month + 1;
+      final ano = prazo.year + (mes > 12 ? 1 : 0);
+      final mesFinal = mes > 12 ? 1 : mes;
+      final ultimo = DateTime(ano, mesFinal + 1, 0).day;
+      return DateTime(ano, mesFinal, prazo.day.clamp(1, ultimo), prazo.hour,
+          prazo.minute);
+    case Recorrencia.anual:
+      final ano = prazo.year + 1;
+      final ultimo = DateTime(ano, prazo.month + 1, 0).day;
+      return DateTime(ano, prazo.month, prazo.day.clamp(1, ultimo),
+          prazo.hour, prazo.minute);
+    case Recorrencia.umaVez:
+      return prazo;
+  }
+}
+
 /// Próxima ocorrência do horário; hoje se ainda não passou, senão amanhã.
 DateTime proximaOcorrencia(int hora, int minuto, DateTime apos) {
   final hoje = DateTime(apos.year, apos.month, apos.day, hora, minuto);
@@ -544,6 +708,8 @@ bool automacaoVencida(
   final ultima = automacao.ultimaExecucaoEm;
   switch (automacao.gatilho) {
     case TipoGatilho.horario:
+      // Só nos dias que a recorrência escolheu: semana, dia do mês ou do ano.
+      if (!diaCombinaCom(automacao, agora)) return false;
       final alvo = DateTime(
           agora.year, agora.month, agora.day, automacao.hora, automacao.minuto);
       final fim = alvo.add(const Duration(minutes: janelaHorarioMinutos));

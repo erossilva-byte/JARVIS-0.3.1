@@ -93,14 +93,14 @@ class _TarefasPageState extends State<TarefasPage> {
           automacao.acao != TipoAcaoAutomacao.avisar) {
         continue;
       }
-      final quando =
-          proximaOcorrencia(automacao.hora, automacao.minuto, DateTime.now());
+      final quando = proximaOcorrenciaAutomacao(automacao, DateTime.now());
+      if (quando == null) continue;
       final ok = await _agenda.agendar(
         id: idLembrete(automacao.id),
         titulo: 'JARVIS · ${automacao.nome}',
         texto: automacao.texto,
         quando: quando,
-        repetirDiario: true,
+        repeticao: automacao.recorrencia,
       );
       if (!ok) algumFalhou = true;
     }
@@ -272,16 +272,19 @@ class _TarefasPageState extends State<TarefasPage> {
     );
   }
 
-  Future<void> _novaTarefa() async {
-    final titulo = TextEditingController();
-    final prazo = TextEditingController();
-    final notas = TextEditingController();
-    var prioridade = PrioridadeTarefa.normal;
+  Future<void> _novaTarefa({Tarefa? existente}) async {
+    final titulo = TextEditingController(text: existente?.titulo ?? '');
+    final prazo = TextEditingController(
+        text: existente?.prazo == null ? '' : _prazoTexto(existente!.prazo!));
+    final notas = TextEditingController(text: existente?.notas ?? '');
+    var prioridade = existente?.prioridade ?? PrioridadeTarefa.normal;
+    var recorrencia = existente?.recorrencia ?? Recorrencia.umaVez;
     final salvar = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, atualizar) => AlertDialog(
-          title: const Text('Nova tarefa', style: TextStyle(fontSize: 15)),
+          title: Text(existente == null ? 'Nova tarefa' : 'Editar tarefa',
+              style: const TextStyle(fontSize: 15)),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               TextField(
@@ -318,6 +321,24 @@ class _TarefasPageState extends State<TarefasPage> {
                 },
               ),
               const SizedBox(height: 8),
+              DropdownButtonFormField<Recorrencia>(
+                key: ValueKey('tarefa-recorrencia-${recorrencia.name}'),
+                initialValue: recorrencia,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Repetir'),
+                items: [
+                  for (final r in Recorrencia.values)
+                    DropdownMenuItem(
+                        value: r,
+                        child: Text(r.rotulo,
+                            style: const TextStyle(fontSize: 11))),
+                ],
+                onChanged: (valor) {
+                  if (valor == null) return;
+                  atualizar(() => recorrencia = valor);
+                },
+              ),
+              const SizedBox(height: 8),
               TextField(
                 key: const ValueKey('tarefa-notas'),
                 controller: notas,
@@ -348,12 +369,15 @@ class _TarefasPageState extends State<TarefasPage> {
       return;
     }
     final resultado = await _store!.salvarTarefa(Tarefa(
-      id: '',
+      id: existente?.id ?? '',
       titulo: titulo.text,
       notas: notas.text,
       prazo: lido.quando,
       prioridade: prioridade,
-      criadaEm: DateTime.now(),
+      origem: existente?.origem ?? 'manual',
+      recorrencia: recorrencia,
+      criadaEm: existente?.criadaEm ?? DateTime.now(),
+      concluidaEm: existente?.concluidaEm,
     ));
     if (!resultado.ok) {
       _snack(resultado.erro!);
@@ -384,6 +408,30 @@ class _TarefasPageState extends State<TarefasPage> {
     }
     if (ficouFeita) {
       await _agenda.cancelar(tarefa.lembreteId);
+      // Tarefa que repete gera a próxima data com o mesmo horário.
+      if (tarefa.recorrencia.repete && tarefa.prazo != null) {
+        final proximo = proximaDataTarefa(tarefa.prazo!, tarefa.recorrencia);
+        final nova = await _store!.salvarTarefa(Tarefa(
+          id: '',
+          titulo: tarefa.titulo,
+          notas: tarefa.notas,
+          prazo: proximo,
+          prioridade: tarefa.prioridade,
+          origem: tarefa.origem,
+          recorrencia: tarefa.recorrencia,
+          criadaEm: DateTime.now(),
+        ));
+        if (nova.ok) {
+          await _agenda.agendar(
+            id: nova.valor!.lembreteId,
+            titulo: 'JARVIS · tarefa',
+            texto: nova.valor!.titulo,
+            quando: proximo,
+            repeticao: tarefa.recorrencia,
+          );
+          _snack('Tarefa concluída; a próxima ficou para ${nova.valor!.prazoRotulo}.');
+        }
+      }
     } else if (tarefa.prazo != null &&
         tarefa.prazo!.isAfter(DateTime.now())) {
       await _agenda.agendar(
@@ -408,22 +456,35 @@ class _TarefasPageState extends State<TarefasPage> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _novaAutomacao() async {
-    final nome = TextEditingController();
-    final hora = TextEditingController(text: '08:00');
-    final bateria = TextEditingController(text: '20');
-    final texto = TextEditingController();
-    final destino = TextEditingController();
-    final pacote = TextEditingController();
-    var gatilho = TipoGatilho.horario;
-    var acao = TipoAcaoAutomacao.avisar;
-    var app = 'whatsapp';
+  Future<void> _novaAutomacao({Automacao? existente}) async {
+    final nome = TextEditingController(text: existente?.nome ?? '');
+    final hora = TextEditingController(
+        text: existente == null
+            ? '08:00'
+            : horarioRotulo(existente.hora, existente.minuto));
+    final bateria =
+        TextEditingController(text: '${existente?.bateriaLimite ?? 20}');
+    final texto = TextEditingController(text: existente?.texto ?? '');
+    final destino = TextEditingController(text: existente?.destino ?? '');
+    final pacote = TextEditingController(text: existente?.pacote ?? '');
+    final diaMes = TextEditingController(text: '${existente?.diaDoMes ?? 1}');
+    final diaAno = TextEditingController(
+        text: existente == null
+            ? '01/01'
+            : '${doisDigitos(existente.diaAno)}/${doisDigitos(existente.mesAno)}');
+    var gatilho = existente?.gatilho ?? TipoGatilho.horario;
+    var acao = existente?.acao ?? TipoAcaoAutomacao.avisar;
+    var app = existente?.app ?? 'whatsapp';
+    var recorrencia = existente != null && existente.recorrencia.repete
+        ? existente.recorrencia
+        : Recorrencia.diaria;
+    final diasSemana = <int>{...?existente?.diasSemana};
     final salvar = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, atualizar) => AlertDialog(
-          title:
-              const Text('Nova automação', style: TextStyle(fontSize: 15)),
+          title: Text(existente == null ? 'Nova automação' : 'Editar automação',
+              style: const TextStyle(fontSize: 15)),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               TextField(
@@ -466,6 +527,83 @@ class _TarefasPageState extends State<TarefasPage> {
                   decoration:
                       const InputDecoration(labelText: 'Bateria abaixo de (%)'),
                 ),
+              if (gatilho == TipoGatilho.horario) ...[
+                const SizedBox(height: 8),
+                DropdownButtonFormField<Recorrencia>(
+                  key: ValueKey('automacao-recorrencia-${recorrencia.name}'),
+                  initialValue: recorrencia,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Repetir'),
+                  items: [
+                    for (final r in [
+                      Recorrencia.diaria,
+                      Recorrencia.semanal,
+                      Recorrencia.mensal,
+                      Recorrencia.anual,
+                    ])
+                      DropdownMenuItem(
+                          value: r,
+                          child: Text(r.rotulo,
+                              style: const TextStyle(fontSize: 11))),
+                  ],
+                  onChanged: (valor) {
+                    if (valor == null) return;
+                    atualizar(() => recorrencia = valor);
+                  },
+                ),
+                if (recorrencia == Recorrencia.semanal) ...[
+                  const SizedBox(height: 8),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Dias da semana',
+                        style: TextStyle(fontSize: 11, color: muted)),
+                  ),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      for (var dia = 1; dia <= 7; dia++)
+                        FilterChip(
+                          key: ValueKey('automacao-dia-semana-$dia'),
+                          label: Text(nomeDoDia(dia),
+                              style: const TextStyle(fontSize: 10)),
+                          selected: diasSemana.contains(dia),
+                          onSelected: (marcado) => atualizar(() {
+                            if (marcado) {
+                              diasSemana.add(dia);
+                            } else {
+                              diasSemana.remove(dia);
+                            }
+                          }),
+                        ),
+                    ],
+                  ),
+                ],
+                if (recorrencia == Recorrencia.mensal) ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: const ValueKey('automacao-dia-mes'),
+                    controller: diaMes,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 12),
+                    decoration: const InputDecoration(
+                        labelText: 'Dia do mês (1 a 31)',
+                        helperText:
+                            'Mês sem esse dia usa o último dia do mês.',
+                        helperStyle: TextStyle(fontSize: 9, color: muted)),
+                  ),
+                ],
+                if (recorrencia == Recorrencia.anual) ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: const ValueKey('automacao-dia-ano'),
+                    controller: diaAno,
+                    style: const TextStyle(fontSize: 12),
+                    decoration: const InputDecoration(
+                        labelText: 'Dia e mês do ano',
+                        hintText: '25/12'),
+                  ),
+                ],
+              ],
               const SizedBox(height: 8),
               DropdownButtonFormField<TipoAcaoAutomacao>(
                 key: ValueKey('automacao-acao-${acao.name}'),
@@ -568,19 +706,63 @@ class _TarefasPageState extends State<TarefasPage> {
     }
     final limite = int.tryParse(bateria.text.trim()) ?? 20;
 
+    // Recorrência só vale para gatilho de horário; bateria não tem dia.
+    var diasEscolhidos = <int>[];
+    var diaDoMesValor = 1;
+    var mesValor = 1;
+    var diaDoAnoValor = 1;
+    var recorrenciaValor = Recorrencia.diaria;
+    if (gatilho == TipoGatilho.horario) {
+      recorrenciaValor = recorrencia;
+      if (recorrencia == Recorrencia.semanal) {
+        if (diasSemana.isEmpty) {
+          _snack('Escolha pelo menos um dia da semana.');
+          return;
+        }
+        diasEscolhidos = diasSemana.toList()..sort();
+      }
+      if (recorrencia == Recorrencia.mensal) {
+        final dia = int.tryParse(diaMes.text.trim());
+        if (dia == null || dia < 1 || dia > 31) {
+          _snack('Informe o dia do mês entre 1 e 31.');
+          return;
+        }
+        diaDoMesValor = dia;
+      }
+      if (recorrencia == Recorrencia.anual) {
+        final partes =
+            RegExp(r'^(\d{1,2})/(\d{1,2})$').firstMatch(diaAno.text.trim());
+        final dia = partes == null ? null : int.tryParse(partes.group(1)!);
+        final mes = partes == null ? null : int.tryParse(partes.group(2)!);
+        if (dia == null || mes == null || dia < 1 || dia > 31 || mes < 1 || mes > 12) {
+          _snack('Informe dia e mês como 25/12.');
+          return;
+        }
+        diaDoAnoValor = dia;
+        mesValor = mes;
+      }
+    }
+
     final resultado = await _store!.salvarAutomacao(Automacao(
-      id: '',
+      id: existente?.id ?? '',
       nome: nome.text,
+      ativa: existente?.ativa ?? true,
       gatilho: gatilho,
       hora: horaValor,
       minuto: minutoValor,
+      recorrencia: recorrenciaValor,
+      diasSemana: diasEscolhidos,
+      diaDoMes: diaDoMesValor,
+      mesAno: mesValor,
+      diaAno: diaDoAnoValor,
       bateriaLimite: limite,
       acao: acao,
       texto: texto.text,
       app: app,
       destino: destino.text,
       pacote: pacote.text,
-      criadaEm: DateTime.now(),
+      criadaEm: existente?.criadaEm ?? DateTime.now(),
+      ultimaExecucaoEm: existente?.ultimaExecucaoEm,
     ));
     if (!resultado.ok) {
       _snack(resultado.erro!);
@@ -721,6 +903,12 @@ class _TarefasPageState extends State<TarefasPage> {
               IconButton(
                 key: ValueKey('tarefa-apagar-${tarefa.id}'),
                 onPressed: () => _apagarTarefa(tarefa),
+              ),
+              TextButton(
+                key: ValueKey('tarefa-editar-${tarefa.id}'),
+                onPressed: () => _novaTarefa(existente: tarefa),
+                child: const Text('Editar',
+                    style: TextStyle(fontSize: 10, color: cyan)),
                 icon: const Icon(Icons.delete_outline_rounded, size: 18),
                 tooltip: 'Apagar',
               ),
@@ -893,6 +1081,12 @@ class _TarefasPageState extends State<TarefasPage> {
                       style: TextStyle(fontSize: 10)),
                 ),
                 TextButton(
+                  key: ValueKey('automacao-editar-${automacao.id}'),
+                  onPressed: () => _novaAutomacao(existente: automacao),
+                  child: const Text('Editar',
+                      style: TextStyle(fontSize: 10)),
+                ),
+                TextButton(
                   key: ValueKey('automacao-apagar-${automacao.id}'),
                   onPressed: () => _apagarAutomacao(automacao),
                   child: const Text('Apagar',
@@ -905,8 +1099,9 @@ class _TarefasPageState extends State<TarefasPage> {
       const SizedBox(height: 14),
       const Text(
         'Automação de horário com aviso é entregue ao AlarmManager do '
-        'Android, inclusive com o app fechado, e é reprogramada para o dia '
-        'seguinte quando dispara. Automações de bateria, de abrir app e de '
+        'Android, inclusive com o app fechado. A repetição escolhe os dias: '
+        'diária e semanal o Android repete sozinho; mensal e anual são '
+        'agendadas para a próxima data e reprogramadas quando o app abre. Automações de bateria, de abrir app e de '
         'criar tarefa são avaliadas quando o app está aberto (ou ao tocar em '
         'Verificar); a fila tenta de novo o que falhou, até '
         '$maxTentativasFila vezes. Mensagem nunca é enviada sozinha.',
@@ -949,6 +1144,11 @@ class _TarefasPageState extends State<TarefasPage> {
       ),
     ]);
   }
+
+  /// Texto do prazo no formato que o próprio campo aceita.
+  String _prazoTexto(DateTime quando) =>
+      '${doisDigitos(quando.day)}/${doisDigitos(quando.month)}/'
+      '${quando.year} ${horarioRotulo(quando.hour, quando.minute)}';
 
   Widget _aviso(String texto, Color cor) => Container(
         margin: const EdgeInsets.only(top: 10),

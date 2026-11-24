@@ -345,9 +345,11 @@ class _PalcoDeMidia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final temImagem = item.miniatura.isNotEmpty;
+    final moldura = molduraDoItem(item);
+    final alturaTela = MediaQuery.sizeOf(context).height;
     return Container(
-      key: ValueKey(chave),
-      height: 210,
+      key: ValueKey('$chave-${moldura.tipo.name}'),
+      height: moldura.alturaEm(alturaTela),
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -361,7 +363,8 @@ class _PalcoDeMidia extends StatelessWidget {
           if (temImagem)
             Image.network(
               item.miniatura,
-              fit: BoxFit.cover,
+              // Foto em pé fica inteira; capa larga preenche a caixa.
+              fit: moldura.cabeInteira ? BoxFit.contain : BoxFit.cover,
               errorBuilder: (_, __, ___) => _semImagem(item),
               loadingBuilder: (_, filho, progresso) => progresso == null
                   ? filho

@@ -3,4 +3,7 @@
      Android. Só a pasta privada de atualizações: nada de armazenamento externo. -->
 <paths>
     <files-path name="atualizacoes" path="updates/" />
+    <!-- Exportação de contatos em .vcf: pasta do app visível para o
+         compartilhamento do Android, sem permissão ampla de armazenamento. -->
+    <external-files-path name="exportacoes" path="exports/" />
 </paths>

@@ -73,7 +73,8 @@ class JarvisAparelho(private val activity: Activity) : MethodChannel.MethodCallH
                     call.argument<Number>("quando")?.toLong() ?: 0L,
                     call.argument<String>("titulo").orEmpty(),
                     call.argument<String>("texto").orEmpty(),
-                    call.argument<Boolean>("repetirDiario") == true
+                    call.argument<Boolean>("repetirDiario") == true,
+                    call.argument<String>("repeticao").orEmpty()
                 )
             )
             "cancelarLembrete" -> {
@@ -123,6 +124,10 @@ class JarvisAparelho(private val activity: Activity) : MethodChannel.MethodCallH
             )
             "buscarContatos" -> result.success(
                 mapOf("itens" to buscarContatos(call.argument<String>("nome").orEmpty()))
+            )
+            "exportarContatos" -> result.success(exportarContatos())
+            "compartilharArquivo" -> result.success(
+                compartilharArquivo(call.argument<String>("caminho").orEmpty())
             )
             "ligar" -> ligar(call.argument<String>("destino").orEmpty(), result)
             "spotifyEstado" -> result.success(mapOf("estado" to estadoMidia()))
@@ -482,6 +487,169 @@ class JarvisAparelho(private val activity: Activity) : MethodChannel.MethodCallH
             }
         } catch (_: Exception) { }
         return lista
+    }
+
+    /**
+     * Todos os contatos do aparelho em vCard 3.0, gravados em
+     * `Android/data/<pacote>/files/exports`. Nada sai do telefone sem o usuário
+     * escolher o app no compartilhamento.
+     */
+    private fun exportarContatos(): Map<String, Any> {
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.READ_CONTACTS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return mapOf(
+                "ok" to false,
+                "mensagem" to "Sem permissão para ler os contatos. Autorize o acesso e tente de novo."
+            )
+        }
+        val contatos = listarTodosContatos()
+        if (contatos.isEmpty()) {
+            return mapOf("ok" to false, "mensagem" to "Nenhum contato no aparelho para exportar.")
+        }
+        return try {
+            val pasta = java.io.File(activity.getExternalFilesDir(null), "exports")
+            pasta.mkdirs()
+            val carimbo = java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US)
+                .format(java.util.Date())
+            val nome = "contatos-jarvis-$carimbo.vcf"
+            val arquivo = java.io.File(pasta, nome)
+            arquivo.writeText(montarVCard(contatos), Charsets.UTF_8)
+            mapOf(
+                "ok" to true,
+                "quantidade" to contatos.size,
+                "nome" to nome,
+                "caminho" to arquivo.absolutePath,
+                "bytes" to arquivo.length(),
+                "mensagem" to "${contatos.size} contato(s) exportado(s)."
+            )
+        } catch (erro: Exception) {
+            mapOf(
+                "ok" to false,
+                "mensagem" to "Não foi possível gravar o arquivo: ${erro.message ?: "erro"}"
+            )
+        }
+    }
+
+    /** Nomes com telefones e e-mails, sem duplicar o mesmo contato. */
+    private fun listarTodosContatos(): List<Map<String, Any>> {
+        val porNome = linkedMapOf<String, MutableMap<String, Any>>()
+        fun registro(nome: String): MutableMap<String, Any> =
+            porNome.getOrPut(nome) {
+                mutableMapOf(
+                    "nome" to nome,
+                    "telefones" to mutableListOf<String>(),
+                    "emails" to mutableListOf<String>()
+                )
+            }
+
+        fun acrescentar(nome: String, chave: String, valor: String) {
+            if (nome.isEmpty() || valor.isEmpty()) return
+            val item = registro(nome)
+            @Suppress("UNCHECKED_CAST")
+            val lista = item[chave] as MutableList<String>
+            if (!lista.contains(valor)) lista.add(valor)
+        }
+
+        try {
+            activity.contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(
+                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                    ContactsContract.CommonDataKinds.Phone.NUMBER
+                ),
+                null, null,
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} ASC"
+            )?.use { cursor ->
+                while (cursor.moveToNext() && porNome.size < 2000) {
+                    acrescentar(
+                        cursor.getString(0)?.trim().orEmpty(),
+                        "telefones",
+                        cursor.getString(1)?.trim().orEmpty()
+                    )
+                }
+            }
+            activity.contentResolver.query(
+                ContactsContract.CommonDataKinds.Email.CONTENT_URI,
+                arrayOf(
+                    ContactsContract.CommonDataKinds.Email.DISPLAY_NAME,
+                    ContactsContract.CommonDataKinds.Email.ADDRESS
+                ),
+                null, null, null
+            )?.use { cursor ->
+                while (cursor.moveToNext() && porNome.size < 2000) {
+                    acrescentar(
+                        cursor.getString(0)?.trim().orEmpty(),
+                        "emails",
+                        cursor.getString(1)?.trim().orEmpty()
+                    )
+                }
+            }
+        } catch (_: Exception) {
+            // Devolve o que já foi lido em vez de fingir uma lista completa.
+        }
+        return porNome.values.toList()
+    }
+
+    /** vCard 3.0, com os caracteres que quebrariam o formato escapados. */
+    private fun montarVCard(contatos: List<Map<String, Any>>): String {
+        fun limpar(valor: String): String = valor
+            .replace("\\", "\\\\")
+            .replace("\n", " ")
+            .replace("\r", " ")
+            .replace(";", "\\;")
+            .replace(",", "\\,")
+
+        val texto = StringBuilder()
+        for (contato in contatos) {
+            val nome = limpar(contato["nome"]?.toString().orEmpty())
+            if (nome.isEmpty()) continue
+            texto.append("BEGIN:VCARD\r\n")
+            texto.append("VERSION:3.0\r\n")
+            texto.append("FN:").append(nome).append("\r\n")
+            texto.append("N:").append(nome).append(";;;;\r\n")
+            val telefones = contato["telefones"] as? List<*> ?: emptyList<Any>()
+            for (telefone in telefones) {
+                val numero = limpar(telefone?.toString().orEmpty())
+                if (numero.isNotEmpty()) texto.append("TEL;TYPE=CELL:").append(numero).append("\r\n")
+            }
+            val emails = contato["emails"] as? List<*> ?: emptyList<Any>()
+            for (email in emails) {
+                val endereco = limpar(email?.toString().orEmpty())
+                if (endereco.isNotEmpty()) texto.append("EMAIL;TYPE=OTHER:").append(endereco).append("\r\n")
+            }
+            texto.append("END:VCARD\r\n")
+        }
+        return texto.toString()
+    }
+
+    /** Abre a folha de compartilhamento com o .vcf exportado. */
+    private fun compartilharArquivo(caminho: String): Map<String, Any> {
+        val arquivo = java.io.File(caminho)
+        if (!arquivo.isFile) {
+            return mapOf("ok" to false, "mensagem" to "O arquivo exportado não foi encontrado.")
+        }
+        return try {
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                activity,
+                "${activity.packageName}.fileprovider",
+                arquivo
+            )
+            val envio = Intent(Intent.ACTION_SEND).apply {
+                type = "text/x-vcard"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, arquivo.name)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            activity.startActivity(Intent.createChooser(envio, "Compartilhar contatos"))
+            mapOf("ok" to true, "mensagem" to "Escolha o app que vai receber os contatos.")
+        } catch (erro: Exception) {
+            mapOf(
+                "ok" to false,
+                "mensagem" to "O Android não abriu o compartilhamento: ${erro.message ?: "erro"}"
+            )
+        }
     }
 
     private fun telefoneDe(destino: String): String {
