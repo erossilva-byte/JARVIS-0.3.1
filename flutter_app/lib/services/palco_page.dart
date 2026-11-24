@@ -348,7 +348,7 @@ class _PalcoDeMidia extends StatelessWidget {
     final moldura = molduraDoItem(item);
     final alturaTela = MediaQuery.sizeOf(context).height;
     return Container(
-      key: ValueKey('$chave-${moldura.tipo.name}'),
+      key: ValueKey(chave),
       height: moldura.alturaEm(alturaTela),
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
