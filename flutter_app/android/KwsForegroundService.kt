@@ -470,11 +470,30 @@ class KwsForegroundService : Service() {
                     abrirPalco(palco, texto)
                     return
                 }
+                // Tela do próprio JARVIS: “abre o modo visão”, “exibe o modo
+                // palco”, “abre a memória”. Vem antes de abrir app para o
+                // Android não procurar um aplicativo chamado “visão”.
+                val telaJarvis = JarvisAbrirTela.interpretar(texto)
+                if (telaJarvis != null) {
+                    escuta?.cancelar()
+                    escuta = null
+                    abrirTelaJarvis(telaJarvis, texto)
+                    return
+                }
                 val comando = JarvisFundo.interpretar(texto)
                 // Pergunta livre (“que horas são”, “quem descobriu o Brasil”):
                 // hora e data são respondidas no aparelho; o resto vai para o
                 // provedor de IA já configurado, pela ponte com o Flutter.
                 if (comando.tipo == JarvisFundo.Tipo.DESCONHECIDO) {
+                    // Mensagem e ligação também valem com o app fechado: têm
+                    // caminho próprio antes de gastar provedor de IA.
+                    val mensagem = JarvisMensagens.interpretar(texto)
+                    if (mensagem != null) {
+                        escuta?.cancelar()
+                        escuta = null
+                        executarMensagem(mensagem, texto)
+                        return
+                    }
                     escuta?.cancelar()
                     escuta = null
                     responderPerguntaLivre(texto)
@@ -648,6 +667,97 @@ class KwsForegroundService : Service() {
             mensagem = frase,
         )
         finalizarComando(frase)
+    }
+
+    /**
+     * Abre o app já na tela do JARVIS pedida (“abre o modo visão”, “abre a
+     * memória”). Mesma exigência do palco: abrir atividade a partir do segundo
+     * plano depende de “Exibir sobre outros apps”.
+     */
+    private fun abrirTelaJarvis(pedido: JarvisAbrirTela.Pedido, texto: String) {
+        val acao = "abrir ${pedido.rotulo}"
+        if (!JarvisFundo.podeAbrirApps(applicationContext)) {
+            val aviso = "Para abrir ${pedido.rotulo} com o app fechado, autorize “Exibir sobre " +
+                "outros apps” no Android. O pedido foi entendido; só falta essa autorização."
+            JarvisFundo.registrarHistorico(
+                applicationContext,
+                origem = JarvisFundo.ORIGEM_SEGUNDO_PLANO,
+                pedido = texto,
+                acao = acao,
+                ok = false,
+                mensagem = aviso,
+            )
+            finalizarComando(aviso)
+            return
+        }
+        updateNotification("Abrindo ${pedido.rotulo}…")
+        avisarAtivo("JARVIS ativo", "Abrindo ${pedido.rotulo}…")
+        val abertura = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(JarvisAbrirTela.EXTRA_TELA, pedido.chave)
+        }
+        val abriu = try {
+            if (abertura == null) false else {
+                startActivity(abertura)
+                true
+            }
+        } catch (_: Exception) {
+            false
+        }
+        val frase = if (abriu) {
+            JarvisAbrirTela.fraseDeAbertura(pedido)
+        } else {
+            "Não consegui abrir o app para mostrar ${pedido.rotulo}. Abra o JARVIS e peça de novo."
+        }
+        JarvisFundo.registrarHistorico(
+            applicationContext,
+            origem = JarvisFundo.ORIGEM_SEGUNDO_PLANO,
+            pedido = texto,
+            acao = acao,
+            ok = abriu,
+            mensagem = frase,
+        )
+        finalizarComando(frase)
+    }
+
+    /**
+     * Mensagem e ligação com o app fechado. Roda fora da thread principal
+     * porque a busca de contato consulta o Android; o resultado real é dito em
+     * voz alta em vez de o JARVIS afirmar que enviou sem ter enviado.
+     */
+    private fun executarMensagem(pedido: JarvisMensagens.Pedido, texto: String) {
+        val acao = when (pedido.tipo) {
+            JarvisMensagens.Tipo.MENSAGEM -> "mensagem para ${pedido.destino} via ${pedido.app}"
+            JarvisMensagens.Tipo.LIGACAO -> "ligar para ${pedido.destino}"
+        }
+        if (!JarvisFundo.podeAbrirApps(applicationContext)) {
+            val aviso = "Para mandar mensagem ou ligar com o app fechado, autorize “Exibir sobre " +
+                "outros apps” no Android. O pedido foi entendido; só falta essa autorização."
+            JarvisFundo.registrarHistorico(
+                applicationContext,
+                origem = JarvisFundo.ORIGEM_SEGUNDO_PLANO,
+                pedido = texto,
+                acao = acao,
+                ok = false,
+                mensagem = aviso,
+            )
+            finalizarComando(aviso)
+            return
+        }
+        updateNotification("Executando: $acao…")
+        avisarAtivo("JARVIS ativo", "Preparando: $acao…")
+        Thread {
+            val resultado = JarvisMensagens.executar(applicationContext, pedido)
+            JarvisFundo.registrarHistorico(
+                applicationContext,
+                origem = JarvisFundo.ORIGEM_SEGUNDO_PLANO,
+                pedido = texto,
+                acao = acao,
+                ok = resultado.ok,
+                mensagem = resultado.mensagem,
+            )
+            handler.post { finalizarComando(resultado.mensagem) }
+        }.start()
     }
 
     /**

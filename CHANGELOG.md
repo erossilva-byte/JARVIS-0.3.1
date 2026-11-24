@@ -1,3 +1,33 @@
+## 1.91.0 — abre tudo por voz, inclusive com o app fechado
+
+### O que mudou
+- **Telas do JARVIS por voz**: “abre o modo visão”, “exibe o modo palco”,
+  “abre a memória”, “mostra as pessoas”, “abre as configurações”, “abre o
+  histórico”, “abre o segundo plano” e as demais telas do app agora abrem de
+  verdade — antes o pedido caía no comando de abrir app e o Android procurava
+  um aplicativo chamado “visão”.
+- **No app e no segundo plano**: o serviço de palavra de ativação reconhece as
+  mesmas telas e abre o app já nelas, sem passar pela IA.
+- **Mensagem e ligação com o app fechado**: “manda mensagem para a Ana no
+  WhatsApp dizendo que chego às 9” e “liga para a Ana” agora funcionam fora da
+  tela, pelo mesmo caminho dos apps de destino. SMS sai direto quando há
+  permissão de enviar SMS; sem ela, a conversa fica pronta para o toque final.
+- **Ligação honesta**: com permissão de chamada o número é discado; sem ela, o
+  discador abre com o número e a resposta diz que falta o toque em ligar.
+- **Abrir app de terceiro continua igual**: “abre o WhatsApp” segue no comando
+  de app, com desambiguação por nome, e não é confundido com as telas do
+  JARVIS.
+
+### Limites declarados
+- Abrir tela ou app de terceiro com o JARVIS fechado depende de “Exibir sobre
+  outros apps”; sem essa autorização a resposta diz o que falta.
+- Nenhum app de terceiro aceita envio silencioso: WhatsApp, Telegram, e-mail e
+  os demais abrem a conversa com o texto e o toque em enviar continua seu.
+- O reconhecimento é por frase fechada (verbo de abrir + nome da tela); frase
+  fora desse formato segue para a conversa normal.
+- Nada foi validado em aparelho físico nesta sessão (abrir telas com o app
+  fechado, mensagem e ligação no segundo plano).
+
 ## 1.90.0 — voz mais rápida, tarefas por voz e mudo na tela principal
 
 ### O que mudou

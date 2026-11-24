@@ -124,8 +124,8 @@ exigir("respostaVisita(" in visita and "ajustesVisita" in visita,
        "modo de visita deixou de usar as regras puras")
 
 # 6. Versão, documentação e suíte.
-exigir("version: 1.90.0+19000" in pubspec,
-       "pubspec sem a versão 1.90.0+19000")
+exigir("version: 1.91.0+19100" in pubspec,
+       "pubspec sem a versão 1.91.0+19100")
 exigir("## 1.90.0" in changelog, "CHANGELOG sem o bloco 1.90.0")
 for termo in ("voz mais veloz", "núcleo", "mudo", "modo de visita"):
     exigir(termo.lower() in changelog.lower(),

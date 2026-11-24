@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 import '../core/palco.dart';
+import '../core/pedido_abrir.dart';
 
 /// Pedido vindo do sistema: atalho do ícone, widget ou "compartilhar com" de outro app.
 class IntencaoSistema {
   const IntencaoSistema(this.acao, [this.texto = '', this.tipo = '']);
 
-  /// `voz`, `conversa`, `historico`, `compartilhar` ou `palco`.
+  /// `voz`, `conversa`, `historico`, `compartilhar`, `palco` ou `tela`.
   final String acao;
   final String texto;
 
@@ -24,6 +25,13 @@ class IntencaoSistema {
 
   /// Pedido de imagem, vídeo ou notícia reconhecido na voz de fundo.
   bool get abrirPalco => acao == 'palco' && texto.trim().isNotEmpty;
+
+  /// Tela do JARVIS reconhecida na voz de fundo (“abre a memória”); o texto é
+  /// a chave fixa da tela, não uma frase qualquer.
+  bool get pediuTela => acao == 'tela' && texto.trim().isNotEmpty;
+
+  /// Tela pronta para abrir, ou `null` quando a chave não existe nesta versão.
+  TelaJarvis? get telaPedida => pediuTela ? TelaJarvis.porChave(texto) : null;
 
   /// Pedido pronto para a tela do palco, ou `null` quando o tipo não fecha.
   PedidoPalco? get pedidoPalco =>

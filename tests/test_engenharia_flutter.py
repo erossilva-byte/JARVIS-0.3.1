@@ -57,7 +57,7 @@ exigir('"abrirApp"' in kotlin, "canal Kotlin sem abrirApp")
 exigir("ActivityManager" in kotlin and "StatFs" in kotlin,
        "leitura de memória/armazenamento ausente")
 exigir("Central do aparelho" in pagina_dispositivo, "tela da central ausente")
-exigir("version: 1.90.0+19000" in pubspec, "versão não atualizada")
+exigir("version: 1.91.0+19100" in pubspec, "versão não atualizada")
 
 for caminho, proibido in [
     ("lib/core/engenharia.dart", "CADeSIMU"),

@@ -836,6 +836,16 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
     /** Traduz a ação Android em um pedido conhecido pelo Flutter; consome a intenção. */
     private fun lerIntencao(intent: Intent?): Map<String, Any>? {
         if (intent == null) return null
+        // Tela do JARVIS pedida na fala com o app fechado (“abre o modo
+        // visão”): o serviço mandou só a chave fixa; quem monta a tela é o
+        // Flutter, e a mesma chave existe em `core/pedido_abrir.dart`.
+        val telaPedida = intent.getStringExtra(JarvisAbrirTela.EXTRA_TELA)
+            ?.trim().orEmpty()
+        if (telaPedida.isNotEmpty()) {
+            intent.removeExtra(JarvisAbrirTela.EXTRA_TELA)
+            intent.action = Intent.ACTION_MAIN
+            return mapOf("acao" to "tela", "texto" to telaPedida)
+        }
         // Pedido de palco reconhecido na fala com o app fechado: a tela abre a
         // pesquisa já com o tipo e o assunto que o serviço ouviu.
         val palcoConsulta = intent.getStringExtra(JarvisPalco.EXTRA_CONSULTA)

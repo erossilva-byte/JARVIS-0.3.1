@@ -73,6 +73,7 @@ CASOS = (
     ("tool/fala_em_fluxo_test.dart", "fala em fluxo: frases durante a resposta e resto no fim"),
     ("tool/palco_regras_test.dart", "palco: regras por tipo, limiares e JSON"),
     ("tool/avatar3d_test.dart", "avatar 3D: giro, perspectiva, malha, rosto e órbitas"),
+    ("tool/pedido_abrir_test.dart", "abrir telas por voz: tela certa, app de terceiro e perguntas"),
 )
 
 

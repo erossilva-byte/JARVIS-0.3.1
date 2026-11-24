@@ -12,6 +12,7 @@ import 'systems_view.dart';
 import 'ui_common.dart';
 import 'services/kws_bridge.dart';
 import 'services/kws_controller.dart';
+import 'services/abrir_tela.dart';
 import 'services/aparelho_service.dart';
 import 'services/arquivos_page.dart';
 import 'services/atualizacao_page.dart';
@@ -211,6 +212,19 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
 
   void _abrirIntencao(IntencaoSistema intencao) {
     if (!mounted) return;
+    // Tela do JARVIS pedida na voz de fundo (“abre o modo visão”): o serviço
+    // trouxe só a chave; quem monta a tela é o app.
+    if (intencao.pediuTela) {
+      final tela = intencao.telaPedida;
+      if (tela == null) {
+        _mostrarAvisoVoz('Não conheço essa tela do JARVIS nesta versão.');
+        return;
+      }
+      unawaited(AbrirTela.abrir(tela).then((resultado) {
+        if (!resultado.ok) _mostrarAvisoVoz(resultado.mensagem);
+      }));
+      return;
+    }
     if (intencao.abrirPalco) {
       // A voz de fundo reconheceu “mostra fotos de…” e trouxe o pedido pronto:
       // a tela abre já pesquisando, sem passar pelo módulo nem pelo provedor.

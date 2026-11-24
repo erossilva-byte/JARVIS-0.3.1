@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jarvis_nova/core/pedido_abrir.dart';
 import 'package:jarvis_nova/services/sistema_android.dart';
 
 void main() {
@@ -113,6 +114,33 @@ void main() {
 
     expect(chamadas.single.method, 'atualizarWidget');
     expect(chamadas.single.arguments, {'texto': 'KWS ESCUTANDO'});
+  });
+
+  test('tela pedida na voz de fundo vira a tela certa', () async {
+    respostaPendente = {'acao': 'tela', 'texto': 'voz_externa'};
+    final recebidas = <IntencaoSistema>[];
+    final assinatura = SistemaAndroid.intencoes.listen(recebidas.add);
+
+    await SistemaAndroid.iniciar();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(recebidas, hasLength(1));
+    expect(recebidas.single.pediuTela, isTrue);
+    expect(recebidas.single.telaPedida, TelaJarvis.vozExterna);
+    await assinatura.cancel();
+  });
+
+  test('chave de tela desconhecida não abre nada', () async {
+    respostaPendente = {'acao': 'tela', 'texto': 'inexistente'};
+    final recebidas = <IntencaoSistema>[];
+    final assinatura = SistemaAndroid.intencoes.listen(recebidas.add);
+
+    await SistemaAndroid.iniciar();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(recebidas.single.pediuTela, isTrue);
+    expect(recebidas.single.telaPedida, isNull);
+    await assinatura.cancel();
   });
 
   test('intenção desconhecida é ignorada', () async {

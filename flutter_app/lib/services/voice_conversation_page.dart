@@ -15,11 +15,13 @@ import '../core/habilidades.dart';
 import '../core/historico_voz.dart';
 import '../core/memoria_busca.dart';
 import '../core/palco.dart';
+import '../core/pedido_abrir.dart';
 import '../core/personalidade.dart';
 import '../core/pessoas.dart';
 import '../core/stream_buffer.dart';
 import '../nucleo/humor_nucleo.dart';
 import '../ui_common.dart';
+import 'abrir_tela.dart';
 import 'acessibilidade_service.dart';
 import 'circuito_page.dart';
 import 'comandos_android_service.dart';
@@ -227,6 +229,23 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       unawaited(store?.limparRascunho());
       await Navigator.of(context).push(MaterialPageRoute<void>(
           builder: (_) => PalcoPage(pedidoInicial: palco)));
+      return;
+    }
+    // Tela do próprio JARVIS: “abre o modo visão”, “exibe o modo palco”,
+    // “abre a memória”, “mostra as pessoas”. Vem antes de abrir app para o
+    // Android não procurar um aplicativo chamado “visão”.
+    final abrir = pedidoAbrir(texto);
+    if (abrir != null) {
+      composer.clear();
+      unawaited(store?.limparRascunho());
+      final resultado =
+          await AbrirTela.abrir(abrir.tela, assunto: abrir.assunto);
+      _concluirLocal(
+        texto,
+        ok: resultado.ok,
+        mensagemRecebida: resultado.mensagem,
+        acao: resultado.acao,
+      );
       return;
     }
     // Ficha de pessoa: entende os dados e pede o consentimento antes de

@@ -58,7 +58,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_089-segundo-plano-sem-app-aberto.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.90.0+19000" in pubspec, "versão não atualizada para 1.75.1")
+exigir("version: 1.91.0+19100" in pubspec, "versão não atualizada para 1.75.1")
 exigir("1.75.1" in changelog, "CHANGELOG sem o ajuste 1.75.1")
 exigir("tests/test_fundo_motor.py" in pacote,
        "contrato novo fora de package.json test:all")

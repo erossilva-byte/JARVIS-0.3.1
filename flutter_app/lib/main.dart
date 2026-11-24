@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'home_screen.dart';
+import 'services/abrir_tela.dart';
 import 'services/bloqueio_gate.dart';
 import 'services/ponte_ia_fundo.dart';
 import 'services/voz_externa_service.dart';
@@ -40,6 +41,9 @@ class JarvisApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
       debugShowCheckedModeBanner: false,
+      // Navegador único: uma tela pedida por voz abre por cima de qualquer
+      // outra, inclusive quando o pedido chega do serviço de segundo plano.
+      navigatorKey: AbrirTela.navegador,
       title: 'J.A.R.V.I.S. Nova',
       theme: ThemeData(
           brightness: Brightness.dark,
