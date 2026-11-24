@@ -103,7 +103,7 @@ for tipo in ("capaLarga", "retratoAlto", "quadrada", "capaVideo",
     exigir(tipo in palco, f"moldura {tipo} ausente")
 exigir("this.largura = 0" in palco and "this.altura = 0" in palco,
        "ItemPalco não guarda o tamanho da mídia")
-exigir("molduraDoItem(item)" in pagina_palco,
+exigir("molduraDoItem(item" in pagina_palco,
        "tela do palco não usa a moldura")
 exigir("BoxFit.contain : BoxFit.cover" in pagina_palco,
        "tela do palco sem recorte adaptativo")
@@ -111,7 +111,7 @@ exigir("height: 210," not in pagina_palco,
        "altura fixa de 210 px ainda no palco")
 
 # 4. Versão e suíte -----------------------------------------------------------
-exigir("version: 1.89.0+18900" in ler(APP / "pubspec.yaml"),
+exigir("version: 1.89.1+18901" in ler(APP / "pubspec.yaml"),
        "versão não atualizada para 1.89.0")
 pacote = ler(RAIZ / "package.json")
 exigir("python3 tests/test_bloco_110.py" in pacote,

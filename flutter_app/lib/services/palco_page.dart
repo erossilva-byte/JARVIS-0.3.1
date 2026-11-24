@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/palco.dart';
 import '../ui_common.dart';
+import 'palco_regras_page.dart';
+import 'palco_regras_store.dart';
 import 'palco_service.dart';
 import 'sistema_android.dart';
 
@@ -43,15 +45,49 @@ class _PalcoPageState extends State<PalcoPage> {
   String? aviso;
   PedidoPalco? ultimoPedido;
 
+  /// Regras de enquadramento escolhidas pelo usuário nesta sessão.
+  RegrasPalco regras = RegrasPalco.padrao;
+
   @override
   void initState() {
     super.initState();
+    unawaited(_carregarRegras());
     final inicial = widget.pedidoInicial;
     if (inicial != null) {
       campo.text = inicial.consulta;
       tipo = inicial.tipo;
       // Fora do primeiro build: a pesquisa chama setState.
       unawaited(Future<void>.microtask(() => _pesquisar(inicial)));
+    }
+  }
+
+  Future<void> _carregarRegras() async {
+    try {
+      final lidas = (await PalcoRegrasStore.abrir()).carregar();
+      if (!mounted) return;
+      setState(() => regras = lidas);
+    } catch (_) {
+      // Sem armazenamento disponível, o palco segue com as regras padrão.
+    }
+  }
+
+  Future<void> _abrirRegras() async {
+    final escolhidas = await Navigator.of(context).push<RegrasPalco>(
+      MaterialPageRoute(builder: (_) => PalcoRegrasPage(regras: regras)),
+    );
+    if (escolhidas == null || !mounted) return;
+    setState(() => regras = escolhidas);
+    try {
+      final loja = await PalcoRegrasStore.abrir();
+      final gravou = await loja.salvar(escolhidas);
+      if (!mounted) return;
+      setState(() => aviso = gravou
+          ? 'Regras do palco salvas neste aparelho.'
+          : 'As regras valem agora, mas o Android não confirmou a gravação.');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => aviso =
+          'As regras valem nesta sessão, mas não foi possível gravar aqui.');
     }
   }
 
@@ -189,6 +225,15 @@ class _PalcoPageState extends State<PalcoPage> {
                 : Icons.travel_explore_rounded),
             label: Text(carregando ? 'Pesquisando…' : 'Pesquisar e mostrar'),
           ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              key: const ValueKey('palco-regras'),
+              onPressed: _abrirRegras,
+              icon: const Icon(Icons.tune_rounded, size: 17),
+              label: const Text('Regras do palco'),
+            ),
+          ),
           if (carregando && ultimoPedido != null) ...[
             const SizedBox(height: 8),
             Text(descricaoDoPedido(ultimoPedido!),
@@ -212,7 +257,8 @@ class _PalcoPageState extends State<PalcoPage> {
           ],
           if (item != null) ...[
             const SizedBox(height: 14),
-            _PalcoDeMidia(item: item, chave: 'palco-resultado'),
+            _PalcoDeMidia(
+                item: item, chave: 'palco-resultado', regras: regras),
             const SizedBox(height: 10),
             Text(item.titulo,
                 style: const TextStyle(
@@ -337,15 +383,20 @@ IconData _iconeDoTipo(TipoPalco tipo) => switch (tipo) {
 
 /// Área de exibição: imagem grande, capa de vídeo ou cartão de notícia.
 class _PalcoDeMidia extends StatelessWidget {
-  const _PalcoDeMidia({required this.item, required this.chave});
+  const _PalcoDeMidia({
+    required this.item,
+    required this.chave,
+    this.regras = RegrasPalco.padrao,
+  });
 
   final ItemPalco item;
   final String chave;
+  final RegrasPalco regras;
 
   @override
   Widget build(BuildContext context) {
     final temImagem = item.miniatura.isNotEmpty;
-    final moldura = molduraDoItem(item);
+    final moldura = molduraDoItem(item, regras: regras);
     final alturaTela = MediaQuery.sizeOf(context).height;
     return Container(
       key: ValueKey(chave),

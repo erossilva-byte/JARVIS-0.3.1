@@ -65,7 +65,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_098-hotword-em-portugues.md")
 
 # 1. Versão, changelog, suíte e relatório.
-exigir("version: 1.89.0+18900" in pubspec,
+exigir("version: 1.89.1+18901" in pubspec,
        "versão não atualizada para 1.87.0+18700")
 exigir("1.84.0" in changelog and "portugu" in changelog.lower(),
        "CHANGELOG sem o bloco 1.84.0 da hotword em português")

@@ -1,3 +1,24 @@
+## 1.89.1 — as regras do palco ficam nas suas mãos
+
+### O que mudou
+- **Regras por tipo de mídia**: no palco, o botão "Regras do palco" abre um
+  editor onde cada tipo — foto larga, foto em pé, foto quase quadrada, vídeo e
+  notícia — tem a sua altura na tela (de 15% a 62%) e a sua escolha entre
+  **preencher (recorta)** e **mostrar inteira**.
+- **Limiares da foto**: dois controles dizem a partir de qual proporção a foto
+  vira capa larga e até qual ela é tratada como retrato. O app impede que os
+  dois se cruzem.
+- **Prévia sem internet**: a prévia é desenhada no aparelho com um retângulo,
+  um gradiente e um ícone — não pede imagem à rede, então funciona no modo
+  avião e não baixa nada.
+- **Guardado no aparelho**: as regras ficam em `SharedPreferences`. Arquivo
+  estragado volta ao padrão; falha de gravação aparece como aviso, não como
+  "salvo". "Voltar ao padrão" devolve o enquadramento original.
+
+### Limites declarados
+- A prévia mostra o tamanho relativo (fração da tela), não centímetros.
+- Nada foi testado em aparelho físico nesta sessão.
+
 ## 1.89.0 — contatos para fora, rotinas que repetem e palco que se ajusta
 
 ### O que mudou

@@ -53,7 +53,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_092-atualizacao-ota.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.89.0+18900" in pubspec, "versão não atualizada para 1.78.0")
+exigir("version: 1.89.1+18901" in pubspec, "versão não atualizada para 1.78.0")
 exigir("1.78.0" in changelog and "atualiza" in changelog.lower(),
        "CHANGELOG sem o bloco 1.78.0 da atualização")
 exigir("tests/test_atualizacao_ota.py" in pacote,

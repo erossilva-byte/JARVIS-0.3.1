@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// Modo palco — contrato puro, sem Flutter e sem rede.
 ///
 /// O palco pesquisa imagens, vídeos ou notícias e mostra o resultado na tela.
@@ -124,9 +126,165 @@ class Moldura {
       (alturaTela * alturaRelativa).clamp(110.0, alturaTela * 0.62);
 }
 
-/// Escolhe a moldura pela forma real da mídia. Imagem declarada em pé fica
-/// inteira; foto larga vira capa; notícia e vídeo têm tratamento próprio.
-Moldura molduraDoItem(ItemPalco item) {
+/// Uma regra de enquadramento: quanto da tela a mídia ocupa e se recorta.
+class RegraMoldura {
+  const RegraMoldura({required this.altura, required this.cabeInteira});
+
+  /// Altura em fração da tela (0,15 a 0,62).
+  final double altura;
+
+  /// `true` mostra inteira; `false` recorta para preencher.
+  final bool cabeInteira;
+
+  static const double alturaMinima = 0.15;
+  static const double alturaMaxima = 0.62;
+
+  double get alturaLimitada => altura.clamp(alturaMinima, alturaMaxima);
+
+  RegraMoldura copiarCom({double? altura, bool? cabeInteira}) => RegraMoldura(
+        altura: (altura ?? this.altura).clamp(alturaMinima, alturaMaxima),
+        cabeInteira: cabeInteira ?? this.cabeInteira,
+      );
+
+  Map<String, Object?> paraJson() =>
+      {'altura': alturaLimitada, 'cabeInteira': cabeInteira};
+
+  static RegraMoldura deJson(Object? dados, RegraMoldura padrao) {
+    if (dados is! Map) return padrao;
+    final valor = dados['altura'];
+    final inteira = dados['cabeInteira'];
+    return RegraMoldura(
+      altura: valor is num
+          ? valor.toDouble().clamp(alturaMinima, alturaMaxima)
+          : padrao.altura,
+      cabeInteira: inteira is bool ? inteira : padrao.cabeInteira,
+    );
+  }
+
+  @override
+  String toString() =>
+      'RegraMoldura(${alturaLimitada.toStringAsFixed(2)}, '
+      '${cabeInteira ? "inteira" : "recorte"})';
+}
+
+/// As regras do palco, editáveis pelo usuário e guardadas no aparelho.
+///
+/// Cada tipo de moldura tem altura e recorte próprios; os dois limiares
+/// decidem quando uma imagem é capa larga, quase quadrada ou retrato.
+class RegrasPalco {
+  const RegrasPalco({
+    this.capaLarga = const RegraMoldura(altura: 0.38, cabeInteira: false),
+    this.retratoAlto = const RegraMoldura(altura: 0.56, cabeInteira: true),
+    this.quadrada = const RegraMoldura(altura: 0.44, cabeInteira: true),
+    this.capaVideo = const RegraMoldura(altura: 0.34, cabeInteira: false),
+    this.capaNoticia = const RegraMoldura(altura: 0.26, cabeInteira: false),
+    this.limiarLargo = 1.5,
+    this.limiarEstreito = 0.8,
+  });
+
+  static const padrao = RegrasPalco();
+
+  static const double limiarLargoMinimo = 1.1;
+  static const double limiarLargoMaximo = 2.5;
+  static const double limiarEstreitoMinimo = 0.5;
+  static const double limiarEstreitoMaximo = 0.95;
+
+  final RegraMoldura capaLarga;
+  final RegraMoldura retratoAlto;
+  final RegraMoldura quadrada;
+  final RegraMoldura capaVideo;
+  final RegraMoldura capaNoticia;
+
+  /// Proporção a partir da qual a imagem vira capa larga.
+  final double limiarLargo;
+
+  /// Proporção até a qual a imagem é tratada como retrato em pé.
+  final double limiarEstreito;
+
+  RegraMoldura regraDe(MolduraPalco tipo) => switch (tipo) {
+        MolduraPalco.capaLarga => capaLarga,
+        MolduraPalco.retratoAlto => retratoAlto,
+        MolduraPalco.quadrada => quadrada,
+        MolduraPalco.capaVideo => capaVideo,
+        MolduraPalco.capaNoticia => capaNoticia,
+        MolduraPalco.semImagem =>
+          const RegraMoldura(altura: 0.24, cabeInteira: false),
+      };
+
+  RegrasPalco comRegra(MolduraPalco tipo, RegraMoldura regra) => RegrasPalco(
+        capaLarga: tipo == MolduraPalco.capaLarga ? regra : capaLarga,
+        retratoAlto: tipo == MolduraPalco.retratoAlto ? regra : retratoAlto,
+        quadrada: tipo == MolduraPalco.quadrada ? regra : quadrada,
+        capaVideo: tipo == MolduraPalco.capaVideo ? regra : capaVideo,
+        capaNoticia: tipo == MolduraPalco.capaNoticia ? regra : capaNoticia,
+        limiarLargo: limiarLargo,
+        limiarEstreito: limiarEstreito,
+      );
+
+  RegrasPalco copiarCom({
+    double? limiarLargo,
+    double? limiarEstreito,
+  }) {
+    final largo = (limiarLargo ?? this.limiarLargo)
+        .clamp(limiarLargoMinimo, limiarLargoMaximo);
+    final estreito = (limiarEstreito ?? this.limiarEstreito)
+        .clamp(limiarEstreitoMinimo, limiarEstreitoMaximo);
+    // O limiar largo tem de ficar acima do estreito, senão nada seria "médio".
+    return RegrasPalco(
+      capaLarga: capaLarga,
+      retratoAlto: retratoAlto,
+      quadrada: quadrada,
+      capaVideo: capaVideo,
+      capaNoticia: capaNoticia,
+      limiarLargo: largo <= estreito + 0.1 ? estreito + 0.1 : largo,
+      limiarEstreito: estreito,
+    );
+  }
+
+  Map<String, Object?> paraJson() => {
+        'capaLarga': capaLarga.paraJson(),
+        'retratoAlto': retratoAlto.paraJson(),
+        'quadrada': quadrada.paraJson(),
+        'capaVideo': capaVideo.paraJson(),
+        'capaNoticia': capaNoticia.paraJson(),
+        'limiarLargo': limiarLargo,
+        'limiarEstreito': limiarEstreito,
+      };
+
+  static RegrasPalco deJson(Object? dados) {
+    Object? cru = dados;
+    if (cru is String) {
+      try {
+        cru = jsonDecode(cru);
+      } catch (_) {
+        return padrao;
+      }
+    }
+    if (cru is! Map) return padrao;
+    final largo = cru['limiarLargo'];
+    final estreito = cru['limiarEstreito'];
+    final regras = RegrasPalco(
+      capaLarga: RegraMoldura.deJson(cru['capaLarga'], padrao.capaLarga),
+      retratoAlto: RegraMoldura.deJson(cru['retratoAlto'], padrao.retratoAlto),
+      quadrada: RegraMoldura.deJson(cru['quadrada'], padrao.quadrada),
+      capaVideo: RegraMoldura.deJson(cru['capaVideo'], padrao.capaVideo),
+      capaNoticia: RegraMoldura.deJson(cru['capaNoticia'], padrao.capaNoticia),
+      limiarLargo: largo is num ? largo.toDouble() : padrao.limiarLargo,
+      limiarEstreito:
+          estreito is num ? estreito.toDouble() : padrao.limiarEstreito,
+    );
+    return regras.copiarCom(
+      limiarLargo: regras.limiarLargo,
+      limiarEstreito: regras.limiarEstreito,
+    );
+  }
+}
+
+/// Escolhe a moldura pela forma real da mídia, obedecendo às regras do usuário.
+/// Imagem declarada em pé fica inteira; foto larga vira capa; notícia e vídeo
+/// têm tratamento próprio.
+Moldura molduraDoItem(ItemPalco item,
+    {RegrasPalco regras = RegrasPalco.padrao}) {
   if (item.miniatura.isEmpty) {
     return const Moldura(
       tipo: MolduraPalco.semImagem,
@@ -135,45 +293,29 @@ Moldura molduraDoItem(ItemPalco item) {
       cabeInteira: false,
     );
   }
+
+  Moldura com(MolduraPalco tipo, double proporcao, RegraMoldura regra) =>
+      Moldura(
+        tipo: tipo,
+        proporcao: proporcao,
+        alturaRelativa: regra.alturaLimitada,
+        cabeInteira: regra.cabeInteira,
+      );
+
   switch (item.tipo) {
     case TipoPalco.video:
-      return const Moldura(
-        tipo: MolduraPalco.capaVideo,
-        proporcao: 16 / 9,
-        alturaRelativa: 0.34,
-        cabeInteira: false,
-      );
+      return com(MolduraPalco.capaVideo, 16 / 9, regras.capaVideo);
     case TipoPalco.noticia:
-      return const Moldura(
-        tipo: MolduraPalco.capaNoticia,
-        proporcao: 16 / 9,
-        alturaRelativa: 0.26,
-        cabeInteira: false,
-      );
+      return com(MolduraPalco.capaNoticia, 16 / 9, regras.capaNoticia);
     case TipoPalco.imagem:
       final proporcao = item.proporcao;
-      if (proporcao >= 1.5) {
-        return const Moldura(
-          tipo: MolduraPalco.capaLarga,
-          proporcao: 16 / 9,
-          alturaRelativa: 0.38,
-          cabeInteira: false,
-        );
+      if (proporcao >= regras.limiarLargo) {
+        return com(MolduraPalco.capaLarga, 16 / 9, regras.capaLarga);
       }
-      if (proporcao <= 0.8) {
-        return Moldura(
-          tipo: MolduraPalco.retratoAlto,
-          proporcao: proporcao,
-          alturaRelativa: 0.56,
-          cabeInteira: true,
-        );
+      if (proporcao <= regras.limiarEstreito) {
+        return com(MolduraPalco.retratoAlto, proporcao, regras.retratoAlto);
       }
-      return Moldura(
-        tipo: MolduraPalco.quadrada,
-        proporcao: proporcao,
-        alturaRelativa: 0.44,
-        cabeInteira: true,
-      );
+      return com(MolduraPalco.quadrada, proporcao, regras.quadrada);
   }
 }
 
