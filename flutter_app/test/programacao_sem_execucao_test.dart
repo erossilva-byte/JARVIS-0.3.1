@@ -94,6 +94,8 @@ void main() {
           onSelectTab: (_) {},
           onProviders: () {},
           onKws: () {},
+          onVozExterna: () {},
+          onNucleo: () {},
           onSettings: () {},
           onModule: (_) {},
           kwsLabel: 'KWS PRONTO',
