@@ -901,16 +901,16 @@ class _TarefasPageState extends State<TarefasPage> {
                 ),
               ),
               IconButton(
-                key: ValueKey('tarefa-apagar-${tarefa.id}'),
-                onPressed: () => _apagarTarefa(tarefa),
-              ),
-              TextButton(
                 key: ValueKey('tarefa-editar-${tarefa.id}'),
+                tooltip: 'Editar',
+                icon: const Icon(Icons.edit_outlined, size: 18),
                 onPressed: () => _novaTarefa(existente: tarefa),
-                child: const Text('Editar',
-                    style: TextStyle(fontSize: 10, color: cyan)),
-                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+              ),
+              IconButton(
+                key: ValueKey('tarefa-apagar-${tarefa.id}'),
                 tooltip: 'Apagar',
+                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                onPressed: () => _apagarTarefa(tarefa),
               ),
             ]),
           ),

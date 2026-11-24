@@ -23,6 +23,7 @@ class AgendaFalsa implements AgendaService {
     required String texto,
     required DateTime quando,
     bool repetirDiario = false,
+    Recorrencia repeticao = Recorrencia.umaVez,
   }) async {
     if (!ok) return false;
     agendados.add({

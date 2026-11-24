@@ -407,6 +407,16 @@ class Automacao {
       return n.clamp(minimo, maximo);
     }
 
+    final diasLidos = dados['diasSemana'] is List
+        ? (dados['diasSemana'] as List)
+            .whereType<num>()
+            .map((n) => n.toInt())
+            .where((d) => d >= 1 && d <= 7)
+            .toSet()
+            .toList()
+        : <int>[];
+    diasLidos.sort();
+
     return Automacao(
       id: id,
       nome: nome,
@@ -421,15 +431,7 @@ class Automacao {
         (r) => r.name == dados['recorrencia'],
         orElse: () => Recorrencia.diaria,
       ),
-      diasSemana: (dados['diasSemana'] is List)
-          ? (dados['diasSemana'] as List)
-              .whereType<num>()
-              .map((n) => n.toInt())
-              .where((d) => d >= 1 && d <= 7)
-              .toSet()
-              .toList()
-            ..sort()
-          : const [],
+      diasSemana: diasLidos,
       diaDoMes: inteiro(dados['diaDoMes'], 1, 1, 31),
       mesAno: inteiro(dados['mesAno'], 1, 1, 12),
       diaAno: inteiro(dados['diaAno'], 1, 1, 31),
