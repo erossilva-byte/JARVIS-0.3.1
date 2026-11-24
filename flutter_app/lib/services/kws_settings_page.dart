@@ -154,27 +154,24 @@ class _KwsSettingsPageState extends State<KwsSettingsPage> {
     final status = controller.status;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Voz e palavra de ativação')),
+      appBar: AppBar(
+        title: const Text('Voz e palavra de ativação'),
+        actions: [
+          // A voz por ID morava só dentro de outro módulo; aqui é o lugar em
+          // que a pessoa procura voz. Fica na barra para não empurrar o
+          // controle de sensibilidade para fora da tela.
+          IconButton(
+            key: const ValueKey('abrir-voz-externa'),
+            tooltip: 'Voz externa (ID e chave do Fish Audio)',
+            onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const VozExternaPage())),
+            icon: const Icon(Icons.key_rounded),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(18),
         children: [
-          // A voz por ID morava só dentro de outro módulo; aqui é o lugar em
-          // que a pessoa procura voz.
-          Card(
-            margin: EdgeInsets.zero,
-            child: ListTile(
-              key: const ValueKey('abrir-voz-externa'),
-              leading: const Icon(Icons.key_rounded),
-              title: const Text('Voz externa (ID)'),
-              subtitle: const Text(
-                  'ID da voz e chave do Fish Audio, com teste de voz. '
-                  'Desligada, o JARVIS fala com a voz do aparelho.'),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                  builder: (_) => const VozExternaPage())),
-            ),
-          ),
-          const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
