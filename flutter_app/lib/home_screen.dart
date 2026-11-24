@@ -4,6 +4,7 @@ import 'catalog.dart';
 import 'drawer.dart';
 import 'command_center.dart';
 import 'nucleo/humor_nucleo.dart';
+import 'nucleo/nucleo_page.dart';
 import 'hologram.dart';
 import 'pages.dart';
 import 'provider_settings_page.dart';
@@ -30,6 +31,7 @@ import 'services/sistema_android.dart';
 import 'services/timbre_page.dart';
 import 'services/voice_conversation_page.dart';
 import 'services/visao_page.dart';
+import 'services/voz_externa_page.dart';
 import 'services/voz_tela_cheia_page.dart';
 
 // Interface clássica restaurada: HUD central, barra superior, painel lateral,
@@ -460,6 +462,8 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
         onSelectTab: (value) => setState(() => tab = value),
         onProviders: _openProviderSettings,
         onKws: _openKwsSettings,
+        onVozExterna: _openVozExterna,
+        onNucleo: _openNucleo,
         onModule: _openModule,
         onSettings: _openSettings,
         kwsLabel: _kwsLabel,
@@ -551,4 +555,12 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
       MaterialPageRoute<void>(builder: (_) => const ProviderSettingsPage()));
   void _openKwsSettings() => Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => KwsSettingsPage(controller: jarvisKwsController)));
+
+  /// Voz por ID e chave do serviço externo, a partir da gaveta.
+  void _openVozExterna() => Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => const VozExternaPage()));
+
+  /// Núcleo flutuante: a tela existia só dentro do avatar, fora da gaveta.
+  void _openNucleo() => Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => const NucleoPage()));
 }

@@ -8,6 +8,8 @@ class JarvisDrawer extends StatelessWidget {
     required this.onSelectTab,
     required this.onProviders,
     required this.onKws,
+    required this.onVozExterna,
+    required this.onNucleo,
     required this.onModule,
     required this.onSettings,
     required this.kwsLabel,
@@ -17,6 +19,8 @@ class JarvisDrawer extends StatelessWidget {
   final ValueChanged<int> onSelectTab;
   final VoidCallback onProviders;
   final VoidCallback onKws;
+  final VoidCallback onVozExterna;
+  final VoidCallback onNucleo;
   final VoidCallback onSettings;
   final ValueChanged<String> onModule;
   final String kwsLabel;
@@ -55,6 +59,10 @@ class JarvisDrawer extends StatelessWidget {
               Navigator.pop(context);
               onSelectTab(0);
             }),
+            _item(Icons.blur_on_rounded, 'Núcleo flutuante', () {
+              Navigator.pop(context);
+              onNucleo();
+            }),
             _item(Icons.psychology_rounded, 'IA Core', () {
               Navigator.pop(context);
               onProviders();
@@ -62,6 +70,10 @@ class JarvisDrawer extends StatelessWidget {
             _item(Icons.graphic_eq_rounded, 'Voz', () {
               Navigator.pop(context);
               onKws();
+            }),
+            _item(Icons.key_rounded, 'Voz externa', () {
+              Navigator.pop(context);
+              onVozExterna();
             }),
             _item(Icons.visibility_rounded, 'Visão', () {
               Navigator.pop(context);

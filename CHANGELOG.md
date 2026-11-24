@@ -1,3 +1,21 @@
+## 1.88.7 — a voz externa e o núcleo saem de dentro do módulo
+
+### O que mudou
+- **Dois atalhos na gaveta**: "Voz externa" abre a tela do ID de voz e da chave
+  da Fish Audio, e "Núcleo flutuante" abre a tela do núcleo, com o interruptor
+  de sobreposição e a autorização. Antes, a voz externa só existia dentro do
+  módulo de timbre (gaveta → Timbre → módulo → botão) e o núcleo só dentro da
+  tela do Avatar 3D — na prática, ninguém encontrava.
+- **Botão na tela de Voz**: quem entra por "Voz" vê "Voz externa (ID)" no topo,
+  com o aviso de que, desligada, a fala continua sendo a do aparelho.
+- **Travas contra o retorno do problema**: teste de widget da gaveta (um toque
+  leva a cada tela) e contrato estático que reprova se algum desses acessos
+  sumir de novo.
+
+### O que não mudou
+- Nenhum campo novo e nenhuma permissão nova: os mesmos campos de ID, chave,
+  interruptor "usar esta voz nas respostas" e o botão de testar voz.
+
 ## 1.88.6 — o núcleo vira mascote: cor e ritmo por estado
 
 ### O que mudou
