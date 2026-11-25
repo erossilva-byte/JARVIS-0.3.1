@@ -64,19 +64,11 @@ jobs:
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
+          # Sem `body`: as notas do release vêm de VERSAO.json pela esteira do
+          # APK. Definir texto aqui apagaria essas notas ao anexar o Linux.
           files: |
             dist/*.AppImage
             dist/*.deb
-          body: |
-            ## J.A.R.V.I.S. Nova ${{ github.ref_name }}
-
-            **Linux**: `JARVIS-Nova-<versão>-<arch>.AppImage` (rode com `chmod +x` e
-            clique duplo) e o pacote `.deb` (`sudo apt install ./arquivo.deb`).
-            O controle de mídia usa `playerctl` e o volume usa `pactl` ou `wpctl`;
-            sem eles o app explica o que instalar.
-
-            **Windows**: instalador NSIS e portátil, mais `atualizacao.json` e
-            `atualizacao.json.sig`.
 
   windows:
     name: Instalador e portátil do J.A.R.V.I.S. Nova (Windows)
