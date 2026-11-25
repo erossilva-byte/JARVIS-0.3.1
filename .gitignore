@@ -38,3 +38,8 @@ _logs/
 # Os fontes Kotlin de flutter_app/android/ são versionados com `git add -f`,
 # apesar da regra android/ acima: o app e os contratos não funcionam sem eles.
 # Ao criar um .kt novo ali, versionar do mesmo jeito.
+
+# chaves locais de assinatura de atualização (nunca versionar)
+.chaves-dev/
+*.pem
+!platforms/desktop/atualizacao-publica.pem

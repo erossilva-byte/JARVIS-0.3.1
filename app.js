@@ -7459,6 +7459,8 @@ document.querySelectorAll('[data-abrir-transcricao]').forEach((b) => { b.onclick
 const cardInfo = $('#dash-info');
 if (cardInfo) cardInfo.onclick = abrirInformacoesUI;
 $('#info-atualizar').onclick = abrirInformacoesUI;
+const btnConferirAtualizacao = $('#btn-conferir-atualizacao');
+if (btnConferirAtualizacao) btnConferirAtualizacao.onclick = () => conferirAtualizacaoBaixada();
 $('#info-fechar').onclick = () => fecharPaineis();
 $('#info-config-celular').onclick = () => { abrirConfig(); mudarCategoriaConfig('celular'); atualizarStatusCelular(); };
 const chkGroqEscuta = $('#c-escuta-groq');
@@ -9079,6 +9081,76 @@ async function renderInformacoes() {
 function abrirInformacoesUI() {
   abrirPainel('#painel-info');
   renderInformacoes().catch((e) => infoStatus('Falhou ao consultar: ' + ((e && e.message) || 'erro'), 'erro'));
+  renderSobre().catch(() => { });
+}
+
+/* ---------- Sobre e atualização assinada (Etapa 7) ----------
+ * A versão e as notas vêm do pacote instalado; a conferência de atualização só
+ * existe no PC, porque quem lê o instalador e confere a assinatura é o processo
+ * principal. Nada é baixado nem instalado sem a pessoa escolher a pasta.
+ */
+let sobreCarregado = false;
+async function renderSobre(forcar) {
+  const versaoEl = $('#sobre-versao'), notasEl = $('#sobre-notas'), status = $('#sobre-atualizacao-status');
+  const botao = $('#btn-conferir-atualizacao');
+  if (!versaoEl || !notasEl) return;
+  if (ehAndroid) {
+    versaoEl.textContent = 'Este é o aplicativo do celular. A instalação e a atualização do computador são feitas no app do PC.';
+    notasEl.textContent = '';
+    if (botao) botao.hidden = true;
+    return;
+  }
+  if (sobreCarregado && !forcar) return;
+  try {
+    const info = await nativo('atualizacao_info', {});
+    versaoEl.textContent = 'Versão instalada: ' + (info && info.versao ? info.versao : 'não informada') +
+      (info && info.temChave ? ' · assinatura de atualização configurada' : ' · sem chave de atualização');
+    const n = await nativo('novidades_app', {});
+    notasEl.textContent = '';
+    if (n && n.ok && n.notas && n.notas.length) {
+      const titulo = document.createElement('p');
+      titulo.className = 'dica';
+      titulo.textContent = 'Novidades da ' + n.versao + ':';
+      const lista = document.createElement('ul');
+      n.notas.slice(0, 8).forEach((item) => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        lista.appendChild(li);
+      });
+      notasEl.append(titulo, lista);
+    } else {
+      const p = document.createElement('p');
+      p.className = 'dica';
+      p.textContent = (n && n.texto) || 'Não encontrei as notas desta versão no pacote.';
+      notasEl.appendChild(p);
+    }
+    sobreCarregado = true;
+  } catch (e) {
+    if (status) status.textContent = 'Não consegui ler a versão instalada: ' + ((e && e.message) || 'erro');
+  }
+}
+async function conferirAtualizacaoBaixada() {
+  const status = $('#sobre-atualizacao-status'), botao = $('#btn-conferir-atualizacao');
+  if (!status) return;
+  if (ehAndroid) { status.textContent = 'A conferência de atualização do computador só existe no app do PC.'; return; }
+  if (botao) botao.disabled = true;
+  status.textContent = 'Abrindo a pasta do pacote baixado…';
+  try {
+    const r = await nativo('atualizacao_verificar', {});
+    if (!r || r.cancelado) { status.textContent = 'Nenhuma pasta escolhida; nada foi conferido.'; return; }
+    if (!r.ok) {
+      status.textContent = 'Atualização recusada (' + (r.motivo || 'motivo não informado') + '): ' + r.texto;
+      registrar('atualização', 'recusada: ' + (r.motivo || '') + ' — ' + (r.texto || ''));
+      return;
+    }
+    const passos = (r.plano && r.plano.aplicar) || [];
+    status.textContent = r.texto + (passos.length ? ' ' + passos.join(' ') : '');
+    registrar('atualização', 'pacote ' + r.versao + ' conferido e pronto');
+  } catch (e) {
+    status.textContent = 'Não consegui conferir o pacote: ' + ((e && e.message) || 'erro');
+  } finally {
+    if (botao) botao.disabled = false;
+  }
 }
 /** Versão para o núcleo Hermes ("Jarvis, informações"): abre, atualiza e devolve a fala. */
 function abrirInformacoes() {

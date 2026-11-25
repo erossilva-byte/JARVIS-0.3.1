@@ -132,6 +132,13 @@ provar de verdade.
 
 ## Etapa 7 — Empacotamento, atualização e teste em PC real
 
+**Estado:** implementada e **não aprovada** (1.108.0) — atualização com
+  assinatura Ed25519 verificada no app, ferramentas de chave e de assinatura,
+  painel de versão e notas, e roteiro de campo em `docs/TESTE-PC-FISICO.md`.
+  Nenhum instalador foi compilado nem assinado com certificado, e o roteiro de
+  campo não foi executado: a aprovação depende de Windows, de certificado de
+  código e de máquina limpa.
+
 **Entregável**
 - Instalador assinado, atualização com verificação de assinatura, versão e
   changelog no app.
@@ -140,7 +147,8 @@ provar de verdade.
 
 **Aceite**
 - Instalador gerado e instalado em máquina limpa; atualização aplicada e
-  revertida; relatório com o que foi medido.
+  revertida; relatório com o que foi medido. **Pendente**: só as regras de
+  verificação e o plano de reversão foram provados.
 
 **Depende de:** todas as anteriores.
 

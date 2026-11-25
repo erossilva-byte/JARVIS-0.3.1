@@ -1746,3 +1746,7 @@ body.modo-visita > *:not(#visita){display:none!important}
 .visita-ajustes{margin-top:12px}
 .visita-ajustes ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:4px}
 .visita-ajustes li{display:flex;justify-content:space-between;gap:10px;font-size:.86rem;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.03)}
+
+/* ---- Sobre e atualização (Etapa 7) ---- */
+.sobre-notas ul{margin:6px 0 0;padding-left:18px;display:grid;gap:4px}
+.sobre-notas li{font-size:.88rem;line-height:1.45}

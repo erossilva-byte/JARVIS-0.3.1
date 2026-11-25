@@ -158,8 +158,8 @@ exigir("envioSemToque()" in servico_acess and
        "o serviço de acessibilidade do app não lê/grava o interruptor")
 
 # 6. Versão, docs e registros.
-exigir("version: 1.107.0+110700" in pubspec,
-       "pubspec.yaml não está em 1.107.0+110700")
+exigir("version: 1.108.0+110800" in pubspec,
+       "pubspec.yaml não está em 1.108.0+110800")
 exigir("## 1.92.0" in changelog, "CHANGELOG.md não tem o bloco 1.92.0")
 exigir(relatorio.is_file(),
        "falta docs/relatorios/2026-11-25_115-mensagem-sem-toque-e-app-com-acao.md")

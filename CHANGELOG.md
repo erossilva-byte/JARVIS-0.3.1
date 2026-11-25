@@ -1,3 +1,31 @@
+## 1.108.0 — instalador e atualização assinada no PC (Etapa 7)
+
+### O que mudou
+- **Atualização com assinatura conferida** (`atualizacao_pc.js`): assinatura
+  Ed25519 sobre o manifesto canônico, SHA-256 e tamanho do arquivo conferidos,
+  recusa de versão igual, mais antiga ou abaixo da mínima, e motivo escrito para
+  cada recusa. Sem chave, sem assinatura ou sem hash: recusa.
+- **Ferramentas de release**: `tools/chave_atualizacao.js` gera o par Ed25519
+  (privada com 0600, nunca no repositório) e `tools/assinar_atualizacao.js`
+  assina o pacote gerado pelo electron-builder, recusando artefato com cara de
+  stub.
+- **Ajustes ▸ Informações ▸ Sobre e atualização**: mostra a versão instalada, se
+  há chave de atualização, as notas da versão lidas do CHANGELOG do próprio
+  pacote e o botão "Conferir atualização baixada…". O app não baixa nem instala
+  sozinho: confere e mostra os passos de aplicar e de reverter.
+- **Documentação**: `docs/ASSINATURA-PC.md` (as duas assinaturas, como ligar o
+  certificado, tabela de recusas) e `docs/TESTE-PC-FISICO.md` (roteiro de campo
+  em sete etapas, com o que medir).
+
+### Limites declarados
+- **Nenhum instalador foi gerado**: não há Windows nem electron-builder nesta
+  máquina. A verificação foi provada com um pacote sintético de 21 MB.
+- **Nenhum certificado de código foi comprado**: o `.exe` continua sem
+  assinatura Authenticode e o SmartScreen continua avisando.
+- A chave de atualização é de desenvolvimento: gere outra antes de distribuir.
+- A Etapa 7 está implementada e **não aprovada**: falta executar o roteiro de
+  campo em PC físico, com instalação, atualização real e reversão.
+
 ## 1.107.0 — voz e segundo plano no PC (Etapa 6)
 
 ### O que mudou

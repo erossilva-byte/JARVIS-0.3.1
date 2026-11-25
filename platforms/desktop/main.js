@@ -12,6 +12,16 @@ const CADPC = require('./cad_pc.js');
 // resolvem para os mesmos arquivos.
 const RAIZ = path.resolve(__dirname, '..', '..');
 const APPS = require(path.join(RAIZ, 'apps.js'));
+// Regras de atualização assinada (Etapa 7). O módulo é Node puro: os testes
+// rodam o mesmo arquivo que este processo usa.
+const ATUALIZACAO = require(path.join(RAIZ, 'atualizacao_pc.js'));
+const ARQUIVO_CHAVE = path.join(__dirname, 'atualizacao-publica.pem');
+function chaveDeAtualizacao() {
+  try { return fs.readFileSync(ARQUIVO_CHAVE, 'utf8'); } catch (e) { return ''; }
+}
+function versaoDoPacote() {
+  try { return String(app.getVersion() || ''); } catch (e) { return ''; }
+}
 
 const plat = process.platform; // win32 | darwin | linux
 const chave = plat === 'win32' ? 'win' : plat === 'darwin' ? 'mac' : 'linux';
@@ -648,7 +658,67 @@ Object.assign(acoes, {
   pareamento_celular: async () => pareamentoDoPC().estado(),
   parear_celular: async ({ ip, codigo }) => pareamentoDoPC().parear({ ip, codigo }),
   status_celular: async () => pareamentoDoPC().status(),
-  esquecer_celular: async () => pareamentoDoPC().esquecer()
+  esquecer_celular: async () => pareamentoDoPC().esquecer(),
+
+  /* Atualização assinada (Etapa 7). O app nunca baixa sozinho: ele confere o
+   * pacote que a pessoa já baixou e diz, com todas as letras, por que recusou. */
+  atualizacao_info: async () => ({
+    versao: versaoDoPacote(),
+    temChave: Boolean(chaveDeAtualizacao()),
+    assinatura: 'Ed25519 sobre o JSON canônico do manifesto',
+    canal: 'estavel'
+  }),
+  atualizacao_verificar: async (pedido) => {
+    let pasta = pedido && pedido.pasta ? String(pedido.pasta) : '';
+    if (!pasta) {
+      const escolha = await dialog.showOpenDialog({
+        title: 'Escolha a pasta com o instalador e o arquivo atualizacao.json',
+        properties: ['openDirectory']
+      });
+      if (escolha.canceled || !escolha.filePaths || !escolha.filePaths[0]) {
+        return { cancelado: true, ok: false, texto: 'Nenhuma pasta escolhida.' };
+      }
+      pasta = escolha.filePaths[0];
+    }
+    const manifestoArquivo = path.join(pasta, 'atualizacao.json');
+    const assinaturaArquivo = manifestoArquivo + '.sig';
+    let manifesto = null, assinatura = '';
+    try {
+      manifesto = JSON.parse(fs.readFileSync(manifestoArquivo, 'utf8'));
+    } catch (e) {
+      return { ok: false, motivo: 'manifesto', texto: 'Não consegui ler ' + manifestoArquivo + ': ' + ((e && e.message) || e) };
+    }
+    try { assinatura = fs.readFileSync(assinaturaArquivo, 'utf8').trim(); } catch (e) { assinatura = ''; }
+    const alvo = path.join(pasta, String(manifesto && manifesto.arquivo ? manifesto.arquivo : ''));
+    let bytes = null;
+    try { bytes = fs.readFileSync(alvo); } catch (e) { bytes = null; }
+    if (!bytes) {
+      return { ok: false, motivo: 'arquivo', texto: 'O instalador citado no manifesto não está na pasta: ' + (manifesto && manifesto.arquivo) };
+    }
+    const sha256Arquivo = require('crypto').createHash('sha256').update(bytes).digest('hex');
+    const resultado = ATUALIZACAO.verificarAtualizacao({
+      manifesto: manifesto,
+      assinatura: assinatura,
+      chavePublica: chaveDeAtualizacao(),
+      sha256Arquivo: sha256Arquivo,
+      tamanhoArquivo: bytes.length,
+      versaoInstalada: versaoDoPacote(),
+      aceitaCanal: (pedido && pedido.canal) || 'estavel'
+    });
+    resultado.plano = ATUALIZACAO.planoDeAtualizacao(resultado, { versaoInstalada: versaoDoPacote() });
+    resultado.pasta = pasta;
+    return resultado;
+  },
+  novidades_app: async () => {
+    const versao = versaoDoPacote();
+    let texto = '';
+    for (const candidato of [path.join(RAIZ, 'CHANGELOG.md'), path.join(app.getAppPath(), 'CHANGELOG.md')]) {
+      try { texto = fs.readFileSync(candidato, 'utf8'); break; } catch (e) { /* tenta o próximo */ }
+    }
+    if (!texto) return { ok: false, versao: versao, texto: 'Não encontrei as notas da versão neste pacote.' };
+    const notas = ATUALIZACAO.notasDaVersao(texto, versao);
+    return Object.assign({ ok: notas.ok, versao: versao }, notas);
+  }
 });
 
 ipcMain.handle('jarvis:run', async (_e, nome, args) => {
