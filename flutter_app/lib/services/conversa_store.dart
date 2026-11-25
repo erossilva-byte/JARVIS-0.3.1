@@ -15,6 +15,9 @@ class ConversaStore {
   static const chaveConversas = 'jarvis.conversas.v1';
   static const chaveRascunho = 'jarvis.rascunho.v1';
 
+  /// Marca da limpeza única dos registros anteriores à máscara de PIN.
+  static const chaveLimpeza = 'jarvis.mascara.antigos.v1';
+
   /// Conversa aberta nesta sessão do app.
   ///
   /// Fica só na memória de propósito: sair da conversa e voltar continua nela,
@@ -30,8 +33,34 @@ class ConversaStore {
 
   final SharedPreferences _prefs;
 
-  static Future<ConversaStore> abrir() async =>
-      ConversaStore(await SharedPreferences.getInstance());
+  static Future<ConversaStore> abrir() async {
+    final store = ConversaStore(await SharedPreferences.getInstance());
+    await store._sanearAntigos();
+    return store;
+  }
+
+  /// Limpa uma vez o que foi gravado antes da máscara de PIN existir.
+  ///
+  /// As conversas salvas antes da 1.96.0 podem ter um PIN ditado no título ou
+  /// nas mensagens, e o rascunho também. Aqui elas são relidas e regravadas pela
+  /// mesma máscara de hoje — o conteúdo é preservado, só o PIN vira `[oculto]`.
+  /// A marca em [chaveLimpeza] faz isso uma vez só; a partir daí a gravação
+  /// normal já mascara tudo.
+  Future<void> _sanearAntigos() async {
+    if (_prefs.getBool(chaveLimpeza) == true) return;
+    final lista = listar();
+    if (lista.isNotEmpty) {
+      await _gravar(lista);
+    }
+    final rascunhoAntigo = _prefs.getString(chaveRascunho);
+    if (rascunhoAntigo != null && rascunhoAntigo.isNotEmpty) {
+      final limpo = protegerPinNoPedido(rascunhoAntigo);
+      if (limpo != rascunhoAntigo) {
+        await _prefs.setString(chaveRascunho, limpo);
+      }
+    }
+    await _prefs.setBool(chaveLimpeza, true);
+  }
 
   List<Conversa> listar() {
     final bruto = _prefs.getString(chaveConversas);

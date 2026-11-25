@@ -1,3 +1,20 @@
+## 1.98.0 — registros antigos sem PIN
+
+### O que mudou
+- **Limpeza única na abertura**: conversas e rascunho salvos antes da máscara
+  são relidos e regravados com o PIN já trocado por `[oculto]`.
+- **Histórico de execuções**: `JarvisFundo.sanearHistorico` reescreve o
+  histórico, a última ação e o último resultado na primeira abertura do app; e
+  `anotar` já limpa os registros antigos ao gravar um novo.
+- **Nada é apagado**: o conteúdo antigo continua lá, só o PIN sai.
+- Marcas `jarvis.mascara.antigos.v1` (conversas) e `mascara_pin_v1` (histórico)
+  garantem que a passada acontece uma vez só.
+
+### Limites declarados
+- Registro restaurado de backup antigo depois da limpeza não é limpo de novo;
+  a máscara vale na próxima gravação.
+- Nada foi validado em aparelho físico nesta sessão.
+
 ## 1.97.0 — a máscara de PIN não atrapalha apelido nem comando
 
 ### O que foi conferido

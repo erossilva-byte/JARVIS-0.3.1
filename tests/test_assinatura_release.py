@@ -53,7 +53,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
 gerado = APP / "android" / "app" / "build.gradle.kts"
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.97.0+19700" in pubspec, "versão não atualizada para 1.77.0")
+exigir("version: 1.98.0+19800" in pubspec, "versão não atualizada para 1.77.0")
 exigir("1.77.0" in changelog and "assinatura" in changelog.lower(),
        "CHANGELOG sem o bloco 1.77.0 da assinatura")
 exigir("tests/test_assinatura_release.py" in pacote,

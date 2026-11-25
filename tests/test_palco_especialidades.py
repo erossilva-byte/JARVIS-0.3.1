@@ -72,7 +72,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-23_105-especialidades-palco-e-microfone.md")
 
 # 1. Versão e suíte.
-exigir("version: 1.97.0+19700" in pubspec, "pubspec sem a versão 1.97.0+19700")
+exigir("version: 1.98.0+19800" in pubspec, "pubspec sem a versão 1.98.0+19800")
 exigir("## 1.88.6" in changelog, "CHANGELOG sem o bloco 1.88.6")
 exigir(relatorio.is_file(), "relatório do bloco 105 ausente")
 for comando in ("python3 tests/test_palco_especialidades.py",

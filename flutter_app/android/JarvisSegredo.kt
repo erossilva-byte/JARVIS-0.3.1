@@ -20,4 +20,15 @@ object JarvisSegredo {
     /** Devolve o texto sem nenhum PIN ditado. */
     fun ocultarPin(texto: String): String =
         SEQUENCIA_DE_PIN.replace(texto, OCULTO)
+
+    /**
+     * Devolve o registro do histórico sem PIN no pedido e no resultado.
+     *
+     * É usado na limpeza dos registros antigos, gravados antes de a máscara
+     * existir: o resto do registro (data, origem, ação) fica como está.
+     */
+    fun ocultarRegistro(item: org.json.JSONObject): org.json.JSONObject = item.apply {
+        put("pedido", ocultarPin(optString("pedido")))
+        put("mensagem", ocultarPin(optString("mensagem")))
+    }
 }

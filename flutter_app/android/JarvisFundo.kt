@@ -40,6 +40,9 @@ object JarvisFundo {
     const val CHAVE_ULTIMO_EM = "ultimo_em"
     const val CHAVE_HISTORICO = "historico_acoes"
 
+    /** Marca da limpeza única dos registros anteriores à máscara de PIN. */
+    const val CHAVE_MASCARA_PIN = "mascara_pin_v1"
+
     /** Registros guardados no aparelho; o mais antigo sai quando o limite é atingido. */
     const val LIMITE_HISTORICO = 100
 
@@ -181,12 +184,57 @@ object JarvisFundo {
         val proximo = JSONArray()
         proximo.put(registro)
         var i = 0
-        // Mais recente primeiro; o excedente antigo é descartado.
+        // Mais recente primeiro; o excedente antigo é descartado. Cada registro
+        // antigo é reescrito sem PIN: a máscara também vale para o passado.
         while (i < anterior.length() && proximo.length() < LIMITE_HISTORICO) {
-            proximo.put(anterior.get(i))
+            val antigo = anterior.optJSONObject(i)
+            proximo.put(
+                if (antigo == null) anterior.get(i)
+                else JarvisSegredo.ocultarRegistro(antigo)
+            )
             i++
         }
         prefs.edit().putString(CHAVE_HISTORICO, proximo.toString()).apply()
+    }
+
+    /**
+     * Limpa uma vez os registros gravados antes da máscara de PIN.
+     *
+     * Chamado quando o app abre. Reescreve o histórico inteiro, além da última
+     * ação e do último resultado, sem 4 a 8 dígitos. A marca [CHAVE_MASCARA_PIN]
+     * evita repetir a passada; a gravação normal ([anotar]) já mascara daqui em
+     * diante.
+     */
+    fun sanearHistorico(context: Context) {
+        val prefs = prefs(context)
+        if (prefs.getBoolean(CHAVE_MASCARA_PIN, false)) return
+        val anterior = try {
+            JSONArray(prefs.getString(CHAVE_HISTORICO, "[]") ?: "[]")
+        } catch (_: Exception) {
+            JSONArray()
+        }
+        val limpo = JSONArray()
+        for (i in 0 until anterior.length()) {
+            val item = anterior.optJSONObject(i)
+            limpo.put(
+                if (item == null) anterior.get(i)
+                else JarvisSegredo.ocultarRegistro(item)
+            )
+        }
+        prefs.edit()
+            .putString(CHAVE_HISTORICO, limpo.toString())
+            .putString(
+                CHAVE_ULTIMA_ACAO,
+                JarvisSegredo.ocultarPin(prefs.getString(CHAVE_ULTIMA_ACAO, "") ?: "")
+            )
+            .putString(
+                CHAVE_ULTIMO_RESULTADO,
+                JarvisSegredo.ocultarPin(
+                    prefs.getString(CHAVE_ULTIMO_RESULTADO, "") ?: ""
+                )
+            )
+            .putBoolean(CHAVE_MASCARA_PIN, true)
+            .apply()
     }
 
     /** Histórico do que foi executado, do mais recente para o mais antigo. */

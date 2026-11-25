@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jarvis_nova/core/conversa.dart';
 import 'package:jarvis_nova/services/conversa_store.dart';
@@ -89,6 +91,48 @@ void main() {
     final store = await ConversaStore.abrir();
     await store.salvarRascunho('o pin do cofre é 87654321');
     expect(store.rascunho, 'o pin do cofre é [oculto]');
+  });
+
+  test('limpa o PIN das conversas gravadas antes da máscara', () async {
+    final antiga = {
+      'id': 'v',
+      'titulo': 'meu pin é 4321',
+      'criadaEm': DateTime(2026, 11, 1).toIso8601String(),
+      'atualizadaEm': DateTime(2026, 11, 1).toIso8601String(),
+      'fixada': false,
+      'mensagens': [
+        {'autor': 'user', 'texto': 'meu pin é 4321'},
+        {'autor': 'assistant', 'texto': 'Anotado: 4321.'},
+      ],
+    };
+    SharedPreferences.setMockInitialValues({
+      ConversaStore.chaveConversas: jsonEncode([antiga]),
+      ConversaStore.chaveRascunho: 'o pin do cofre é 87654321',
+    });
+
+    final store = await ConversaStore.abrir();
+    final lida = store.listar().single;
+    expect(lida.titulo, 'meu pin é [oculto]');
+    expect(lida.mensagens.map((m) => m.texto).toList(),
+        ['meu pin é [oculto]', 'Anotado: [oculto].']);
+    expect(store.rascunho, 'o pin do cofre é [oculto]');
+
+    // Não é só na leitura: o disco foi reescrito.
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString(ConversaStore.chaveConversas), isNot(contains('4321')));
+    expect(prefs.getString(ConversaStore.chaveRascunho), isNot(contains('87654321')));
+  });
+
+  test('a limpeza dos antigos roda uma vez só', () async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await ConversaStore.abrir();
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool(ConversaStore.chaveLimpeza), isTrue);
+    // Conversa salva depois da marca não é mexida pela limpeza.
+    await store.salvar(Conversa.nova(id: 'n', agora: DateTime(2026, 11, 25))
+      ..adicionar(const MensagemConversa(autor: 'user', texto: 'oi')));
+    await ConversaStore.abrir();
+    expect(store.listar().single.titulo, 'oi');
   });
 
   test('lista corrompida não derruba a tela', () async {

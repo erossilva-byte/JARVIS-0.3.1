@@ -745,6 +745,8 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler, EventCh
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Histórico gravado antes da máscara de PIN é limpo na primeira abertura.
+        JarvisFundo.sanearHistorico(this)
         wakeIntentPending = intent?.getStringExtra("jarvis_wake_keyword") != null
         // Atalho, widget ou compartilhamento que abriu o app: o Flutter busca ao iniciar.
         intencaoInicial = lerIntencao(intent)
