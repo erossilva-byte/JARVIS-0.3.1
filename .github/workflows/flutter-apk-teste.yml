@@ -1,0 +1,106 @@
+name: APK de teste (Flutter, chave de debug)
+
+# Esteira de conveniência para quem quer instalar o app e experimentar sem ter
+# os quatro secrets da chave de release. Ela compila o mesmo código da esteira
+# oficial (flutter-release-apk.yml) e assina com a chave de debug que o próprio
+# Gradle gera no runner.
+#
+# Aviso honesto: um APK assinado em debug NÃO instala por cima de um APK
+# assinado com a chave de release, e a assinatura muda a cada execução. Serve
+# para conhecer o app, não para receber atualização por cima do oficial.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jarvis-flutter-apk-teste
+  cancel-in-progress: false
+
+jobs:
+  apk-teste:
+    name: Compilar e publicar o APK de teste
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Instalar tokenizer oficial do sherpa-onnx
+        run: python3 -m pip install --disable-pip-version-check sherpa-onnx==1.13.8 sentencepiece pypinyin
+
+      - name: Gerar o runner Android
+        run: flutter create --project-name jarvis_nova --platforms=android .
+
+      - name: Aplicar a identidade do aplicativo
+        run: python3 tool/prepare_android_identidade.py android/app
+
+      - run: flutter pub get
+
+      - name: Baixar o runtime de voz neural e preparar o KWS
+        run: |
+          python3 ../baixar_sherpa.py android/app
+          python3 ../preparar_kws.py android/app
+
+      - name: Registrar plugin KWS, atalhos, widget e compartilhamento
+        run: |
+          python3 tool/prepare_android_kws.py android/app
+          python3 tool/prepare_android_sistema.py android/app
+
+      - name: Compilar o APK de teste (arm64)
+        # PJARVIS_PERMITIR_DEBUG=true é o caminho documentado no Gradle para um
+        # build de release consciente com a chave de debug, sem os secrets.
+        run: flutter build apk --release --target-platform android-arm64 -PJARVIS_PERMITIR_DEBUG=true
+
+      - name: Conferir, nomear e gerar o SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK" || { echo 'APK não foi gerado.'; exit 1; }
+          VERSAO=$(sed -n 's/^version: *\([0-9][0-9.]*\).*/\1/p' pubspec.yaml | head -1)
+          test -n "$VERSAO" || { echo 'versão ausente no pubspec.yaml.'; exit 1; }
+          NOME="jarvis-nova-$VERSAO-teste-arm64.apk"
+          mkdir -p build/app/outputs/entrega
+          cp "$APK" "build/app/outputs/entrega/$NOME"
+          ( cd build/app/outputs/entrega && sha256sum "$NOME" > "$NOME.sha256" && cat "$NOME.sha256" )
+          echo "APK_ENTREGA=build/app/outputs/entrega/$NOME" >> "$GITHUB_ENV"
+          echo "VERSAO_APK=$VERSAO" >> "$GITHUB_ENV"
+
+      - name: Guardar o APK como artefato da execução
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-flutter-android-teste
+          path: |
+            flutter_app/${{ env.APK_ENTREGA }}
+            flutter_app/${{ env.APK_ENTREGA }}.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publicar o Release de teste com o APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="android-v$VERSAO_APK-teste"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK_ENTREGA" "$APK_ENTREGA.sha256" \
+              --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" "$APK_ENTREGA" "$APK_ENTREGA.sha256" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "J.A.R.V.I.S. Nova $VERSAO_APK — APK de teste (Android arm64)" \
+              --notes "APK de teste da versão $VERSAO_APK, compilado da mesma árvore do release.
+
+Assinado com a chave de debug do runner, não com a chave oficial: instala normalmente, mas não recebe atualização por cima de um APK oficial e a assinatura muda a cada compilação."
+          fi
