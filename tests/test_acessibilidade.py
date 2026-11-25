@@ -65,7 +65,7 @@ relatorio_conversa = (RAIZ / "docs" / "relatorios"
                       / "2026-11-21_096-tela-na-conversa.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.94.0+19400" in pubspec,
+exigir("version: 1.95.0+19500" in pubspec,
        "versão não atualizada para 1.81.0")
 exigir("1.81.0" in changelog and "acessibilidade" in changelog.lower(),
        "CHANGELOG sem o bloco 1.81.0 da acessibilidade")

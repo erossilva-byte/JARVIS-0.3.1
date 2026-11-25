@@ -173,7 +173,7 @@ exigir("tests/test_fundo_flutter.py" in script["scripts"]["test:all"],
        "contrato do segundo plano fora da suíte")
 
 # 9. Versão e documentação.
-exigir("version: 1.94.0+19400" in pubspec, "versão não atualizada para 1.64.0")
+exigir("version: 1.95.0+19500" in pubspec, "versão não atualizada para 1.64.0")
 exigir("1.64.0" in changelog, "CHANGELOG sem 1.64.0")
 exigir("Segundo plano" in inventario or "segundo plano" in inventario,
        "inventário sem a seção do segundo plano")

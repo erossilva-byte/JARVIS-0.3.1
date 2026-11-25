@@ -111,7 +111,7 @@ exigir("height: 210," not in pagina_palco,
        "altura fixa de 210 px ainda no palco")
 
 # 4. Versão e suíte -----------------------------------------------------------
-exigir("version: 1.94.0+19400" in ler(APP / "pubspec.yaml"),
+exigir("version: 1.95.0+19500" in ler(APP / "pubspec.yaml"),
        "versão não atualizada para 1.89.0")
 pacote = ler(RAIZ / "package.json")
 exigir("python3 tests/test_bloco_110.py" in pacote,

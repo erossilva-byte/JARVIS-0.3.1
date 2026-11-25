@@ -83,7 +83,7 @@ exigir("RegrasPalco carregar()" in loja, "sem carregar")
 exigir("voltarAoPadrao" in loja, "sem voltar ao padrão")
 
 # 5. Versão e suíte ----------------------------------------------------------
-exigir("version: 1.94.0+19400" in ler(APP / "pubspec.yaml"),
+exigir("version: 1.95.0+19500" in ler(APP / "pubspec.yaml"),
        "versão não atualizada para 1.89.1")
 pacote = ler(RAIZ / "package.json")
 exigir("python3 tests/test_bloco_111.py" in pacote,

@@ -1,3 +1,23 @@
+## 1.95.0 — PIN dito em voz alta não entra no histórico
+
+### O que mudou
+- **Máscara de PIN no histórico**: qualquer sequência isolada de 4 a 8 dígitos
+  dita em voz alta vira `[oculto]` antes de ser gravada. “O meu PIN é 4321” fica
+  como “O meu PIN é [oculto]”.
+- **Duas camadas**: o app mascara antes de enviar pelo canal e o Android mascara
+  de novo no funil de gravação (`JarvisFundo.anotar`), que é por onde passa todo
+  registro — inclusive o do serviço de segundo plano.
+- **O que continua legível**: hora (“às 9”), valores curtos e telefone com 9 ou
+  mais dígitos não são mascarados, porque não cabem num PIN deste app.
+
+### Limites declarados
+- A máscara cobre o histórico de execuções. A conversa que você vê na tela
+  continua com o texto como foi dito — ela é outra gravação, e mascarar ali
+  mudaria o que você leu.
+- Um ano de 4 dígitos (“2026”) também é mascarado: a regra é simples e
+  previsível de propósito.
+- Nada foi validado em aparelho físico nesta sessão.
+
 ## 1.94.0 — ensina apelido, mostra o mapa da voz e fecha a conferência
 
 ### O que mudou

@@ -171,7 +171,9 @@ object JarvisFundo {
         val registro = JSONObject().apply {
             put("em", System.currentTimeMillis())
             put("origem", origem.take(24))
-            put("pedido", pedido.trim().take(300))
+            // PIN ditado (4 a 8 dígitos) nunca é gravado: o histórico existe
+            // para explicar o comando, não para guardar segredo.
+            put("pedido", JarvisSegredo.ocultarPin(pedido.trim()).take(300))
             put("acao", acao.trim().take(160))
             put("ok", ok)
             put("mensagem", mensagem.trim().take(600))

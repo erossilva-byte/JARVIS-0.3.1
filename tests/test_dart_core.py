@@ -78,6 +78,7 @@ CASOS = (
     ("tool/nome_contato_test.dart", "nomes de contato: apelido, emoji, erro de fala e empate"),
     ("tool/pedido_apelido_test.dart", "apelido de contato: ensinar, esquecer e não sequestrar conversa"),
     ("tool/mapa_voz_test.dart", "mapa da voz: pergunta, catálogo e total de telas"),
+    ("tool/segredo_pedido_test.dart", "PIN no histórico: 4 a 8 dígitos mascarados, telefone preservado"),
 )
 
 

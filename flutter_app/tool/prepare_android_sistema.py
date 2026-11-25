@@ -294,6 +294,7 @@ def copiar_codigo(app: Path) -> None:
     shutil.copy2(ANDROID / "JarvisContatos.kt", kotlin / "JarvisContatos.kt")
     shutil.copy2(ANDROID / "JarvisApelidos.kt", kotlin / "JarvisApelidos.kt")
     shutil.copy2(ANDROID / "JarvisMapaVoz.kt", kotlin / "JarvisMapaVoz.kt")
+    shutil.copy2(ANDROID / "JarvisSegredo.kt", kotlin / "JarvisSegredo.kt")
 
 
 def garantir_permissoes(texto: str) -> str:

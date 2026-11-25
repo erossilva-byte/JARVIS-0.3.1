@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 
 import '../core/historico_voz.dart';
+import '../core/segredo_pedido.dart';
 
 /// Ponte com o histórico guardado pelo Android.
 ///
@@ -66,7 +67,8 @@ class HistoricoVozService implements HistoricoVozGateway {
     if (pedido.trim().isEmpty) return false;
     try {
       return await _canal.invokeMethod<bool>('registrarExecucao', {
-            'pedido': pedido.trim(),
+            // PIN ditado não chega nem ao canal: vai mascarado para o Android.
+            'pedido': protegerPinNoPedido(pedido.trim()),
             'acao': acao.trim(),
             'ok': ok,
             'mensagem': mensagem.trim(),
