@@ -6408,14 +6408,70 @@ function bytesLegiveis(n) {
   while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
   return n.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' ' + u[i];
 }
+// Um só lugar formata o status dos dois lados: `status_plataforma.js` é o
+// espelho de `core/status_plataforma.dart`.
+function renderStatusPlataforma(id, status) {
+  const alvo = document.getElementById(id);
+  if (!alvo) return;
+  alvo.innerHTML = '';
+  if (!status || status.semDados) {
+    const vazio = document.createElement('p');
+    vazio.className = 'dica';
+    vazio.textContent = 'Sem conexão: nada foi lido deste lado.';
+    alvo.appendChild(vazio);
+    return;
+  }
+  status.linhas.forEach((linha) => {
+    const card = document.createElement('div');
+    card.className = 'info-card';
+    const titulo = document.createElement('b');
+    titulo.textContent = linha.rotulo;
+    const valor = document.createElement('p');
+    valor.textContent = linha.valor;
+    card.appendChild(titulo);
+    card.appendChild(valor);
+    alvo.appendChild(card);
+  });
+}
+
+// Status do computador. Fora do app do PC, diz onde ver — nunca inventa número.
+async function atualizarStatusPc() {
+  const alvo = document.getElementById('sp-linhas');
+  const alerta = document.getElementById('sp-alerta');
+  const dizer = (texto) => { if (alerta) alerta.textContent = texto; };
+  if (!alvo) return;
+  if (plataforma !== 'desktop') {
+    alvo.innerHTML = '';
+    dizer('Este é o app do celular: o status do computador aparece no JARVIS do PC.');
+    return;
+  }
+  dizer('Consultando o computador…');
+  try {
+    const r = await nativo('status_pc', {});
+    const status = window.StatusPlataforma ? window.StatusPlataforma.deMapa(r, 'pc') : null;
+    renderStatusPlataforma('sp-linhas', status);
+    dizer(status && !status.semDados
+      ? 'Dados lidos do computador agora: ' + (status.sistema || 'sistema não informado') + '.'
+      : 'O computador não devolveu dados de status.');
+  } catch (e) {
+    alvo.innerHTML = '';
+    dizer('Não consegui consultar o computador: ' + ((e && e.message) || 'erro nativo'));
+  }
+}
+
 async function atualizarStatusCelular() {
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   if (plataforma !== 'android') {
-    set('cel-bateria', 'Disponível apenas no app Android'); set('cel-temperatura', 'Disponível apenas no app Android');
-    set('cel-armazenamento', 'Disponível apenas no app Android'); set('cel-ram', 'Disponível apenas no app Android');
-    set('cel-conexao', navigator.onLine ? 'Conectado (navegador)' : 'Sem conexão'); set('cel-wifi', 'Detalhe disponível no Android'); set('cel-dados', 'Detalhe disponível no Android'); set('cel-aparelho', navigator.userAgent.slice(0, 80)); set('cel-ultimo-app', store.get('ultimo_app_jarvis', 'Nenhum registro ainda')); 
-    set('cel-alerta', 'Alguns dados de hardware exigem a versão Android instalada.'); return;
+    set('sc-pareamento', 'Sem conexão com o celular: o pareamento entre PC e celular ainda não existe (Etapa 3 do roteiro do PC).');
+    set('cel-bateria', 'Sem conexão'); set('cel-temperatura', 'Sem conexão');
+    set('cel-armazenamento', 'Sem conexão'); set('cel-ram', 'Sem conexão');
+    set('cel-conexao', navigator.onLine ? 'Rede do PC ativa' : 'Rede do PC sem conexão'); set('cel-wifi', 'Depende do pareamento'); set('cel-dados', 'Depende do pareamento'); set('cel-aparelho', navigator.userAgent.slice(0, 80)); set('cel-ultimo-app', store.get('ultimo_app_jarvis', 'Nenhum registro ainda'));
+    set('cel-alerta', 'Os dados do celular aparecem aqui quando o pareamento existir e o celular estiver na mesma rede.');
+    atualizarStatusPc();
+    return;
   }
+  set('sc-pareamento', 'Lido neste aparelho: este é o próprio celular.');
+  atualizarStatusPc();
   set('cel-alerta', 'Consultando dados locais…');
   try {
     const r = await nativo('statusDispositivo', {});

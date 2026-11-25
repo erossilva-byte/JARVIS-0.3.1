@@ -568,7 +568,13 @@
   </section>
 
   <section class="grupo" data-category="celular" role="tabpanel" hidden>
-    <h3>Estado do celular</h3>
+    <h3>Status do PC</h3>
+    <p class="dica">Lido do computador onde o JARVIS está rodando: processador, memória, disco, tempo ligado e sistema. No app do celular esta seção explica onde ver esses dados.</p>
+    <div class="status-grid" id="sp-linhas" role="list" aria-live="polite"></div>
+    <p id="sp-alerta" class="dica" role="status" aria-live="polite">Ainda não consultado.</p>
+
+    <h3>Status do celular</h3>
+    <p id="sc-pareamento" class="dica" role="status" aria-live="polite">Sem conexão com o celular.</p>
     <p class="dica">Dados lidos localmente no aparelho. Temperatura é a temperatura reportada pela bateria, não a temperatura de todos os componentes.</p>
     <div class="status-atualizacao"><button id="c-atualizar-celular" type="button" class="primario">Atualizar agora</button><span class="dica" id="cel-auto-atualiza">Atualização automática a cada 5 segundos enquanto esta tela estiver aberta.</span></div>
     <div class="status-grid">
@@ -1534,6 +1540,7 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="eletrica.js"></script>
 <script src="projetista.js"></script>
 <script src="sandbox.js"></script>
+<script src="status_plataforma.js"></script>
 <script src="app.js"></script>
 <script src="utilidades_ui.js"></script>
 <script src="core_ui.js"></script>

@@ -113,7 +113,7 @@ jobs:
           cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js eletrica.js projetista.js pc.js cad_projeto.js visao.js visao_contexto.js seguranca.js pessoas.js utilidades.js cultura.js briefing.js jogos.js utilidades_ui.js www/
           cp avatar.js interface.css core.css nucleo_v3.js nucleo_v3.css consumo_ia.js modo_dev.js escuta_voz.js segundo_plano.js perfil_energia.js manutencao.js privacidade.js www/
           cp identidade.js identidade_ui.js escuta.js agentes.js sistema.js plano.js interface.js www/
-          cp core.js core_ui.js aprendizado.js aprendizado_ui.js arquivos_dev.js voz_motor.js fala.js audio_pcm.js cognicao.js humor.js www/
+          cp core.js core_ui.js status_plataforma.js aprendizado.js aprendizado_ui.js arquivos_dev.js voz_motor.js fala.js audio_pcm.js cognicao.js humor.js www/
           mkdir -p www/vendor
           cp vendor/three.min.js www/vendor/three.min.js
 

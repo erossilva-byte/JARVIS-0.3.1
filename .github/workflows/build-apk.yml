@@ -98,7 +98,7 @@ jobs:
           cp interface.css www/
           cp core.css www/
           cp identidade.js identidade_ui.js escuta.js agentes.js sistema.js plano.js interface.js www/
-          cp core.js core_ui.js www/
+          cp core.js core_ui.js status_plataforma.js www/
           cp aprendizado.js aprendizado_ui.js www/
           cp arquivos_dev.js www/
           cp sandbox.js www/

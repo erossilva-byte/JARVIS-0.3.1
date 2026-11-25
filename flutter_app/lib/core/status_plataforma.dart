@@ -108,7 +108,8 @@ class StatusPlataforma {
           ? dados['carregando'] as bool
           : null,
       temperatura: _decimal(dados['temperatura']),
-      sistema: _primeiroNaoVazio([dados['sistema'], dados['modelo']]),
+      sistema: _primeiroNaoVazio(
+          [dados['sistema'], dados['modelo'], dados['aparelho']]),
       conexao: _texto(dados['conexao']),
     );
   }
@@ -174,7 +175,8 @@ String? _memoria(int? total, int? livre) {
 
 String _gigabytes(int bytes) {
   final valor = bytes / 1024 / 1024 / 1024;
-  final texto = valor >= 100
+  // Valor redondo sai sem decimal: “8 GB”, não “8,0 GB”.
+  final texto = valor >= 100 || valor == valor.roundToDouble()
       ? valor.round().toString()
       : valor.toStringAsFixed(1).replaceAll('.', ',');
   return '$texto GB';

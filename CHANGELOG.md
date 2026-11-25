@@ -1,3 +1,22 @@
+## 1.102.0 — painel do PC com os dois status (Etapa 2)
+
+### O que mudou
+- **Duas seções no painel**: “Status do PC”, com processador, memória, disco,
+  tempo ligado e sistema lidos do computador, e “Status do celular”.
+- **O lado do celular diz “sem conexão”** enquanto o pareamento não existe, com
+  a explicação de que ele chega na Etapa 3 do roteiro — nada de número
+  inventado.
+- **Uma regra só de formatação** (`status_plataforma.js`, espelho do modelo Dart
+  da Etapa 1): valor redondo sem decimal (“8 GB”), memória como “8 GB de 16 GB
+  em uso (50%)” e estado vazio com frase própria.
+- **No app do celular**, a seção do PC explica onde ver os dados; no PC, a seção
+  do celular diz o que falta para o pareamento.
+
+### Limites declarados
+- O pareamento em si continua na Etapa 3; esta entrega não conecta nada.
+- Nada foi aberto no Electron nesta sessão: a prova é teste de DOM (jsdom) e de
+  contrato.
+
 ## 1.101.0 — roteiro do PC e status unificado
 
 ### O que mudou
