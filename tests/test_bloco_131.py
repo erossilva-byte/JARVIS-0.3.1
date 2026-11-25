@@ -121,7 +121,36 @@ for etapa in ["máquina limpa", "Pareamento", "Ouvir e falar", "Reiniciar",
 exigir("implementada, não aprovada" in roteiro_campo,
        "o roteiro de campo deixou de dizer que a etapa não foi aprovada")
 
-# 7. Versão, changelog, relatório, roteiro e suíte.
+# 7. A esteira de release assina o manifesto e publica junto do instalador.
+workflow = ler(RAIZ / ".github" / "workflows" / "release-pc.yml")
+for trecho in [
+    "CHAVE_ATUALIZACAO: ${{ secrets.CHAVE_ATUALIZACAO_PRIVADA }}",
+    "if: env.CHAVE_ATUALIZACAO != ''",
+    "printf '%s\\n' \"$CHAVE_ATUALIZACAO\" > \"$ARQ\"",
+    "chmod 600 \"$ARQ\"",
+    "node tools/assinar_atualizacao.js --pasta dist",
+    "node tools/conferir_atualizacao.js dist",
+    'rm -f "$RUNNER_TEMP/atualizacao-privada.pem"',
+    "dist/atualizacao.json",
+    "dist/atualizacao.json.sig",
+]:
+    exigir(trecho in workflow, f"release-pc.yml perdeu: {trecho}")
+exigir(workflow.count("dist/atualizacao.json.sig") >= 2,
+       "o .sig precisa entrar nos artefatos do build e no release")
+exigir("Falta o segredo CHAVE_ATUALIZACAO_PRIVADA" in workflow,
+       "numa tag sem segredo o release precisa parar com mensagem clara")
+exigir(workflow.find("Assinar o manifesto") < workflow.find("Anexar ao release"),
+       "a assinatura precisa acontecer antes de anexar ao release")
+exigir(workflow.find("Conferir a assinatura com a chave pública") < workflow.find("Anexar ao release"),
+       "a conferência da assinatura precisa acontecer antes de publicar")
+exigir("if: always()" in workflow, "a limpeza da chave precisa rodar mesmo em falha")
+exigir(not re.search(r"begin private key", workflow, re.IGNORECASE),
+       "nenhuma chave privada pode estar escrita no workflow")
+ajuda = ler(RAIZ / "tools" / "conferir_atualizacao.js")
+for trecho in ["A.verificarAtualizacao(", "atualizacao-publica.pem", "process.exit(1)"]:
+    exigir(trecho in ajuda, f"tools/conferir_atualizacao.js perdeu: {trecho}")
+
+# 8. Versão, changelog, relatório, roteiro e suíte.
 pubspec = ler(RAIZ / "flutter_app" / "pubspec.yaml")
 changelog = ler(RAIZ / "CHANGELOG.md")
 roteiro = ler(RAIZ / "docs" / "ROTEIRO-PC.md")

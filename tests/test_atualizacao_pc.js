@@ -177,6 +177,24 @@ chk('trocar um byte do instalador derruba a atualização',
     sha256Arquivo: 'c'.repeat(64), tamanhoArquivo: gerado.tamanho, versaoInstalada: '1.107.0'
   }).motivo === 'hash');
 
+const conferiu = spawnSync(process.execPath, [
+  path.join(raiz, 'tools', 'conferir_atualizacao.js'), dist, '1.107.0',
+  '--publica', path.join(chaves, 'atualizacao-publica.pem')
+], { encoding: 'utf8' });
+chk('ferramenta de conferência aprova o pacote assinado', conferiu.status === 0, (conferiu.stderr || '').slice(0, 200));
+const chaveDoApp = spawnSync(process.execPath, [
+  path.join(raiz, 'tools', 'conferir_atualizacao.js'), dist, '1.107.0'
+], { encoding: 'utf8' });
+chk('a conferência padrão usa a chave embutida e recusa chave estranha',
+  chaveDoApp.status === 1 && /assinatura não confere/i.test(chaveDoApp.stderr), (chaveDoApp.stderr || '').slice(0, 160));
+fs.appendFileSync(setup, Buffer.from([1]));
+const recusou = spawnSync(process.execPath, [
+  path.join(raiz, 'tools', 'conferir_atualizacao.js'), dist, '1.107.0',
+  '--publica', path.join(chaves, 'atualizacao-publica.pem')
+], { encoding: 'utf8' });
+chk('ferramenta de conferência recusa pacote alterado',
+  recusou.status === 1 && /RECUSADO/.test(recusou.stderr), (recusou.stderr || '').slice(0, 200));
+
 fs.rmSync(tmp, { recursive: true, force: true });
 
 if (falhas) {

@@ -21,6 +21,9 @@ jobs:
     timeout-minutes: 40
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      # Chave privada Ed25519 que assina o manifesto de atualização. Vem do
+      # segredo do repositório, nunca do código; o app só tem a pública.
+      CHAVE_ATUALIZACAO: ${{ secrets.CHAVE_ATUALIZACAO_PRIVADA }}
     steps:
       - name: Baixar o repositório
         uses: actions/checkout@v4
@@ -81,6 +84,50 @@ jobs:
           for f in *.exe; do sha256sum "$f" > "$f.sha256"; done
           cat *.sha256
 
+      # Numa tag não existe release sem manifesto assinado: o app recusaria a
+      # atualização e o instalador sairia sem como ser conferido.
+      - name: Conferir a versão da tag e a chave de assinatura
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          VERSAO=$(node -p "require('./package.json').version")
+          if [ "${GITHUB_REF_NAME#v}" != "$VERSAO" ]; then
+            echo "::error::A tag ${GITHUB_REF_NAME} não corresponde à versão $VERSAO do package.json."
+            exit 1
+          fi
+          if [ -z "$CHAVE_ATUALIZACAO" ]; then
+            echo "::error::Falta o segredo CHAVE_ATUALIZACAO_PRIVADA: sem ele o atualizacao.json não seria assinado e o app recusaria a atualização."
+            exit 1
+          fi
+          echo "Versão $VERSAO e chave de assinatura presentes."
+
+      - name: Assinar o manifesto de atualização
+        if: env.CHAVE_ATUALIZACAO != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARQ="$RUNNER_TEMP/atualizacao-privada.pem"
+          umask 077
+          printf '%s\n' "$CHAVE_ATUALIZACAO" > "$ARQ"
+          chmod 600 "$ARQ"
+          VERSAO=$(node -p "require('./package.json').version")
+          # As notas do manifesto saem do CHANGELOG, para o painel do app mostrar
+          # o que mudou sem depender de internet.
+          node -e "const fs=require('fs');const A=require('./atualizacao_pc.js');const n=A.notasDaVersao(fs.readFileSync('CHANGELOG.md','utf8'),process.argv[1]);fs.writeFileSync(process.argv[2],n.notas.map(function(x){return '- '+x;}).join('\n')+'\n');" "$VERSAO" "$RUNNER_TEMP/notas.txt"
+          node tools/assinar_atualizacao.js --pasta dist --chave "$ARQ" --versao "$VERSAO" --canal estavel --notas "$RUNNER_TEMP/notas.txt"
+
+      # Confere com a chave pública embutida no app, não com a chave que acabou
+      # de assinar: se as duas não forem o mesmo par, o release para aqui.
+      - name: Conferir a assinatura com a chave pública do app
+        if: env.CHAVE_ATUALIZACAO != ''
+        shell: bash
+        run: node tools/conferir_atualizacao.js dist 0.0.1 estavel
+
+      - name: Apagar a chave privada do disco do runner
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/atualizacao-privada.pem" "$RUNNER_TEMP/notas.txt"
+
       - name: Guardar artefatos do build
         uses: actions/upload-artifact@v4
         with:
@@ -88,6 +135,8 @@ jobs:
           path: |
             dist/*.exe
             dist/*.sha256
+            dist/atualizacao.json
+            dist/atualizacao.json.sig
             dist/*.zip
             dist/win-unpacked/**
             dist/*.yml
@@ -100,6 +149,8 @@ jobs:
           files: |
             dist/*.exe
             dist/*.sha256
+            dist/atualizacao.json
+            dist/atualizacao.json.sig
             dist/*.zip
             dist/*.yml
           generate_release_notes: false
@@ -108,6 +159,9 @@ jobs:
 
             - `J.A.R.V.I.S. Nova Setup <versão>.exe` — instalador (NSIS).
             - `J.A.R.V.I.S. Nova <versão>.exe` — executável portátil, sem instalação.
+            - `atualizacao.json` e `atualizacao.json.sig` — manifesto assinado
+              (Ed25519) que o app confere em Ajustes ▸ Informações ▸ “Conferir
+              atualização baixada…”. Baixe os dois junto do instalador.
 
             O Windows pode exibir aviso do SmartScreen porque o executável não é assinado
             digitalmente. Instalar apenas a partir deste release.

@@ -68,6 +68,20 @@ app. A segunda é a que este bloco resolve.
   pareamento, ouvir/falar, reiniciar, atualização/reversão, desinstalação,
   medições), com o que anotar em cada passo.
 
+### Esteira de release
+
+O `release-pc.yml` passou a assinar o pacote: lê a chave do segredo
+`CHAVE_ATUALIZACAO_PRIVADA`, grava em `$RUNNER_TEMP` com permissão 0600, assina o
+manifesto com as notas tiradas do `CHANGELOG`, confere o resultado com a chave
+pública embutida no app e só então anexa `atualizacao.json` e `.sig` ao release,
+ao lado do instalador e do portátil. Numa tag sem o segredo, o release para com
+mensagem clara; a chave temporária é apagada do runner com `if: always()`.
+
+Os comandos do passo foram executados aqui, fora do Actions, com a chave de
+desenvolvimento: assinatura gerada, conferência aprovada com a chave embutida,
+conferência recusada com chave estranha e pacote alterado recusado. **O workflow
+em si não rodou** — não há Windows nem runner do GitHub neste ambiente.
+
 ## Verificação executada
 
 Assinatura e verificação de verdade, com um pacote sintético de 21.000.000 de

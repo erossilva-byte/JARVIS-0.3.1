@@ -19,6 +19,11 @@
 - **Versão unificada**: `package.json`, `VERSAO.json` e `VERSAO_APP` passaram de
   1.46.0 para 1.108.0, com versionCode 110800, igual ao Flutter. O contrato de
   versão agora lê o metadado e falha se algum dos quatro ficar para trás.
+- **Assinatura na esteira de release**: o workflow do PC assina o manifesto com
+  a chave privada vinda do segredo `CHAVE_ATUALIZACAO_PRIVADA`, confere o
+  resultado com a chave pública embutida no app e publica `atualizacao.json` e
+  `atualizacao.json.sig` junto do instalador. Sem segredo, o release numa tag
+  para; a chave temporária é apagada do runner mesmo em falha.
 
 ### Limites declarados
 - **Nenhum instalador foi gerado**: não há Windows nem electron-builder nesta

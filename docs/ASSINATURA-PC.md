@@ -83,6 +83,38 @@ A ferramenta **recusa** assinar artefato menor que 20 MB (o stub que o
 própria chave antes de gravar — assinar errado e descobrir só na hora de
 atualizar seria pior.
 
+### Esteira de release (GitHub Actions)
+
+O workflow `release-pc.yml` assina o pacote sozinho, sem chave no repositório:
+
+1. **`Conferir a versão da tag e a chave de assinatura`** (só em tag): exige que
+   `vX.Y.Z` seja igual à versão do `package.json` e que o segredo exista. Sem
+   segredo, o release **para** com a mensagem
+   `Falta o segredo CHAVE_ATUALIZACAO_PRIVADA`.
+2. **`Assinar o manifesto de atualização`**: escreve a chave em
+   `$RUNNER_TEMP` com `umask 077` e `chmod 600`, gera as notas a partir do
+   `CHANGELOG.md`, roda `tools/assinar_atualizacao.js` e grava
+   `dist/atualizacao.json` + `dist/atualizacao.json.sig`.
+3. **`Conferir a assinatura com a chave pública do app`**: roda
+   `tools/conferir_atualizacao.js dist` — verifica com a chave **embutida no
+   app**, não com a que acabou de assinar. Se as duas não forem o mesmo par, o
+   release para antes de publicar.
+4. **`Apagar a chave privada do disco do runner`** (`if: always()`): apaga o
+   arquivo temporário e as notas mesmo se alguma etapa falhar.
+
+Depois disso, `atualizacao.json` e `atualizacao.json.sig` entram nos artefatos do
+build e são anexados ao release junto do `Setup.exe`, do portátil e dos
+`.sha256`.
+
+Para configurar: **Settings ▸ Secrets and variables ▸ Actions ▸ New repository
+secret**, nome `CHAVE_ATUALIZACAO_PRIVADA`, valor = conteúdo inteiro do arquivo
+`atualizacao-privada.pem` (incluindo as linhas `BEGIN/END`). O GitHub mascara o
+valor nos logs; a esteira nunca imprime a chave.
+
+Se a chave for rotacionada, publique primeiro uma versão com a **nova chave
+pública** no repositório; releases antigos assinados com a chave velha passam a
+ser recusados, e é isso que se quer.
+
 ### O que o app faz com isso
 
 O botão **Ajustes ▸ Informações ▸ Conferir atualização baixada…** abre a pasta
