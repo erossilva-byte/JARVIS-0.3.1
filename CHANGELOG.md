@@ -12,6 +12,16 @@
 - **Linux**: `build.linux` com AppImage e `.deb`, mantenedor e nome de artefato
   com versão; job próprio na esteira `release-pc.yml` (empacota, confere tamanho
   de 20 MB e anexa ao release na tag).
+- **APK de teste publicado**: a esteira de release da tag não produzia APK — ela
+  compila o projeto Capacitor antigo e para nos testes estáticos, e a esteira
+  Flutter oficial exige os quatro segredos da chave de release. Entrou
+  `flutter-apk-teste.yml`, que compila o mesmo código Flutter e assina com a
+  chave de debug, num Release separado (`android-v<versão>-teste`) para não
+  confundir o caminho de atualização do app.
+- **CI**: `setup-python` da esteira antiga pedia `cache: pip` sem arquivo de
+  dependências e falhava em 4 s; e `JarvisAbrirTela.kt`/`JarvisMensagens.kt`
+  nunca foram versionados (`android/` é ignorado pelo Git), então a preparação
+  do Android quebrava no checkout do CI.
 - **Mídia e volume no Linux**: `playerctl` para tocar/pausar/avançar e
   `pactl`/`wpctl` para volume e mudo, com recusa explicando o pacote quando a
   ferramenta falta. No Windows nada mudou.
