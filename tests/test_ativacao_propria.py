@@ -13,6 +13,7 @@ plugin = (ROOT / "JarvisBackgroundPlugin.java").read_text(encoding="utf-8")
 prepare = (ROOT / "preparar_kws.py").read_text(encoding="utf-8")
 release = (ROOT / ".github/workflows/release-apk.yml").read_text(encoding="utf-8")
 main_js = (ROOT / "platforms/desktop/main.js").read_text(encoding="utf-8")
+cofre_js = (ROOT / "platforms/desktop/cofre_chaves.js").read_text(encoding="utf-8")
 css = (ROOT / "style.css").read_text(encoding="utf-8")
 
 issues = []
@@ -64,7 +65,8 @@ if "ATIVACAO_VARIANTES" not in hermes:
     issues.append("Lista de variantes fonéticas Hermes não existe")
 
 # 4. Cofre de chaves Windows e segurança do resto da aplicação permanecem.
-if "safeStorage.encryptString" not in main_js or "safeStorage.decryptString" not in main_js:
+if "safeStorage.encryptString" not in cofre_js or "safeStorage.decryptString" not in cofre_js\
+        or "cofre_chaves.js" not in main_js:
     issues.append("Cofre criptografado do Windows ausente")
 
 # 5. Personalidade: humor seco com limites e frases próprias novas.

@@ -53,7 +53,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_097-tela-no-segundo-plano.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.105.0+110500" in pubspec,
+exigir("version: 1.106.0+110600" in pubspec,
        "versão não atualizada para 1.83.0")
 exigir("1.83.0" in changelog and "segundo plano" in changelog.lower(),
        "CHANGELOG sem o bloco 1.83.0 da tela no segundo plano")

@@ -97,7 +97,7 @@ exigir(teste_tela.is_file(), "teste de tela de tarefas ausente")
 if teste_puro.is_file():
     exigir(teste_puro.read_text(encoding="utf-8").count("ok(") >= 15,
            "teste puro com menos de 15 grupos")
-exigir("version: 1.105.0+110500" in pubspec, "versão não atualizada")
+exigir("version: 1.106.0+110600" in pubspec, "versão não atualizada")
 exigir("1.63.1" in changelog, "CHANGELOG sem 1.63.1")
 exigir("1.64.0" in changelog, "CHANGELOG sem 1.64.0")
 exigir("1.63.0" in changelog, "CHANGELOG sem 1.63.0")

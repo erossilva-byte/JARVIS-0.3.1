@@ -120,7 +120,7 @@ for trecho in [
     "const MEM_REGRAS",
     "MEM_REGRAS.buscarNotas(MEM.carregar(), busca",
     "MEM_REGRAS.contextoRelevante(MEM.carregar(), perguntaAtual",
-    "window.PessoasJarvis.blocoParaConsulta",
+    "FICHAS.blocoParaConsulta",
     "function citacaoDaNota(",
     "function copiarCitacaoMemoria(",
     "async function sincronizarMemPasta(",
@@ -158,7 +158,7 @@ pubspec = ler(RAIZ / "flutter_app" / "pubspec.yaml")
 changelog = ler(RAIZ / "CHANGELOG.md")
 roteiro = ler(RAIZ / "docs" / "ROTEIRO-PC.md")
 relatorio = RAIZ / "docs" / "relatorios" / "2026-11-25_128-memoria-e-pessoas-pc.md"
-exigir("version: 1.105.0+110500" in pubspec, "pubspec.yaml não está em 1.105.0+110500")
+exigir("version: 1.106.0+110600" in pubspec, "pubspec.yaml não está em 1.106.0+110600")
 exigir("## 1.105.0" in changelog, "CHANGELOG.md sem o bloco 1.105.0")
 exigir("Estado:** entregue na 1.105.0" in roteiro,
        "o roteiro não registrou a Etapa 4 como entregue")

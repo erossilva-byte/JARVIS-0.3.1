@@ -4,14 +4,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 app = (ROOT / "app.js").read_text(encoding="utf-8")
 main = (ROOT / "platforms/desktop/main.js").read_text(encoding="utf-8")
+cofre = (ROOT / "platforms/desktop/cofre_chaves.js").read_text(encoding="utf-8")
+bloqueio = (ROOT / "bloqueio.js").read_text(encoding="utf-8")
 html = (ROOT / "index.html").read_text(encoding="utf-8")
 cofre_java = (ROOT / "JarvisUtilPlugin.java").read_text(encoding="utf-8")
 identidade = (ROOT / "identidade.js").read_text(encoding="utf-8")
 checks = {
     "Android usa o cofre nativo": "guardarSeguro({ nome: n, valor: v })" in app,
-    "Desktop usa safeStorage": "safeStorage.encryptString" in main and "safeStorage.decryptString" in main,
-    "Cofre desktop falha fechado": "O armazenamento criptografado do sistema não está disponível" in main,
-    "Segredos do desktop ficam fora do renderer": "jarvis-secrets.json" in main and "guardar_chave_segura" in main,
+    "Desktop usa safeStorage": "safeStorage.encryptString" in cofre and "safeStorage.decryptString" in cofre,
+    "Cofre desktop falha fechado": "O armazenamento criptografado do sistema não está disponível" in cofre,
+    "Segredos do desktop ficam fora do renderer": "jarvis-secrets.json" in cofre and "guardar_chave_segura" in main and "cofre_chaves.js" in main,
     "Nomes de chave são permitidos por lista": "groq|openrouter|cerebras|mistral|gemini" in main and "picovoice" not in main,
     "Navegador não persiste chaves em texto puro": "O navegador comum não possui cofre criptográfico integrado" in app,
     # O detector de ativação é próprio: nenhum campo de chave na interface. A checagem
@@ -44,11 +46,12 @@ checks = {
     "Configuração do cofre é normalizada apesar de não ter UID bruto": (
         'uidHash' in (ROOT / 'seguranca.js').read_text(encoding='utf-8')),
     "PIN e código de recuperação usam PBKDF2 com sal": (
-        'iterations: 120000, hash: ' in app and "'pbkdf2$'" in app
+        'ITERACOES = 120000' in bloqueio and "'sha256'" in bloqueio
+        and 'BLOQ_REG.ITERACOES' in app and "'pbkdf2$'" in app
         and 'pin_salt' in app and 'rec_salt' in app),
     "Desktop grava o cofre com 0o600 e troca atômica": (
-        'fs.writeFileSync(temporario, JSON.stringify(dados), { mode: 0o600 })' in main
-        and 'fs.renameSync(temporario, arquivo)' in main),
+        'fs.writeFileSync(temporario, JSON.stringify(dados), { mode: 0o600 })' in cofre
+        and 'fs.renameSync(temporario, arquivo)' in cofre),
     "Diagnóstico do desktop lista apenas o nome da chave": (
         'Object.keys(lerCofreDesktop())' in main),
     "Biometria de voz declara chave local, sem Keystore": (

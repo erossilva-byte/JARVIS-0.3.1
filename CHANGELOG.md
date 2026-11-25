@@ -1,3 +1,37 @@
+## 1.106.0 — segurança no PC (Etapa 5)
+
+### O que mudou
+- **Política de PIN igual à do celular** (`bloqueio.js`): 4 a 8 dígitos, sem
+  dígito repetido, sem sequência (1234/9876) e sem os PINs mais usados do mundo.
+  A mensagem de recusa é a mesma em qualquer lugar do app.
+- **Derivação PBKDF2-HMAC-SHA256** com sal aleatório, 120.000 iterações e 32
+  bytes, no formato `pbkdf2$sal$digest` que o app já usava. O teste confere um
+  vetor calculado fora do Node, para não comparar a implementação consigo mesma.
+- **Espera progressiva**: cinco erros aplicam 30 s; cada novo bloco aplica o
+  dobro (30 s, 1 min, 2 min… até 15 min). Acerto zera as falhas e a escala.
+  Durante a espera o PIN correto também não passa.
+- **Cofre de chaves extraído para módulo testável** (`cofre_chaves.js`) e ligado
+  ao `safeStorage`: DPAPI no Windows, Keychain no macOS, secret service no Linux.
+  Sem essa proteção, o cofre **recusa** gravar em vez de cair para texto puro.
+  O renderer pede a chave pelo nome; a lista mostra só nomes.
+- **Modo de visita no PC** (`modo_visita.js`): um PIN de coação abre um JARVIS
+  vazio, sem conversas, memória, fichas, arquivos ou chaves. As respostas são
+  locais, com o mesmo prompt do celular; nada sai do computador.
+- **Ajustes ▸ Segurança** ganhou o PIN de visita (definir/remover exige o PIN
+  principal) e mostra quando o modo de visita foi aberto pela última vez.
+
+### Limites declarados
+- O modo de visita esconde o conteúdo, não criptografa os dados de novo: com
+  acesso técnico ao computador, os arquivos do app ainda podem ser encontrados.
+- Fechar e reabrir o aplicativo encerra o modo de visita e volta à tela de
+  bloqueio normal; ele não fica “ligado” entre sessões.
+- O cofre do PC cifra a chave, mas não pede PIN para abrir: quem já está dentro
+  da sessão do sistema operacional consegue ler a chave que o app usa.
+- A biometria e o NFC continuam sendo recursos do Android; no PC o desbloqueio
+  é por PIN.
+- Nada foi medido em PC físico: a prova é de regra, de arquivo temporário e de
+  DOM/`node --check`.
+
 ## 1.105.0 — memória e pessoas no PC (Etapa 4)
 
 ### O que mudou

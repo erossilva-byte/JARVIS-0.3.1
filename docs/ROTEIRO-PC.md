@@ -92,6 +92,11 @@ provar de verdade.
 
 ## Etapa 5 — Segurança no PC
 
+**Estado:** entregue na 1.106.0 — política de PIN, PBKDF2 com vetor fixo,
+  espera progressiva, cofre de chaves pelo `safeStorage` (com recusa sem
+  proteção do sistema), PIN de visita e modo de visita local. Os limites estão
+  no relatório `docs/relatorios/2026-11-25_129-seguranca-pc.md`.
+
 **Entregável**
 - PIN de bloqueio com derivação e espera progressiva, cofre de chaves protegido
   pelo sistema (DPAPI no Windows, Keychain no macOS, secret service no Linux).
@@ -153,7 +158,7 @@ consiga rodar, ou se o custo de manter duas interfaces passar o de uma reescrita
 ## O que fica declarado como não feito
 
 - Nenhuma etapa acima foi executada em PC físico nem em aparelho Android; as
-  Etapas 1 a 4 têm código e teste local, não medição em hardware.
+  Etapas 1 a 5 têm código e teste local, não medição em hardware.
 - O pareamento entre dois aparelhos reais é o primeiro item do roteiro de teste
   em hardware (Etapa 7).
 - Funções exclusivas do celular (SMS, ligação, contatos, acessibilidade de tela)

@@ -59,7 +59,7 @@ servico_kt = ler(KOTLIN / "KwsForegroundService.kt")
 relatorio = RAIZ / "docs" / "relatorios" / "2026-11-20_081-historico-de-voz.md"
 
 # 1. Versão, changelog, relatório e suíte.
-exigir("version: 1.105.0+110500" in pubspec, "versão não atualizada para 1.68.0")
+exigir("version: 1.106.0+110600" in pubspec, "versão não atualizada para 1.68.0")
 exigir("1.68.0" in changelog and "histórico" in changelog.lower(),
        "CHANGELOG sem o bloco 1.68.0 do histórico")
 exigir(relatorio.is_file(), "relatório 081 ausente")

@@ -40,45 +40,27 @@ function rodar(cmd, args) {
 
 const numeroOk = (n) => /^\+?\d{8,15}$/.test(String(n || ''));
 
-// Cofre de chaves do desktop: cifra com a proteção de credenciais fornecida pelo SO.
-// Se o Electron/OS não oferecer safeStorage, falha fechado em vez de gravar em texto puro.
-const arquivoCofre = () => path.join(app.getPath('userData'), 'jarvis-secrets.json');
-function lerCofreDesktop() {
-  const arquivo = arquivoCofre();
-  if (!fs.existsSync(arquivo)) return {};
-  try {
-    const bruto = JSON.parse(fs.readFileSync(arquivo, 'utf8'));
-    if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return {};
-    return bruto;
-  } catch (_) { throw new Error('O cofre local está ilegível. Nenhuma chave foi substituída.'); }
-}
-function gravarCofreDesktop(dados) {
-  const arquivo = arquivoCofre();
-  const temporario = arquivo + '.tmp';
-  fs.mkdirSync(path.dirname(arquivo), { recursive: true });
-  fs.writeFileSync(temporario, JSON.stringify(dados), { mode: 0o600 });
-  fs.renameSync(temporario, arquivo);
-}
-function exigirCofreDesktop() {
-  if (!safeStorage || typeof safeStorage.isEncryptionAvailable !== 'function' || !safeStorage.isEncryptionAvailable()) {
-    throw new Error('O armazenamento criptografado do sistema não está disponível; a chave não foi salva.');
+// Cofre de chaves do desktop: cifra com a proteção de credenciais fornecida pelo SO
+// (DPAPI no Windows, Keychain no macOS, secret service no Linux, via safeStorage).
+// Se o sistema não oferecer essa proteção, o cofre recusa gravar em vez de cair
+// para texto puro. A regra fica em `cofre_chaves.js`, testada fora do Electron.
+const COFRE = require(path.join(__dirname, 'cofre_chaves.js'));
+let cofreChaves = null;
+function cofreDoPC() {
+  if (!cofreChaves) {
+    cofreChaves = COFRE.criarCofre({ dirDados: app.getPath('userData'), safeStorage: safeStorage });
   }
+  return cofreChaves;
 }
-function guardarChaveDesktop({ nome, valor }) {
-  exigirCofreDesktop();
-  if (!/^(groq|openrouter|cerebras|mistral|gemini)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
-  const dados = lerCofreDesktop();
-  if (!valor) delete dados[nome];
-  else dados[nome] = safeStorage.encryptString(String(valor)).toString('base64');
-  gravarCofreDesktop(dados);
+function guardarChaveDesktop(dados) {
+  const r = cofreDoPC().guardar(dados || {});
+  if (!r.ok) throw new Error(r.erro);
   return true;
 }
-function lerChaveDesktop({ nome }) {
-  exigirCofreDesktop();
-  if (!/^(groq|openrouter|cerebras|mistral|gemini)$/.test(String(nome || ''))) throw new Error('Nome de chave inválido.');
-  const cifrado = lerCofreDesktop()[nome];
-  if (!cifrado) return '';
-  return safeStorage.decryptString(Buffer.from(String(cifrado), 'base64'));
+function lerChaveDesktop(dados) {
+  const r = cofreDoPC().ler(dados || {});
+  if (!r.ok) throw new Error(r.erro);
+  return r.valor;
 }
 
 // Só estas ações existem. O renderer NUNCA envia comandos de shell.
@@ -162,7 +144,13 @@ const acoes = {
   ler_area_transferencia: async () => clipboard.readText().slice(0, 4000),
   copiar_texto: async ({ texto }) => clipboard.writeText(String(texto || '').slice(0, 10000)),
   guardar_chave_segura: async (dados) => guardarChaveDesktop(dados || {}),
-  ler_chave_segura: async (dados) => ({ valor: lerChaveDesktop(dados || {}) })
+  ler_chave_segura: async (dados) => ({ valor: lerChaveDesktop(dados || {}) }),
+  cofre_listar: async () => cofreDoPC().listar(),
+  cofre_apagar: async (dados) => {
+    const r = cofreDoPC().apagar(dados || {});
+    if (!r.ok) throw new Error(r.erro);
+    return r;
+  }
 };
 
 

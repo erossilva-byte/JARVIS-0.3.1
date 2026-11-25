@@ -550,6 +550,15 @@
     <div class="botoes"><button id="c-bloqueio-recuperacao" type="button" class="secundario">Gerar código de recuperação</button><button id="c-bloqueio-biometria" type="button" class="secundario" hidden>Testar biometria</button></div>
     <output id="c-bloqueio-codigo" class="codigo-recuperacao" hidden></output>
 
+    <h3>Modo de visita (PIN de coação)</h3>
+    <p class="dica">Um segundo PIN, diferente do principal. Digitado na tela de bloqueio, ele abre um JARVIS vazio: sem conversas, memória, fichas, arquivos ou chaves. Nada é apagado — tudo volta com o PIN principal. O PIN atual confirma a mudança.</p>
+    <div class="seg-grade">
+      <label>PIN atual<input id="c-coacao-atual" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password" placeholder="confirmação"></label>
+      <label>PIN de visita<input id="c-coacao-pin" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="4 a 8 dígitos"></label>
+    </div>
+    <div class="botoes"><button id="c-coacao-definir" type="button" class="secundario">Definir PIN de visita</button><button id="c-coacao-remover" type="button" class="secundario perigo">Remover PIN de visita</button></div>
+    <p id="c-coacao-status" class="dica" role="status" aria-live="polite">Modo de visita desligado.</p>
+
     <h3>Tags NFC autorizadas</h3>
     <p class="dica">Cadastre a tag com um nome. Para cadastrar, renomear, bloquear ou remover, confirme com biometria ou com o PIN atual. Tags desconhecidas nunca desbloqueiam.</p>
     <div class="seg-grade">
@@ -1250,6 +1259,21 @@
   </div>
 </div>
 
+<div id="visita" class="visita" hidden role="dialog" aria-modal="true" aria-labelledby="visita-titulo">
+  <div class="visita-caixa">
+    <p class="eyebrow">J.A.R.V.I.S. · COMPUTADOR SEM CONFIGURAÇÃO</p>
+    <h2 id="visita-titulo">Modo de visita</h2>
+    <div id="visita-chat" class="visita-chat" role="log" aria-live="polite"></div>
+    <form id="visita-form" class="visita-form">
+      <label for="visita-texto">Mensagem</label>
+      <input id="visita-texto" type="text" autocomplete="off" maxlength="200" placeholder="Pergunte algo simples">
+      <button id="visita-enviar" type="submit" class="primario">Enviar</button>
+    </form>
+    <div class="visita-ajustes"><b>Este computador</b><ul id="visita-ajustes"></ul></div>
+    <p class="dica">Este modo não guarda nada e não fala com a internet. Feche o aplicativo para voltar à tela de bloqueio.</p>
+  </div>
+</div>
+
 <aside id="painel-dev" class="painel painel-dev" hidden aria-label="Desenvolvimento de arquivos do J.A.R.V.I.S. Nova">
   <div class="painel-topo"><div><p class="eyebrow">J.A.R.V.I.S. NOVA · DESENVOLVIMENTO</p><h2>Desenvolvimento de Arquivos</h2></div><span class="versao-chip">local · com original preservado</span></div>
   <section class="grupo" aria-label="Autorização do modo de desenvolvimento">
@@ -1535,6 +1559,8 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="visao.js"></script>
 <script src="visao_contexto.js"></script>
 <script src="seguranca.js"></script>
+<script src="bloqueio.js"></script>
+<script src="modo_visita.js"></script>
 <script src="utilidades.js"></script>
 <script src="cultura.js"></script>
 <script src="briefing.js"></script>

@@ -662,9 +662,16 @@ function atualizarSeguranca() {
  * substitui a tela de bloqueio do Android, e nenhuma imagem ou UID bruto é guardado.
  */
 const SEGN = window.SegurancaNucleo;
+// Regras da Etapa 5: política do PIN, derivação e espera progressiva (bloqueio.js)
+// e o modo de visita (modo_visita.js). Sem eles o app continua funcionando com
+// as checagens antigas, mas o recurso novo não é anunciado.
+const BLOQ_REG = window.BloqueioRegras || null;
+const VISITA = window.ModoVisita || null;
 const BLOQ_TENT = 'bloqueio_tentativas';
+const BLOQ_BLOQUEIOS = 'bloqueio_bloqueios';
 const BLOQ_ULTIMO = 'bloqueio_ultimo_plano';
 const BLOQ_ATE = 'bloqueio_espera_ate';
+let emModoVisita = false;
 let bloqTimer = 0;
 let bloqProvas = {};
 let bloqMetodoUsado = 'pin';
@@ -771,6 +778,99 @@ function bloqDisponibilidadeModo(cfg) {
   };
 }
 
+/* ---------- Modo de visita (Etapa 5) ----------
+ * O PIN de visita abre um aplicativo vazio; nenhum dado do dono é mostrado e
+ * nenhuma pergunta sai do computador. A decisão de mostrar a tela é do app, não
+ * do provedor de IA: por isso as respostas são locais (modo_visita.js).
+ */
+function coacaoDefinida() {
+  return !!store.get('pin_coacao_hash', '');
+}
+function coacaoStatus(txt, erro) {
+  const el = $('#c-coacao-status');
+  if (!el) return;
+  const ultima = Number(store.get('coacao_usada_em', '0')) || 0;
+  el.textContent = txt || (coacaoDefinida()
+    ? 'Modo de visita ligado' + (ultima ? ' · última abertura em ' + new Date(ultima).toLocaleString('pt-BR') : '') + '.'
+    : 'Modo de visita desligado.');
+  el.classList.toggle('erro', !!erro);
+}
+function atualizarCoacaoUI() {
+  coacaoStatus('');
+}
+async function definirPinVisita() {
+  const atual = String(($('#c-coacao-atual') || {}).value || '').trim();
+  const novo = String(($('#c-coacao-pin') || {}).value || '').trim();
+  if (!store.get('pin_hash', '')) { coacaoStatus('Defina o PIN principal antes do PIN de visita.', true); return; }
+  if (!(await pinConfere(atual, store.get('pin_hash', '')))) { coacaoStatus('PIN atual incorreto.', true); return; }
+  if (!BLOQ_REG) { coacaoStatus('As regras de PIN não carregaram neste dispositivo.', true); return; }
+  const av = BLOQ_REG.avaliarPin(novo);
+  if (!av.ok) { coacaoStatus(av.mensagem, true); return; }
+  if (await pinConfere(novo, store.get('pin_hash', ''))) {
+    coacaoStatus('O PIN de visita precisa ser diferente do PIN principal.', true);
+    return;
+  }
+  store.set('pin_coacao_hash', await hashPin(novo));
+  const campoAtual = $('#c-coacao-atual'); if (campoAtual) campoAtual.value = '';
+  const campoNovo = $('#c-coacao-pin'); if (campoNovo) campoNovo.value = '';
+  coacaoStatus('PIN de visita definido. Ele abre um aplicativo vazio e não apaga nada.');
+  registrar('segurança', 'PIN de visita definido');
+}
+async function removerPinVisita() {
+  const atual = String(($('#c-coacao-atual') || {}).value || '').trim();
+  if (!coacaoDefinida()) { coacaoStatus('Nenhum PIN de visita definido.', true); return; }
+  if (!(await pinConfere(atual, store.get('pin_hash', '')))) { coacaoStatus('PIN atual incorreto.', true); return; }
+  store.set('pin_coacao_hash', '');
+  const campoAtual = $('#c-coacao-atual'); if (campoAtual) campoAtual.value = '';
+  coacaoStatus('PIN de visita removido. O modo de visita não abre mais por PIN.');
+  registrar('segurança', 'PIN de visita removido');
+}
+function visitaFala(texto, autor) {
+  const chat = $('#visita-chat');
+  if (!chat) return;
+  const linha = document.createElement('p');
+  linha.className = 'visita-fala ' + (autor === 'voce' ? 'visita-voce' : 'visita-jarvis');
+  linha.textContent = texto;
+  chat.appendChild(linha);
+  chat.scrollTop = chat.scrollHeight;
+}
+function abrirModoVisita() {
+  if (!VISITA) return false;
+  emModoVisita = true;
+  const tela = $('#visita');
+  if (!tela) return false;
+  if (bloqTimer) { clearInterval(bloqTimer); bloqTimer = 0; }
+  const bloqueio = $('#bloqueio');
+  if (bloqueio) { bloqueio.hidden = true; bloqueio.classList.remove('saindo'); }
+  document.body.classList.remove('bloqueado');
+  document.body.classList.remove('travado');
+  document.body.classList.add('modo-visita');
+  tela.hidden = false;
+  const chat = $('#visita-chat'); if (chat) chat.textContent = '';
+  visitaFala(VISITA.BOAS_VINDAS, 'jarvis');
+  const lista = $('#visita-ajustes');
+  if (lista) {
+    lista.textContent = '';
+    VISITA.ajustes().forEach((item) => {
+      const li = document.createElement('li');
+      const nome = document.createElement('span'); nome.textContent = item.nome;
+      const valor = document.createElement('b'); valor.textContent = item.valor;
+      li.append(nome, valor);
+      lista.appendChild(li);
+    });
+  }
+  store.set('coacao_usada_em', String(Date.now()));
+  const campo = $('#visita-texto'); if (campo) { try { campo.focus(); } catch (e) { } }
+  return true;
+}
+function responderModoVisita(pergunta) {
+  if (!emModoVisita || !VISITA) return '';
+  visitaFala(pergunta, 'voce');
+  const resposta = VISITA.respostaVisita(pergunta, { agora: new Date() });
+  visitaFala(resposta, 'jarvis');
+  return resposta;
+}
+
 function atualizarBloqueioUI() {
   if (!SEGN) return;
   const chk = $('#c-bloqueio');
@@ -821,6 +921,7 @@ function atualizarBloqueioUI() {
   }
   renderTagsNfc();
   renderHistoricoSeguranca();
+  atualizarCoacaoUI();
 }
 function bloqPintaPontos() {
   const campo = $('#bloqueio-pin'), box = $('#bloqueio-pontos');
@@ -908,6 +1009,7 @@ function fecharBloqueio() {
   document.body.classList.remove('bloqueado');
   document.body.classList.remove('travado');
   store.set(BLOQ_TENT, '0');
+  store.set(BLOQ_BLOQUEIOS, '0');
   store.set(BLOQ_ATE, '0');
   store.set(BLOQ_ULTIMO, String(Date.now()));
   segRegistrar(bloqMetodoUsado || 'pin', 'ok', 'acesso liberado');
@@ -926,41 +1028,86 @@ function fecharBloqueio() {
 }
 async function tentarDesbloquear() {
   const campo = $('#bloqueio-pin'), erro = $('#bloqueio-erro');
-  // O atraso é conferido aqui, não só no botão: desabilitar o botão sozinho deixava a
-  // tecla Enter (e um toque vindo de script) furar o limite de tentativas.
-  const esperaAte = Number(store.get(BLOQ_ATE, '0')) || 0;
-  if (Date.now() < esperaAte) {
-    const resta = Math.max(1, Math.ceil((esperaAte - Date.now()) / 1000));
-    if (erro) erro.textContent = 'Aguarde ' + resta + ' s antes de tentar de novo.';
+  const agora = Date.now();
+  // A espera é conferida aqui, não só no botão: desabilitar o botão sozinho
+  // deixava a tecla Enter (e um toque vindo de script) furar o limite.
+  const estado = BLOQ_REG ? BLOQ_REG.normalizarConfig({
+    ativo: true,
+    tentativas: Number(store.get(BLOQ_TENT, '0')) || 0,
+    bloqueios: Number(store.get(BLOQ_BLOQUEIOS, '0')) || 0,
+    bloqueadoAte: Number(store.get(BLOQ_ATE, '0')) || 0
+  }) : null;
+  if (estado && BLOQ_REG.bloqueadoEm(estado, agora)) {
+    const resta = BLOQ_REG.restanteDeEspera(estado, agora);
+    if (erro) erro.textContent = 'Aguarde ' + BLOQ_REG.formatarEspera(resta) + ' antes de tentar de novo.';
     bloqTremer();
     return;
   }
+  if (!BLOQ_REG) {
+    const esperaAte = Number(store.get(BLOQ_ATE, '0')) || 0;
+    if (agora < esperaAte) {
+      const resta = Math.max(1, Math.ceil((esperaAte - agora) / 1000));
+      if (erro) erro.textContent = 'Aguarde ' + resta + ' s antes de tentar de novo.';
+      bloqTremer();
+      return;
+    }
+  }
   const pin = campo ? String(campo.value || '').trim() : '';
   if (!pin) { if (erro) erro.textContent = 'Digite o PIN.'; return; }
+
+  // PIN de visita: abre o aplicativo vazio. Não conta como tentativa e não
+  // entra no histórico, para não deixar rastro de quem entrou por ele.
+  if (coacaoDefinida() && await pinConfere(pin, store.get('pin_coacao_hash', ''))) {
+    if (campo) campo.value = '';
+    if (!abrirModoVisita() && erro) erro.textContent = 'O modo de visita não carregou neste dispositivo.';
+    return;
+  }
+
   const esperado = store.get('pin_hash', '');
   const cfg = segCfg();
-  const tentativas = Number(store.get(BLOQ_TENT, '0')) || 0;
   if (await pinConfere(pin, esperado)) {
+    if (estado) {
+      const limpo = BLOQ_REG.avaliarTentativa({ config: estado, pinCorreto: true, agora: agora }).config;
+      store.set(BLOQ_TENT, String(limpo.tentativas));
+      store.set(BLOQ_BLOQUEIOS, String(limpo.bloqueios));
+      store.set(BLOQ_ATE, String(limpo.bloqueadoAte));
+    }
     if (campo) campo.value = '';
     bloqMetodoUsado = 'pin';
     bloqMetodoBadge('PIN');
     bloqMarcarProva('pin');
     return;
   }
-  const nova = SEGN.tentativa(tentativas + 1, cfg.maxTentativas, cfg.esperaMaxSeg);
-  store.set(BLOQ_TENT, String(nova.n));
+
+  let mensagem = 'PIN incorreto.';
+  let espera = 0;
+  if (estado) {
+    const r = BLOQ_REG.avaliarTentativa({ config: estado, pinCorreto: false, agora: agora });
+    store.set(BLOQ_TENT, String(r.config.tentativas));
+    store.set(BLOQ_BLOQUEIOS, String(r.config.bloqueios));
+    store.set(BLOQ_ATE, String(r.config.bloqueadoAte));
+    mensagem = r.mensagem;
+    espera = r.esperaSeg || 0;
+  } else {
+    const tentativas = Number(store.get(BLOQ_TENT, '0')) || 0;
+    const nova = SEGN.tentativa(tentativas + 1, cfg.maxTentativas, cfg.esperaMaxSeg);
+    store.set(BLOQ_TENT, String(nova.n));
+    espera = Math.min(30, Math.round(0.5 * Math.pow(2, Math.min(nova.n, 6))));
+    store.set(BLOQ_ATE, String(agora + espera * 1000));
+    mensagem = 'PIN incorreto. ' + nova.aviso;
+  }
   if (campo) campo.value = '';
-  const espera = Math.min(30, Math.round(0.5 * Math.pow(2, Math.min(nova.n, 6))));
-  segRegistrar('pin', 'negado', 'tentativa ' + nova.n + ' recusada');
-  bloqTexto('PIN incorreto. ' + nova.aviso, 'erro');
+  segRegistrar('pin', 'negado', 'tentativa recusada');
+  bloqTexto(mensagem, 'erro');
   bloqFase('Acesso negado');
   bloqPintaPontos();
   bloqTremer();
   bloqNucleoEstado('negado');
   setTimeout(() => bloqNucleoEstado(''), 900);
-  store.set(BLOQ_ATE, String(Date.now() + espera * 1000));
-  const botao = $('#bloqueio-entrar');
-  if (botao) { botao.disabled = true; setTimeout(() => { botao.disabled = false; }, espera * 1000); }
+  if (espera > 0) {
+    const botao = $('#bloqueio-entrar');
+    if (botao) { botao.disabled = true; setTimeout(() => { botao.disabled = false; }, espera * 1000); }
+  }
   const rec = $('#bloqueio-recuperacao'); if (rec) rec.hidden = false;
 }
 async function desbloquearComBiometria() {
@@ -1208,6 +1355,7 @@ function restaurarSeguranca() {
   store.set('seguranca_eventos', '[]');
   store.set('bloqueio', '0');
   store.set(BLOQ_TENT, '0');
+  store.set(BLOQ_BLOQUEIOS, '0');
   store.set(BLOQ_ATE, '0');
   atualizarBloqueioUI();
   bloqStatus('Segurança restaurada: bloqueio desativado, tags e histórico apagados. O PIN foi mantido.', false);
@@ -1242,6 +1390,19 @@ function restaurarSeguranca() {
     if (b) acaoTagNfc(b.getAttribute('data-acao'), b.getAttribute('data-id'));
   });
   const restaurar = $('#c-bloq-restaurar'); if (restaurar) restaurar.onclick = () => restaurarSeguranca();
+  const definirVisita = $('#c-coacao-definir');
+  if (definirVisita) definirVisita.onclick = () => definirPinVisita().catch((e) => coacaoStatus('Falha ao definir o PIN de visita: ' + ((e && e.message) || e), true));
+  const removerVisita = $('#c-coacao-remover');
+  if (removerVisita) removerVisita.onclick = () => removerPinVisita().catch((e) => coacaoStatus('Falha ao remover o PIN de visita: ' + ((e && e.message) || e), true));
+  const formVisita = $('#visita-form');
+  if (formVisita) formVisita.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const campo = $('#visita-texto');
+    const texto = campo ? String(campo.value || '').trim() : '';
+    if (!texto) return;
+    if (campo) campo.value = '';
+    responderModoVisita(texto);
+  });
   const modo = $('#c-bloq-modo');
   if (modo) modo.addEventListener('change', () => {
     const cfg = segCfg(); cfg.modo = modo.value;
@@ -1311,13 +1472,17 @@ function novoSalt(bytes) {
 async function derivar(texto, saltHex) {
   if (!(window.crypto && crypto.subtle && crypto.subtle.importKey)) return '';
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(texto), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: bytesDeHex(saltHex), iterations: 120000, hash: 'SHA-256' }, base, 256);
+  // Mesmos parâmetros do teste de derivação em bloqueio.js (120.000 iterações,
+  // SHA-256, 32 bytes). O vetor fixo do teste garante que os dois coincidem.
+  const iteracoes = BLOQ_REG ? BLOQ_REG.ITERACOES : 120000;
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: bytesDeHex(saltHex), iterations: iteracoes, hash: 'SHA-256' }, base, 256);
   return 'pbkdf2$' + saltHex + '$' + hexDe(bits);
 }
 async function hashPin(pin) {
   let sal = store.get('pin_salt', '');
   if (!sal) { sal = novoSalt(16); store.set('pin_salt', sal); }
-  const forte = await derivar('pin|' + pin, sal);
+  const prefixo = BLOQ_REG ? BLOQ_REG.PREFIXO_PIN : 'pin|';
+  const forte = await derivar(prefixo + pin, sal);
   if (forte) return forte;
   return hashPinLegado(pin);
 }
@@ -6844,7 +7009,16 @@ async function salvarConfig() {
   if (pausaMusicaAnterior !== store.get('wake_pausa_musica', '1')) await pararWake();
   const pin = $('#c-pin').value.trim();
   if (pin) {
-    if (!/^\d{4,8}$/.test(pin)) { alert('O PIN precisa ter de 4 a 8 dígitos.'); return; }
+    // A mesma política do celular: recusa PIN curto, longo, com letra,
+    // repetido, em sequência ou da lista dos mais usados.
+    const av = BLOQ_REG ? BLOQ_REG.avaliarPin(pin) : null;
+    if (av && !av.ok) { alert(av.mensagem); mudarCategoriaConfig('seguranca'); return; }
+    if (!av && !/^\d{4,8}$/.test(pin)) { alert('O PIN precisa ter de 4 a 8 dígitos.'); return; }
+    if (coacaoDefinida() && await pinConfere(pin, store.get('pin_coacao_hash', ''))) {
+      alert('Esse é o PIN de visita; escolha um PIN principal diferente.');
+      mudarCategoriaConfig('seguranca');
+      return;
+    }
     store.set('pin_hash', await hashPin(pin));
     registrar('config', 'PIN alterado');
   }

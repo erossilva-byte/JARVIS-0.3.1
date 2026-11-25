@@ -33,7 +33,7 @@ jobs:
       - name: Conferir os fontes web obrigatórios
         shell: bash
         run: |
-          for f in index.html style.css app.js pc.js hermes.js plataforma.js memoria_regras.js memoria.js orbita.js cad.js vendor/three.min.js platforms/desktop/main.js platforms/desktop/arquivos.js platforms/desktop/cad_pc.js platforms/desktop/memoria_pasta.js; do
+          for f in index.html style.css app.js pc.js hermes.js plataforma.js memoria_regras.js memoria.js bloqueio.js modo_visita.js orbita.js cad.js vendor/three.min.js platforms/desktop/main.js platforms/desktop/arquivos.js platforms/desktop/cad_pc.js platforms/desktop/memoria_pasta.js platforms/desktop/cofre_chaves.js; do
             test -s "$f" || { echo "Falta $f: o pacote do PC sairia incompleto."; exit 1; }
           done
 
