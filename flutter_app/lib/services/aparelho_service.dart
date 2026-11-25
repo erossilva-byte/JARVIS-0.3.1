@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../core/aparelho.dart';
 import '../core/dispositivo.dart';
 import '../core/localizacao.dart';
+import '../core/pedido_app.dart';
 
 /// Ponte com o Android para as capacidades do aparelho.
 ///
@@ -44,6 +45,15 @@ class AparelhoService {
   Future<ResultadoAparelho> abrirApp(String pacote) async =>
       ResultadoAparelho.deMapa(
           await _chamar('abrirApp', {'pacote': pacote}));
+
+  /// Abre o app já na conversa, no rascunho, na busca ou na rota.
+  Future<ResultadoAparelho> abrirComAcao(PedidoAppAcao pedido) async =>
+      ResultadoAparelho.deMapa(await _chamar('abrirComAcao', {
+        'app': pedido.app.chave,
+        'acao': pedido.acao.chave,
+        'alvo': pedido.alvo,
+        'texto': pedido.texto,
+      }));
 
   Future<bool> temAcessoNotificacoes() async {
     final dados = await _chamar('notificacoesAcesso');

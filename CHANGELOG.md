@@ -1,3 +1,40 @@
+## 1.92.0 — mensagem sem toque e app aberto já na ação
+
+### O que mudou
+- **Mensagem sem toque**: com o serviço de acessibilidade autorizado e o
+  interruptor “Enviar mensagem sem toque” ligado, o JARVIS abre a conversa com
+  o texto pronto e toca no botão Enviar por você. Vale para WhatsApp, WhatsApp
+  Business, Telegram, Gmail/e-mail e SMS quando o SMS não sai direto.
+- **Travas do envio assistido**: só toca com o app na frente, com o texto
+  pedido visível na tela e num botão de enviar do próprio app. Se o botão não
+  aparecer no prazo, a resposta diz que faltou o toque — nada de dizer que
+  enviou sem ter enviado.
+- **Interruptor na tela de acessibilidade**: “Autorizo tocar em Enviar por
+  mim”, separado do consentimento de leitura, para desligar quando quiser.
+- **Abrir app já na ação**: “abre o WhatsApp na conversa da Ana”, “abre a
+  conversa com o João no WhatsApp”, “abre o Gmail para escrever para a Ana”,
+  “abre o mapa até a Rua das Flores”, “abre o mapa de São Paulo”, “abre o
+  YouTube e pesquisa gatos”, “abre o Spotify e toca Legião Urbana”, “abre a
+  câmera” e “abre a calculadora”.
+- **No app e no segundo plano**: a conversa reconhece o pedido antes do comando
+  de abrir app pela lista, e o serviço de palavra de ativação reconhece o mesmo
+  pedido antes de gastar provedor de IA.
+- **Contato pelo nome**: conversa e e-mail procuram o telefone e o endereço nos
+  contatos do aparelho; sem achar, o app abre na tela inicial e a resposta diz
+  o que faltou.
+- **Abrir o app pelado continua igual**: “abre o WhatsApp” segue no comando de
+  app que já existia, com desambiguação por nome.
+
+### Limites declarados
+- O envio sem toque depende do serviço de acessibilidade do Android e da
+  permissão de “Exibir sobre outros apps” para agir com o app fechado.
+- Apps de terceiro podem mudar o rótulo ou o lugar do botão Enviar; nesse caso
+  o JARVIS não toca e a conversa fica com o texto pronto.
+- Instagram e Telegram só caem direto na conversa quando o usuário é dito; com
+  nome de contato, o app abre na tela inicial.
+- Nada foi validado em aparelho físico nesta sessão (toque real no Enviar,
+  conversa do WhatsApp por nome e rota no mapa).
+
 ## 1.91.0 — abre tudo por voz, inclusive com o app fechado
 
 ### O que mudou

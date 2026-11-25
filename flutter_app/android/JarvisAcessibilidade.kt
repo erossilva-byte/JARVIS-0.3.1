@@ -51,6 +51,13 @@ class JarvisAcessibilidade : AccessibilityService() {
 
         fun servicoLigado() = instancia != null
 
+        /**
+         * Raiz da janela ativa, para o envio assistido procurar o botão Enviar.
+         * Fica aqui porque só este serviço tem acesso à árvore da tela.
+         */
+        fun raizVisivel(): AccessibilityNodeInfo? =
+            instancia?.let { raiz(it) }
+
         fun status(): Map<String, Any> = mapOf(
             "ligado" to servicoLigado(),
             "pacote" to pacoteAtual,
@@ -316,6 +323,19 @@ class JarvisAcessibilidadeCanal(private val activity: Activity) {
             .setMethodCallHandler { chamada, resultado ->
                 if (chamada.method == "abrirConfiguracoes") {
                     resultado.success(abrirConfiguracoes())
+                    return@setMethodCallHandler
+                }
+                if (chamada.method == "envioSemToque") {
+                    resultado.success(
+                        mapOf("ativo" to JarvisEnvioSemToque.ativo(activity))
+                    )
+                    return@setMethodCallHandler
+                }
+                if (chamada.method == "definirEnvioSemToque") {
+                    JarvisEnvioSemToque.definir(
+                        activity, chamada.argument<Boolean>("ativo") == true
+                    )
+                    resultado.success(mapOf("ok" to true))
                     return@setMethodCallHandler
                 }
                 val metodo = chamada.method

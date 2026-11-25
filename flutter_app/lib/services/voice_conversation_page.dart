@@ -21,6 +21,7 @@ import '../core/pessoas.dart';
 import '../core/stream_buffer.dart';
 import '../nucleo/humor_nucleo.dart';
 import '../ui_common.dart';
+import 'abrir_app.dart';
 import 'abrir_tela.dart';
 import 'acessibilidade_service.dart';
 import 'circuito_page.dart';
@@ -245,6 +246,19 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
         ok: resultado.ok,
         mensagemRecebida: resultado.mensagem,
         acao: resultado.acao,
+      );
+      return;
+    }
+    // App de terceiro já na ação: “abre o WhatsApp na conversa da Ana”,
+    // “abre o Gmail para escrever para o João”, “abre o mapa até a Rua X”.
+    // Vem antes de abrir app pela lista, que só chegaria na tela inicial.
+    final appComAcao = await AbrirAppComAcao.executar(texto);
+    if (appComAcao != null) {
+      _concluirLocal(
+        texto,
+        ok: appComAcao.ok,
+        mensagemRecebida: appComAcao.mensagem,
+        acao: appComAcao.acao,
       );
       return;
     }

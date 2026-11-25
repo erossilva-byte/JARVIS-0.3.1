@@ -77,6 +77,27 @@ class AcessibilidadeService {
 
   Future<void> definirConsentimento(bool valor) => _consentimento.definir(valor);
 
+  /// “Enviar sem toque”: com o serviço autorizado, o JARVIS toca no botão
+  /// Enviar do app de mensagem depois de abrir a conversa com o texto pronto.
+  Future<bool> envioSemToque() async {
+    if (!ativo) return false;
+    try {
+      final resposta = await _chamada('envioSemToque', const {});
+      return resposta?['ativo'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> definirEnvioSemToque(bool valor) async {
+    if (!ativo) return;
+    try {
+      await _chamada('definirEnvioSemToque', {'ativo': valor});
+    } catch (_) {
+      // Sem a ponte Android a preferência não existe; a tela explica.
+    }
+  }
+
   Future<EstadoAcessibilidade> status() async {
     final consentimento = await _consentimento.ativo();
     if (!ativo) {

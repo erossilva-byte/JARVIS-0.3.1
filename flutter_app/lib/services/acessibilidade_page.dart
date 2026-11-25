@@ -21,6 +21,7 @@ class _AcessibilidadePageState extends State<AcessibilidadePage> {
       widget.servico ?? AcessibilidadeService();
 
   bool consentido = false;
+  bool envioSemToque = false;
   EstadoAcessibilidade? estado;
   ResultadoTela? resultado;
   bool carregando = true;
@@ -40,12 +41,20 @@ class _AcessibilidadePageState extends State<AcessibilidadePage> {
 
   Future<void> _carregar() async {
     final novoEstado = await servico.status();
+    final envio = await servico.envioSemToque();
     if (!mounted) return;
     setState(() {
       consentido = novoEstado.consentimento;
+      envioSemToque = envio;
       estado = novoEstado;
       carregando = false;
     });
+  }
+
+  Future<void> _alternarEnvio(bool valor) async {
+    await servico.definirEnvioSemToque(valor);
+    if (!mounted) return;
+    setState(() => envioSemToque = valor);
   }
 
   Future<void> _alternar(bool valor) async {
@@ -157,6 +166,47 @@ class _AcessibilidadePageState extends State<AcessibilidadePage> {
                     const SizedBox(width: 6),
                     const Expanded(
                       child: Text('Autorizo a leitura da tela',
+                          style: TextStyle(fontSize: 11)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: panel,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Enviar mensagem sem toque',
+                    style: TextStyle(fontSize: 13)),
+                const SizedBox(height: 4),
+                Text(
+                  envioSemToque
+                      ? 'Ligado. Depois de abrir a conversa com o texto pronto, o '
+                          'JARVIS toca no botão Enviar pelo serviço de '
+                          'acessibilidade. Só age com a sua autorização acima.'
+                      : 'Desligado. O JARVIS abre a conversa com o texto e você '
+                          'toca em enviar.',
+                  style: const TextStyle(
+                      color: muted, fontSize: 10, height: 1.4),
+                ),
+                Row(
+                  children: [
+                    Switch(
+                      key: const ValueKey('acessibilidade-envio-sem-toque'),
+                      value: envioSemToque,
+                      onChanged: _alternarEnvio,
+                    ),
+                    const SizedBox(width: 6),
+                    const Expanded(
+                      child: Text('Autorizo tocar em Enviar por mim',
                           style: TextStyle(fontSize: 11)),
                     ),
                   ],

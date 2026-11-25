@@ -286,6 +286,11 @@ def copiar_codigo(app: Path) -> None:
     shutil.copy2(ANDROID / "JarvisPalco.kt", kotlin / "JarvisPalco.kt")
     shutil.copy2(ANDROID / "JarvisNucleo.kt", kotlin / "JarvisNucleo.kt")
     shutil.copy2(ANDROID / "JarvisAgenda.kt", kotlin / "JarvisAgenda.kt")
+    shutil.copy2(ANDROID / "KwsForegroundService.kt", kotlin / "KwsForegroundService.kt")
+    shutil.copy2(ANDROID / "JarvisAbrirTela.kt", kotlin / "JarvisAbrirTela.kt")
+    shutil.copy2(ANDROID / "JarvisMensagens.kt", kotlin / "JarvisMensagens.kt")
+    shutil.copy2(ANDROID / "JarvisAbrirApp.kt", kotlin / "JarvisAbrirApp.kt")
+    shutil.copy2(ANDROID / "JarvisEnvioSemToque.kt", kotlin / "JarvisEnvioSemToque.kt")
 
 
 def garantir_permissoes(texto: str) -> str:

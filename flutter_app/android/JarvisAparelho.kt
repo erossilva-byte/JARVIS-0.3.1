@@ -19,6 +19,8 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.os.Build
 import android.os.StatFs
 import android.os.SystemClock
@@ -116,6 +118,16 @@ class JarvisAparelho(private val activity: Activity) : MethodChannel.MethodCallH
                 )
             )
             "appsMensagem" -> result.success(mapOf("ids" to appsInstalados()))
+            // Abrir app já na ação: conversa, rascunho, busca, rota, câmera.
+            "abrirComAcao" -> abrirComAcao(
+                JarvisAbrirApp.Pedido(
+                    app = call.argument<String>("app").orEmpty(),
+                    acao = call.argument<String>("acao").orEmpty(),
+                    alvo = call.argument<String>("alvo").orEmpty(),
+                    texto = call.argument<String>("texto").orEmpty(),
+                ),
+                result
+            )
             "enviarMensagem" -> enviarMensagem(
                 call.argument<String>("app").orEmpty(),
                 call.argument<String>("destino").orEmpty(),
@@ -339,16 +351,19 @@ class JarvisAparelho(private val activity: Activity) : MethodChannel.MethodCallH
                     } else {
                         Uri.parse("whatsapp://send?text=${Uri.encode(texto)}")
                     }
-                    val intent = Intent(Intent.ACTION_VIEW, uri)
-                        .setPackage(if (app == "whatsapp_business") "com.whatsapp.w4b" else "com.whatsapp")
-                    abrirConversa(intent, "WhatsApp", destino, texto, result)
+                    val pacote = if (app == "whatsapp_business") "com.whatsapp.w4b" else "com.whatsapp"
+                    val intent = Intent(Intent.ACTION_VIEW, uri).setPackage(pacote)
+                    abrirConversa(intent, "WhatsApp", destino, texto, result, pacote)
                 }
                 "telegram" -> {
                     val usuario = destino.trim().removePrefix("@")
                     val uri = if (usuario.isNotBlank() && !usuario.any { it.isDigit() })
                         Uri.parse("https://t.me/$usuario") else
                         Uri.parse("https://t.me/share/url?url=${Uri.encode(texto)}")
-                    abrirConversa(Intent(Intent.ACTION_VIEW, uri), "Telegram", destino, texto, result)
+                    abrirConversa(
+                        Intent(Intent.ACTION_VIEW, uri), "Telegram", destino, texto, result,
+                        "org.telegram.messenger"
+                    )
                 }
                 "gmail" -> {
                     val endereco = emailDe(destino).ifBlank { if (destino.contains("@")) destino else "" }
@@ -356,7 +371,7 @@ class JarvisAparelho(private val activity: Activity) : MethodChannel.MethodCallH
                         data = Uri.parse("mailto:$endereco")
                         putExtra(Intent.EXTRA_TEXT, texto)
                     }
-                    abrirConversa(intent, "Gmail", destino, texto, result)
+                    abrirConversa(intent, "Gmail", destino, texto, result, "com.google.android.gm")
                 }
                 else -> {
                     val pacote = pacoteDoApp(app)
@@ -377,9 +392,14 @@ class JarvisAparelho(private val activity: Activity) : MethodChannel.MethodCallH
         }
     }
 
+    /**
+     * Abre a conversa e, se o envio assistido estiver ligado, toca em Enviar
+     * pelo serviço de acessibilidade. A resposta só volta depois de o toque
+     * acontecer ou do prazo acabar — é ela que diz a verdade ao alto-falante.
+     */
     private fun abrirConversa(
         intent: Intent, nome: String, destino: String, texto: String,
-        result: MethodChannel.Result
+        result: MethodChannel.Result, pacote: String = ""
     ) {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val abriu = try {
@@ -392,12 +412,41 @@ class JarvisAparelho(private val activity: Activity) : MethodChannel.MethodCallH
             result.success(erro("$nome não aceitou abrir a conversa com esse destinatário."))
             return
         }
+        Thread {
+            val envio = JarvisEnvioSemToque.tentar(activity, pacote, texto)
+            val mensagem = when {
+                envio.enviado ->
+                    "Mensagem enviada para $destino no $nome, sem toque."
+                envio.tentou ->
+                    "Abri o $nome para $destino com o texto exato. " +
+                        JarvisEnvioSemToque.explicar(envio) + " Falta tocar em enviar."
+                else ->
+                    "Abri o $nome para $destino com o texto exato. " +
+                        "Falta tocar em enviar — $nome não aceita envio silencioso."
+            }
+            Handler(Looper.getMainLooper()).post {
+                result.success(mapOf(
+                    "ok" to true,
+                    "enviado" to envio.enviado,
+                    "mensagem" to mensagem,
+                    "texto" to texto,
+                    "destino" to destino
+                ))
+            }
+        }.start()
+    }
+
+    /** Abre o app de terceiro já na ação pedida, pelo link do próprio app. */
+    private fun abrirComAcao(pedido: JarvisAbrirApp.Pedido, result: MethodChannel.Result) {
+        if (pedido.app.isBlank() || pedido.acao.isBlank()) {
+            result.success(erro("Faltou dizer qual app abrir e o que fazer nele."))
+            return
+        }
+        val resposta = JarvisAbrirApp.executar(activity, pedido)
         result.success(mapOf(
-            "ok" to true,
-            "mensagem" to "Abri o $nome para $destino com o texto exato. " +
-                "Falta tocar em enviar — $nome não aceita envio silencioso.",
-            "texto" to texto,
-            "destino" to destino
+            "ok" to resposta.ok,
+            "mensagem" to resposta.mensagem,
+            "acao" to resposta.acao
         ))
     }
 
