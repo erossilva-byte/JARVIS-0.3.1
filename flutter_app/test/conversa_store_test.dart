@@ -57,6 +57,40 @@ void main() {
     expect(store.rascunho, isEmpty);
   });
 
+  test('PIN ditado não entra no histórico da conversa', () async {
+    final store = await ConversaStore.abrir();
+    final conversa = Conversa.nova(id: 'p', agora: DateTime(2026, 11, 25))
+      ..adicionar(const MensagemConversa(autor: 'user', texto: 'meu pin é 4321'))
+      ..adicionar(
+          const MensagemConversa(autor: 'assistant', texto: 'Anotado: 4321.'));
+    await store.salvar(conversa);
+
+    // Na sessão aberta, o texto continua como foi dito.
+    expect(conversa.mensagens.first.texto, 'meu pin é 4321');
+
+    final salva = store.listar().single;
+    expect(salva.titulo, 'meu pin é [oculto]');
+    expect(salva.mensagens.map((m) => m.texto).toList(),
+        ['meu pin é [oculto]', 'Anotado: [oculto].']);
+  });
+
+  test('telefone continua no histórico da conversa', () async {
+    final store = await ConversaStore.abrir();
+    final conversa = Conversa.nova(id: 't', agora: DateTime(2026, 11, 25))
+      ..adicionar(const MensagemConversa(
+          autor: 'user', texto: 'liga para 11999998888'));
+    await store.salvar(conversa);
+
+    expect(store.listar().single.mensagens.single.texto,
+        'liga para 11999998888');
+  });
+
+  test('rascunho com PIN é mascarado', () async {
+    final store = await ConversaStore.abrir();
+    await store.salvarRascunho('o pin do cofre é 87654321');
+    expect(store.rascunho, 'o pin do cofre é [oculto]');
+  });
+
   test('lista corrompida não derruba a tela', () async {
     SharedPreferences.setMockInitialValues(
         {ConversaStore.chaveConversas: '{quebrado'});

@@ -52,7 +52,7 @@ def ler(caminho: Path) -> str:
 
 # 1. Versão e pacote.
 pubspec = ler(APP / "pubspec.yaml")
-exigir("version: 1.95.0+19500" in pubspec, "pubspec sem 1.88.0+18800")
+exigir("version: 1.96.0+19600" in pubspec, "pubspec sem 1.88.0+18800")
 pacote = ler(RAIZ / "package.json")
 exigir("tests/test_restos_099.py" in pacote, "contrato fora do npm run test:all")
 dart_core = ler(RAIZ / "tests" / "test_dart_core.py")

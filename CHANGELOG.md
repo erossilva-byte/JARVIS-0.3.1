@@ -1,3 +1,20 @@
+## 1.96.0 — PIN fora do histórico de conversas
+
+### O que mudou
+- **Máscara na conversa salva**: o `ConversaStore` grava uma cópia com título e
+  mensagens mascarados. “Meu PIN é 4321” fica salvo como “Meu PIN é [oculto]”,
+  inclusive no título automático da conversa.
+- **Rascunho também**: texto pela metade com PIN vai para o disco mascarado.
+- **A tela não muda**: a máscara existe só na cópia gravada. Durante a sessão a
+  conversa continua como foi dita; ao reabrir, o que estava salvo mostra
+  `[oculto]`.
+- **Telefone preservado**: 9 dígitos ou mais continuam inteiros, como no
+  histórico de execuções.
+
+### Limites declarados
+- Conversas salvas antes desta versão continuam com o texto antigo no disco.
+- Nada foi validado em aparelho físico nesta sessão.
+
 ## 1.95.0 — PIN dito em voz alta não entra no histórico
 
 ### O que mudou

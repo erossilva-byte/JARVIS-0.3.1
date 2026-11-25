@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/conversa.dart';
+import '../core/segredo_pedido.dart';
 
 /// Guarda conversas e o rascunho no armazenamento local da plataforma.
 ///
@@ -100,11 +101,29 @@ class ConversaStore {
       await _prefs.remove(chaveRascunho);
       return;
     }
-    await _prefs.setString(chaveRascunho, texto);
+    await _prefs.setString(chaveRascunho, protegerPinNoPedido(texto));
   }
 
   Future<void> limparRascunho() => _prefs.remove(chaveRascunho);
 
-  Future<void> _gravar(List<Conversa> lista) => _prefs.setString(
-      chaveConversas, jsonEncode(lista.map((c) => c.paraJson()).toList()));
+  /// Grava o histórico sem nenhum PIN ditado na conversa.
+  ///
+  /// A máscara é aplicada só na cópia que vai para o disco: a conversa aberta
+  /// na tela continua com o texto como foi dito (aqui e em `salvar`), então
+  /// nada muda durante a sessão. Ao reabrir, o que aparece é `[oculto]`.
+  Future<void> _gravar(List<Conversa> lista) => _prefs.setString(chaveConversas,
+      jsonEncode(lista.map(_paraJsonArmazenado).toList()));
+
+  /// JSON da conversa como fica no aparelho: título e mensagens mascarados.
+  static Map<String, Object?> _paraJsonArmazenado(Conversa conversa) => {
+        ...conversa.paraJson(),
+        'titulo': protegerPinNoPedido(conversa.titulo),
+        'mensagens': [
+          for (final mensagem in conversa.mensagens)
+            {
+              ...mensagem.paraJson(),
+              'texto': protegerPinNoPedido(mensagem.texto),
+            },
+        ],
+      };
 }
