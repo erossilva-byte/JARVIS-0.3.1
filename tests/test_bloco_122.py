@@ -205,8 +205,8 @@ pacote = ler(RAIZ / "package.json")
 nucleo = ler(RAIZ / "tests" / "test_dart_core.py")
 relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-25_122-paridade-das-acoes.md")
-exigir("version: 1.106.0+110600" in pubspec,
-       "pubspec.yaml não está em 1.106.0+110600")
+exigir("version: 1.107.0+110700" in pubspec,
+       "pubspec.yaml não está em 1.107.0+110700")
 exigir("## 1.99.0" in changelog, "CHANGELOG.md não tem o bloco 1.99.0")
 exigir(relatorio.is_file(), "falta o relatório do bloco 122")
 exigir("test_bloco_122.py" in pacote, "package.json não roda o contrato 122")

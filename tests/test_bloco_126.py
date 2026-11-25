@@ -110,8 +110,8 @@ pubspec = ler(APP / "pubspec.yaml")
 changelog = ler(RAIZ / "CHANGELOG.md")
 pacote = ler(RAIZ / "package.json")
 relatorio = RAIZ / "docs" / "relatorios" / "2026-11-25_126-asserts-e-triagem.md"
-exigir("version: 1.106.0+110600" in pubspec,
-       "pubspec.yaml não está em 1.106.0+110600")
+exigir("version: 1.107.0+110700" in pubspec,
+       "pubspec.yaml não está em 1.107.0+110700")
 exigir("## 1.103.0" in changelog, "CHANGELOG.md não tem o bloco 1.103.0")
 exigir(relatorio.is_file(), "falta o relatório da triagem")
 try:

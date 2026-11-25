@@ -110,6 +110,13 @@ provar de verdade.
 
 ## Etapa 6 — Voz e segundo plano no PC
 
+**Estado:** entregue na 1.107.0 — tabela de paridade (13 ações no PC, 3 só com a
+  interface, 7 do celular, 1 sem voz), escuta com a janela atrás por regra
+  testada, escolha honesta do motor de escuta, voz do PC com a prosódia do
+  celular e medição de CPU do laço. Não há detector de palavra local no PC: a
+  palavra é conferida localmente, mas o áudio do trecho vai para a transcrição.
+  Os limites estão em `docs/relatorios/2026-11-25_130-voz-e-segundo-plano-pc.md`.
+
 **Entregável**
 - Palavra de ativação local no PC, escuta sem a janela em foco e fala com a
   mesma voz do celular quando configurada.
@@ -158,8 +165,11 @@ consiga rodar, ou se o custo de manter duas interfaces passar o de uma reescrita
 ## O que fica declarado como não feito
 
 - Nenhuma etapa acima foi executada em PC físico nem em aparelho Android; as
-  Etapas 1 a 5 têm código e teste local, não medição em hardware.
+  Etapas 1 a 6 têm código e teste local, não medição em hardware.
 - O pareamento entre dois aparelhos reais é o primeiro item do roteiro de teste
   em hardware (Etapa 7).
-- Funções exclusivas do celular (SMS, ligação, contatos, acessibilidade de tela)
-  não serão copiadas para o PC: serão **acessadas pelo pareamento**, na Etapa 6.
+- Funções exclusivas do celular (SMS, lanterna, contatos, acessibilidade de tela)
+  não foram copiadas para o PC. O pareamento é **só de leitura** (token para
+  `/jarvis/status`), então a Etapa 6 não levou comando até o aparelho: o PC diz
+  qual é a função do celular. Comando remoto exige rota de escrita autenticada e
+  teste em dois aparelhos — fica declarado como não feito.

@@ -50,7 +50,10 @@ checagens = {
     "Dois motores nunca disputam o microfone": (
         'if (escutaGroqLigada()) { iniciarEscutaGroq(); return; }' in app
         and 'if (escutaGroqAtiva) await pararEscutaGroq(true);' in app
-        and 'if (ocupado || document.hidden || paradaAtiva) { await esperaMs(400); continue; }' in app),
+        # A condição "posso ouvir agora" saiu daqui para voz_pc.js na Etapa 6 do PC;
+        # o fallback continua valendo quando o módulo não carrega.
+        and 'decisao ? !decisao.ouvindo : (ocupado || document.hidden || paradaAtiva)' in app
+        and 'VOZ_PC.podeOuvir({' in app),
     "Variações pedidas existem nas duas listas": (
         all(("'%s'" % v) in hermes for v in ('jerves', 'gerves', 'garves', 'jaive', 'jaives'))
         and all(('"%s"' % v) in ativacao_java for v in ('jerves', 'gerves', 'garves', 'jaive', 'jaives'))),

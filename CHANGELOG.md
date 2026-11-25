@@ -1,3 +1,39 @@
+## 1.107.0 — voz e segundo plano no PC (Etapa 6)
+
+### O que mudou
+- **Tabela de paridade de voz do PC** (`voz_pc.js`): 24 ações classificadas em
+  “no PC com ou sem janela em foco” (13), “só com a interface aberta” (3),
+  “só no celular” (7) e “sem voz” (1). O teste confere cada linha contra o
+  código real; se um caminho sumir, o teste falha.
+- **Escuta com a janela atrás**: o laço não para mais só porque a janela perdeu
+  o foco. A decisão de ouvir passou a ser uma regra testada — e ela sempre para
+  quando ele grava, pensa, fala (a própria voz), está travado, em modo visita ou
+  terminando um comando de parada. Ajuste novo em Voz, visível só no PC.
+- **Ligar a ativação no PC agora faz algo**: sem o serviço do Android, o app
+  escolhe o motor pela regra — com chave, ouve pela transcrição e confere a
+  palavra localmente; sem chave ou em offline, explica o motivo em vez de
+  ficar calado.
+- **A voz do computador acompanha a do celular**: mesma prosódia dos quatro
+  perfis e escolha da melhor voz instalada; quando a voz salva não existe no
+  PC, ele avisa uma vez em vez de trocar em silêncio.
+- **Ação do celular pedida no PC** deixa de responder “indisponível”: diz que
+  SMS, lanterna, agenda, alarme, notificações e acessibilidade são do aparelho e
+  que o pareamento é só de leitura.
+- **Medição de CPU** do laço de escuta em `tools/medir_cpu_escuta.js`: 4 a 8 ms
+  de CPU por minuto de áudio nesta máquina, registrados no relatório.
+
+### Limites declarados
+- Não existe detector de palavra local no PC como o sherpa KWS do Android: a
+  palavra é conferida localmente, mas o áudio do trecho vai para a transcrição
+  quando há chave. Sem chave, o PC não ouve com a janela atrás.
+- As ações do celular não são executadas pelo PC — o pareamento é de leitura por
+  projeto, e levar comando até o aparelho exige rota de escrita e teste em dois
+  aparelhos.
+- A voz não foi ouvida em PC físico: a escolha foi testada com listas
+  sintéticas de vozes.
+- A medição de CPU não inclui captura de microfone, transcrição nem janela
+  minimizada no Windows.
+
 ## 1.106.0 — segurança no PC (Etapa 5)
 
 ### O que mudou

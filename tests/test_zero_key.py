@@ -53,7 +53,7 @@ pacote = ler(RAIZ / "package.json")
 relatorio = RAIZ / "docs" / "relatorios" / "2026-11-21_093-provedor-sem-chave.md"
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.106.0+110600" in pubspec,
+exigir("version: 1.107.0+110700" in pubspec,
        "versão não atualizada para 1.79.0")
 exigir("1.79.0" in changelog and "sem chave" in changelog.lower(),
        "CHANGELOG sem o bloco 1.79.0 do provedor sem chave")

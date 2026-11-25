@@ -667,6 +667,9 @@ const SEGN = window.SegurancaNucleo;
 // as checagens antigas, mas o recurso novo não é anunciado.
 const BLOQ_REG = window.BloqueioRegras || null;
 const VISITA = window.ModoVisita || null;
+// Regras da Etapa 6: quando o PC pode ouvir, qual motor ouve, qual voz usar e
+// onde cada ação de voz vive (voz_pc.js).
+const VOZ_PC = window.VozPc || null;
 const BLOQ_TENT = 'bloqueio_tentativas';
 const BLOQ_BLOQUEIOS = 'bloqueio_bloqueios';
 const BLOQ_ULTIMO = 'bloqueio_ultimo_plano';
@@ -2018,8 +2021,12 @@ async function executarSeguro(acao, opcoes) {
   }
   const def = ACOES[nome];
   if (!def || !disponiveis().includes(nome)) {
+    // Ação que só o celular faz (SMS, lanterna, acessibilidade da tela): em vez
+    // de "não disponível", dizer a verdade — o pareamento é de leitura.
+    const soCelular = def && VOZ_PC && Array.isArray(def.disp)
+      && def.disp.indexOf('android') >= 0 && def.disp.indexOf(plataforma) < 0;
     registrar('bloqueado', 'ação inexistente: ' + nome);
-    return fim({ info: fraseApp('acaoIndisponivel'), bloqueado: true });
+    return fim({ info: soCelular ? VOZ_PC.mensagemAcao(VOZ_PC.ONDE.CELULAR) : fraseApp('acaoIndisponivel'), bloqueado: true });
   }
   // Código do próprio app: escrita só com o modo de desenvolvimento autorizado, e cada
   // tentativa — permitida ou recusada — entra no registro.
@@ -4423,6 +4430,7 @@ async function falarNativo(texto, o) {
   if (r.indexOf('erro:') === 0) throw new Error(r.slice(5));
   return r;
 }
+let avisoVozPC = false;
 function falarWebUm(texto, o) {
   const { voz, pitch, rate } = opcoesVoz(o);
   let anim;
@@ -4432,7 +4440,16 @@ function falarWebUm(texto, o) {
     const u = new SpeechSynthesisUtterance(texto);
     u.lang = 'pt-BR';
     const vs = speechSynthesis.getVoices();
-    const v = vs.find((x) => x.name === voz) || vs[indiceVozPreferida(vs)] || vs.find((x) => /^pt[-_]br/i.test(x.lang));
+    // A voz salva veio do celular: se não existir aqui, voz_pc.js escolhe a mais
+    // próxima e devolve o aviso — trocar de voz em silêncio é o que incomoda.
+    const escolha = VOZ_PC ? VOZ_PC.vozParaPC(vs, { salva: voz, perfil: store.get('perfil_voz', '') }) : null;
+    if (escolha && escolha.aviso && !avisoVozPC) {
+      avisoVozPC = true;
+      registrar('voz', escolha.aviso);
+      msg('sis', escolha.aviso);
+    }
+    const v = (escolha && escolha.voz)
+      || vs.find((x) => x.name === voz) || vs[indiceVozPreferida(vs)] || vs.find((x) => /^pt[-_]br/i.test(x.lang));
     if (v) u.voice = v;
     u.pitch = pitch; u.rate = rate;
     u.onstart = () => { anim = animarFala(); };
@@ -5069,7 +5086,19 @@ async function pararEscutaGroq(silencioso) {
 async function cicloEscutaGroq() {
   while (escutaGroqAtiva && !escutaGroqParar) {
     // Não ouvir a própria resposta e não gravar com o app fora da tela (privacidade e bateria).
-    if (ocupado || document.hidden || paradaAtiva) { await esperaMs(400); continue; }
+    // A regra de "posso ouvir agora?" mora em voz_pc.js: no PC a janela pode
+    // estar atrás (quando autorizado), no Android a escuta em segundo plano é do
+    // KWS nativo, não deste laço.
+    const decisao = VOZ_PC ? VOZ_PC.podeOuvir({
+      janelaVisivel: !document.hidden,
+      aceitaForaDeFoco: !ehAndroid && store.get('escuta_fora_de_foco', '1') === '1',
+      ocupado,
+      falando: !!(document.body && document.body.dataset && document.body.dataset.state === 'speaking'),
+      bloqueado: !!(document.body && document.body.classList.contains('bloqueado')),
+      emModoVisita,
+      paradaAtiva
+    }) : null;
+    if (decisao ? !decisao.ouvindo : (ocupado || document.hidden || paradaAtiva)) { await esperaMs(400); continue; }
     const trecho = await capturarTrechoGroq();
     if (!escutaGroqAtiva) return;
     if (!trecho) { await esperaMs(300); continue; }
@@ -5199,6 +5228,25 @@ async function iniciarWake() {
   // Com a escuta pela Groq ligada, quem ouve é ela: dois motores disputando microfone só
   // gastariam bateria e produziriam detecção dobrada.
   if (escutaGroqLigada()) { iniciarEscutaGroq(); return; }
+  // No PC não existe o serviço do Android. A única escuta possível é o laço com
+  // transcrição e palavra conferida localmente — se houver chave para isso.
+  if (!p && !ehAndroid) {
+    await chavesProntas;
+    const motor = VOZ_PC ? VOZ_PC.motorDeEscuta({ chaveNuvem: !!CHAVES.groq, offline: store.get('offline', '0') === '1' }) : null;
+    if (motor && motor.motor === 'nuvem') {
+      store.set('escuta_groq', '1');
+      const chk = $('#c-escuta-groq'); if (chk) chk.checked = true;
+      registrar('voz', 'ativação no PC: transcrição com a palavra conferida localmente');
+      iniciarEscutaGroq();
+      return;
+    }
+    wakeAtivo = false;
+    atualizarWakeControles();
+    const aviso = motor ? motor.texto : 'A ativação por voz no computador precisa da transcrição configurada.';
+    registrar('erro', 'ativação no PC: ' + aviso);
+    msg('sis', aviso);
+    return;
+  }
   if (!p || !wakeLigado() || ocupado || wakeAtivo || iniciandoWake) return;
   iniciandoWake = true;
   let servicoPronto = false;
@@ -7422,6 +7470,19 @@ if (chkGroqEscuta) chkGroqEscuta.addEventListener('change', () => {
 });
 const btnGroqTeste = $('#c-escuta-groq-testar');
 if (btnGroqTeste) btnGroqTeste.onclick = () => testarTranscricaoGroq();
+// Escuta com a janela atrás: só existe no PC, porque no Android quem ouve em
+// segundo plano é o KWS nativo. A decisão de ouvir está em voz_pc.js.
+const linhaForaFoco = $('#c-linha-fora-foco'), chkForaFoco = $('#c-escuta-fora-foco');
+if (linhaForaFoco && chkForaFoco) {
+  if (!ehAndroid) linhaForaFoco.hidden = false;
+  chkForaFoco.checked = store.get('escuta_fora_de_foco', '1') === '1';
+  chkForaFoco.addEventListener('change', () => {
+    store.set('escuta_fora_de_foco', chkForaFoco.checked ? '1' : '0');
+    registrar('voz', chkForaFoco.checked
+      ? 'escuta com a janela atrás ligada no PC'
+      : 'escuta com a janela atrás desligada no PC');
+  });
+}
 // Aparência do núcleo: troca na hora, fica salva e o cartão de ajustes acompanha.
 const selNucleo = $('#c-nucleo-estilo');
 if (selNucleo) selNucleo.addEventListener('change', () => {
