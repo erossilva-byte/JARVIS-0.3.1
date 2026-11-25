@@ -3,7 +3,6 @@ package com.jarvis.nova
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.provider.ContactsContract
 import android.provider.MediaStore
 
 /**
@@ -398,44 +397,13 @@ object JarvisAbrirApp {
         )
     }
 
-    private fun telefoneDe(contexto: Context, destino: String): String {
-        val alvo = destino.trim()
-        if (alvo.isEmpty()) return ""
-        if (alvo.any { it.isDigit() } && alvo.none { it.isLetter() }) {
-            return alvo.filter { it.isDigit() || it == '+' }
-        }
-        return try {
-            contexto.contentResolver.query(
-                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
-                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?",
-                arrayOf("%$alvo%"),
-                null,
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) cursor.getString(0).orEmpty() else ""
-            } ?: ""
-        } catch (_: Exception) {
-            ""
-        }
-    }
+    private fun telefoneDe(contexto: Context, destino: String): String =
+        JarvisContatos.resolver(contexto, destino).contato?.primeiroTelefone.orEmpty()
 
     private fun emailDe(contexto: Context, destino: String): String {
         val alvo = destino.trim()
         if (alvo.contains("@")) return alvo
-        if (alvo.isEmpty()) return ""
-        return try {
-            contexto.contentResolver.query(
-                ContactsContract.CommonDataKinds.Email.CONTENT_URI,
-                arrayOf(ContactsContract.CommonDataKinds.Email.ADDRESS),
-                "${ContactsContract.CommonDataKinds.Email.DISPLAY_NAME} LIKE ?",
-                arrayOf("%$alvo%"),
-                null,
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) cursor.getString(0).orEmpty() else ""
-            } ?: ""
-        } catch (_: Exception) {
-            ""
-        }
+        return JarvisContatos.resolver(contexto, alvo).contato?.primeiroEmail.orEmpty()
     }
 
     private fun depois(original: String, marcador: Regex): String {

@@ -505,6 +505,18 @@ class JarvisAparelho(private val activity: Activity) : MethodChannel.MethodCallH
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.READ_CONTACTS) !=
             PackageManager.PERMISSION_GRANTED
         ) return emptyList()
+        // Nome falado do jeito que ele é dito: apelido, emoji e letra repetida
+        // já foram resolvidos por JarvisContatos antes do LIKE exato.
+        val parecidos = JarvisContatos.buscar(activity, nome, 20)
+        if (parecidos.isNotEmpty()) {
+            return parecidos.map {
+                mapOf(
+                    "nome" to it.nome,
+                    "telefones" to it.telefones,
+                    "emails" to it.emails,
+                )
+            }
+        }
         val lista = mutableListOf<Map<String, Any>>()
         val projecao = arrayOf(
             ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
@@ -701,35 +713,13 @@ class JarvisAparelho(private val activity: Activity) : MethodChannel.MethodCallH
         }
     }
 
-    private fun telefoneDe(destino: String): String {
-        val direto = destino.filter { it.isDigit() || it == '+' }
-        if (direto.length >= 8 && destino.trim().all { it.isDigit() || it == '+' || it == ' ' || it == '-' || it == '(' || it == ')' }) {
-            return direto
-        }
-        return buscarContatos(destino).firstOrNull()
-            ?.get("telefones")?.let { (it as List<*>).firstOrNull()?.toString() }
-            .orEmpty()
-    }
+    /** Telefone do contato entendendo apelido, emoji e erro de fala. */
+    private fun telefoneDe(destino: String): String =
+        JarvisContatos.resolver(activity, destino).contato?.primeiroTelefone.orEmpty()
 
     private fun emailDe(destino: String): String {
         if (destino.contains("@")) return destino.trim()
-        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.READ_CONTACTS) !=
-            PackageManager.PERMISSION_GRANTED
-        ) return ""
-        try {
-            activity.contentResolver.query(
-                ContactsContract.CommonDataKinds.Email.CONTENT_URI,
-                arrayOf(
-                    ContactsContract.CommonDataKinds.Email.DISPLAY_NAME,
-                    ContactsContract.CommonDataKinds.Email.ADDRESS
-                ),
-                "${ContactsContract.CommonDataKinds.Email.DISPLAY_NAME} LIKE ?",
-                arrayOf("%${destino.trim()}%"), null
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) return cursor.getString(1).orEmpty()
-            }
-        } catch (_: Exception) { }
-        return ""
+        return JarvisContatos.resolver(activity, destino).contato?.primeiroEmail.orEmpty()
     }
 
     private fun ligar(destino: String, result: MethodChannel.Result) {

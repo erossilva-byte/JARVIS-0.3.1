@@ -1,3 +1,30 @@
+## 1.93.0 — entende o nome do contato e completa as telas por voz
+
+### O que mudou
+- **Nome do contato como ele é falado**: o JARVIS lê a agenda do aparelho e
+  entende apelido, emoji, acento, letra repetida e erro de fala. “Biaa🩵🩵”
+  salvo no celular atende por “Bia”, “Beatriz” ou “Bianca”; “Murilin” e
+  “Murilinho” acham “Murilo”; “Zé” acha “José”; “Nanda” acha “Fernanda”.
+- **Sem palpite**: quando o nome serve para duas pessoas (uma Beatriz e uma
+  Bianca), a resposta pergunta com os nomes encontrados em vez de escolher uma.
+- **Aprende o jeito de falar**: quando o nome dito é diferente do salvo e o
+  contato é único, o par fica guardado no aparelho e a próxima vez é direta.
+- **Lista de contatos no painel do aparelho**: a busca mostra os contatos do
+  celular e põe no topo o mais parecido com o nome digitado ou falado.
+- **Mensagem, ligação, e-mail e conversa** usam o mesmo entendimento de nome,
+  com o app aberto e com o app fechado.
+- **Telas que faltavam por voz**: “abre os backups”, “abre as regras do palco”,
+  “abre o histórico de voz” e “abre a palavra de ativação” agora abrem — elas
+  existiam no app mas não estavam na tabela de voz.
+
+### Limites declarados
+- A agenda fica no aparelho; o JARVIS só lê com a permissão de contatos e não
+  envia nome nem número para provedor de IA.
+- Apelidos muito distantes do nome salvo (um apelido de família, por exemplo)
+  não são adivinhados: use o nome salvo uma vez e o JARVIS aprende.
+- Nada foi validado em aparelho físico nesta sessão (contatos reais, emoji no
+  nome salvo e o toque em Enviar).
+
 ## 1.92.0 — mensagem sem toque e app aberto já na ação
 
 ### O que mudou

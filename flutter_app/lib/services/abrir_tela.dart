@@ -10,6 +10,7 @@ import '../services/aparelho_page.dart';
 import '../services/arquivos_page.dart';
 import '../services/atualizacao_page.dart';
 import '../services/avatar_page.dart';
+import '../services/backups_page.dart';
 import '../services/cadesimu_page.dart';
 import '../services/circuito_page.dart';
 import '../services/comandos_android_page.dart';
@@ -19,10 +20,14 @@ import '../services/gestos_page.dart';
 import '../services/habilidades_page.dart';
 import '../services/hermes_page.dart';
 import '../services/historico_page.dart';
+import '../services/historico_voz_page.dart';
+import '../services/kws_settings_page.dart';
 import '../services/memoria_page.dart';
 import '../services/memoria_store.dart';
 import '../services/modelos_locais_page.dart';
 import '../services/palco_page.dart';
+import '../services/palco_regras_page.dart';
+import '../services/palco_regras_store.dart';
 import '../services/personalidade_page.dart';
 import '../services/personalidade_store.dart';
 import '../services/pessoas_page.dart';
@@ -145,6 +150,15 @@ class AbrirTela {
         return const ProviderSettingsPage();
       case TelaJarvis.historico:
         return HistoricoPage(store: await ConversaStore.abrir());
+      case TelaJarvis.historicoVoz:
+        return const HistoricoVozPage();
+      case TelaJarvis.backups:
+        return BackupsPage(store: await MemoriaStore.abrir());
+      case TelaJarvis.regrasPalco:
+        return PalcoRegrasPage(
+            regras: (await PalcoRegrasStore.abrir()).carregar());
+      case TelaJarvis.ativacao:
+        return KwsSettingsPage(controller: jarvisKwsController);
       case TelaJarvis.aparelho:
         return const AparelhoPage();
       case TelaJarvis.comandos:

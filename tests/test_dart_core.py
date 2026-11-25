@@ -75,6 +75,7 @@ CASOS = (
     ("tool/avatar3d_test.dart", "avatar 3D: giro, perspectiva, malha, rosto e órbitas"),
     ("tool/pedido_abrir_test.dart", "abrir telas por voz: tela certa, app de terceiro e perguntas"),
     ("tool/pedido_app_test.dart", "abrir app com ação: conversa, rascunho, busca, rota e recusa"),
+    ("tool/nome_contato_test.dart", "nomes de contato: apelido, emoji, erro de fala e empate"),
 )
 
 

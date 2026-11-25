@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../core/aparelho.dart';
+import '../core/nome_contato.dart';
 import '../core/pessoas.dart';
 import '../core/resumo_tatico.dart';
 import '../ui_common.dart';
@@ -153,11 +154,14 @@ class _AparelhoPageState extends State<AparelhoPage> {
     if (ocupado) return;
     setState(() => ocupado = true);
     try {
-      final achados = await servico.buscarContatos(campoContato.text.trim());
+      final procurado = campoContato.text.trim();
+      final achados = await servico.buscarContatos(procurado);
       if (!mounted) return;
       setState(() {
         ocupado = false;
-        contatos = achados;
+        // Apelido, emoji e letra repetida: o contato mais parecido vai para o
+        // topo da lista, em vez de depender só do LIKE do Android.
+        contatos = ordenarContatosPorNome(procurado, achados);
         if (achados.isEmpty) {
           resultado = const ResultadoAparelho.erro(
               'Nenhum contato do aparelho corresponde a esse nome.');

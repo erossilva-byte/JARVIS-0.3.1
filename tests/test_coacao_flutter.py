@@ -58,7 +58,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_090-modo-de-visita.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.92.0+19200" in pubspec, "versão não atualizada para 1.76.0")
+exigir("version: 1.93.0+19300" in pubspec, "versão não atualizada para 1.76.0")
 exigir("1.76.0" in changelog and "modo de visita" in changelog.lower(),
        "CHANGELOG sem o bloco 1.76.0 do modo de visita")
 exigir("tests/test_coacao_flutter.py" in pacote,
