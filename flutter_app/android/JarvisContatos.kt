@@ -211,6 +211,26 @@ object JarvisContatos {
             .map { it.first }
     }
 
+    /** Apelidos já aprendidos: apelido normalizado → nome normalizado. */
+    fun apelidos(contexto: Context): Map<String, String> = try {
+        prefs(contexto).all.mapNotNull { (chave, valor) ->
+            if (valor is String) chave to valor else null
+        }.toMap()
+    } catch (_: Exception) {
+        emptyMap()
+    }
+
+    /** Esquece um apelido ensinado; o nome salvo continua valendo. */
+    fun esquecer(contexto: Context, apelido: String) {
+        val alvo = normalizar(apelido)
+        if (alvo.isEmpty()) return
+        try {
+            prefs(contexto).edit().remove(alvo).apply()
+        } catch (_: Exception) {
+            // Sem armazenamento o apelido apenas não existia mais.
+        }
+    }
+
     /** Guarda “Murilin” → “murilo” para o próximo pedido ser direto. */
     fun aprender(contexto: Context, dito: String, nomeNormalizado: String) {
         val alvo = normalizar(dito)

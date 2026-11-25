@@ -22,6 +22,7 @@ import '../services/hermes_page.dart';
 import '../services/historico_page.dart';
 import '../services/historico_voz_page.dart';
 import '../services/kws_settings_page.dart';
+import '../services/mapa_voz_page.dart';
 import '../services/memoria_page.dart';
 import '../services/memoria_store.dart';
 import '../services/modelos_locais_page.dart';
@@ -159,6 +160,8 @@ class AbrirTela {
             regras: (await PalcoRegrasStore.abrir()).carregar());
       case TelaJarvis.ativacao:
         return KwsSettingsPage(controller: jarvisKwsController);
+      case TelaJarvis.mapaVoz:
+        return const MapaVozPage();
       case TelaJarvis.aparelho:
         return const AparelhoPage();
       case TelaJarvis.comandos:

@@ -43,6 +43,9 @@ class _AparelhoPageState extends State<AparelhoPage> {
   List<AppMensagem> apps = const [];
   AppMensagem? appEscolhido;
   List<ContatoAparelho> contatos = const [];
+
+  /// Apelidos ensinados por voz: apelido → nome salvo na agenda.
+  Map<String, String> apelidos = const {};
   List<Pessoa> pessoas = const [];
   ResultadoAparelho? resultado;
   Pessoa? fichaEmEdicao;
@@ -66,7 +69,20 @@ class _AparelhoPageState extends State<AparelhoPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.ativo) _atualizarTudo();
+    if (widget.ativo) {
+      _atualizarTudo();
+      _carregarApelidos();
+    }
+  }
+
+  Future<void> _carregarApelidos() async {
+    try {
+      final lista = await servico.apelidos();
+      if (!mounted) return;
+      setState(() => apelidos = lista);
+    } catch (_) {
+      // Sem a ponte Android a lista fica vazia; o resto do painel continua.
+    }
   }
 
   @override
@@ -773,6 +789,39 @@ class _AparelhoPageState extends State<AparelhoPage> {
                         onPressed: () => _prepararFicha(c),
                       ),
                     ]),
+                  ),
+              ],
+            ),
+          ),
+          _cartao(
+            titulo: 'APELIDOS APRENDIDOS',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ensinados por voz: “o apelido do Murilo é Murilin”. O JARVIS '
+                  'entende os dois nomes em mensagem, ligação, e-mail e ao abrir '
+                  'a conversa.',
+                  style: TextStyle(fontSize: 9.5, color: muted, height: 1.4),
+                ),
+                const SizedBox(height: 8),
+                if (apelidos.isEmpty)
+                  const Text('Nenhum apelido ensinado ainda.',
+                      key: ValueKey('apelidos-vazio'),
+                      style: TextStyle(fontSize: 10, color: muted))
+                else
+                  Wrap(
+                    key: const ValueKey('apelidos-lista'),
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final entrada in apelidos.entries)
+                        Chip(
+                          label: Text('${entrada.key} → ${entrada.value}',
+                              style: const TextStyle(fontSize: 10)),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                    ],
                   ),
               ],
             ),

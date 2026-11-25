@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../core/aparelho.dart';
 import '../core/dispositivo.dart';
 import '../core/localizacao.dart';
+import '../core/pedido_apelido.dart';
 import '../core/pedido_app.dart';
 
 /// Ponte com o Android para as capacidades do aparelho.
@@ -45,6 +46,26 @@ class AparelhoService {
   Future<ResultadoAparelho> abrirApp(String pacote) async =>
       ResultadoAparelho.deMapa(
           await _chamar('abrirApp', {'pacote': pacote}));
+
+  /// Ensina (ou esquece) o apelido de um contato no aparelho.
+  Future<ResultadoAparelho> aprenderApelido(PedidoApelido pedido) async =>
+      ResultadoAparelho.deMapa(await _chamar('aprenderApelido', {
+        'apelido': pedido.apelido,
+        'nome': pedido.nome,
+        'esquecer': pedido.esquecer,
+      }));
+
+  /// Apelidos já aprendidos neste aparelho: apelido → nome salvo.
+  Future<Map<String, String>> apelidos() async {
+    final dados = await _chamar('apelidos');
+    final itens = dados?['itens'];
+    if (itens is! Map) return const {};
+    return {
+      for (final entrada in itens.entries)
+        if (entrada.value is String)
+          entrada.key.toString(): entrada.value as String,
+    };
+  }
 
   /// Abre o app já na conversa, no rascunho, na busca ou na rota.
   Future<ResultadoAparelho> abrirComAcao(PedidoAppAcao pedido) async =>

@@ -128,6 +128,20 @@ class JarvisAparelho(private val activity: Activity) : MethodChannel.MethodCallH
                 ),
                 result
             )
+            // Apelido ensinado pela fala: “o apelido do Murilo é Murilin”.
+            "aprenderApelido" -> result.success(
+                JarvisApelidos.executar(
+                    activity,
+                    JarvisApelidos.Pedido(
+                        apelido = call.argument<String>("apelido").orEmpty(),
+                        nome = call.argument<String>("nome").orEmpty(),
+                        esquecer = call.argument<Boolean>("esquecer") == true,
+                    )
+                )
+            )
+            "apelidos" -> result.success(
+                mapOf("itens" to JarvisContatos.apelidos(activity))
+            )
             "enviarMensagem" -> enviarMensagem(
                 call.argument<String>("app").orEmpty(),
                 call.argument<String>("destino").orEmpty(),

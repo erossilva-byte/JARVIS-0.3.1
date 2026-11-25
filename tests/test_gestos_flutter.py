@@ -64,7 +64,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_087-flip-to-shush-e-modo-noturno.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.93.0+19300" in pubspec, "versão não atualizada para 1.74.0")
+exigir("version: 1.94.0+19400" in pubspec, "versão não atualizada para 1.74.0")
 exigir("1.74.0" in changelog and "noturno" in changelog.lower(),
        "CHANGELOG sem o bloco 1.74.0 do modo noturno")
 exigir("tests/test_gestos_flutter.py" in pacote,

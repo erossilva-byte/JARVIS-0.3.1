@@ -14,6 +14,7 @@ import '../core/fala_em_fluxo.dart';
 import '../core/habilidades.dart';
 import '../core/historico_voz.dart';
 import '../core/memoria_busca.dart';
+import '../core/mapa_voz.dart';
 import '../core/palco.dart';
 import '../core/pedido_abrir.dart';
 import '../core/personalidade.dart';
@@ -22,6 +23,7 @@ import '../core/stream_buffer.dart';
 import '../nucleo/humor_nucleo.dart';
 import '../ui_common.dart';
 import 'abrir_app.dart';
+import 'apelido.dart';
 import 'abrir_tela.dart';
 import 'acessibilidade_service.dart';
 import 'circuito_page.dart';
@@ -221,11 +223,38 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
   Future<void> _enviar({AiProvider? provedor}) async {
     final texto = composer.text.trim();
     if (texto.isEmpty || enviando) return;
+    // Ensinar apelido de contato: “o apelido do Murilo é Murilin”. A regra
+    // exige marcador explícito, então conversa comum não vira apelido.
+    final apelido = await AprenderApelido.executar(texto);
+    if (apelido != null) {
+      _concluirLocal(
+        texto,
+        ok: apelido.ok,
+        mensagemRecebida: apelido.mensagem,
+        acao: apelido.acao,
+      );
+      return;
+    }
+    // Mapa da voz: “quais telas você abre?” é respondida no aparelho, sem
+    // provedor, e aponta a tela com a lista completa.
+    final mapa = respostaMapaDaVoz(texto);
+    if (mapa != null) {
+      composer.clear();
+      unawaited(store?.limparRascunho());
+      _concluirLocal(
+        texto,
+        ok: true,
+        mensagemRecebida: mapa,
+        acao: 'mapa da voz',
+      );
+      return;
+    }
     // Modo palco: “mostra fotos de…”, “me mostra um vídeo sobre…” ou “traz as
     // últimas notícias de…” abrem a tela já pesquisando. Vem antes do provedor
     // porque a pesquisa do palco não usa chave e não depende da conversa.
     final palco = pedidoPalco(texto);
     if (palco != null) {
+      if (!mounted) return;
       composer.clear();
       unawaited(store?.limparRascunho());
       await Navigator.of(context).push(MaterialPageRoute<void>(

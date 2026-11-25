@@ -453,6 +453,22 @@ class KwsForegroundService : Service() {
                     }
                     return
                 }
+                // Apelido de contato: “o apelido do Murilo é Murilin”.
+                // Não usa provedor nem abre app; quem grava é a agenda.
+                val apelido = JarvisApelidos.interpretar(texto)
+                if (apelido != null) {
+                    escuta?.cancelar()
+                    escuta = null
+                    executarApelido(apelido, texto)
+                    return
+                }
+                // Mapa da voz: “quais telas você abre?” é do próprio app.
+                if (JarvisMapaVoz.pergunta(texto)) {
+                    escuta?.cancelar()
+                    escuta = null
+                    finalizarComando(JarvisMapaVoz.responder())
+                    return
+                }
                 // Comando de tela tem prioridade sobre a pergunta livre.
                 val pedidoTela = JarvisTelaVoz.interpretar(texto)
                 if (pedidoTela != null) {
@@ -735,6 +751,30 @@ class KwsForegroundService : Service() {
      * porque a busca de contato consulta o Android; o resultado real é dito em
      * voz alta em vez de o JARVIS afirmar que enviou sem ter enviado.
      */
+    /** Ensina ou esquece um apelido de contato, anotando no histórico. */
+    private fun executarApelido(pedido: JarvisApelidos.Pedido, texto: String) {
+        val acao = if (pedido.esquecer) {
+            "esquecer o apelido ${pedido.apelido}"
+        } else {
+            "apelido de ${pedido.nome}: ${pedido.apelido}"
+        }
+        updateNotification("Guardando o apelido…")
+        avisarAtivo("JARVIS ativo", "Guardando o apelido…")
+        Thread {
+            val resposta = JarvisApelidos.executar(applicationContext, pedido)
+            val mensagem = resposta["mensagem"]?.toString().orEmpty()
+            JarvisFundo.registrarHistorico(
+                applicationContext,
+                origem = JarvisFundo.ORIGEM_SEGUNDO_PLANO,
+                pedido = texto,
+                acao = acao,
+                ok = resposta["ok"] == true,
+                mensagem = mensagem,
+            )
+            handler.post { finalizarComando(mensagem) }
+        }.start()
+    }
+
     /** Abre o app de terceiro já na ação, com o app do JARVIS fechado. */
     private fun abrirAppComAcao(pedido: JarvisAbrirApp.Pedido, texto: String) {
         val acao = when (pedido.acao) {

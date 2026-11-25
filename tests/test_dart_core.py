@@ -76,6 +76,8 @@ CASOS = (
     ("tool/pedido_abrir_test.dart", "abrir telas por voz: tela certa, app de terceiro e perguntas"),
     ("tool/pedido_app_test.dart", "abrir app com ação: conversa, rascunho, busca, rota e recusa"),
     ("tool/nome_contato_test.dart", "nomes de contato: apelido, emoji, erro de fala e empate"),
+    ("tool/pedido_apelido_test.dart", "apelido de contato: ensinar, esquecer e não sequestrar conversa"),
+    ("tool/mapa_voz_test.dart", "mapa da voz: pergunta, catálogo e total de telas"),
 )
 
 

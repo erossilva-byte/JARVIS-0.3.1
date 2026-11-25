@@ -1,3 +1,32 @@
+## 1.94.0 — ensina apelido, mostra o mapa da voz e fecha a conferência
+
+### O que mudou
+- **Aprender apelido novo por voz**: “o apelido do Murilo é Murilin”, “chama o
+  Murilo de Murilin” ou “conhece o Murilo como Murilin”. O par fica guardado no
+  aparelho e vale em mensagem, ligação, e-mail e ao abrir a conversa — no app e
+  com o app fechado.
+- **Esquecer apelido**: “esquece o apelido Murilin” remove o ensinado sem
+  mexer no contato da agenda.
+- **Sem sequestrar conversa**: só vira apelido a frase com marcador explícito
+  (“apelido”, “chama… de”, “conhece… como”). “O céu é azul” continua conversa.
+- **Lista de apelidos no painel do aparelho**: a seção “Apelidos aprendidos”
+  mostra cada par *apelido → nome salvo*.
+- **Mapa da voz**: a tela “Mapa da voz” (ou “telas por voz”, “comandos de voz”)
+  lista todas as frases que funcionam, com exemplo em cada linha.
+- **Pergunta respondida no aparelho**: “quais telas você abre?” responde sem
+  provedor de IA, com o total de telas e o caminho para a lista completa.
+- **Conferência das funções restantes virou teste**: cada tela do app agora
+  precisa ter caminho de voz ou uma exclusão declarada com motivo, e o contrato
+  falha se alguém acrescentar tela sem voz.
+
+### Limites declarados
+- Continuam fora da voz, de propósito: **modo visita** (fluxo de segurança com
+  PIN) e **conflitos de sincronização** (a tela precisa da lista de conflitos e
+  do cofre).
+- Apelido ensinado vale para o aparelho, não para a nuvem.
+- Nada foi validado em aparelho físico nesta sessão (gravação do apelido nos
+  contatos reais, abertura do mapa e resposta falada).
+
 ## 1.93.0 — entende o nome do contato e completa as telas por voz
 
 ### O que mudou
