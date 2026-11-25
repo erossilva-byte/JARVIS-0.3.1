@@ -100,7 +100,5 @@ jobs:
             gh release create "$TAG" "$APK_ENTREGA" "$APK_ENTREGA.sha256" \
               --repo "$GITHUB_REPOSITORY" \
               --title "J.A.R.V.I.S. Nova $VERSAO_APK — APK de teste (Android arm64)" \
-              --notes "APK de teste da versão $VERSAO_APK, compilado da mesma árvore do release.
-
-Assinado com a chave de debug do runner, não com a chave oficial: instala normalmente, mas não recebe atualização por cima de um APK oficial e a assinatura muda a cada compilação."
+              --notes "APK de teste da versão $VERSAO_APK, compilado da mesma árvore do release. Assinado com a chave de debug do runner, não com a chave oficial: instala normalmente, mas não recebe atualização por cima de um APK oficial."
           fi
