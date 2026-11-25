@@ -1,3 +1,37 @@
+## 1.105.0 — memória e pessoas no PC (Etapa 4)
+
+### O que mudou
+- **Regras da memória portadas do celular para o JS** (`memoria_regras.js`):
+  busca com pontuação e motivo, orçamento de caracteres no contexto da IA,
+  citação da nota usada e Markdown no mesmo formato do celular (`id`, `titulo`,
+  `tema`, `tags`, `importancia`, `criada`, `atualizada`).
+- **Cofre em pasta no PC**: escolher a pasta do Obsidian, sincronizar nos dois
+  sentidos, adotar caminho das notas iguais e **preservar conflito** sem
+  sobrescrever nenhum lado. Nada é apagado; só notas `.md` dentro da pasta.
+- **Busca do painel mostra o porquê**: relevância, motivo (título, tag, texto,
+  termos parecidos) e botão “citar” com o trecho, o título, o tema e o caminho.
+- **Fichas de pessoas com consentimento**: ficha nova só entra com a
+  confirmação de que existe consentimento; revogar tira a ficha do cadastro
+  enviado à conversa, sem apagar nada.
+- **Bloco seguro na conversa**: só nome, apelido, relação e preferências vão
+  para a IA. Contato, descrição, observações, compromissos e histórico ficam de
+  fora; nome completo vence primeiro nome e homônimos viram pergunta.
+- **Testes de regra do celular em Node**: busca, orçamento, citação, os 13 casos
+  de sincronização, consentimento e ambiguidade, além de um teste com pasta real
+  em disco.
+
+### Limites declarados
+- O tema de uma nota escrita pelo PC que não existe no celular (Gostos,
+  Pesquisas, Objetivos, Estudos, Dispositivos, Mensagens) volta como
+  “Contextos” quando lida pelo app do celular: o formato das chaves é o mesmo,
+  mas o conjunto de temas do celular é menor.
+- Fichas antigas do PC, criadas antes do consentimento, continuam visíveis até
+  o usuário editar e confirmar; a tela pede a confirmação na próxima edição.
+- A sincronização não guarda versão anterior da nota em conflito: as duas
+  cópias ficam onde estão e a interface mostra o conflito.
+- Nada foi testado em PC físico nem em aparelho; a prova é de regra, de pasta
+  temporária real e de DOM.
+
 ## 1.104.0 — pareamento PC ↔ celular (Etapa 3)
 
 ### O que mudou

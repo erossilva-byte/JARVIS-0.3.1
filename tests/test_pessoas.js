@@ -17,14 +17,14 @@ P.configurar({ store, relogio: () => (t += 1000) });
 
 // ---------- 1. Nome é obrigatório; o resto é opcional ----------
 assert.strictEqual(P.salvar({ nome: '   ' }).ok, false);
-const ana = P.salvar({ nome: 'Ana' });
+const ana = P.salvar({ nome: 'Ana', consentimento: true });
 assert.ok(ana.ok, 'perfil mínimo com só o nome');
 assert.strictEqual(ana.perfil.nome, 'Ana');
 assert.strictEqual(P.listar().length, 1);
 console.log('OK: nome obrigatório e perfil mínimo');
 
 // ---------- 2. Campos são limpos e limitados ----------
-const longo = P.salvar({ nome: 'Bruno', observacoes: '<b>' + 'x'.repeat(900) + '</b>' });
+const longo = P.salvar({ nome: 'Bruno', consentimento: true, observacoes: '<b>' + 'x'.repeat(900) + '</b>' });
 assert.ok(longo.ok);
 assert.ok(longo.perfil.observacoes.length <= 800, 'limite de observações');
 assert.ok(longo.perfil.observacoes.indexOf('<') < 0, 'tags removidas');
@@ -39,8 +39,8 @@ assert.strictEqual(P.obter(ana.perfil.id).apelido, 'Aninha');
 console.log('OK: edição no mesmo perfil');
 
 // ---------- 4. Nomes parecidos nunca são fundidos nem escolhidos sozinhos ----------
-P.salvar({ nome: 'Ana Paula', apelido: 'Paulinha' });
-P.salvar({ nome: 'Carlos', apelido: 'Cadu' });
+P.salvar({ nome: 'Ana Paula', apelido: 'Paulinha', consentimento: true });
+P.salvar({ nome: 'Carlos', apelido: 'Cadu', consentimento: true });
 const amb = P.resolver('an'); // parcial: Ana e Ana Paula, nenhum exato
 assert.strictEqual(amb.tipo, 'ambiguo');
 assert.strictEqual(amb.candidatos.length, 2);
@@ -55,7 +55,7 @@ assert.strictEqual(P.buscar('aninha').length, 1);
 assert.strictEqual(P.buscar('ANA').length, 2);
 assert.strictEqual(P.buscar('carlos').length, 1);
 assert.strictEqual(P.buscar('').length, P.listar().length);
-const acento = P.salvar({ nome: 'José' });
+const acento = P.salvar({ nome: 'José', consentimento: true });
 assert.ok(acento.ok);
 assert.strictEqual(P.buscar('jose').length, 1);
 P.remover(acento.perfil.id);
@@ -64,7 +64,7 @@ console.log('OK: busca por nome/apelido ignorando acentos');
 // ---------- 6. Descrição não inventa o que não foi cadastrado ----------
 const desc = P.descrever(P.obter(ana.perfil.id));
 assert.ok(desc.indexOf('Aninha') > 0 && desc.indexOf('café sem açúcar') > 0);
-const vazio = P.descrever(P.salvar({ nome: 'Sem dados' }).perfil);
+const vazio = P.descrever(P.salvar({ nome: 'Sem dados', consentimento: true }).perfil);
 assert.ok(vazio.indexOf('Nenhuma informação além do nome') > 0, vazio);
 console.log('OK: descrição só com dados cadastrados');
 
@@ -80,6 +80,13 @@ const bruto = store.getItem(P.CHAVE);
 assert.ok(bruto && JSON.parse(bruto).length === P.listar().length);
 console.log('OK: perfis gravados no armazenamento');
 
+// ---------- 8b. Consentimento é obrigatório para gravar a ficha ----------
+const semConsentimento = P.salvar({ nome: 'Sem autorização' });
+assert.strictEqual(semConsentimento.ok, false, 'ficha sem consentimento não pode ser gravada');
+assert.ok(/consentimento/i.test(semConsentimento.erro), semConsentimento.erro);
+assert.strictEqual(P.resolver('Sem autorização').tipo, 'nenhum', 'ficha recusada não entrou no cadastro');
+console.log('OK: consentimento obrigatório');
+
 // ---------- 9. Exportar e importar sem duplicar ----------
 const json = P.exportar();
 const total = P.listar().length;
@@ -88,7 +95,7 @@ assert.ok(imp.ok);
 assert.strictEqual(imp.importados, 0, 'reexportar não duplica');
 assert.strictEqual(P.listar().length, total);
 const outro = JSON.parse(json);
-outro.perfis = [{ nome: 'Dora' }];
+outro.perfis = [{ nome: 'Dora', consentimento: true }];
 const imp2 = P.importar(JSON.stringify(outro));
 assert.strictEqual(imp2.importados, 1);
 assert.strictEqual(P.resolver('Dora').tipo, 'exato');
@@ -106,8 +113,8 @@ console.log('OK: remoção e limpeza total');
 
 // ---------- 11. Reabrir o aplicativo mantém os perfis ----------
 P.limparTudo();
-P.salvar({ nome: 'João Silva', apelido: 'Jota', observacoes: 'amigo da faculdade' });
-P.salvar({ nome: 'João Souza', observacoes: 'vizinho' });
+P.salvar({ nome: 'João Silva', apelido: 'Jota', observacoes: 'amigo da faculdade', consentimento: true });
+P.salvar({ nome: 'João Souza', observacoes: 'vizinho', consentimento: true });
 delete require.cache[require.resolve('../pessoas.js')];
 const Preaberto = require('../pessoas.js');
 Preaberto.configurar({ store, relogio: () => t });
@@ -137,7 +144,7 @@ const quebrado = {
 delete require.cache[require.resolve('../pessoas.js')];
 const Pfalha = require('../pessoas.js');
 Pfalha.configurar({ store: quebrado, relogio: () => t });
-const falhou = Pfalha.salvar({ nome: 'Sem espaço' });
+const falhou = Pfalha.salvar({ nome: 'Sem espaço', consentimento: true });
 assert.strictEqual(falhou.ok, false);
 assert.ok(/gravar/i.test(falhou.erro), falhou.erro);
 console.log('OK: falha de armazenamento informada');
@@ -152,7 +159,7 @@ console.log('OK: termo vazio não resolve ninguém');
 
 // ---------- 15. Contexto limitado e sem telefone/observações ----------
 P2.limparTudo();
-for (let i = 1; i <= 14; i++) P2.salvar({ nome: 'Pessoa ' + i, contato: '+55 11 99999-000' + i, observacoes: 'segredo ' + i });
+for (let i = 1; i <= 14; i++) P2.salvar({ nome: 'Pessoa ' + i, contato: '+55 11 99999-000' + i, observacoes: 'segredo ' + i, consentimento: true });
 const ctx2 = P2.contexto();
 assert.strictEqual(ctx2.split('\n').length, 12, 'contexto limitado a 12 perfis');
 assert.ok(ctx2.indexOf('99999') < 0, 'telefone fora do contexto');
@@ -161,7 +168,7 @@ console.log('OK: contexto da IA limitado e sem dados sensíveis');
 
 // ---------- 16. Importação ignora entradas sem nome ----------
 const antesImp = P2.listar().length;
-const impFinal = P2.importar(JSON.stringify({ perfis: [{ nome: '' }, { nome: 'Válida' }] }));
+const impFinal = P2.importar(JSON.stringify({ perfis: [{ nome: '' }, { nome: 'Válida', consentimento: true }] }));
 assert.ok(impFinal.ok);
 assert.strictEqual(impFinal.importados, 1);
 assert.strictEqual(P2.listar().length, antesImp + 1);

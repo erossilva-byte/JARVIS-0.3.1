@@ -540,6 +540,8 @@
     if (vazio) vazio.hidden = !!(p && p.foto);
     var rec = $('idp-foto-recorte');
     if (rec) rec.hidden = true;
+    var consDados = $('idp-consent-dados');
+    if (consDados) consDados.checked = !!(p && p.consentimento && p.consentimento.dados && p.consentimento.dados.ok);
     renderCampos(p);
     atualizarBlocoVoz(p);
     atualizarBlocoRosto(p);
@@ -572,6 +574,12 @@
   }
   async function salvarPerfil() {
     if (!valor('nome')) { status('Informe o nome ou uma identificação para a pessoa.', 'fail'); return; }
+    // Ficha nova só entra com o consentimento declarado; é a mesma regra do celular.
+    var consDadosNovo = $('idp-consent-dados');
+    if (!estado.editando && !(consDadosNovo && consDadosNovo.checked)) {
+      status('Confirme que você tem o consentimento desta pessoa antes de salvar a ficha.', 'fail');
+      return;
+    }
     var dados = { id: estado.editando || undefined };
     CAMPOS_FORM.forEach(function (c) { dados[c] = valor(c); });
     var r = IDENT.salvar(dados);
@@ -603,6 +611,14 @@
       IDENT.consentir(id, 'rosto', 'Autorizo a comparação da minha fotografia com este perfil neste aparelho');
     } else if (consRosto2 && !consRosto2.checked && atual2.consentimento && atual2.consentimento.rosto && atual2.consentimento.rosto.ok) {
       IDENT.revogarConsentimento(id, 'rosto');
+    }
+    var consDados = $('idp-consent-dados');
+    var atualDados = IDENT.obter(id);
+    var dadosOk = !!(atualDados.consentimento && atualDados.consentimento.dados && atualDados.consentimento.dados.ok);
+    if (consDados && consDados.checked && !dadosOk && typeof IDENT.consentirDados === 'function') {
+      IDENT.consentirDados(id, true);
+    } else if (consDados && !consDados.checked && dadosOk && typeof IDENT.consentirDados === 'function') {
+      IDENT.consentirDados(id, false);
     }
     var final = IDENT.obter(id);
     status('Perfil de ' + final.nome + ' salvo neste aparelho.', 'ok');

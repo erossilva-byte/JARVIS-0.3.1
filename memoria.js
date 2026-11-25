@@ -241,6 +241,8 @@
         origem: n.origem === 'voz' ? 'voz' : 'painel',
         importancia: Math.max(0, Math.min(3, Math.round(Number(n.importancia) || 0))),
         usos: Math.max(0, Math.min(999, Math.round(Number(n.usos) || 0))),
+        caminho: typeof n.caminho === 'string' && n.caminho.trim() ? n.caminho.trim() : undefined,
+        hashSincronizado: typeof n.hashSincronizado === 'string' && n.hashSincronizado ? n.hashSincronizado : undefined,
         versoes: (Array.isArray(n.versoes) ? n.versoes : []).filter(function (v) {
           return v && typeof v.texto === 'string' && v.texto.trim();
         }).slice(-LIMITE_VERSOES).map(function (v) {
@@ -415,6 +417,15 @@
     if (i < 0) return false;
     lista[i].usos = Math.min(999, (Number(lista[i].usos) || 0) + 1);
     return salvar(lista);
+  }
+
+  /** Substitui o cofre pela lista já conciliada com a pasta (sem apagar nota). */
+  function substituirNotas(lista) {
+    if (!Array.isArray(lista)) return { ok: false, erro: 'Lista de notas inválida.' };
+    if (!gravarBruto(JSON.stringify(lista.slice(0, LIMITE_NOTAS)))) {
+      return { ok: false, erro: 'Não foi possível gravar o cofre conciliado.' };
+    }
+    return { ok: true, notas: carregar() };
   }
 
   function apagar(id) {
@@ -833,6 +844,7 @@
     apagar: apagar,
     apagarTema: apagarTema,
     apagarTudo: apagarTudo,
+    substituirNotas: substituirNotas,
     espaco: espaco,
     podar: podar,
     contexto: contexto,

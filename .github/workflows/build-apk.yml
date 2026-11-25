@@ -93,7 +93,7 @@ jobs:
       - name: Preparar os recursos web do aplicativo
         run: |
           mkdir -p www
-          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria.js orbita.js cad.js eletrica.js projetista.js pc.js cad_projeto.js visao.js visao_contexto.js seguranca.js pessoas.js utilidades.js cultura.js briefing.js jogos.js utilidades_ui.js www/
+          cp index.html style.css app.js apps.js hermes.js plataforma.js memoria_regras.js memoria.js orbita.js cad.js eletrica.js projetista.js pc.js cad_projeto.js visao.js visao_contexto.js seguranca.js pessoas.js utilidades.js cultura.js briefing.js jogos.js utilidades_ui.js www/
           cp avatar.js nucleo_v3.js consumo_ia.js modo_dev.js escuta_voz.js segundo_plano.js perfil_energia.js manutencao.js privacidade.js www/
           cp interface.css www/
           cp core.css www/

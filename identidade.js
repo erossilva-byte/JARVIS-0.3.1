@@ -347,8 +347,32 @@
       });
     }
     if (p.nascimento) { p.idadeBase = ''; p.idadeEm = ''; }
+    if (d.consentimentoDados !== undefined) {
+      if (!p.consentimento) p.consentimento = { voz: { ok: false }, rosto: { ok: false } };
+      p.consentimento.dados = d.consentimentoDados === true
+        ? { ok: true, em: agoraISO(), texto: 'Tenho o consentimento desta pessoa para guardar a ficha neste computador' }
+        : { ok: false, em: agoraISO(), texto: 'Consentimento para guardar a ficha revogado' };
+    }
     p.atualizado = relogio();
     return p;
+  }
+
+  /**
+   * Consentimento para guardar a ficha (LGPD). Sem ele o perfil não participa do
+   * bloco de pessoas enviado à conversa; os perfis antigos continuam visíveis até
+   * o usuário decidir, e a tela pede a confirmação na próxima edição.
+   */
+  function consentirDados(id, autorizado) {
+    var lista = perfis();
+    var i = lista.findIndex(function (p) { return p.id === id; });
+    if (i < 0) return { ok: false, erro: 'Perfil não encontrado.' };
+    if (!lista[i].consentimento) lista[i].consentimento = { voz: { ok: false }, rosto: { ok: false } };
+    lista[i].consentimento.dados = autorizado
+      ? { ok: true, em: agoraISO(), texto: 'Tenho o consentimento desta pessoa para guardar a ficha neste computador' }
+      : { ok: false, em: agoraISO(), texto: 'Consentimento para guardar a ficha revogado' };
+    lista[i].atualizado = relogio();
+    if (!gravarPerfis(lista)) return { ok: false, erro: 'Não foi possível gravar o consentimento.' };
+    return { ok: true, perfil: lista[i] };
   }
   function registrar(p, campo, de, para) {
     if (!p.historico) p.historico = [];
@@ -929,7 +953,7 @@
     interpretarCadastroVoz: interpretarCadastroVoz,
     resolver: resolver, descrever: descrever, contexto: contexto, resumo: resumo,
     idade: idade, idadeDetalhada: idadeDetalhada, diasAteAniversario: diasAteAniversario,
-    dataValida: dataValida, consentir: consentir,
+    dataValida: dataValida, consentir: consentir, consentirDados: consentirDados,
     revogarConsentimento: revogarConsentimento,
     definirFoto: definirFoto, removerFoto: removerFoto,
     definirRosto: definirRosto, removerRosto: removerRosto,

@@ -26,12 +26,15 @@
     descricao: 400,
     preferencias: 400,
     observacoes: 800,
-    contato: 120
+    contato: 120,
+    compromissos: 600,
+    historico: 1200
   };
   var rotulo = {
     nome: 'Nome', apelido: 'Apelido', relacao: 'Relação',
     descricao: 'Descrição', preferencias: 'Preferências',
-    observacoes: 'Observações', contato: 'Contato autorizado'
+    observacoes: 'Observações', contato: 'Contato autorizado',
+    compromissos: 'Compromissos', historico: 'Histórico escrito por você'
   };
 
   var deposito = null;
@@ -83,20 +86,29 @@
     return 'p_' + relogio().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
   }
 
-  /** Valida e limpa um perfil recebido da interface. Nome é o único campo obrigatório. */
+  /** Valida e limpa um perfil recebido da interface. Nome é obrigatório e consentimento também. */
   function preparar(dados, atual) {
     var d = dados || {};
-    var p = atual ? Object.assign({}, atual) : { id: novoId(), criado: relogio() };
+    var p = atual ? Object.assign({}, atual) : { id: novoId(), criado: relogio(), consentimento: false };
     Object.keys(CAMPOS).forEach(function (campo) {
       if (d[campo] === undefined && atual) return;
       p[campo] = limpar(d[campo], CAMPOS[campo]);
     });
+    if (d.consentimento !== undefined) p.consentimento = d.consentimento === true;
     p.atualizado = relogio();
     return p;
   }
 
+  /**
+   * Só entra no cadastro com nome e com o consentimento declarado por quem
+   * cadastra. Sem o consentimento, a ficha nem é gravada — é a mesma regra do
+   * celular (`validarPessoa`).
+   */
   function validar(p) {
     if (!p.nome) return 'Informe o nome ou uma identificação para a pessoa.';
+    if (!p.consentimento) {
+      return 'Confirme que você tem o consentimento desta pessoa para guardar estas informações neste computador.';
+    }
     return '';
   }
 
@@ -130,6 +142,16 @@
     }
     if (!gravar(proxima)) return { ok: false, erro: 'Não foi possível gravar no armazenamento deste aparelho.' };
     return { ok: true, perfil: p };
+  }
+
+  /** Revoga o consentimento sem apagar a ficha: ela sai da conversa e do contexto. */
+  function revogarConsentimento(id) {
+    var lista = ler();
+    var i = lista.findIndex(function (p) { return p.id === id; });
+    if (i < 0) return { ok: false, erro: 'Perfil não encontrado.' };
+    lista[i] = Object.assign({}, lista[i], { consentimento: false, atualizado: relogio() });
+    if (!gravar(lista)) return { ok: false, erro: 'Não foi possível gravar no armazenamento deste aparelho.' };
+    return { ok: true, perfil: lista[i] };
   }
 
   function remover(id) {
@@ -182,15 +204,110 @@
     return (p.nome || 'sem nome') + (partes.length ? ' — ' + partes.join('. ') : '. Nenhuma informação além do nome.');
   }
 
+  /** Perfis que podem participar do contexto: consentimento não revogado. */
+  function consentidos() {
+    return listar().filter(function (p) { return p.consentimento !== false; });
+  }
+
   /** Bloco compacto para o contexto da IA: só nomes/apelidos, sem contatos. */
   function contexto() {
-    var lista = listar().slice(0, 12);
+    var lista = consentidos().slice(0, 12);
     if (!lista.length) return '';
     return lista.map(function (p) {
       return '- ' + p.nome + (p.apelido ? ' (' + p.apelido + ')' : '') +
         (p.relacao ? ' · ' + p.relacao : '') +
         (p.preferencias ? ' · prefere ' + p.preferencias : '');
     }).join('\n');
+  }
+
+  /* ---------- Bloco seguro na conversa ----------
+   * Porte de `contextoPessoasParaConsulta` do celular: só nome, apelido,
+   * relação e preferências entram na conversa. Contato, descrição, observações,
+   * compromissos e histórico nunca são enviados. Quando não há ficha, o bloco
+   * manda dizer que não encontrou em vez de deixar a IA completar com invenção.
+   * Perfil com consentimento revogado fica de fora.
+   */
+  var PISTAS = [
+    'quem e', 'quem sao', 'ficha', 'fichas', 'sobre a', 'sobre o',
+    'o que sabe', 'o que voce sabe', 'ultima interacao', 'ultima conversa'
+  ];
+
+  function participantes(lista) {
+    return (Array.isArray(lista) ? lista : []).filter(function (p) {
+      return p && typeof p.nome === 'string' && p.consentimento !== false;
+    });
+  }
+
+  function blocoParaConsulta(lista, consulta) {
+    var pessoas = participantes(lista);
+    var pergunta = ' ' + normalizar(consulta) + ' ';
+    if (!pergunta.trim()) return { bloco: '', nomes: [], tipo: 'nenhum' };
+
+    function citado(termo) {
+      var alvo = normalizar(termo);
+      return alvo.length >= 2 && pergunta.indexOf(' ' + alvo + ' ') >= 0;
+    }
+
+    var citadas = pessoas.filter(function (p) { return citado(p.nome); });
+    if (citadas.length) {
+      // Nome completo vence primeiro nome: "Ana Paula" não vira ambiguidade com "Ana".
+      var maior = citadas.reduce(function (m, p) {
+        return Math.max(m, normalizar(p.nome).length);
+      }, 0);
+      var completos = citadas.filter(function (p) { return normalizar(p.nome).length === maior; });
+      if (completos.some(function (p) { return normalizar(p.nome).indexOf(' ') >= 0; })) {
+        citadas = completos;
+      } else {
+        // Primeiro nome dito sozinho alcança os homônimos: “Ana” com “Ana” e
+        // “Ana Paula” na agenda é ambiguidade, não escolha silenciosa.
+        var primeiros = Object.create(null);
+        completos.forEach(function (p) { primeiros[normalizar(p.nome)] = true; });
+        citadas = pessoas.filter(function (p) {
+          var nome = normalizar(p.nome);
+          return primeiros[nome] || primeiros[nome.split(' ')[0]];
+        });
+      }
+    } else {
+      citadas = pessoas.filter(function (p) {
+        return citado(p.apelido) || citado(normalizar(p.nome).split(' ')[0]);
+      });
+    }
+
+    var falaDePessoa = citadas.length > 0 ||
+      PISTAS.some(function (pista) { return pergunta.indexOf(pista) >= 0; }) ||
+      pergunta.indexOf(' pessoa ') >= 0;
+    if (!falaDePessoa) return { bloco: '', nomes: [], tipo: 'nenhum' };
+
+    if (!citadas.length) {
+      return {
+        bloco: 'FICHAS DE PESSOAS — nenhuma ficha corresponde ao nome perguntado. Diga que não encontrou; ' +
+          'não invente dados nem atribua informações a outra pessoa.',
+        nomes: [],
+        tipo: 'ausente'
+      };
+    }
+    if (citadas.length > 1) {
+      var nomes = citadas.map(function (p) { return p.nome; });
+      return {
+        bloco: 'FICHAS DE PESSOAS — mais de uma ficha corresponde: ' + nomes.join(', ') +
+          '. Pergunte qual delas; não escolha sozinho e não invente.',
+        nomes: nomes,
+        tipo: 'ambiguo'
+      };
+    }
+
+    var pessoa = citadas[0];
+    var linhas = [
+      'FICHA DE PESSOA — dados fornecidos pelo próprio usuário; use apenas o que está aqui.',
+      '- Nome: ' + pessoa.nome
+    ];
+    if (pessoa.apelido) linhas.push('- Apelido: ' + pessoa.apelido);
+    if (pessoa.relacao) linhas.push('- Relação: ' + pessoa.relacao);
+    if (pessoa.preferencias) linhas.push('- Preferências: ' + pessoa.preferencias);
+    linhas.push('');
+    linhas.push('Contato, anotações, compromissos e histórico não estão disponíveis para envio. ' +
+      'Se a pergunta pedir algo que não está acima, diga que não encontrou — não invente.');
+    return { bloco: linhas.join('\n'), nomes: [pessoa.nome], tipo: 'detalhe' };
   }
 
   function exportar() {
@@ -204,7 +321,8 @@
     if (!perfis) return { ok: false, erro: 'Formato sem lista de perfis.' };
     var atuais = ler();
     var entraram = 0;
-    perfis.slice(0, LIMITE_PERFIS).forEach(function (p) {
+          perfis.slice(0, LIMITE_PERFIS).forEach(function (p) {
+      if (p.consentimento !== true) return;
       var novo = preparar(p, null);
       novo.criado = Number(p.criado) || novo.criado;
       if (!novo.nome) return;
@@ -238,10 +356,12 @@
     obter: obter,
     salvar: salvar,
     remover: remover,
+    revogarConsentimento: revogarConsentimento,
     buscar: buscar,
     resolver: resolver,
     descrever: descrever,
     contexto: contexto,
+    blocoParaConsulta: blocoParaConsulta,
     exportar: exportar,
     importar: importar,
     limparTudo: limparTudo,

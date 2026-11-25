@@ -72,6 +72,13 @@ provar de verdade.
 
 ## Etapa 4 — Memória e pessoas no PC
 
+**Estado:** entregue na 1.105.0 — regras da memória portadas para o JS (busca,
+  orçamento, citação), Markdown no formato do celular, cofre em pasta com
+  conflito preservado, consentimento nas fichas e bloco seguro na conversa. Os
+  limites (tema menor no celular, ficha antiga sem consentimento declarado,
+  nada medido em PC físico) estão no relatório
+  `docs/relatorios/2026-11-25_128-memoria-e-pessoas-pc.md`.
+
 **Entregável**
 - Memória em Markdown com busca, citação e sincronização (mesmo formato do
   celular, cofre em pasta escolhida).
@@ -146,7 +153,7 @@ consiga rodar, ou se o custo de manter duas interfaces passar o de uma reescrita
 ## O que fica declarado como não feito
 
 - Nenhuma etapa acima foi executada em PC físico nem em aparelho Android; as
-  Etapas 1, 2 e 3 têm código e teste local, não medição em hardware.
+  Etapas 1 a 4 têm código e teste local, não medição em hardware.
 - O pareamento entre dois aparelhos reais é o primeiro item do roteiro de teste
   em hardware (Etapa 7).
 - Funções exclusivas do celular (SMS, ligação, contatos, acessibilidade de tela)

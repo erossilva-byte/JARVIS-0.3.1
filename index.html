@@ -929,6 +929,7 @@
 
     <fieldset class="idp-bloco"><legend>Consentimento e privacidade</legend>
       <p class="dica">O cadastro de pessoas guarda apenas as informações que você fornecer. A referência visual é opcional, fica neste aparelho e não é prova de identidade.</p>
+      <label class="linha"><input id="idp-consent-dados" type="checkbox"><span>Tenho o consentimento desta pessoa<small>Obrigatório para criar a ficha. Sem esta confirmação o perfil não é salvo; apagar a ficha revoga o que foi guardado.</small></span></label>
       <label class="linha"><input id="idp-consent-rosto" type="checkbox"><span>A pessoa autoriza a referência visual<small>Opcional. Usa um hash da foto para semelhança de imagem — não é reconhecimento facial biométrico nem prova de identidade.</small></span></label>
     </fieldset>
 
@@ -1017,6 +1018,17 @@
     <label>Anotação<textarea id="mem-texto" rows="4" maxlength="4000" placeholder="Escreva o que o JARVIS deve lembrar. Por voz: “Jarvis, anote que prefiro respostas curtas.”"></textarea></label>
     <button id="mem-criar" type="button" class="primario">Criar nota</button>
     <p id="mem-status" class="dica" role="status" aria-live="polite">Limite de 240 notas e 512 kB. Apagar pede confirmação (e PIN, se cadastrado).</p>
+  </section>
+  <section class="grupo" id="mem-pasta-bloco" hidden>
+    <h3>Cofre em pasta (.md)</h3>
+    <p class="dica">Escolha a pasta do seu Obsidian neste computador. O JARVIS grava um arquivo <code>.md</code> por nota, no mesmo formato do celular, e traz de volta o que você editar lá. Nada é apagado: quando as duas cópias mudaram, a nota fica em conflito e as duas versões são preservadas.</p>
+    <div class="audio-head"><b>Pasta conectada</b><output id="mem-pasta-nome">nenhuma</output></div>
+    <div class="botoes">
+      <button id="mem-pasta-escolher" type="button" class="secundario">Escolher pasta</button>
+      <button id="mem-pasta-sincronizar" type="button" class="secundario">Sincronizar agora</button>
+      <button id="mem-pasta-esquecer" type="button" class="secundario perigo">Desconectar pasta</button>
+    </div>
+    <p id="mem-pasta-status" class="dica" role="status" aria-live="polite">Escolha uma pasta para ativar a sincronização.</p>
   </section>
   <section class="grupo" id="obs-atalho">
     <h3>Obsidian</h3>
@@ -1509,6 +1521,7 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 </aside>
 
 <script src="plataforma.js"></script>
+<script src="memoria_regras.js"></script>
 <script src="memoria.js"></script>
 <script src="vendor/three.min.js"></script>
 <script src="orbita.js"></script>

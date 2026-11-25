@@ -196,6 +196,9 @@ const MEM = (() => {
   try { return (typeof window !== 'undefined' && window.MemoriaJarvis) || null; } catch (e) { return null; }
 })();
 const MEM_ESTADO = MEM ? 'pronta' : 'indisponivel';
+// Regras da memória portadas do celular (1.105.0): busca com motivo, orçamento de
+// contexto, citação e plano de sincronização com a pasta escolhida.
+const MEM_REGRAS = (typeof window !== 'undefined' && window.MemoriaRegras) ? window.MemoriaRegras : null;
 const PC = (plataforma === 'desktop' && nativoDesk) ? {
   status: async () => {
     const s = await nativo('status_pc', {});
@@ -3512,9 +3515,24 @@ function promptSistema() {
   const apps = Object.keys(LISTA_APPS).join(', ');
   const cts = store.get('compartilhar_contatos', '0') === '1' ? (Object.keys(contatos()).join(', ') || '(nenhum cadastrado)') : '(nomes omitidos por privacidade)';
   const memoria = store.get('memoria_ativa', '0') === '1' && usarMemoriaNestaConversa ? String(store.get('memoria', '')).slice(0, 1200).trim() : '';
-  const cofreCtx = (MEM && usarMemoriaNestaConversa && typeof MEM.contextoRelevante === 'function') ? MEM.contextoRelevante(perguntaAtual, 1600) : '';
+  // Contexto do cofre: orçamento de caracteres e notas realmente relacionadas,
+  // com o título de cada uma no próprio bloco (é a citação da fonte na resposta).
+  const achadoCofre = (MEM && MEM_REGRAS && usarMemoriaNestaConversa)
+    ? MEM_REGRAS.contextoRelevante(MEM.carregar(), perguntaAtual, { orcamento: 1600, limite: 3 })
+    : null;
+  const cofreCtx = achadoCofre
+    ? achadoCofre.texto
+    : ((MEM && usarMemoriaNestaConversa && typeof MEM.contextoRelevante === 'function') ? MEM.contextoRelevante(perguntaAtual, 1600) : '');
   const identCfg = (IDENT && IDENT.config) ? IDENT.config() : null;
-  const pessoasCtx = (PESSOAS && (!identCfg || identCfg.contexto) && store.get('pessoas_contexto', '1') === '1') ? PESSOAS.contexto() : '';
+  // Bloco seguro das fichas: só nome, apelido, relação e preferências. Contato,
+  // observações, compromissos e histórico nunca entram na conversa.
+  const FICHAS = (typeof window !== 'undefined' && window.PessoasJarvis) ? window.PessoasJarvis : null;
+  const blocoFichas = (FICHAS && typeof FICHAS.blocoParaConsulta === 'function')
+    ? FICHAS.blocoParaConsulta(PESSOAS ? PESSOAS.listar() : [], perguntaAtual)
+    : { bloco: '', tipo: 'nenhum' };
+  const pessoasCtx = (PESSOAS && (!identCfg || identCfg.contexto) && store.get('pessoas_contexto', '1') === '1')
+    ? (blocoFichas.bloco || (blocoFichas.tipo === 'nenhum' ? PESSOAS.contexto() : ''))
+    : '';
   const aprendCtx = (APRENDIZADO && store.get('aprendizado_ativo', '1') === '1') ? APRENDIZADO.contexto() : '';
   const pessoaAtualCtx = pessoaAtual ? ('Pessoa falando agora (identificação local; confirme antes de qualquer ação sensível): ' + pessoaAtual.nome + (pessoaAtual.apelido ? ' (“' + pessoaAtual.apelido + '”)' : '') + (pessoaAtual.relacao ? ' · ' + pessoaAtual.relacao : '') + '. Use somente os dados do perfil dela e não invente o que não está registrado.') : '';
   const ferr = disponiveis().map((k) => `- ${k}: ${ACOES[k].ajuda || ''}`).join('\n');
@@ -9016,6 +9034,9 @@ if (memBusca) { let memBuscaTimer = 0; memBusca.addEventListener('input', () => 
 ['#mem-exportar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => exportarMemoria(); });
 ['#mem-esvaziar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => esvaziarMemoria(); });
 ['#mem-liberar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => liberarEspacoMemoria(); });
+['#mem-pasta-escolher'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => escolherMemPasta(); });
+['#mem-pasta-sincronizar'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => sincronizarMemPasta(); });
+['#mem-pasta-esquecer'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => esquecerMemPasta(); });
 const memFechar = $('#mem-fechar');
 if (memFechar) memFechar.onclick = () => fecharPaineis();
 const memTemaSel = $('#mem-tema');
@@ -9373,9 +9394,12 @@ function renderMemoria() {
   lista.textContent = '';
   const busca = String($('#mem-busca') ? $('#mem-busca').value : '').trim();
   const achados = busca
-    ? (typeof MEM.buscarSemantica === 'function'
-      ? MEM.buscarSemantica(busca, 100)
-      : MEM.buscar(busca).map((n) => ({ nota: n, score: null })))
+    ? (MEM_REGRAS
+      ? MEM_REGRAS.buscarNotas(MEM.carregar(), busca, { limite: 100 })
+        .map((x) => ({ nota: x.nota, score: x.pontuacao, motivo: x.motivo }))
+      : (typeof MEM.buscarSemantica === 'function'
+        ? MEM.buscarSemantica(busca, 100)
+        : MEM.buscar(busca).map((n) => ({ nota: n, score: null }))))
     : MEM.listar(memTemaAtual()).map((n) => ({ nota: n, score: null }));
   const notas = achados.map((x) => x.nota);
   const contagem = $('#mem-contagem');
@@ -9405,21 +9429,120 @@ function renderMemoria() {
     apagar.textContent = 'apagar';
     apagar.setAttribute('aria-label', 'Apagar a nota ' + n.titulo);
     apagar.onclick = () => apagarNotaMemoria(n.id);
-    cab.append(tema, titulo, apagar);
+    const citar = document.createElement('button');
+    citar.type = 'button';
+    citar.className = 'mini';
+    citar.textContent = 'citar';
+    citar.setAttribute('aria-label', 'Copiar a citação da nota ' + n.titulo);
+    citar.onclick = () => copiarCitacaoMemoria(n);
+    cab.append(tema, titulo, citar, apagar);
     const texto = document.createElement('p');
     texto.textContent = n.texto;
     const meta = document.createElement('small');
     meta.textContent = new Date(n.atualizado).toLocaleString('pt-BR') +
       (n.tags.length ? ' · ' + n.tags.join(', ') : '') +
       ' · ' + (n.origem === 'voz' ? 'anotada por voz' : 'anotada no painel') +
-      (achado.score != null && busca ? ' · relevância ' + Math.round(achado.score * 100) + '%' : '');
+      (n.caminho ? ' · ' + n.caminho : '') +
+      (achado.score != null && busca ? ' · relevância ' + Math.round(achado.score * 100) + '%' : '') +
+      (achado.motivo ? ' · ' + achado.motivo : '');
     item.append(cab, texto, meta);
     lista.appendChild(item);
   });
 }
+/* Citação da nota: o mesmo par título + tema que o prompt leva à IA, pronto
+ * para colar numa conversa ou num documento. Sem termo inventado. */
+function citacaoDaNota(n) {
+  if (!n) return '';
+  const tema = (MEM_REGRAS ? MEM_REGRAS.temaNome(n.tema) : n.tema) || 'Contextos';
+  const corpo = String(n.texto || '').replace(/\s+/g, ' ').trim();
+  const trecho = corpo.length > 160 ? corpo.slice(0, 160) + '…' : corpo;
+  return '> ' + trecho + '\n> — ' + n.titulo + ' (' + tema + ')' + (n.caminho ? ' · ' + n.caminho : '');
+}
+function copiarCitacaoMemoria(n) {
+  const texto = citacaoDaNota(n);
+  if (!texto) return;
+  Promise.resolve(navigator.clipboard && navigator.clipboard.writeText
+    ? navigator.clipboard.writeText(texto)
+    : Promise.reject(new Error('sem área de transferência')))
+    .then(() => memStatus('Citação copiada: ' + n.titulo + ' (' + (MEM_REGRAS ? MEM_REGRAS.temaNome(n.tema) : n.tema) + ').'))
+    .catch(() => memStatus('Não foi possível copiar a citação neste dispositivo.', true));
+}
+
+/* ---------- Cofre em pasta no PC (Etapa 4) ----------
+ * O escolher/sincronizar fala com o processo principal (memoria_pasta.js); a
+ * regra de conciliação é a testada em Node. Sem pasta escolhida, o bloco avisa
+ * em vez de fingir sincronização.
+ */
+function memPastaStatus(texto, erro) {
+  const el = $('#mem-pasta-status');
+  if (!el) return;
+  el.textContent = texto;
+  el.classList.toggle('erro', !!erro);
+}
+function memPastaNome(pasta) {
+  const el = $('#mem-pasta-nome');
+  if (!el) return;
+  el.textContent = pasta && pasta.caminho ? (pasta.nome || pasta.caminho) + (pasta.existe === false ? ' (indisponível)' : '') : 'nenhuma';
+}
+async function atualizarMemPasta() {
+  const bloco = $('#mem-pasta-bloco');
+  if (bloco) bloco.hidden = !nativoDesk;
+  if (!nativoDesk) return;
+  try {
+    const r = await nativo('memoria_pasta', {});
+    memPastaNome(r && r.pasta);
+    if (r && r.erro) memPastaStatus(r.erro, true);
+  } catch (e) {
+    memPastaStatus('Não foi possível consultar a pasta conectada: ' + (e && e.message ? e.message : e), true);
+  }
+}
+async function escolherMemPasta() {
+  if (!nativoDesk) { memPastaStatus('O cofre em pasta só existe no aplicativo do PC.', true); return; }
+  try {
+    const r = await nativo('memoria_escolher_pasta', {});
+    if (!r || !r.ok) { memPastaStatus((r && r.erro) || 'Não foi possível escolher a pasta.', true); return; }
+    if (r.cancelado) { memPastaStatus('Nenhuma pasta escolhida.'); return; }
+    memPastaNome(r.pasta);
+    memPastaStatus('Pasta conectada. Sincronize para levar as notas do cofre para lá.');
+  } catch (e) {
+    memPastaStatus('Falha ao abrir o seletor de pastas: ' + (e && e.message ? e.message : e), true);
+  }
+}
+async function esquecerMemPasta() {
+  if (!nativoDesk) return;
+  try {
+    await nativo('memoria_esquecer_pasta', {});
+    memPastaNome(null);
+    memPastaStatus('Pasta desconectada. As notas continuam neste computador; nada foi apagado na pasta.');
+  } catch (e) {
+    memPastaStatus('Não foi possível desconectar a pasta: ' + (e && e.message ? e.message : e), true);
+  }
+}
+async function sincronizarMemPasta() {
+  if (!nativoDesk) { memPastaStatus('O cofre em pasta só existe no aplicativo do PC.', true); return; }
+  if (!MEM) { memPastaStatus('A memória conectada não carregou neste dispositivo.', true); return; }
+  memPastaStatus('Sincronizando…');
+  try {
+    const r = await nativo('memoria_sincronizar', { notas: MEM.carregar() });
+    if (!r || !r.ok) { memPastaStatus((r && r.erro) || 'Não foi possível sincronizar.', true); return; }
+    if (Array.isArray(r.notas) && typeof MEM.substituirNotas === 'function') MEM.substituirNotas(r.notas);
+    renderMemoria();
+    const partes = [r.resumo || 'sincronizado'];
+    if (r.conflitos && r.conflitos.length) {
+      partes.push('Conflitos preservados: ' + r.conflitos.slice(0, 3).map((c) => c.titulo).join(', ') +
+        (r.conflitos.length > 3 ? '…' : ''));
+    }
+    if (r.falhas && r.falhas.length) partes.push('Falhas: ' + r.falhas.slice(0, 2).join('; '));
+    memPastaStatus(partes.join('. ') + '.');
+  } catch (e) {
+    memPastaStatus('Falha na sincronização: ' + (e && e.message ? e.message : e), true);
+  }
+}
+
 function abrirMemoria() {
   renderMemoria();
   if (typeof atualizarObsUI === 'function') atualizarObsUI().catch(() => {});
+  atualizarMemPasta().catch(() => {});
   abrirPainel('#painel-memoria');
   if (PC) atualizarPC().catch(() => {});
 }

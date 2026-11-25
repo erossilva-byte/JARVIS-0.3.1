@@ -643,7 +643,20 @@ function pareamentoDoPC() {
   }
   return clientePareamento;
 }
+// Cofre em pasta (Etapa 4): leitura e gravação de Markdown na pasta escolhida.
+const MEM_PASTA = require(path.join(__dirname, 'memoria_pasta.js'));
+let cofreMemoria = null;
+function cofreDoPC() {
+  if (!cofreMemoria) {
+    cofreMemoria = MEM_PASTA.criarCofre({ dirDados: app.getPath('userData'), dialogo: dialog });
+  }
+  return cofreMemoria;
+}
 Object.assign(acoes, {
+  memoria_pasta: async () => cofreDoPC().pastaAtual(),
+  memoria_escolher_pasta: async () => cofreDoPC().escolher(),
+  memoria_esquecer_pasta: async () => cofreDoPC().esquecer(),
+  memoria_sincronizar: async ({ notas }) => cofreDoPC().sincronizar(notas),
   pareamento_celular: async () => pareamentoDoPC().estado(),
   parear_celular: async ({ ip, codigo }) => pareamentoDoPC().parear({ ip, codigo }),
   status_celular: async () => pareamentoDoPC().status(),

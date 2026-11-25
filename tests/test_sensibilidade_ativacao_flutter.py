@@ -60,7 +60,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_083-ativacao-mais-confiavel.md")
 
 # 1. Versão, changelog, suíte e relatório.
-exigir("version: 1.104.0+110400" in pubspec,
+exigir("version: 1.105.0+110500" in pubspec,
        "versão não atualizada para 1.70.0")
 exigir("1.70.0" in changelog and "sensibilidade" in changelog.lower(),
        "CHANGELOG sem o bloco 1.70.0 da sensibilidade")
