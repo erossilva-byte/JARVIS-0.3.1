@@ -1,3 +1,21 @@
+## 1.99.0 — ligação com “chama” no segundo plano e paridade das ações em teste
+
+### O que mudou
+- **Ligação por voz com o app fechado**: a regra de ligação do segundo plano
+  passou a aceitar os mesmos verbos do app aberto — “chama o Murilo” e “chamar
+  a Ana” agora ligam nos dois modos. Antes, no fundo, caíam na IA.
+- **Contrato de paridade das ações** (`tests/test_bloco_122.py`): tabela
+  explícita do que existe na tela, no segundo plano, só num dos dois ou em
+  nenhum. Se a divergência voltar, o projeto falha.
+- **Verbos de ligação e mensagem comparados** entre Dart e Kotlin pelo contrato,
+  além dos apps de mensagem e das regras de cada ação.
+
+### O que a tabela revelou
+- Hora e data são respondidas no aparelho **só no segundo plano**; com a tela
+  aberta a pergunta gasta provedor de IA. Ficou declarado como pendência.
+- Ficha de pessoa, circuito, localização e música por nome continuam só na tela.
+- Notas de memória, notificações, visão, tarefas e arquivos continuam sem voz.
+
 ## 1.98.0 — registros antigos sem PIN
 
 ### O que mudou
