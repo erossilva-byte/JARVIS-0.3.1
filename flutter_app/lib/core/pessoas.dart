@@ -314,7 +314,20 @@ ContextoPessoasConversa contextoPessoasParaConsulta(
     final maior = citadas
         .map((p) => normalizar(p.nome).length)
         .reduce((a, b) => a > b ? a : b);
-    citadas = citadas.where((p) => normalizar(p.nome).length == maior).toList();
+    final completos =
+        citadas.where((p) => normalizar(p.nome).length == maior).toList();
+    if (completos.any((p) => normalizar(p.nome).contains(' '))) {
+      citadas = completos;
+    } else {
+      // Primeiro nome dito sozinho alcança os homônimos: “Ana” com “Ana” e
+      // “Ana Paula” na agenda é ambiguidade, não escolha silenciosa.
+      final primeiros = completos.map((p) => normalizar(p.nome)).toSet();
+      citadas = pessoas.where((p) {
+        final nome = normalizar(p.nome);
+        return primeiros.contains(nome) ||
+            primeiros.contains(nome.split(' ').first);
+      }).toList();
+    }
   } else {
     citadas = pessoas
         .where((p) => citado(p.apelido) || citado(p.nome.split(' ').first))

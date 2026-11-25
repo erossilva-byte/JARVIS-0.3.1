@@ -623,9 +623,10 @@ String _duracao(Object? bruto) {
   return '$minutos min ${resto.toString().padLeft(2, '0')} s';
 }
 
-/// Data curta do RSS em pt-BR; texto original quando não dá para ler.
+/// Data curta do RSS em pt-BR; vazio quando não dá para ler.
 String _dataCurta(String bruto) {
-  final data = DateTime.tryParse(bruto.trim());
+  final texto = bruto.trim();
+  final data = DateTime.tryParse(texto) ?? _dataDoRss(texto);
   if (data == null) return '';
   const meses = [
     'jan',
@@ -643,6 +644,45 @@ String _dataCurta(String bruto) {
   ];
   final local = data.toLocal();
   return '${local.day} ${meses[local.month - 1]} ${local.year}';
+}
+
+/// O RSS do Google usa RFC 822 (“Sun, 22 Nov 2026 10:30:00 GMT”), formato que
+/// `DateTime.tryParse` não lê. Aqui é o bastante para a data curta da notícia.
+DateTime? _dataDoRss(String bruto) {
+  final achado = RegExp(
+          r'(\d{1,2})\s+([A-Za-z]{3})\.?\s+(\d{4})(?:\s+(\d{1,2}):(\d{2}))?')
+      .firstMatch(bruto);
+  if (achado == null) return null;
+  const meses = {
+    'jan': 1,
+    'fev': 2,
+    'feb': 2,
+    'mar': 3,
+    'abr': 4,
+    'apr': 4,
+    'mai': 5,
+    'may': 5,
+    'jun': 6,
+    'jul': 7,
+    'ago': 8,
+    'aug': 8,
+    'set': 9,
+    'sep': 9,
+    'out': 10,
+    'oct': 10,
+    'nov': 11,
+    'dez': 12,
+    'dec': 12,
+  };
+  final mes = meses[achado.group(2)!.toLowerCase()];
+  if (mes == null) return null;
+  return DateTime(
+    int.parse(achado.group(3)!),
+    mes,
+    int.parse(achado.group(1)!),
+    int.tryParse(achado.group(4) ?? '') ?? 0,
+    int.tryParse(achado.group(5) ?? '') ?? 0,
+  );
 }
 
 String _tag(String corpo, String nome) {

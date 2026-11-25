@@ -118,7 +118,7 @@ exigir("JarvisPonteIa.usarVoz(voz)" in servico,
        "o MP3 de fundo não tem por onde tocar")
 
 # 5. Versão, suíte e registro -------------------------------------------------
-exigir("version: 1.102.0+110200" in ler(APP / "pubspec.yaml"),
+exigir("version: 1.103.0+110300" in ler(APP / "pubspec.yaml"),
        "versão não atualizada para 1.89.2")
 exigir("python3 tests/test_bloco_112.py" in ler(RAIZ / "package.json"),
        "contrato do bloco fora da suíte")

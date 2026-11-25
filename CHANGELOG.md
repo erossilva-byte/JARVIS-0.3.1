@@ -1,3 +1,29 @@
+## 1.103.0 — asserts ligados e triagem dos testes puros
+
+### O que mudou
+- **O executor dos testes puros passou a usar `--enable-asserts`**: sem a flag,
+  o Dart roda com os asserts desligados e os 50 arquivos de `tool/` passavam
+  sem verificar nada. Era o “OK” mais caro da suíte.
+- **16 defeitos reais corrigidos** na triagem: resumo da sensibilidade
+  interpolava a função em vez do valor; bitola de cabo e “null check operator”
+  não caíam na especialidade certa; “liga o volume” e “como liga o bluetooth”
+  discavam; “Onde eu estou agora?” não virava comando; memória aceitava nota
+  sem relação por colisão do embedding; sincronização não reconhecia
+  `Motor.md` como a nota “Motor”; notícia do RSS ficava sem data; o pedido de
+  app perdia/ganhava conector no alvo, escolhia o app pela ordem do dicionário
+  e transformava “abre o Gmail” em escrever; “deixa pra lá” não cancelava a
+  ficha; “Ana” com “Ana Paula” na agenda escolhia em silêncio; “Murilo 2”
+  resolvia para “Murilo”.
+- **5 expectativas velhas alinhadas**: limite de 512 kB exato, espaço
+  codificado como `+` na consulta, duas comparações de texto que ignoravam
+  caixa e a máscara de PIN em dígitos colados a letra (mantida, por segurança).
+- **Contrato 126** prende a flag, a cobertura do executor e cada correção.
+
+### Limites declarados
+- Nada foi rodado em aparelho Android nem em PC físico.
+- O Kotlin não compila nesta máquina; as guardas de ligação do Dart foram
+  alinhadas às do `JarvisMensagens` por leitura e contrato.
+
 ## 1.102.0 — painel do PC com os dois status (Etapa 2)
 
 ### O que mudou

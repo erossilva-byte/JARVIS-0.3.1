@@ -353,11 +353,16 @@ class PedidoLigacao {
 PedidoLigacao? interpretarLigacao(String texto) {
   final limpo = _limpar(texto);
   if (limpo.isEmpty) return null;
+  // Pergunta não disca: “como liga o bluetooth” é conversa, como no segundo plano.
+  if (limpo.startsWith('como ') || limpo.startsWith('por que ')) return null;
   if (!RegExp(r'\b(liga|ligar|ligue|disca|discar|chama|chamar)\b')
       .hasMatch(limpo)) {
     return null;
   }
-  if (RegExp(r'\b(desliga|desligar|ligar a|ligar o|ligue a|ligue o)\b')
+  // Mesma guarda do segundo plano (`JarvisMensagens`): lanterna, volume e alarme
+  // são comandos do aparelho, não ligação — “liga o volume” não disca para ninguém.
+  if (RegExp(
+          r'\b(desliga|desligar|lanterna|volume|alarme|ligar a|ligar o|ligue a|ligue o)\b')
       .hasMatch(limpo)) {
     return null;
   }

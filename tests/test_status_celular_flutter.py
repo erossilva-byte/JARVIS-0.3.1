@@ -55,7 +55,7 @@ aparelho_kt = ler(KOTLIN / "JarvisAparelho.kt")
 comandos_kt = ler(KOTLIN / "JarvisComandos.kt")
 
 # 1. Versão, changelog e relatório do ajuste.
-exigir("version: 1.102.0+110200" in pubspec, "versão não atualizada para 1.66.0")
+exigir("version: 1.103.0+110300" in pubspec, "versão não atualizada para 1.66.0")
 exigir("1.66.0" in changelog, "CHANGELOG sem 1.66.0")
 exigir(
     (RAIZ / "docs" / "relatorios" / "2026-11-19_079-status-celular.md").is_file(),

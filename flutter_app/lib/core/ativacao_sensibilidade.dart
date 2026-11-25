@@ -82,5 +82,5 @@ class AtivacaoSensibilidade {
   }
 
   static String resumo(int valor) =>
-      '$rotulo · limiar ${limiar(valor).toStringAsFixed(2)}';
+      '${rotulo(valor)} · limiar ${limiar(valor).toStringAsFixed(2)}';
 }

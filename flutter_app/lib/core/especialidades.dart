@@ -118,7 +118,8 @@ final List<({String id, RegExp regra})> _regrasEspecialidade = [
         r'contator|disjuntor|seccionadora|rel[eé] t[eé]rmico|'
         r'partida direta|estrela.?tri[aâ]ngulo|soft.?starter|'
         r'texto estruturado|diagrama el[eé]trico|quadro el[eé]trico|'
-        r'comando el[eé]trico|motor trif[aá]sico|dimensiona.+(motor|circuito|cabo))'),
+        r'comando el[eé]trico|motor trif[aá]sico|dimensiona.+(motor|circuito|cabo)|'
+        r'bitola.+(cabo|condutor|fio))'),
   ),
   (
     id: 'programacao',
@@ -126,7 +127,7 @@ final List<({String id, RegExp regra})> _regrasEspecialidade = [
         r'(\bcodigo\b|\bprograma(r|cao|dor)?\b|python|dart|kotlin|javascript|'
         r'typescript|\bjava\b|\bc#|c\+\+|flutter|react|node\.?js|'
         r'\bsql\b|\bhtml\b|\bcss\b|\bapi\b|\bjson\b|regex|'
-        r'\bbug\b|exce[cç][aã]o|null pointer|stack ?trace|compila|'
+        r'\bbug\b|exce[cç][aã]o|null (?:pointer|check operator)|stack ?trace|compila|'
         r'refator|teste unit[aá]rio|\bfun[cç][aã]o\b|\bclasse\b|revis.+(c[oó]digo|fun[cç][aã]o|arquivo))'),
   ),
 ];

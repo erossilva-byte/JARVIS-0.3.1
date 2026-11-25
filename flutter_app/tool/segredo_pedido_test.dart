@@ -43,6 +43,8 @@ void main() {
       'texto já mascarado mudou');
   assert(protegerPinNoPedido('123456789') == '123456789',
       'nove dígitos não são PIN deste app');
-  assert(protegerPinNoPedido('12345abc') == '12345abc',
-      'dígitos colados em letra não são sequência isolada');
+  // Dígitos colados a letra continuam mascarados: o lado seguro é esconder,
+  // não arriscar deixar um PIN escrito no histórico.
+  assert(protegerPinNoPedido('12345abc') == '${textoOcultoNoPedido}abc',
+      'dígitos colados em letra deveriam ser mascarados');
 }

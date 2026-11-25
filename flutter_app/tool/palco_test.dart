@@ -44,13 +44,16 @@ void main() {
     assert(pedidoPalco(texto) == null, 'palco abriu à toa em: $texto');
   }
 
-  // 3. Endereços: sem chave, com o termo codificado.
+  // 3. Endereços: sem chave, com o termo codificado no parâmetro de busca.
   assert(
       urlDeBuscaImagens('motor elétrico')
           .startsWith('https://commons.wikimedia.org/w/api.php'),
       'URL de imagens errada');
-  assert(urlDeBuscaImagens('motor elétrico').contains('motor%20el%C3%A9trico'),
-      'consulta de imagem não foi codificada');
+  final buscaImagem = Uri.parse(urlDeBuscaImagens('motor elétrico'));
+  assert(buscaImagem.queryParameters['gsrsearch'] == 'motor elétrico',
+      'consulta de imagem não foi preservada: ${buscaImagem.query}');
+  assert(!urlDeBuscaImagens('motor elétrico').contains('motor elétrico'),
+      'consulta de imagem saiu sem codificação');
   assert(
       urlDeBuscaNoticias('eleições')
           .startsWith('https://news.google.com/rss/search'),

@@ -123,7 +123,7 @@ bool confirmacaoDeFicha(String texto) => RegExp(
 /// “Cancela”, “não”: joga fora a ficha que estava esperando confirmação.
 bool cancelamentoDeFicha(String texto) => RegExp(
       r'^(?:jarvis )?(?:cancela|cancele|cancelar|deixa|deixe|nao|nao quero)'
-      r'(?: a ficha)?$',
+      r'(?: a ficha)?(?: (?:pra|para) la)?$',
     ).hasMatch(_limpo(texto));
 
 String _limpo(String texto) => normalizar(texto)

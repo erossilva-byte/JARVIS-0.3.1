@@ -126,8 +126,10 @@ String _semAcento(String texto) {
   return saida.toString();
 }
 
-String _limpar(String texto) =>
-    _semAcento(texto).replaceAll(RegExp(r'\s+'), ' ').trim();
+String _limpar(String texto) => _semAcento(texto)
+    .replaceAll(RegExp(r'\s+'), ' ')
+    .replaceAll(RegExp(r'[?!.]+$'), '')
+    .trim();
 
 class InterpretadorComandos {
   const InterpretadorComandos._();

@@ -266,7 +266,9 @@ List<ResultadoMemoria> buscarNotas(
     final similaridade = cosseno(alvo, vetor);
     final encontrados = <String>{};
     final literal = _literal(nota, termos, encontrados);
-    if (literal == 0 && similaridade < 0.10) continue;
+    // Sem nenhuma palavra em comum, só entra quem tem similaridade de fato
+    // alta; abaixo disso é colisão do embedding, não relação.
+    if (literal == 0 && similaridade < 0.35) continue;
     final recente = _recencia(nota.atualizadaEm, quando);
     final uso = (nota.usos / 10).clamp(0, 1).toDouble();
     final pontuacao = (0.50 * similaridade) +
@@ -279,7 +281,7 @@ List<ResultadoMemoria> buscarNotas(
       pontuacao: pontuacao,
       cosseno: similaridade,
       motivo: _motivo(encontrados, nota, quando, recente,
-          literal == 0 && similaridade >= 0.10),
+          literal == 0 && similaridade >= 0.35),
     ));
   }
 

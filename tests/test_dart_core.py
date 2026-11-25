@@ -78,6 +78,11 @@ CASOS = (
     ("tool/nome_contato_test.dart", "nomes de contato: apelido, emoji, erro de fala e empate"),
     ("tool/pedido_apelido_test.dart", "apelido de contato: ensinar, esquecer e não sequestrar conversa"),
     ("tool/mapa_voz_test.dart", "mapa da voz: pergunta, catálogo e total de telas"),
+    ("tool/aparelho_test.dart", "aparelho: estado, volume, brilho, voz e ligação"),
+    ("tool/dispositivo_test.dart", "dispositivo: central do aparelho e honestidade"),
+    ("tool/engenharia_test.dart", "engenharia: unidades, fórmulas e limites"),
+    ("tool/pedido_ficha_test.dart", "pedido de ficha: dados, confirmação e cancelamento"),
+    ("tool/tarefas_test.dart", "tarefas e automações: estado, ordem e limites"),
     ("tool/segredo_pedido_test.dart", "PIN no histórico: 4 a 8 dígitos mascarados, telefone preservado"),
     ("tool/pin_sem_colisao_test.dart", "máscara de PIN não atrapalha apelido com número nem envio com número"),
     ("tool/ligacao_paridade_test.dart", "ligação: mesmos verbos do segundo plano e destino limpo"),
@@ -93,7 +98,7 @@ def main() -> int:
         return 0
     for caminho, rotulo in CASOS:
         r = subprocess.run(
-            [dart, "run", caminho],
+            [dart, "run", "--enable-asserts", caminho],
             cwd=RAIZ / "flutter_app",
             capture_output=True,
             text=True,

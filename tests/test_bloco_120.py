@@ -100,8 +100,8 @@ changelog = ler(RAIZ / "CHANGELOG.md")
 pacote = ler(RAIZ / "package.json")
 relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-25_120-mascara-e-comandos.md")
-exigir("version: 1.102.0+110200" in pubspec,
-       "pubspec.yaml não está em 1.102.0+110200")
+exigir("version: 1.103.0+110300" in pubspec,
+       "pubspec.yaml não está em 1.103.0+110300")
 exigir("## 1.97.0" in changelog, "CHANGELOG.md não tem o bloco 1.97.0")
 exigir(relatorio.is_file(), "falta o relatório do bloco 120")
 exigir("test_bloco_120.py" in pacote, "package.json não roda o contrato 120")

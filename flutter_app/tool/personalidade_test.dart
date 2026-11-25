@@ -39,7 +39,8 @@ void main() {
   final equilibrado = estiloDoTurno(const Personalidade(), 'meu computador está lento');
   assert(equilibrado.prompt.contains('PERSONALIDADE OBRIGATÓRIA'), 'equilibrado sem regra obrigatória');
   assert(equilibrado.prompt.contains('nunca com a pessoa'), 'falta limite contra piada com a pessoa');
-  assert(equilibrado.prompt.contains('não copie falas'), 'falta proibição de imitar filmes');
+  assert(equilibrado.prompt.toLowerCase().contains('não copie falas'),
+      'falta proibição de imitar filmes');
   assert(equilibrado.prompt.contains('A informação vem antes da graça'), 'falta ordem informação/humor');
   assert(equilibrado.angulo != null, 'equilibrado deveria receber um ângulo');
 

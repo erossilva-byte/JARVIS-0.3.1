@@ -20,7 +20,8 @@ Future<void> main() async {
   // 2. Limite de conteúdo em bytes, não em caracteres.
   assert(validarConteudoArquivo('texto') == null, 'texto curto recusado');
   assert(validarConteudoArquivo('a' * (limiteBytesArquivo + 1)) != null, 'texto acima de 512 kB aceito');
-  assert(validarConteudoArquivo('ç' * (limiteBytesArquivo ~/ 2)) != null, 'bytes de acento não contados');
+  assert(validarConteudoArquivo('ç' * (limiteBytesArquivo ~/ 2 + 1)) != null,
+      'bytes de acento não contados');
 
   // 3. Caminho não escapa da raiz.
   final base = p.join(Directory.systemTemp.path, 'base-jarvis');

@@ -169,6 +169,12 @@ PlanoSync planejarSincronizacao(
   }
 
   final usados = <String>{};
+  // O caminho gerado pelo título é sempre minúsculo; a pasta pode ter “Motor.md”.
+  // Este índice deixa os dois se encontrarem sem tratar arquivos diferentes como iguais.
+  final porCaminhoMinusculo = <String, String>{};
+  for (final caminho in porCaminho.keys) {
+    porCaminhoMinusculo.putIfAbsent(caminho.toLowerCase(), () => caminho);
+  }
   final locaisPorTitulo = <String, NotaMemoria>{};
   for (final nota in locais) {
     locaisPorTitulo.putIfAbsent(chaveTitulo(nota.titulo), () => nota);
@@ -227,8 +233,15 @@ PlanoSync planejarSincronizacao(
     }
 
     // Nota local ainda sem caminho: destino pelo título.
-    final alvo = caminhoParaTitulo(nota.titulo);
-    final remoto = porCaminho[alvo];
+    var alvo = caminhoParaTitulo(nota.titulo);
+    var remoto = porCaminho[alvo];
+    if (remoto == null) {
+      final real = porCaminhoMinusculo[alvo.toLowerCase()];
+      if (real != null) {
+        alvo = real;
+        remoto = porCaminho[real];
+      }
+    }
     if (remoto != null) {
       usados.add(alvo);
       if (remoto.hash == hashLocal) {

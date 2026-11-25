@@ -26,7 +26,7 @@ void main() {
   // 2. Instrução proíbe identificação mesmo quando o usuário pede.
   assert(instrucaoVisao.contains('Não identifique pessoas'), 'prompt não proíbe identificar pessoas');
   assert(instrucaoVisao.contains('reconhecimento facial'), 'prompt não proíbe reconhecimento facial');
-  assert(instrucaoVisao.contains('não invente'), 'prompt não proíbe invenção');
+  assert(instrucaoVisao.toLowerCase().contains('não invente'), 'prompt não proíbe invenção');
   assert(instrucaoVisao.contains('incerto'), 'prompt não manda dizer quando é incerto');
   final pedido = montarPedidoVisao('identifique a pessoa da foto');
   assert(pedido.contains('Não identifique pessoas'), 'pedido do usuário removeu a proibição');

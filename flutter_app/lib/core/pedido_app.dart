@@ -100,12 +100,6 @@ const _aliases = <String, AppComAcao>{
   'calculadora': AppComAcao.calculadora,
 };
 
-final List<MapEntry<String, AppComAcao>> _ordenados = () {
-  final lista = _aliases.entries.toList();
-  lista.sort((a, b) => b.key.length.compareTo(a.key.length));
-  return lista;
-}();
-
 String _semAcento(String texto) {
   const de = 'áàâãäéèêëíìîïóòôõöúùûüç';
   const para = 'aaaaaeeeeiiiiooooouuuuc';
@@ -160,9 +154,9 @@ final _escrever = RegExp(r'\b(?:escrever|escreve|nova mensagem|novo email|'
 
 /// Conectores que sobram antes do alvo.
 final _conectores = RegExp(
-    r'^(?:e|o|a|os|as|um|uma|para|pra|pro|ao|aos|no|na|nos|nas|com|da|do|'
-    r'das|dos|de|sobre|por|pelo|pela|ate|que|nova|novo|mensagem|email|'
-    r'e-mail|conversa|direct|pesquisa|pesquisar|busca|buscar|procura|'
+    r'^(?:e-mail|email|e|o|a|os|as|um|uma|para|pra|pro|ao|aos|no|na|nos|nas|'
+    r'com|da|do|das|dos|de|sobre|por|pelo|pela|ate|que|nova|novo|mensagem|'
+    r'conversa|direct|pesquisa|pesquisar|busca|buscar|procura|'
     r'procurar|toca|tocar|escrever|escreve|falar|conversar|mapa|rota)\b\s*');
 
 String _limparAlvo(String trecho) {
@@ -173,7 +167,10 @@ String _limparAlvo(String trecho) {
   var anterior = '';
   while (t != anterior) {
     anterior = t;
-    t = t.replaceFirst(_conectores, '').trim();
+    // Comparar sem acento ("até" = "ate") sem perder a grafia do alvo: a
+    // normalização troca caractere por caractere, então o índice vale no original.
+    final achado = _conectores.firstMatch(_semAcento(t));
+    if (achado != null) t = t.substring(achado.end).trim();
   }
   return t;
 }
@@ -194,8 +191,14 @@ String _semApp(String alvo, AppComAcao app) {
   var t = alvo;
   for (final entrada in _aliases.entries) {
     if (entrada.value != app) continue;
+    // O conector antes do app sai junto: “João no WhatsApp” → “João”, sem “no” sobrando.
     t = t.replaceAll(
-        RegExp(r'\b' + RegExp.escape(entrada.key) + r'\b', caseSensitive: false), ' ');
+        RegExp(
+            r'(?:\b(?:no|na|do|da|de|pelo|pela|via)\s+)?\b' +
+                RegExp.escape(entrada.key) +
+                r'\b',
+            caseSensitive: false),
+        ' ');
   }
   return _limparAlvo(t);
 }
@@ -253,11 +256,22 @@ PedidoAppAcao? pedidoAppComAcao(String texto) {
   if (interpretarMensagem(original) != null) return null;
   if (interpretarLigacao(original) != null) return null;
 
+  // Ganha o app citado primeiro no pedido; no mesmo ponto, o nome mais longo
+  // (“WhatsApp Business” antes de “WhatsApp”). Assim “Gmail … novo e-mail”
+  // abre o Gmail, não o app de e-mail genérico.
   AppComAcao? app;
-  for (final alias in _ordenados) {
-    if (RegExp(r'\b' + RegExp.escape(alias.key) + r'\b').hasMatch(limpo)) {
+  var melhorInicio = 1 << 30;
+  var melhorTamanho = 0;
+  for (final alias in _aliases.entries) {
+    final achado =
+        RegExp(r'\b' + RegExp.escape(alias.key) + r'\b').firstMatch(limpo);
+    if (achado == null) continue;
+    final tamanho = achado.end - achado.start;
+    if (achado.start < melhorInicio ||
+        (achado.start == melhorInicio && tamanho > melhorTamanho)) {
       app = alias.value;
-      break;
+      melhorInicio = achado.start;
+      melhorTamanho = tamanho;
     }
   }
   if (app == null) return null;
@@ -317,8 +331,10 @@ PedidoAppAcao? pedidoAppComAcao(String texto) {
     return PedidoAppAcao(app: app, acao: TipoAcaoApp.conversa, alvo: alvo);
   }
 
-  // Escrever: Gmail e e-mail.
+  // Escrever: Gmail e e-mail. Sem pedido de escrita, abrir o app sozinho
+  // continua sendo o comando de abrir app, não uma ação de escrever.
   if (app == AppComAcao.gmail || app == AppComAcao.email) {
+    if (!_escrever.hasMatch(limpo)) return null;
     final alvo = _semApp(_depois(original, _escrever), app);
     if (alvo.isEmpty) {
       return PedidoAppAcao(app: app, acao: TipoAcaoApp.escrever);

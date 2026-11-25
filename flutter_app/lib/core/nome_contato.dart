@@ -219,6 +219,13 @@ EscolhaContato escolherContato(
     ..sort((a, b) => b.value.compareTo(a.value));
   if (notas.isEmpty) return const EscolhaContato();
 
+  // Nome dito inteiro vence o empate por prefixo: “Murilo 2” é o contato
+  // “Murilo 2”, não o “Murilo”.
+  final exatos = notas
+      .where((e) => normalizarNomeContato(e.key.nome) == alvo)
+      .toList();
+  if (exatos.isNotEmpty) return EscolhaContato(contato: exatos.first.key);
+
   final melhor = notas.first.value;
   var empatados = notas.where((e) => melhor - e.value <= empateContato).toList();
   if (empatados.length > 1) {
