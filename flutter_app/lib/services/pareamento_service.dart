@@ -3,24 +3,29 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import '../core/comando_remoto.dart';
 import '../core/pareamento.dart';
 
 /// Canal de pareamento do celular: um servidor HTTP só na rede local.
 ///
 /// Rotas (todas recusam endereço fora da LAN):
-/// - `GET  /jarvis/info`     — nome, versão e o desafio da oferta aberta;
+/// - `GET  /jarvis/info`     — nome, versão, protocolo, recursos e o desafio;
 /// - `POST /jarvis/parear`   — `{dispositivo, prova}`; devolve o token uma vez;
 /// - `GET  /jarvis/status`   — exige `Authorization: Bearer <token>`; só leitura;
+/// - `POST /jarvis/comando`  — exige o token; executa ação da lista fechada;
 /// - `POST /jarvis/esquecer` — exige o token; revoga o acesso do PC.
 ///
-/// Não há rota de comando nesta etapa, e nenhuma conexão sai do aparelho: o
-/// servidor só responde a quem chega da própria rede local.
+/// O comando só existe quando a tela injeta [executarComando]; sem isso o
+/// celular anuncia apenas o recurso `status` e o PC sabe que não deve mandar
+/// nada. Nenhuma conexão sai do aparelho: o servidor só responde a quem chega
+/// da própria rede local.
 class PareamentoService {
   PareamentoService({
     this.porta = portaPareamento,
     this.nome = 'JARVIS no celular',
     this.versao = '',
     this.status,
+    this.executarComando,
     this.relogio,
     this.aleatorio,
   });
@@ -32,6 +37,14 @@ class PareamentoService {
 
   /// Leitura do status do aparelho, injetada pela tela.
   final Future<Map<String, Object?>> Function()? status;
+
+  /// Execução de comando, injetada pela tela.
+  ///
+  /// Sem esta função o canal continua só de leitura — é assim que a tela diz
+  /// ao PC, pela negociação, o que aquela versão sabe fazer.
+  final Future<Object?> Function(EnvelopeDeComando comando)? executarComando;
+
+  final RegistroDeComandos _comandos = RegistroDeComandos();
 
   /// Injetáveis para teste: relógio e fonte de aleatoriedade.
   final DateTime Function()? relogio;
@@ -128,6 +141,8 @@ class PareamentoService {
         await _parear(pedido, remoto);
       } else if (pedido.method == 'GET' && caminho == '/jarvis/status') {
         await _status(pedido);
+      } else if (pedido.method == 'POST' && caminho == '/jarvis/comando') {
+        await _comando(pedido);
       } else if (pedido.method == 'POST' && caminho == '/jarvis/esquecer') {
         await _esquecer(pedido);
       } else {
@@ -150,6 +165,7 @@ class PareamentoService {
     await _responder(pedido, 200, {
       'nome': nome,
       'versao': versao,
+      ...negociacao(comando: executarComando != null),
       'desafio': aberta.desafio,
       'expiraEmSegundos': aberta.segundosRestantes(_agora()),
       'tentativas': aberta.tentativasRestantes,
@@ -203,7 +219,55 @@ class PareamentoService {
       'dispositivo': registro!.dispositivo,
       'nome': nome,
       'versao': versao,
+      ...negociacao(comando: executarComando != null),
     });
+  }
+
+  /// Executa um comando do PC pareado, depois de conferir token, protocolo,
+  /// prazo, repetição, ação e ritmo — nesta ordem.
+  Future<void> _comando(HttpRequest pedido) async {
+    if (!_autorizado(pedido)) {
+      await _responder(pedido, 401, {'ok': false, 'erro': 'token inválido ou ausente'});
+      return;
+    }
+    final executar = executarComando;
+    if (executar == null) {
+      await _responder(pedido, 409, {
+        'ok': false,
+        'erro': 'Este celular está com o canal só de leitura: nenhuma tela registrou comandos.',
+        'recursos': const [recursoStatus],
+      });
+      return;
+    }
+    final agora = _agora();
+    final validacao = validarComando(
+      await _corpo(pedido),
+      agora: agora,
+      idsUsados: _comandos.idsUsados,
+    );
+    if (!validacao.ok) {
+      await _responder(pedido, validacao.codigoHttp, {'ok': false, 'erro': validacao.erro});
+      return;
+    }
+    if (!_comandos.podeExecutar(agora)) {
+      await _responder(pedido, 429, {
+        'ok': false,
+        'erro': 'Comandos demais em pouco tempo. Espere alguns segundos.',
+      });
+      return;
+    }
+    final comando = validacao.comando!;
+    _comandos.registrar(comando.id, agora);
+    try {
+      final resultado = await executar(comando).timeout(const Duration(seconds: 10));
+      await _responder(pedido, 200, {'ok': true, 'id': comando.id, 'resultado': resultado});
+    } catch (_) {
+      await _responder(pedido, 500, {
+        'ok': false,
+        'id': comando.id,
+        'erro': 'O celular recebeu o comando mas não conseguiu executar.',
+      });
+    }
   }
 
   Future<void> _status(HttpRequest pedido) async {

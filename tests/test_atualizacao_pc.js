@@ -27,19 +27,19 @@ const outra = crypto.generateKeyPairSync('ed25519');
 chk('JSON canônico ordena chaves', A.canonico({ b: 1, a: 2 }) === '{"a":2,"b":1}');
 chk('JSON canônico aninha e mantém listas', A.canonico({ z: [{ y: 1, x: 2 }] }) === '{"z":[{"x":2,"y":1}]}');
 chk('ordem de escrita não muda o canônico', A.canonico({ x: 1, y: 2 }) === A.canonico({ y: 2, x: 1 }));
-chk('versão válida', A.versaoValida('1.108.0') && A.versaoValida('2.0.0-beta.1'));
+chk('versão válida', A.versaoValida('1.109.0') && A.versaoValida('2.0.0-beta.1'));
 chk('versão inválida recusada', !A.versaoValida('1.2') && !A.versaoValida('v1.2.3') && !A.versaoValida(''));
-chk('compara maior', A.compararVersoes('1.108.0', '1.107.9') === 1);
+chk('compara maior', A.compararVersoes('1.109.0', '1.107.9') === 1);
 chk('compara menor', A.compararVersoes('1.9.0', '1.10.0') === -1);
-chk('compara igual', A.compararVersoes('1.108.0', '1.108.0') === 0);
-chk('sufixo não faz versão maior', A.compararVersoes('1.108.0-beta.1', '1.108.0') === 0);
+chk('compara igual', A.compararVersoes('1.109.0', '1.109.0') === 0);
+chk('sufixo não faz versão maior', A.compararVersoes('1.109.0-beta.1', '1.109.0') === 0);
 
 /* ---------- 2. Manifesto ---------- */
 const manifesto = {
   app: A.APP,
   canal: 'estavel',
-  versao: '1.108.0',
-  arquivo: 'J.A.R.V.I.S. Nova Setup 1.108.0.exe',
+  versao: '1.109.0',
+  arquivo: 'J.A.R.V.I.S. Nova Setup 1.109.0.exe',
   tamanho: 120000000,
   sha256: 'a'.repeat(64),
   data: '2026-11-25T12:00:00.000Z',
@@ -89,7 +89,7 @@ const base = {
   versaoInstalada: '1.107.0'
 };
 const ok = A.verificarAtualizacao(base);
-chk('atualização válida passa', ok.ok && ok.versao === '1.108.0');
+chk('atualização válida passa', ok.ok && ok.versao === '1.109.0');
 chk('texto diz que assinatura e hash conferem', /assinatura e hash conferem/.test(ok.texto));
 chk('notas acompanham a decisão', Array.isArray(ok.notas) && ok.notas.length === 2);
 chk('sem hash do arquivo recusa',
@@ -97,12 +97,12 @@ chk('sem hash do arquivo recusa',
 chk('tamanho diferente recusa',
   A.verificarAtualizacao(Object.assign({}, base, { tamanhoArquivo: 1 })).motivo === 'tamanho');
 chk('mesma versão recusa',
-  A.verificarAtualizacao(Object.assign({}, base, { versaoInstalada: '1.108.0' })).motivo === 'mesma-versao');
+  A.verificarAtualizacao(Object.assign({}, base, { versaoInstalada: '1.109.0' })).motivo === 'mesma-versao');
 chk('rebaixamento recusa',
-  A.verificarAtualizacao(Object.assign({}, base, { versaoInstalada: '1.109.0' })).motivo === 'mais-antiga');
+  A.verificarAtualizacao(Object.assign({}, base, { versaoInstalada: '1.110.0' })).motivo === 'mais-antiga');
 chk('versão instalada ilegível recusa',
   A.verificarAtualizacao(Object.assign({}, base, { versaoInstalada: '' })).motivo === 'versao-instalada');
-const comMinima = Object.assign({}, manifesto, { minima: '1.108.0' });
+const comMinima = Object.assign({}, manifesto, { minima: '1.110.0' });
 chk('versão mínima respeitada',
   A.verificarAtualizacao(Object.assign({}, base, {
     manifesto: comMinima, chavePublica: publicaPem,
@@ -147,7 +147,7 @@ if (process.platform !== 'win32') {
 const segunda = spawnSync(process.execPath, [path.join(raiz, 'tools', 'chave_atualizacao.js'), chaves], { encoding: 'utf8' });
 chk('não sobrescreve chave existente', segunda.status === 1 && /não sobrescrevo/.test(segunda.stderr));
 
-const setup = path.join(dist, 'J.A.R.V.I.S. Nova Setup 1.108.0.exe');
+const setup = path.join(dist, 'J.A.R.V.I.S. Nova Setup 1.109.0.exe');
 fs.writeFileSync(setup, Buffer.alloc(21000000, 7));
 const notasTxt = path.join(tmp, 'notas.txt');
 fs.writeFileSync(notasTxt, 'Instalador assinado\nAtualização com assinatura conferida\n');
@@ -155,7 +155,7 @@ const assinou = spawnSync(process.execPath, [
   path.join(raiz, 'tools', 'assinar_atualizacao.js'),
   '--pasta', dist,
   '--chave', path.join(chaves, 'atualizacao-privada.pem'),
-  '--versao', '1.108.0',
+  '--versao', '1.109.0',
   '--notas', notasTxt
 ], { encoding: 'utf8' });
 chk('ferramenta assina o pacote', assinou.status === 0, assinou.stderr.slice(0, 200));

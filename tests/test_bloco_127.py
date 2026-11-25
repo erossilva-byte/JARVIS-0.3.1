@@ -62,8 +62,18 @@ for trecho in [
     "enderecoDaRedeLocal(remoto)",
 ]:
     exigir(trecho in servico, f"pareamento_service.dart perdeu: {trecho}")
-exigir("/jarvis/comando" not in servico and "'/comando'" not in servico,
-       "o canal de leitura ganhou rota de comando")
+# A rota de escrita chegou no bloco 132 (protocolo jarvis/2). O que a Etapa 3
+# continua prometendo é o essencial: sem executor, o canal segue só de leitura,
+# e a rota de comando confere o token antes de ler o corpo.
+if "/jarvis/comando" in servico:
+    exigir("negociacao(comando: executarComando != null)" in servico,
+           "o celular não anuncia se aceita comando")
+    inicio_comando = servico.find("Future<void> _comando(HttpRequest pedido) async {")
+    exigir(inicio_comando >= 0, "rota de comando sem a conferência de token")
+    if inicio_comando >= 0:
+        corpo_comando = servico[inicio_comando:inicio_comando + 1200]
+        exigir(corpo_comando.find("_autorizado") < corpo_comando.find("_corpo(pedido)"),
+               "a rota de comando lê o corpo antes de autenticar")
 exigir("package:http" not in servico and "https://" not in servico,
        "o serviço do celular passou a falar com a internet")
 exigir("'/jarvis/status'" in servico and "pedido.method == 'GET'" in servico,
@@ -112,8 +122,9 @@ for trecho in [
     "fs.renameSync",
 ]:
     exigir(trecho in cliente, f"cliente do PC perdeu: {trecho}")
-exigir("/comando" not in cliente,
-       "o cliente do PC ganhou rota de comando antes da etapa certa")
+if "/comando" in cliente:
+    exigir("if (!aceitaComando(registro))" in cliente,
+           "o cliente do PC manda comando sem conferir se o celular anuncia o recurso")
 exigir("https://" not in cliente,
        "o cliente do PC passou a falar com a internet")
 
@@ -165,8 +176,8 @@ pacote = ler(RAIZ / "package.json")
 relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-25_127-pareamento-pc-celular.md")
 roteiro = ler(RAIZ / "docs" / "ROTEIRO-PC.md")
-exigir("version: 1.108.0+110800" in pubspec,
-       "pubspec.yaml não está em 1.108.0+110800")
+exigir("version: 1.109.0+110900" in pubspec,
+       "pubspec.yaml não está em 1.109.0+110900")
 exigir("## 1.104.0" in changelog and "1.104.0" in roteiro,
        "CHANGELOG.md ou roteiro sem o bloco 1.104.0")
 exigir(relatorio.is_file(), "falta o relatório do pareamento")

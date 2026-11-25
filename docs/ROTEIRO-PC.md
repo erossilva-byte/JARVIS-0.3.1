@@ -152,6 +152,20 @@ provar de verdade.
 
 **Depende de:** todas as anteriores.
 
+## Depois da Etapa 7 — compatibilidade Android ↔ PC
+
+**Estado:** em andamento (1.109.0). O bloco 132 começou pelo protocolo
+`jarvis/2`: os dois lados negociam versão e recursos antes de conversar, e o PC
+pareado pode pedir `abrir_tela` ao celular, com token, prazo, `id` de uso único
+e lista fechada de ações. O protocolo e a tabela estão em
+`docs/COMPATIBILIDADE-ANDROID-PC.md`; o relatório é
+`docs/relatorios/2026-11-25_132-compatibilidade-android-pc.md`.
+
+**Próximos passos naturais** (nenhum começado): mais ações na lista (ler a
+memória do celular, mandar arquivo, iniciar/parar a escuta), TLS com
+certificado próprio, e o teste do canal em dois aparelhos reais — que é o mesmo
+item pendente do roteiro de hardware da Etapa 7.
+
 ## Decisão de base única (fim da Etapa 3)
 
 **Decisão: manter o Electron como app do PC.** Os números que sustentam a

@@ -77,8 +77,8 @@ for trecho in [
     exigir(trecho in testes, f"falta o teste: {trecho}")
 
 # 5. Versão, docs e registros.
-exigir("version: 1.108.0+110800" in pubspec,
-       "pubspec.yaml não está em 1.108.0+110800")
+exigir("version: 1.109.0+110900" in pubspec,
+       "pubspec.yaml não está em 1.109.0+110900")
 exigir("## 1.96.0" in changelog, "CHANGELOG.md não tem o bloco 1.96.0")
 exigir(relatorio.is_file(), "falta o relatório do bloco 119")
 exigir("test_bloco_119.py" in pacote, "package.json não roda o contrato 119")

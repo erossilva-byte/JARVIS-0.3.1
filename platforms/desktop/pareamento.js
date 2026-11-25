@@ -4,8 +4,13 @@
  * o PC lê o desafio em `/jarvis/info`, prova que sabe o código de 6 dígitos com
  * HMAC-SHA256, guarda o token de leitura e usa esse token só para pedir status.
  *
+ * Protocolo `jarvis/2` (bloco 132): o PC lê `protocolo` e `recursos` do
+ * celular e, quando ele anuncia `comando`, pode pedir uma ação da lista
+ * fechada por `POST /jarvis/comando`. Celular antigo não anuncia nada e o PC
+ * continua tratando como `jarvis/1`, só de leitura.
+ *
  * O que este arquivo não faz: descobrir sozinho (a escolha da Etapa 3 é IP
- * manual), falar com endereço fora da rede local e enviar comando ao celular.
+ * manual) e falar com endereço fora da rede local.
  */
 'use strict';
 
@@ -15,6 +20,58 @@ const crypto = require('crypto');
 
 const PORTA_PADRAO = 47600;
 const TEMPO_LIMITE_MS = 5000;
+
+// Espelho de `flutter_app/lib/core/comando_remoto.dart`: o teste do bloco 132
+// compara as listas para os dois lados não divergirem.
+const PROTOCOLO = 'jarvis/2';
+const PROTOCOLO_LEGADO = 'jarvis/1';
+const RECURSO_STATUS = 'status';
+const RECURSO_COMANDO = 'comando';
+const ACOES_REMOTAS = {
+  abrir_tela: ['memoria', 'pessoas', 'visao', 'historico', 'conversa']
+};
+
+/// Lê o que o celular anunciou, aceitando quem não anuncia nada.
+function lerNegociacao(dados) {
+  const mapa = dados && typeof dados === 'object' ? dados : {};
+  const bruto = String(mapa.protocolo || '').trim();
+  const protocolo = bruto === PROTOCOLO || bruto === PROTOCOLO_LEGADO ? bruto : PROTOCOLO_LEGADO;
+  const recursos = [];
+  if (Array.isArray(mapa.recursos)) {
+    for (const item of mapa.recursos) {
+      const nome = String(item || '').trim();
+      if ((nome === RECURSO_STATUS || nome === RECURSO_COMANDO) && !recursos.includes(nome)) {
+        recursos.push(nome);
+      }
+    }
+  }
+  if (!recursos.includes(RECURSO_STATUS)) recursos.unshift(RECURSO_STATUS);
+  if (protocolo === PROTOCOLO_LEGADO && recursos.includes(RECURSO_COMANDO)) {
+    recursos.splice(recursos.indexOf(RECURSO_COMANDO), 1);
+  }
+  return { protocolo: protocolo, recursos: recursos };
+}
+
+function aceitaComando(dados) {
+  const lido = lerNegociacao(dados);
+  return lido.protocolo === PROTOCOLO && lido.recursos.includes(RECURSO_COMANDO);
+}
+
+/// Confere ação e argumento antes de qualquer rede.
+function conferirPedidoDeComando(pedido = {}) {
+  const acao = String(pedido.acao || '').trim();
+  const permitidos = ACOES_REMOTAS[acao];
+  if (!permitidos) {
+    throw erro('Ação desconhecida: “' + acao + '”. Este PC só pede: ' +
+      Object.keys(ACOES_REMOTAS).join(', ') + '.', 'acao');
+  }
+  const argumentos = pedido.argumentos && typeof pedido.argumentos === 'object' ? pedido.argumentos : {};
+  const tela = String(argumentos.tela || '').trim();
+  if (!permitidos.includes(tela)) {
+    throw erro('Para “' + acao + '” o celular aceita: ' + permitidos.join(', ') + '.', 'argumento');
+  }
+  return { acao: acao, argumentos: { tela: tela } };
+}
 
 function normalizarCodigo(valor) {
   return String(valor === null || valor === undefined ? '' : valor).replace(/\D/g, '');
@@ -101,12 +158,16 @@ function normalizarRegistro(dados) {
   const porta = Number(dados.porta);
   if (!dispositivo || !ip || !token) return null;
   if (!Number.isInteger(porta) || porta <= 0 || porta > 65535) return null;
+  // Pareamento gravado antes do protocolo 2 não tem estes campos: vira jarvis/1.
+  const negociado = lerNegociacao(dados);
   return {
     dispositivo: dispositivo,
     ip: ip,
     porta: porta,
     token: token,
-    criadoEm: String(dados.criadoEm || '')
+    criadoEm: String(dados.criadoEm || ''),
+    protocolo: negociado.protocolo,
+    recursos: negociado.recursos
   };
 }
 
@@ -163,7 +224,10 @@ function criarPareamento(opcoes = {}) {
       ip: registro.ip,
       porta: registro.porta,
       endereco: registro.ip + ':' + registro.porta,
-      desde: registro.criadoEm
+      desde: registro.criadoEm,
+      protocolo: registro.protocolo,
+      recursos: registro.recursos,
+      podeComandar: aceitaComando(registro)
     };
   }
 
@@ -196,12 +260,17 @@ function criarPareamento(opcoes = {}) {
     if (!resposta.ok || !corpo.token) {
       throw erro('O celular não concluiu o pareamento (HTTP ' + resposta.status + ').', 'http');
     }
+    // A negociação pode vir no /info, na resposta do pareamento, ou (celular
+    // antigo) em nenhum dos dois — nesse caso o registro fica jarvis/1.
+    const negociado = lerNegociacao(corpo.recursos || corpo.protocolo ? corpo : dados);
     const registro = {
       dispositivo: String(corpo.dispositivo || nome),
       ip: alvo.host,
       porta: alvo.porta,
       token: String(corpo.token),
-      criadoEm: new Date().toISOString()
+      criadoEm: new Date().toISOString(),
+      protocolo: negociado.protocolo,
+      recursos: negociado.recursos
     };
     salvar(registro);
     return {
@@ -210,7 +279,10 @@ function criarPareamento(opcoes = {}) {
       nomeCelular: String(corpo.nome || ''),
       ip: registro.ip,
       porta: registro.porta,
-      endereco: registro.ip + ':' + registro.porta
+      endereco: registro.ip + ':' + registro.porta,
+      protocolo: registro.protocolo,
+      recursos: registro.recursos,
+      podeComandar: aceitaComando(registro)
     };
   }
 
@@ -224,6 +296,48 @@ function criarPareamento(opcoes = {}) {
     }
     if (!resposta.ok) throw erro('O celular respondeu HTTP ' + resposta.status + ' ao pedido de status.', 'http');
     return resposta.json();
+  }
+
+  /// Pede uma ação ao celular pareado.
+  ///
+  /// Recusa antes da rede quando o celular não anunciou `comando` — canal de
+  /// leitura não recebe escrita, nem por engano de tela.
+  async function enviarComando(pedido = {}) {
+    const registro = ler();
+    if (!registro) throw erro('Nenhum celular pareado.', 'sem-pareamento');
+    if (!aceitaComando(registro)) {
+      throw erro('Este celular está com o canal só de leitura (protocolo ' + registro.protocolo +
+        '). Atualize o app do celular para usar comandos.', 'sem-recurso');
+    }
+    const conferido = conferirPedidoDeComando(pedido);
+    const id = crypto.randomBytes(16).toString('hex');
+    const url = 'http://' + registro.ip + ':' + registro.porta + '/jarvis/comando';
+    const resposta = await comTempoLimite(buscar, url, {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, credenciais(registro)),
+      body: JSON.stringify({
+        protocolo: PROTOCOLO,
+        id: id,
+        emitidoEm: new Date().toISOString(),
+        acao: conferido.acao,
+        argumentos: conferido.argumentos
+      })
+    });
+    let corpo = {};
+    try { corpo = await resposta.json(); } catch (_) { corpo = {}; }
+    if (resposta.status === 401) {
+      throw erro('O celular não reconhece mais este PC. Esqueça o pareamento e pareie de novo.', 'revogado');
+    }
+    if (resposta.status === 409) {
+      throw erro(String(corpo.erro || 'O celular recusou o comando por repetição ou prazo.'), 'recusado');
+    }
+    if (resposta.status === 429) {
+      throw erro(String(corpo.erro || 'Comandos demais em pouco tempo.'), 'ritmo');
+    }
+    if (!resposta.ok || !corpo.ok) {
+      throw erro(String(corpo.erro || 'O celular recusou o comando (HTTP ' + resposta.status + ').'), 'comando');
+    }
+    return { ok: true, id: String(corpo.id || id), resultado: corpo.resultado };
   }
 
   async function esquecer() {
@@ -242,15 +356,23 @@ function criarPareamento(opcoes = {}) {
     return { esquecido: true };
   }
 
-  return { ler, estado, info, parear, status, esquecer };
+  return { ler, estado, info, parear, status, enviarComando, esquecer };
 }
 
 module.exports = {
   PORTA_PADRAO,
+  PROTOCOLO,
+  PROTOCOLO_LEGADO,
+  RECURSO_STATUS,
+  RECURSO_COMANDO,
+  ACOES_REMOTAS,
   normalizarCodigo,
   codigoUtilizavel,
   provaDePareamento,
   enderecoDaRedeLocal,
   enderecoDoCelular,
+  lerNegociacao,
+  aceitaComando,
+  conferirPedidoDeComando,
   criarPareamento
 };

@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../core/comando_remoto.dart';
 import '../core/pareamento.dart';
+import '../core/pedido_abrir.dart';
 import '../ui_common.dart';
+import 'abrir_tela.dart';
 import 'aparelho_service.dart';
 import 'pareamento_service.dart';
 
@@ -24,8 +27,13 @@ class PareamentoPage extends StatefulWidget {
 }
 
 class _PareamentoPageState extends State<PareamentoPage> {
-  late final PareamentoService servico =
-      widget.servico ?? PareamentoService(status: _statusDoAparelho);
+  late final PareamentoService servico = widget.servico ??
+      PareamentoService(
+        status: _statusDoAparelho,
+        // Com o comando ligado, o celular anuncia o recurso ao PC; sem esta
+        // função ele continua só de leitura, e o PC vê isso pela negociação.
+        executarComando: _executarComando,
+      );
   late final Future<List<String>> Function() enderecos =
       widget.enderecos ?? PareamentoService.enderecosLocais;
 
@@ -101,6 +109,23 @@ class _PareamentoPageState extends State<PareamentoPage> {
       // idem: sem modelo, o campo não vai.
     }
     return dados;
+  }
+
+  /// Comando vindo do PC pareado: só abre tela, e só a que está na lista.
+  ///
+  /// Erro aqui vira `ok: false` na resposta do canal, com o motivo — o celular
+  /// nunca responde “ok” para uma ação que não fez.
+  Future<Object?> _executarComando(EnvelopeDeComando comando) async {
+    if (comando.acao != 'abrir_tela') {
+      throw StateError('Este celular não sabe “${comando.acao}”.');
+    }
+    final tela = TelaJarvis.porChave(comando.argumento);
+    if (tela == null) {
+      throw StateError('Tela desconhecida: ${comando.argumento}.');
+    }
+    final resultado = await AbrirTela.abrir(tela);
+    if (!resultado.ok) throw StateError(resultado.mensagem);
+    return 'abri ${tela.rotulo} no celular';
   }
 
   Future<void> _carregarIps() async {

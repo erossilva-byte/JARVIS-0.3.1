@@ -1,17 +1,34 @@
-# J.A.R.V.I.S. Nova 1.108.0
+# J.A.R.V.I.S. Nova 1.109.0
 
-## 1.108.0 — desenvolvimento (não é release estável)
+## 1.109.0 — compatibilidade Android ↔ PC (começo)
+
+O celular e o PC pareados agora combinam o que sabem fazer antes de conversar:
+o celular anuncia `protocolo jarvis/2` e `recursos` (`status`, `comando`) em
+`/jarvis/info`; celular de versão anterior, sem esses campos, é tratado como
+`jarvis/1` e continua funcionando — só de leitura.
+
+Com isso o PC pode pedir que o celular **abra uma tela** (memória, pessoas,
+visão, histórico ou conversa). O pedido leva token, prazo de 60 s e um `id` que
+não se repete, e o celular só executa ação da lista fechada — qualquer outra
+coisa é recusada com o motivo escrito. O painel “Status do celular” desabilita
+os botões quando o celular pareado é antigo.
+
+Limites: nada foi executado em aparelho Android nem em PC físico; o canal é HTTP
+na rede local (sem TLS) e só existe com a tela de pareamento aberta. Detalhes em
+`docs/COMPATIBILIDADE-ANDROID-PC.md`.
+
+## 1.109.0 — desenvolvimento (não é release estável)
 
 As sete etapas do roteiro do PC estão implementadas no núcleo web compartilhado:
 status unificado, pareamento PC↔celular, memória em Markdown e fichas, PIN com
 espera progressiva e cofre de chaves pelo sistema, voz e segundo plano, e
 atualização com **assinatura** Ed25519 conferida pelo próprio app.
 
-Limites declarados: nenhum APK 1.108.0 foi compilado ou instalado em aparelho
+Limites declarados: nenhum APK 1.109.0 foi compilado ou instalado em aparelho
 físico; nenhum pacote Windows foi compilado nem assinado com certificado de
 código; o roteiro de teste em PC físico (`docs/TESTE-PC-FISICO.md`) não foi
 executado. A versão do pacote do PC (`package.json`, `VERSAO.json`,
-`VERSAO_APP`) acompanha a do app Flutter: 1.108.0, versionCode 110800.
+`VERSAO_APP`) acompanha a do app Flutter: 1.109.0, versionCode 110900.
 
 ## 1.46.0 — desenvolvimento (não é release estável)
 

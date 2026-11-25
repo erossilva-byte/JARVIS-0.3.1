@@ -658,6 +658,7 @@ Object.assign(acoes, {
   pareamento_celular: async () => pareamentoDoPC().estado(),
   parear_celular: async ({ ip, codigo }) => pareamentoDoPC().parear({ ip, codigo }),
   status_celular: async () => pareamentoDoPC().status(),
+  comandar_celular: async ({ acao, argumentos }) => pareamentoDoPC().enviarComando({ acao, argumentos }),
   esquecer_celular: async () => pareamentoDoPC().esquecer(),
 
   /* Atualização assinada (Etapa 7). O app nunca baixa sozinho: ele confere o

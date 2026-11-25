@@ -104,8 +104,8 @@ exigir("sem conexão" in roteiro,
        "o roteiro não declara o estado sem conexão do celular")
 
 # 6. Versão, docs e registros.
-exigir("version: 1.108.0+110800" in pubspec,
-       "pubspec.yaml não está em 1.108.0+110800")
+exigir("version: 1.109.0+110900" in pubspec,
+       "pubspec.yaml não está em 1.109.0+110900")
 exigir("## 1.102.0" in changelog, "CHANGELOG.md não tem o bloco 1.102.0")
 exigir(relatorio.is_file(), "falta o relatório do bloco 125")
 exigir("test_bloco_125.py" in pacote, "package.json não roda o contrato 125")

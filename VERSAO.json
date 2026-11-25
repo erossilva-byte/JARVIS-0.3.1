@@ -1,13 +1,13 @@
 {
   "nome": "J.A.R.V.I.S. Nova",
-  "version": "1.108.0",
-  "versionCode": 110800,
+  "version": "1.109.0",
+  "versionCode": 110900,
   "androidAppId": "com.jarvis.nova",
   "base": "núcleo web compartilhado na raiz; camadas por plataforma em platforms/",
   "gerado": "2026-11-25",
-  "status": "1.108.0 em desenvolvimento: núcleo web compartilhado com as sete etapas do roteiro do PC implementadas — status unificado, pareamento PC↔celular, memória e fichas, PIN com espera progressiva e cofre, voz e segundo plano, e atualização com assinatura Ed25519. Ainda pendentes: build Android e pacote Windows reais, certificado de código do instalador, teste em aparelho e em PC físico, e validação do KWS com sotaque PT-BR.",
+  "status": "1.109.0 em desenvolvimento: o núcleo web compartilhado tem as sete etapas do roteiro do PC implementadas e a compatibilidade Android ↔ PC começou — o celular e o PC negociam protocolo e recursos (jarvis/2) e o PC pareado pode pedir que o celular abra uma tela, com token, prazo, id de uso único e lista fechada de ações. Ainda pendentes: build Android e pacote Windows reais, certificado de código do instalador, teste em aparelho e em PC físico, e validação do KWS com sotaque PT-BR.",
   "identidade": "aplicativo independente; não substitui com.jarvis.app nem com.jarvis.assistente",
-  "notas": "Versão de desenvolvimento, não publicar como estável. A versão do pacote do PC e a do app agora são a mesma (package.json, VERSAO.json e VERSAO_APP), com versionCode 110800. Groq continua como principal e OpenRouter/DeepSeek como reserva. O KWS sherpa-onnx roda local no Android e envia áudio só depois da palavra-chave; no PC não existe detector local, então a palavra é conferida aqui e o trecho vai para a transcrição. A atualização do PC confere assinatura Ed25519, SHA-256 e tamanho antes de aceitar um pacote, e recusa versão igual, mais antiga ou abaixo da mínima. Segurança inclui PIN ou biometria, PIN ou NFC e modos com múltiplos fatores obrigatórios; BiometricPrompt usa biometria forte e o Android escolhe o sensor. NFC por UID simples é clonável. Nenhum APK 1.108.0 foi compilado, instalado ou aprovado em aparelho físico; nenhum pacote Windows 1.108.0 foi compilado nem assinado com certificado de código. Não declarar recurso concluído sem teste e evidência. A interface preserva o núcleo central, áreas separadas e abertura sem flashes. Os módulos de cognição existentes preservam raciocínio em etapas, personalidade adaptativa e verificação/revisão de respostas.",
+  "notas": "Versão de desenvolvimento, não publicar como estável. A versão do pacote do PC e a do app agora são a mesma (package.json, VERSAO.json e VERSAO_APP), com versionCode 110800. Groq continua como principal e OpenRouter/DeepSeek como reserva. O KWS sherpa-onnx roda local no Android e envia áudio só depois da palavra-chave; no PC não existe detector local, então a palavra é conferida aqui e o trecho vai para a transcrição. A atualização do PC confere assinatura Ed25519, SHA-256 e tamanho antes de aceitar um pacote, e recusa versão igual, mais antiga ou abaixo da mínima. Segurança inclui PIN ou biometria, PIN ou NFC e modos com múltiplos fatores obrigatórios; BiometricPrompt usa biometria forte e o Android escolhe o sensor. NFC por UID simples é clonável. Nenhum APK 1.109.0 foi compilado, instalado ou aprovado em aparelho físico; nenhum pacote Windows 1.109.0 foi compilado nem assinado com certificado de código. Não declarar recurso concluído sem teste e evidência. A interface preserva o núcleo central, áreas separadas e abertura sem flashes. Os módulos de cognição existentes preservam raciocínio em etapas, personalidade adaptativa e verificação/revisão de respostas. Compatibilidade Android ↔ PC (bloco 132): o celular anuncia protocolo jarvis/2 e recursos (status, comando) em /jarvis/info; celular antigo sem esses campos é tratado como jarvis/1, só de leitura. O comando abrir_tela exige token, prazo de 60 s, id de uso único por 5 min, ação na lista fechada e no máximo 20 por minuto. Nada disso foi executado em aparelho Android nem em PC físico.",
   "arquivos_documentacao": [
     "GUIA-ACESSOS-ANDROID.md",
     "MODELOS-IA-LOCAL.md",
@@ -16,7 +16,7 @@
   ],
   "build": {
     "resultado": "pendente",
-    "observacao": "Nenhum APK 1.108.0 foi compilado ou instalado em aparelho físico."
+    "observacao": "Nenhum APK 1.109.0 foi compilado ou instalado em aparelho físico."
   },
   "pc": {
     "camada": "platforms/desktop + pc.js",
@@ -37,5 +37,5 @@
       "suite": "suíte completa em Node e Python executada localmente; CI não executado nesta versão"
     }
   },
-  "versao": "1.108.0"
+  "versao": "1.109.0"
 }

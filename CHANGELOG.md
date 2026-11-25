@@ -1,3 +1,32 @@
+## 1.109.0 — compatibilidade Android ↔ PC (protocolo jarvis/2)
+
+### O que mudou
+- **Negociação**: `GET /jarvis/info` e a resposta do pareamento passam a levar
+  `protocolo` e `recursos`. Celular antigo sem esses campos é tratado como
+  `jarvis/1` e continua só de leitura; recurso desconhecido é descartado.
+- **Canal de comando** (`POST /jarvis/comando`): o PC pareado pede
+  `abrir_tela` e o celular abre memória, pessoas, visão, histórico ou conversa
+  pelo mesmo caminho que a voz usa. Token, protocolo, prazo de 60 s, `id` de uso
+  único por 5 minutos, lista fechada de ações e teto de 20 por minuto; cada
+  recusa tem código e motivo em português.
+- **PC**: `enviarComando` em `platforms/desktop/pareamento.js`, IPC
+  `comandar_celular`, e bloco “Comandos” no painel do celular com os botões
+  desabilitados quando o celular não anunciou `comando`.
+- **Regras compartilhadas**: `core/comando_remoto.dart` e o espelho no JS têm a
+  mesma lista de ações; o contrato do bloco 132 compara as duas e falha se
+  divergirem.
+- **Documentação**: `docs/COMPATIBILIDADE-ANDROID-PC.md` (protocolo, tabela de
+  ações, ordem das recusas e limites).
+
+### Limites declarados
+- **Nada foi executado em aparelho Android nem em PC físico.** A prova é de
+  regra e de protocolo: celular falso em Node para o cliente do PC e
+  `flutter_app/tool/comando_remoto_test.dart` (serviço Dart real em 127.0.0.1)
+  rodando com o SDK. Nenhum dos dois tocou um aparelho de verdade.
+- Canal HTTP na LAN, sem TLS; token e `id` trafegam em claro.
+- Uma ação só (`abrir_tela`); sem conversa remota, arquivos ou microfone.
+- O servidor do celular morre com a tela de pareamento aberta.
+
 ## 1.108.0 — instalador e atualização assinada no PC (Etapa 7)
 
 ### O que mudou

@@ -88,6 +88,16 @@
     return 'Pareado com ' + estado.dispositivo + ' · ' + endereco + '.';
   }
 
+  /// `true` quando o celular anunciou o protocolo 2 com o recurso `comando`.
+  /// Celular antigo (ou registro gravado antes do protocolo 2) dá `false`, e a
+  /// tela desabilita os botões em vez de mandar comando que seria recusado.
+  function podeComandar(estado) {
+    if (!estadoPareado(estado)) return false;
+    const protocolo = String(estado.protocolo || '');
+    const recursos = Array.isArray(estado.recursos) ? estado.recursos : [];
+    return protocolo === 'jarvis/2' && recursos.indexOf('comando') >= 0;
+  }
+
   window.Pareamento = {
     PORTA_PADRAO,
     normalizarCodigo,
@@ -97,6 +107,7 @@
     enderecoDoCelular,
     validarDigitacao,
     estadoPareado,
-    resumoPareado
+    resumoPareado,
+    podeComandar
   };
 })();

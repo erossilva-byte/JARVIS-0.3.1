@@ -214,7 +214,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.108.0';
+const VERSAO_APP = '1.109.0';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -6702,6 +6702,11 @@ function iniciarPareamentoPainel() {
   botao.addEventListener('click', parearCelular);
   const esquecer = document.getElementById('sc-esquecer');
   if (esquecer) esquecer.addEventListener('click', esquecerCelular);
+  document.querySelectorAll('[data-comando-tela]').forEach((b) => {
+    if (b.dataset.ligado === '1') return;
+    b.dataset.ligado = '1';
+    b.addEventListener('click', () => comandarCelular(b.dataset.comandoTela));
+  });
   const codigo = document.getElementById('sc-codigo');
   if (codigo) {
     codigo.addEventListener('input', () => {
@@ -6741,6 +6746,40 @@ async function atualizarPareamentoCelular() {
       : '';
   }
   if (esquecer) esquecer.hidden = !pareado;
+  atualizarComandosCelular(pareado);
+}
+
+// Comandos ao celular (protocolo jarvis/2). O botão só habilita quando o
+// celular anunciou o recurso `comando` — canal de leitura não recebe escrita.
+function atualizarComandosCelular(pareado) {
+  const caixa = document.getElementById('sc-comandos');
+  if (!caixa) return;
+  const P = window.Pareamento;
+  const pode = pareado && Boolean(P) && P.podeComandar(pareamentoCelular);
+  caixa.hidden = !pareado;
+  caixa.querySelectorAll('button').forEach((b) => { b.disabled = !pode; });
+  const alvo = document.getElementById('sc-comando-status');
+  if (!alvo) return;
+  if (!pareado) { alvo.textContent = ''; return; }
+  if (!pode && !alvo.textContent) {
+    alvo.textContent = 'Canal só de leitura: atualize o app do celular para ele aceitar comandos.';
+  }
+  if (pode && /só de leitura/.test(alvo.textContent)) alvo.textContent = '';
+}
+
+const NOMES_DE_TELA = { memoria: 'a memória', pessoas: 'as pessoas', visao: 'a visão', historico: 'o histórico', conversa: 'a conversa' };
+
+async function comandarCelular(tela) {
+  const alvo = document.getElementById('sc-comando-status');
+  const nome = NOMES_DE_TELA[tela] || tela;
+  if (alvo) alvo.textContent = 'Pedindo ao celular para abrir ' + nome + '…';
+  try {
+    const r = await nativo('comandar_celular', { acao: 'abrir_tela', argumentos: { tela: tela } });
+    if (alvo) alvo.textContent = 'Celular respondeu: ' + ((r && r.resultado) || ('abriu ' + nome + '.'));
+    registrar('dispositivo', 'comando enviado ao celular: abrir ' + nome);
+  } catch (e) {
+    if (alvo) alvo.textContent = (e && e.message) || 'Não consegui enviar o comando ao celular.';
+  }
 }
 
 async function parearCelular() {
