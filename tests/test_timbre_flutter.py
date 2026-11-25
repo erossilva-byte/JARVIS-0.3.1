@@ -63,7 +63,7 @@ relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-21_088-perfis-de-timbre.md")
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.96.0+19600" in pubspec, "versão não atualizada para 1.75.0")
+exigir("version: 1.97.0+19700" in pubspec, "versão não atualizada para 1.75.0")
 exigir("1.75.0" in changelog and "timbre" in changelog.lower(),
        "CHANGELOG sem o bloco 1.75.0 do timbre")
 exigir("tests/test_timbre_flutter.py" in pacote,

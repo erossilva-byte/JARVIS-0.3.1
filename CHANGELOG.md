@@ -1,3 +1,20 @@
+## 1.97.0 — a máscara de PIN não atrapalha apelido nem comando
+
+### O que foi conferido
+- **Apelido com número** continua inteiro: “chama o Murilo de Murilo 2” guarda
+  `Murilo 2` e resolve o contato `Murilo 2` em vez de cair no `Murilo`.
+- **Comando com número** continua funcionando: “manda mensagem para o Murilo no
+  WhatsApp dizendo que o código é 4321” chega ao envio com `o código é 4321`.
+- **A máscara só existe na gravação**: histórico de execuções e conversa salva.
+  As regras de apelido, de contato e de mensagem não conhecem a máscara, então
+  nada é mascarado antes de o comando ser entendido ou enviado.
+
+### O que mudou no código
+- Teste puro `tool/pin_sem_colisao_test.dart` e contrato
+  `tests/test_bloco_120.py`, que falham se a máscara entrar no caminho de
+  interpretação (Dart ou Kotlin).
+- Nenhuma mudança de comportamento no app: só prova e trava.
+
 ## 1.96.0 — PIN fora do histórico de conversas
 
 ### O que mudou

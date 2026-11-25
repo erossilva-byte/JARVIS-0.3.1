@@ -79,6 +79,7 @@ CASOS = (
     ("tool/pedido_apelido_test.dart", "apelido de contato: ensinar, esquecer e não sequestrar conversa"),
     ("tool/mapa_voz_test.dart", "mapa da voz: pergunta, catálogo e total de telas"),
     ("tool/segredo_pedido_test.dart", "PIN no histórico: 4 a 8 dígitos mascarados, telefone preservado"),
+    ("tool/pin_sem_colisao_test.dart", "máscara de PIN não atrapalha apelido com número nem envio com número"),
 )
 
 
