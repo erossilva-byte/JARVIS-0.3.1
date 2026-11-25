@@ -16,6 +16,9 @@
 - **Documentação**: `docs/ASSINATURA-PC.md` (as duas assinaturas, como ligar o
   certificado, tabela de recusas) e `docs/TESTE-PC-FISICO.md` (roteiro de campo
   em sete etapas, com o que medir).
+- **Versão unificada**: `package.json`, `VERSAO.json` e `VERSAO_APP` passaram de
+  1.46.0 para 1.108.0, com versionCode 110800, igual ao Flutter. O contrato de
+  versão agora lê o metadado e falha se algum dos quatro ficar para trás.
 
 ### Limites declarados
 - **Nenhum instalador foi gerado**: não há Windows nem electron-builder nesta

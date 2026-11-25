@@ -142,7 +142,7 @@ checagens = {
     # A linha 1.10 continua válida para as versões seguintes; o número exato da versão
     # publicada é conferido pelo teste daquela versão (test_v1_12_0.py e seguintes).
     "Versão a partir da 1.10 com versionCode >= 10100": (
-        re.match(r"^1\.(1[0-9]|[2-9][0-9])\.", str(versao.get("version", "")))
+        re.match(r"^1\.\d{2,3}\.", str(versao.get("version", "")))
         and versao.get("versionCode", 0) >= 10100
         and pacote.get("version") == versao.get("version")
         and "const VERSAO_APP = '" + str(versao.get("version")) + "';" in app

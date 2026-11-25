@@ -1,4 +1,17 @@
-# J.A.R.V.I.S. Nova 1.46.0
+# J.A.R.V.I.S. Nova 1.108.0
+
+## 1.108.0 — desenvolvimento (não é release estável)
+
+As sete etapas do roteiro do PC estão implementadas no núcleo web compartilhado:
+status unificado, pareamento PC↔celular, memória em Markdown e fichas, PIN com
+espera progressiva e cofre de chaves pelo sistema, voz e segundo plano, e
+atualização com **assinatura** Ed25519 conferida pelo próprio app.
+
+Limites declarados: nenhum APK 1.108.0 foi compilado ou instalado em aparelho
+físico; nenhum pacote Windows foi compilado nem assinado com certificado de
+código; o roteiro de teste em PC físico (`docs/TESTE-PC-FISICO.md`) não foi
+executado. A versão do pacote do PC (`package.json`, `VERSAO.json`,
+`VERSAO_APP`) acompanha a do app Flutter: 1.108.0, versionCode 110800.
 
 ## 1.46.0 — desenvolvimento (não é release estável)
 

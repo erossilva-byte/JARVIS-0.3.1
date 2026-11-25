@@ -20,7 +20,7 @@ assert.match(html, /id="c-key-openrouter"/, 'Campo OpenRouter deve existir na in
 assert.match(html, /id="c-apagar-openrouter"/, 'Ação de apagar a chave OpenRouter deve existir.');
 assert.match(html, /https:\/\/openrouter\.ai/, 'CSP deve permitir a conexão ao endpoint OpenRouter.');
 assert.match(desktop, /\^\(groq\|openrouter\|cerebras\|mistral\|gemini\)\$/, 'Cofre Windows deve aceitar OpenRouter e continuar em allowlist.');
-assert.equal(pkg.version, '1.46.0', 'package.json deve declarar 1.46.0.');
-assert.equal(version.version, '1.46.0', 'VERSAO.json deve declarar 1.46.0.');
-assert.equal(version.versionCode, 10460, 'versionCode deve acompanhar 1.46.0.');
+assert.equal(pkg.version, version.version, 'package.json e VERSAO.json devem declarar a mesma versão.');
+assert.match(version.version, /^\d+\.\d+\.\d+$/, 'VERSAO.json deve declarar uma versão x.y.z.');
+assert.ok(version.versionCode >= 10460, 'versionCode deve acompanhar a versão e nunca andar para trás.');
 console.log('OpenRouter/DeepSeek: 14 verificações estáticas aprovadas.');

@@ -140,7 +140,7 @@ checagens = {
     # pacote atual (>= 1.12.0) e que número e nome acompanham o VERSAO.json, em vez de fixar
     # um literal que envelhece a cada release.
     "Versão publicada é igual ou posterior à 1.12.0": (
-        str(versao.get("version", "")) >= "1.12.0"
+        tuple(int(x) for x in str(versao.get("version", "0.0.0")).split(".")[:3]) >= (1, 12, 0)
         and int(versao.get("versionCode", 0)) >= 10120
         and pacote.get("version") == versao.get("version")
         and ("const VERSAO_APP = '%s';" % versao.get("version")) in app

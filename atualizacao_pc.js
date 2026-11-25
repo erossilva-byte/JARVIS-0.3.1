@@ -225,7 +225,8 @@
       var t = linhas[j].trim();
       if (!t || /^###/.test(t)) continue;
       if (t.charAt(0) === '-' || t.charAt(0) === '*') t = t.slice(1).trim();
-      if (t) notas.push(t.replace(/\s+/g, ' '));
+      // O CHANGELOG usa negrito e crase; na tela do app isso viraria asterisco solto.
+      if (t) notas.push(t.replace(/\*\*|`/g, '').replace(/\s+/g, ' '));
     }
     return { ok: true, versao: alvo, titulo: titulo, notas: notas.slice(0, 20) };
   }

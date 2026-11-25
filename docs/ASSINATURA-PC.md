@@ -105,13 +105,16 @@ Recusas possíveis, com o motivo na tela:
 
 ### Versão do pacote Windows × versão do app
 
-O pacote do PC ainda se identifica como **1.46.0** (`package.json`, `VERSAO.json`
-e a constante `VERSAO_APP` no `app.js`), enquanto o app Flutter já está em 1.108.0.
-São duas trilhas de versão separadas, e a Etapa 7 não as unificou: o painel Sobre
-mostra 1.46.0 e as notas da 1.46.0, e uma atualização assinada para 1.108.0 seria
-aceita (é mais nova), mas o app continuaria dizendo 1.46.0 até alguém bumpar os
-três juntos. **Antes de publicar uma atualização de verdade, os três arquivos
-precisam subir juntos** — o teste da 1.46.0 prende essa igualdade.
+Até a 1.107.0 o pacote do PC se identificava como 1.46.0 enquanto o Flutter já
+estava em 1.108.0. Isso foi unificado: `package.json`, `VERSAO.json` e a
+constante `VERSAO_APP` no `app.js` declaram **1.108.0**, com `versionCode`
+**110800**, igual ao `pubspec.yaml` (`1.108.0+110800`). O painel Sobre mostra essa
+versão e as notas dela.
+
+A regra que fica: **subir a versão do app é subir os quatro juntos** —
+`pubspec.yaml`, `package.json`, `VERSAO.json` (version e versionCode) e
+`VERSAO_APP`. O contrato de versão (`tests/test_v1_46_0.py`) lê o `VERSAO.json`
+e falha se algum ficar para trás.
 
 ## 3. O que continua faltando (declarado)
 

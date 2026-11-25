@@ -109,12 +109,10 @@ rodou antes do commit.
   sem o usuário escolher é o tipo de conveniência que não combina com o resto do
   projeto. O fluxo é: baixar do release, conferir no app, rodar o instalador.
 - **Revertemos nada na prática**: o plano de reversão é roteiro, não botão.
-- **Duas trilhas de versão**: o pacote Windows se identifica como 1.46.0
-  (`package.json`, `VERSAO.json`, `VERSAO_APP` no `app.js`) enquanto o Flutter já
-  está em 1.108.0. O painel mostra a versão do pacote e as notas dela; uma
-  atualização assinada para 1.108.0 seria aceita, mas o app continuaria dizendo
-  1.46.0 até os três arquivos subirem juntos. Está anotado em
-  `docs/ASSINATURA-PC.md`.
+- **Duas trilhas de versão**: na entrega deste bloco o pacote Windows ainda se
+  identificava como 1.46.0. Isso foi unificado logo depois: `package.json`,
+  `VERSAO.json` e `VERSAO_APP` estão em 1.108.0, versionCode 110800, e o teste
+  de versão passou a ler o metadado em vez de fixar o número antigo.
 
 Com isso a Etapa 7 fica **implementada e não aprovada**: as regras e o caminho
 de conferência estão prontos e testados; a aprovação depende de Windows, de

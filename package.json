@@ -1,7 +1,7 @@
 {
   "name": "jarvis-nova",
-  "version": "1.46.0",
-  "description": "J.A.R.V.I.S. Nova 1.46.0 — evolução incremental, OpenRouter/DeepSeek e migração multiplataforma auditável.",
+  "version": "1.108.0",
+  "description": "J.A.R.V.I.S. Nova 1.108.0 — núcleo web compartilhado, app do PC com atualização assinada e app Flutter em paridade.",
   "main": "platforms/desktop/main.js",
   "scripts": {
     "verificar": "python3 ci/verificar.py",

@@ -1,7 +1,8 @@
 name: Publicar release do J.A.R.V.I.S. Nova
 # Versão publicada: 1.45.0 — confira VERSAO.json antes de criar a tag.
 # Notas publicadas: o passo "Publicar release com o APK" gera o texto a partir de VERSAO.json.
-# A linha 1.46.0 adiciona KWS acústico sherpa-onnx no próprio processo, sem SpeechRecognizer ou fallback de rede.
+# Versão atual: 1.108.0 (versionCode 110800).
+# A linha 1.46.0 adicionou KWS acústico sherpa-onnx no próprio processo, sem SpeechRecognizer ou fallback de rede.
 # O modelo KWS GigaSpeech é inglês: a palavra Jarvis é configurada como hotword e requer teste de sotaque PT-BR.
 # Novidades da 1.45.0: tela de bloqueio com biometria forte do Android, leitura NFC real,
 # modos combinados (biometria/NFC/PIN), central completa em Ajustes ▸ Segurança, histórico sem

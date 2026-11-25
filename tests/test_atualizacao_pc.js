@@ -130,6 +130,8 @@ chk('as notas são desta versão', notas.notas.some((n) => /voz|escuta|tabela/i.
 chk('versão fora do arquivo devolve ok:false', A.notasDaVersao(changelog, '0.0.9').ok === false);
 chk('changelog vazio não quebra', A.notasDaVersao('', '1.107.0').ok === false);
 chk('notas não incluem o título seguinte', !notas.notas.some((n) => /^##/.test(n)));
+chk('notas não vazam marcação do Markdown',
+  !notas.notas.some((n) => /\*\*|`/.test(n)), notas.notas.find((n) => /\*\*|`/.test(n)));
 
 /* ---------- 7. Ferramentas de release, de ponta a ponta ---------- */
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jarvis-atualizacao-'));
