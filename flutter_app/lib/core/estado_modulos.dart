@@ -46,6 +46,7 @@ enum TelaModulo {
   atualizacoes,
   programacao,
   avatar,
+  pareamento,
 }
 
 class SituacaoModulo {
@@ -278,11 +279,13 @@ const situacoesModulos = <SituacaoModulo>[
   ),
   SituacaoModulo(
     nome: 'Pareamento Windows',
-    estado: EstadoModulo.ausente,
-    titulo: 'Falta o canal autenticado',
-    detalhe: 'Não existe pareamento neste APK: falta o canal autenticado entre '
-        'celular e computador, com chave trocada, expiração e revogação. Sem '
-        'isso, nada de controle remoto.',
+    estado: EstadoModulo.parcial,
+    titulo: 'Canal de leitura com código de 6 dígitos',
+    detalhe: 'O celular abre um canal só na rede local e mostra um código de '
+        '6 dígitos; o PC prova que sabe o código e recebe um token para ler o '
+        'status, que pode ser revogado. Não envia comando ao computador nem '
+        'descobre a rede sozinho: isso fica para a etapa do controle.',
+    tela: TelaModulo.pareamento,
   ),
   SituacaoModulo(
     nome: 'Controle do Windows',

@@ -50,6 +50,11 @@ a menor peça que já serve às duas plataformas.
 
 ## Etapa 3 — Pareamento PC ↔ celular
 
+**Estado:** entregue na 1.104.0 — descoberta por IP manual, código de 6
+  dígitos no celular, prova HMAC, token de leitura e “esquecer” no PC. Sem
+  mDNS, sem TLS e sem serviço de segundo plano; os limites estão no relatório
+  `docs/relatorios/2026-11-25_127-pareamento-pc-celular.md`.
+
 **Entregável**
 - Descoberta na rede local (mDNS ou lista manual de IP) com código de 6 dígitos
   mostrado no celular.
@@ -120,11 +125,29 @@ provar de verdade.
 
 **Depende de:** todas as anteriores.
 
+## Decisão de base única (fim da Etapa 3)
+
+**Decisão: manter o Electron como app do PC.** Os números que sustentam a
+escolha, contados no repositório em 25/11/2026:
+
+| Lado | Código | Testes |
+|------|--------|--------|
+| Celular (Flutter) | 45.497 linhas em `lib/` | 81 testes de widget, 6.858 linhas em `tool/` |
+| PC (Electron/JS) | 12.593 linhas em `app.js` + 2.155 em `platforms/desktop` | 65 testes Node |
+| Núcleo web compartilhado | 30.256 linhas em módulos JS da raiz | jsdom e Node |
+
+O PC tem CAD, projetista, utilitários, arquivos e empacotamento que só existem
+em JS; reescrever isso em Flutter custaria mais do que manter as duas telas, e o
+pareamento já provou que protocolo pode ser compartilhado sem base única. A
+decisão muda se a Etapa 6 precisar de um modelo de voz que o Electron não
+consiga rodar, ou se o custo de manter duas interfaces passar o de uma reescrita
+— nenhum dos dois aconteceu ainda.
+
 ## O que fica declarado como não feito
 
-- Nenhuma etapa acima foi executada em PC físico; só a Etapa 1 tem código e
-  teste nesta rodada.
-- A decisão “Electron ou Flutter no PC” fica para o fim da Etapa 3, com números
-  de esforço das duas opções.
+- Nenhuma etapa acima foi executada em PC físico nem em aparelho Android; as
+  Etapas 1, 2 e 3 têm código e teste local, não medição em hardware.
+- O pareamento entre dois aparelhos reais é o primeiro item do roteiro de teste
+  em hardware (Etapa 7).
 - Funções exclusivas do celular (SMS, ligação, contatos, acessibilidade de tela)
   não serão copiadas para o PC: serão **acessadas pelo pareamento**, na Etapa 6.

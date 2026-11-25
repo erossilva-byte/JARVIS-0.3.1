@@ -1,3 +1,26 @@
+## 1.104.0 — pareamento PC ↔ celular (Etapa 3)
+
+### O que mudou
+- **Código de 6 dígitos no celular**, com prazo de 2 minutos, cinco tentativas
+  e endereço IP da rede local na tela do módulo “Pareamento Windows”.
+- **Canal autenticado só de leitura no celular**: desafio em `/jarvis/info`,
+  prova HMAC-SHA256 em `/jarvis/parear`, token de 32 bytes para
+  `/jarvis/status` e revogação em `/jarvis/esquecer`. Nenhuma rota de comando.
+- **Registro no PC** em `userData/pareamento-celular.json`, com “Esquecer este
+  celular”, e formulário no painel para digitar IP e código.
+- **Nada sai da rede local**: o servidor recusa origem fora das faixas
+  privadas e o cliente do PC recusa endereço público antes de abrir conexão.
+- **Pareamento Windows** saiu de “não existe” para **parcial**: tem tela, pareia
+  e só lê; controle remoto continua fora.
+- **Decisão de base única registrada** no roteiro: manter o Electron, com os
+  números das duas bases.
+
+### Limites declarados
+- Sem TLS, sem mDNS e sem serviço de segundo plano: o canal existe enquanto a
+  tela do pareamento está aberta.
+- Nada foi testado em aparelho nem em PC físico; a prova é de protocolo,
+  integração local (127.0.0.1) e DOM.
+
 ## 1.103.0 — asserts ligados e triagem dos testes puros
 
 ### O que mudou

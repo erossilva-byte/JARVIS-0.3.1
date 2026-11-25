@@ -38,7 +38,6 @@ void main() {
       .map((s) => s.nome)
       .toList();
   for (final esperado in [
-    'Pareamento Windows',
     'Controle do Windows',
     'ESP32 e Home Assistant',
     'Modelos locais',
@@ -52,6 +51,7 @@ void main() {
     'Programação (sem execução)',
     'Avatar 3D',
     'Modo palco',
+    'Pareamento Windows',
   ]) {
     final situacao = situacaoDe(parcial);
     assert(situacao.estado == EstadoModulo.parcial,

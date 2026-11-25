@@ -631,6 +631,25 @@ function resumirResultado(acao, r) {
 }
 Object.assign(acoes, acoesPC2);
 
+// Pareamento PC ↔ celular (Etapa 3): cliente Node puro, testado fora da janela.
+const PAR_PC = require(path.join(__dirname, 'pareamento.js'));
+let clientePareamento = null;
+function pareamentoDoPC() {
+  if (!clientePareamento) {
+    clientePareamento = PAR_PC.criarPareamento({
+      arquivo: path.join(app.getPath('userData'), 'pareamento-celular.json'),
+      nome: os.hostname() || 'JARVIS no PC'
+    });
+  }
+  return clientePareamento;
+}
+Object.assign(acoes, {
+  pareamento_celular: async () => pareamentoDoPC().estado(),
+  parear_celular: async ({ ip, codigo }) => pareamentoDoPC().parear({ ip, codigo }),
+  status_celular: async () => pareamentoDoPC().status(),
+  esquecer_celular: async () => pareamentoDoPC().esquecer()
+});
+
 ipcMain.handle('jarvis:run', async (_e, nome, args) => {
   if (!Object.prototype.hasOwnProperty.call(acoes, nome)) {
     anotarFalha(nome, 'ação desconhecida');

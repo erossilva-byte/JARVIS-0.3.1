@@ -88,6 +88,8 @@ CASOS = (
     ("tool/ligacao_paridade_test.dart", "ligação: mesmos verbos do segundo plano e destino limpo"),
     ("tool/hora_data_test.dart", "hora e data no aparelho: frases, falas e ação do histórico"),
     ("tool/status_plataforma_test.dart", "status do PC e do celular: campos, títulos, formatação e vazio honesto"),
+    ("tool/pareamento_test.dart", "pareamento: código, prova, token, oferta, registro e rede local"),
+    ("tool/pareamento_rede_test.dart", "pareamento em rede: oferta, token, leitura, esquecimento e expiração"),
 )
 
 

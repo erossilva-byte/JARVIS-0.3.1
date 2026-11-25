@@ -18,6 +18,7 @@ import 'services/kws_controller.dart';
 import 'services/kws_settings_page.dart';
 import 'services/modelos_locais_page.dart';
 import 'services/palco_page.dart';
+import 'services/pareamento_page.dart';
 import 'services/programacao_page.dart';
 import 'services/projetista_page.dart';
 import 'services/segundo_plano_page.dart';
@@ -292,6 +293,11 @@ class ModulePage extends StatelessWidget {
         return [
           _botao(c, 'abrir-avatar-3d', Icons.view_in_ar_rounded,
               'Abrir o avatar 3D', () => const AvatarPage()),
+        ];
+      case TelaModulo.pareamento:
+        return [
+          _botao(c, 'abrir-pareamento', Icons.devices_rounded,
+              'Parear com o PC', () => const PareamentoPage()),
         ];
       case TelaModulo.nenhuma:
         return const [];

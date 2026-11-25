@@ -103,6 +103,8 @@ MAPA = {
 EXCLUIDOS = {
     "conflitos": "precisa da lista de conflitos e do cofre; aberta vazia não mostra nada",
     "modo_visita": "fluxo de segurança com PIN e bloqueio; não abre por voz",
+    "pareamento": "mostra um código na tela para o PC digitar; abrir por voz não ajuda e "
+        "exporia o fluxo de pareamento a um comando falado",
 }
 
 paginas = sorted(p.stem.removesuffix("_page")
@@ -176,8 +178,8 @@ for classe in ["JarvisApelidos.kt", "JarvisMapaVoz.kt"]:
            f"prepare_android_sistema.py não copia {classe}")
 
 # 4. Versão, docs e registros.
-exigir("version: 1.103.0+110300" in pubspec,
-       "pubspec.yaml não está em 1.103.0+110300")
+exigir("version: 1.104.0+110400" in pubspec,
+       "pubspec.yaml não está em 1.104.0+110400")
 exigir("## 1.94.0" in changelog, "CHANGELOG.md não tem o bloco 1.94.0")
 exigir(relatorio.is_file(), "falta o relatório do bloco 117")
 exigir("test_bloco_117.py" in pacote, "package.json não roda o contrato 117")

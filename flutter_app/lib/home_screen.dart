@@ -23,6 +23,7 @@ import 'services/historico_page.dart';
 import 'services/kws_settings_page.dart';
 import 'services/memoria_page.dart';
 import 'services/palco_page.dart';
+import 'services/pareamento_page.dart';
 import 'services/memoria_store.dart';
 import 'services/pessoas_page.dart';
 import 'services/personalidade_page.dart';
@@ -432,6 +433,11 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     if (name == 'Atualizações') {
       Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const AtualizacaoPage()));
+      return;
+    }
+    if (name == 'Pareamento Windows') {
+      Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const PareamentoPage()));
       return;
     }
     if (name == 'Gestos e modo noturno') {

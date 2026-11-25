@@ -6459,14 +6459,170 @@ async function atualizarStatusPc() {
   }
 }
 
+// Pareamento com o celular (Etapa 3). O canal é só de leitura: o PC pede o
+// status, nunca envia comando. O código de 6 dígitos é digitado aqui e vira
+// prova HMAC no processo principal; o token fica no registro do PC.
+let pareamentoCelular = { pareado: false };
+
+function iniciarPareamentoPainel() {
+  const botao = document.getElementById('sc-parear');
+  if (!botao || botao.dataset.ligado === '1') return;
+  botao.dataset.ligado = '1';
+  botao.addEventListener('click', parearCelular);
+  const esquecer = document.getElementById('sc-esquecer');
+  if (esquecer) esquecer.addEventListener('click', esquecerCelular);
+  const codigo = document.getElementById('sc-codigo');
+  if (codigo) {
+    codigo.addEventListener('input', () => {
+      const P = window.Pareamento;
+      if (!P) return;
+      codigo.value = P.formatarCodigo(P.normalizarCodigo(codigo.value).slice(0, 6));
+    });
+    codigo.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') parearCelular(); });
+  }
+  const ip = document.getElementById('sc-ip');
+  if (ip) ip.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') parearCelular(); });
+  atualizarPareamentoCelular();
+}
+
+function mostrarErroPareamento(texto) {
+  const alvo = document.getElementById('sc-pareamento-erro');
+  if (alvo) alvo.textContent = texto || '';
+}
+
+async function atualizarPareamentoCelular() {
+  if (plataforma !== 'desktop') return;
+  try {
+    const estado = await nativo('pareamento_celular', {});
+    pareamentoCelular = estado && estado.pareado ? estado : { pareado: false };
+  } catch (_) {
+    pareamentoCelular = { pareado: false };
+  }
+  const P = window.Pareamento;
+  const pareado = P ? P.estadoPareado(pareamentoCelular) : Boolean(pareamentoCelular.pareado);
+  const caixa = document.getElementById('sc-pareado');
+  const esquecer = document.getElementById('sc-esquecer');
+  if (caixa) {
+    caixa.hidden = !pareado;
+    caixa.textContent = pareado
+      ? (P ? P.resumoPareado(pareamentoCelular)
+          : 'Pareado com ' + pareamentoCelular.dispositivo + '.')
+      : '';
+  }
+  if (esquecer) esquecer.hidden = !pareado;
+}
+
+async function parearCelular() {
+  const ip = document.getElementById('sc-ip');
+  const codigo = document.getElementById('sc-codigo');
+  const botao = document.getElementById('sc-parear');
+  if (!ip || !codigo) return;
+  const P = window.Pareamento;
+  const conferido = P
+    ? P.validarDigitacao(ip.value, codigo.value)
+    : { ok: false, erro: 'A regra de pareamento não carregou nesta janela.' };
+  if (!conferido.ok) { mostrarErroPareamento(conferido.erro); return; }
+  if (plataforma !== 'desktop') {
+    mostrarErroPareamento('O pareamento com o celular existe no app do PC (Electron).');
+    return;
+  }
+  mostrarErroPareamento('');
+  if (botao) botao.disabled = true;
+  try {
+    await nativo('parear_celular', { ip: conferido.ip, codigo: conferido.codigo });
+    ip.value = '';
+    codigo.value = '';
+    await atualizarPareamentoCelular();
+    await atualizarStatusCelular();
+  } catch (e) {
+    mostrarErroPareamento((e && e.message) || 'Não consegui parear com o celular.');
+  } finally {
+    if (botao) botao.disabled = false;
+  }
+}
+
+async function esquecerCelular() {
+  if (plataforma !== 'desktop') return;
+  try {
+    await nativo('esquecer_celular', {});
+    pareamentoCelular = { pareado: false };
+    mostrarErroPareamento('');
+    const linhas = document.getElementById('sc-linhas');
+    if (linhas) linhas.innerHTML = '';
+    await atualizarPareamentoCelular();
+    await atualizarStatusCelular();
+  } catch (e) {
+    mostrarErroPareamento((e && e.message) || 'Não consegui esquecer o celular.');
+  }
+}
+
 async function atualizarStatusCelular() {
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   if (plataforma !== 'android') {
-    set('sc-pareamento', 'Sem conexão com o celular: o pareamento entre PC e celular ainda não existe (Etapa 3 do roteiro do PC).');
+    iniciarPareamentoPainel();
+    if (plataforma === 'desktop') {
+      await atualizarPareamentoCelular();
+      const P = window.Pareamento;
+      const pareado = P ? P.estadoPareado(pareamentoCelular) : Boolean(pareamentoCelular.pareado);
+      if (!pareado) {
+        set('sc-pareamento', 'Sem conexão: nenhum celular pareado ainda.');
+        set('cel-bateria', 'Sem conexão'); set('cel-temperatura', 'Sem conexão');
+        set('cel-armazenamento', 'Sem conexão'); set('cel-ram', 'Sem conexão');
+        set('cel-conexao', navigator.onLine ? 'Rede do PC ativa' : 'Rede do PC sem conexão');
+        set('cel-wifi', 'Depende do pareamento'); set('cel-dados', 'Depende do pareamento');
+        set('cel-aparelho', navigator.userAgent.slice(0, 80));
+        set('cel-ultimo-app', store.get('ultimo_app_jarvis', 'Nenhum registro ainda'));
+        set('cel-alerta', 'Para ver os dados do celular, pareie acima com o código de 6 dígitos. Nada sai da rede local.');
+        atualizarStatusPc();
+        return;
+      }
+      set('sc-pareamento', P
+        ? P.resumoPareado(pareamentoCelular)
+        : 'Pareado com ' + pareamentoCelular.dispositivo + '.');
+      set('cel-alerta', 'Consultando o celular pareado…');
+      try {
+        const r = await nativo('status_celular', {});
+        const dados = (r && r.status) || {};
+        const status = window.StatusPlataforma
+          ? window.StatusPlataforma.deMapa(dados, 'celular')
+          : null;
+        renderStatusPlataforma('sc-linhas', status);
+        const linhas = status && !status.semDados ? status.linhas : [];
+        const valor = (rotulo) => {
+          const achado = linhas.find((linha) => linha.rotulo === rotulo);
+          return achado ? achado.valor : 'Não informado pelo celular';
+        };
+        set('cel-bateria', valor('Bateria'));
+        set('cel-temperatura', valor('Temperatura'));
+        set('cel-armazenamento', valor('Disco'));
+        set('cel-ram', valor('Memória'));
+        set('cel-conexao', valor('Rede'));
+        const rede = String((dados && dados.conexao) || '').toLowerCase();
+        set('cel-wifi', rede.includes('wi') ? 'Conexão ativa via Wi-Fi' : 'Wi-Fi não é a conexão ativa');
+        set('cel-dados', rede.includes('m') && rede.includes('vel') ? 'Conexão ativa via rede móvel' : 'Dados móveis não são a conexão ativa');
+        set('cel-aparelho', valor('Sistema'));
+        set('cel-ultimo-app', 'Não informado pelo canal de leitura');
+        const quando = r && r.atualizadoEm ? new Date(r.atualizadoEm) : null;
+        set('cel-alerta', 'Status lido do celular pareado' +
+          (quando && !Number.isNaN(quando.getTime())
+            ? ' às ' + quando.toLocaleTimeString('pt-BR') + '.'
+            : '.'));
+        registrar('dispositivo', 'status do celular pareado lido');
+      } catch (e) {
+        renderStatusPlataforma('sc-linhas', null);
+        set('cel-alerta', 'Não consegui ler o status do celular: ' + ((e && e.message) || 'erro no canal'));
+      }
+      atualizarStatusPc();
+      return;
+    }
+    set('sc-pareamento', 'Sem conexão: o pareamento existe no app do PC e no app do celular.');
     set('cel-bateria', 'Sem conexão'); set('cel-temperatura', 'Sem conexão');
     set('cel-armazenamento', 'Sem conexão'); set('cel-ram', 'Sem conexão');
-    set('cel-conexao', navigator.onLine ? 'Rede do PC ativa' : 'Rede do PC sem conexão'); set('cel-wifi', 'Depende do pareamento'); set('cel-dados', 'Depende do pareamento'); set('cel-aparelho', navigator.userAgent.slice(0, 80)); set('cel-ultimo-app', store.get('ultimo_app_jarvis', 'Nenhum registro ainda'));
-    set('cel-alerta', 'Os dados do celular aparecem aqui quando o pareamento existir e o celular estiver na mesma rede.');
+    set('cel-conexao', navigator.onLine ? 'Rede do PC ativa' : 'Rede do PC sem conexão');
+    set('cel-wifi', 'Depende do pareamento'); set('cel-dados', 'Depende do pareamento');
+    set('cel-aparelho', navigator.userAgent.slice(0, 80));
+    set('cel-ultimo-app', store.get('ultimo_app_jarvis', 'Nenhum registro ainda'));
+    set('cel-alerta', 'Os dados do celular aparecem aqui no app do PC, quando ele estiver pareado e na mesma rede.');
     atualizarStatusPc();
     return;
   }
