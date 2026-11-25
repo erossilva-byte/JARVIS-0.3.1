@@ -135,8 +135,8 @@ for pagina in ("VisaoPage", "PalcoPage", "MemoriaPage", "PessoasPage",
     exigir(pagina in abrir, f"abrir_tela.dart sem {pagina}")
 
 # 6. Versão, CHANGELOG, relatório e registro do teste.
-exigir("version: 1.99.0+19900" in pubspec,
-       "pubspec sem a versão 1.99.0+19900")
+exigir("version: 1.100.0+110000" in pubspec,
+       "pubspec sem a versão 1.100.0+110000")
 exigir("## 1.91.0" in changelog, "CHANGELOG sem o bloco 1.91.0")
 for termo in ("abre o modo visão", "mensagem", "segundo plano"):
     exigir(termo in changelog.lower(), f"CHANGELOG do 1.91.0 sem {termo}")

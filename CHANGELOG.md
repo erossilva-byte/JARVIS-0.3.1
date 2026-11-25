@@ -1,3 +1,16 @@
+## 1.100.0 — hora e data no aparelho também com o app aberto
+
+### O que mudou
+- **Hora e data sem provedor**: “que horas são”, “que dia é hoje”, “qual a
+  data” e “dia da semana” são respondidas pelo relógio do aparelho com a tela
+  aberta também — mesma fala, mesmo relógio e mesmo rótulo de histórico do
+  segundo plano. Antes, com a tela aberta, a pergunta gastava chave de IA.
+- **Tabela de paridade atualizada**: hora e data saíram de “só no segundo
+  plano” e entraram em “ambos”. Agora são 16 ações em paridade, 4 só na tela e
+  5 sem voz.
+- O contrato passou a exigir que a regra esteja **ligada no caminho de voz**, e
+  não só que o arquivo exista.
+
 ## 1.99.0 — ligação com “chama” no segundo plano e paridade das ações em teste
 
 ### O que mudou

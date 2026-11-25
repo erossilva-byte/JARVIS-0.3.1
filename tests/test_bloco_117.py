@@ -176,8 +176,8 @@ for classe in ["JarvisApelidos.kt", "JarvisMapaVoz.kt"]:
            f"prepare_android_sistema.py não copia {classe}")
 
 # 4. Versão, docs e registros.
-exigir("version: 1.99.0+19900" in pubspec,
-       "pubspec.yaml não está em 1.99.0+19900")
+exigir("version: 1.100.0+110000" in pubspec,
+       "pubspec.yaml não está em 1.100.0+110000")
 exigir("## 1.94.0" in changelog, "CHANGELOG.md não tem o bloco 1.94.0")
 exigir(relatorio.is_file(), "falta o relatório do bloco 117")
 exigir("test_bloco_117.py" in pacote, "package.json não roda o contrato 117")

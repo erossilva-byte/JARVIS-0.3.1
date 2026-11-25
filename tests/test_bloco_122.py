@@ -86,6 +86,8 @@ PARIDADE = [
      "JarvisFundo.kt", "Tipo.MIDIA"),
     ("núcleo flutuante", "lib/core/pedido_nucleo.dart", "pedidoNucleo",
      "JarvisFundo.kt", "Tipo.NUCLEO"),
+    ("hora e data", "lib/core/hora_data.dart", "respostaHoraData",
+     "JarvisFundo.kt", "Tipo.HORA"),
 ]
 
 # Ação que existe só com a tela aberta, e o marcador que prova que o segundo
@@ -99,12 +101,6 @@ SO_TELA = [
      ("marcador", "LOCALIZACAO")),
     ("música por nome", "lib/core/aparelho.dart", "interpretarSpotify",
      ("marcador", "interpretarSpotify")),
-]
-
-# Ação que só o segundo plano resolve no aparelho: hora e data saem daqui sem
-# provedor, enquanto com a tela aberta a pergunta vai para a IA.
-SO_FUNDO = [
-    ("hora e data", "JarvisFundo.kt", "Tipo.HORA"),
 ]
 
 # Ação que não tem voz em nenhum dos dois caminhos, e o que não pode aparecer
@@ -131,6 +127,10 @@ for nome, arquivo, marcador, kt, marcador_kt in PARIDADE:
     exigir(marcador_kt in ler(ANDROID / kt),
            f"{nome}: marcador {marcador_kt} ausente em {kt}")
 
+# 1b. Hora e data respondidas no aparelho também com a tela aberta.
+exigir("respostaHoraData(" in voz,
+       "hora e data não entram no caminho de voz com a tela aberta")
+
 # 2. Ações só na tela — e isso precisa continuar verdadeiro.
 for nome, arquivo, marcador, (tipo, alvo) in SO_TELA:
     exigir(marcador in ler(APP / arquivo),
@@ -142,13 +142,6 @@ for nome, arquivo, marcador, (tipo, alvo) in SO_TELA:
         exigir(alvo not in ler(ANDROID / "JarvisFundo.kt"),
                f"{nome}: o segundo plano passou a tratar {alvo} — "
                "atualize a tabela de paridade")
-
-# 2b. Ações que só o segundo plano tem.
-for nome, kt, marcador_kt in SO_FUNDO:
-    exigir(marcador_kt in ler(ANDROID / kt),
-           f"{nome}: marcador {marcador_kt} ausente em {kt}")
-    exigir("ComandoHora" not in ler(LIB / "core" / "comandos_android.dart"),
-           f"{nome}: o app passou a tratar no aparelho — atualize a tabela")
 
 # 3. Ações sem voz continuam sem voz.
 for nome, motivo, proibidos in SEM_VOZ:
@@ -212,8 +205,8 @@ pacote = ler(RAIZ / "package.json")
 nucleo = ler(RAIZ / "tests" / "test_dart_core.py")
 relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-25_122-paridade-das-acoes.md")
-exigir("version: 1.99.0+19900" in pubspec,
-       "pubspec.yaml não está em 1.99.0+19900")
+exigir("version: 1.100.0+110000" in pubspec,
+       "pubspec.yaml não está em 1.100.0+110000")
 exigir("## 1.99.0" in changelog, "CHANGELOG.md não tem o bloco 1.99.0")
 exigir(relatorio.is_file(), "falta o relatório do bloco 122")
 exigir("test_bloco_122.py" in pacote, "package.json não roda o contrato 122")

@@ -13,6 +13,7 @@ import '../core/especialidades.dart';
 import '../core/fala_em_fluxo.dart';
 import '../core/habilidades.dart';
 import '../core/historico_voz.dart';
+import '../core/hora_data.dart';
 import '../core/memoria_busca.dart';
 import '../core/mapa_voz.dart';
 import '../core/palco.dart';
@@ -313,6 +314,18 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
         ok: tarefa.ok,
         mensagemRecebida: tarefa.mensagem,
         acao: tarefa.acao,
+      );
+      return;
+    }
+    // Hora e data saem do relógio do aparelho, como no segundo plano: sem
+    // provedor, sem chave e sem espera.
+    final relogio = respostaHoraData(texto);
+    if (relogio != null) {
+      _concluirLocal(
+        texto,
+        ok: true,
+        mensagemRecebida: relogio.fala,
+        acao: relogio.acao,
       );
       return;
     }

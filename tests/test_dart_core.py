@@ -81,6 +81,7 @@ CASOS = (
     ("tool/segredo_pedido_test.dart", "PIN no histórico: 4 a 8 dígitos mascarados, telefone preservado"),
     ("tool/pin_sem_colisao_test.dart", "máscara de PIN não atrapalha apelido com número nem envio com número"),
     ("tool/ligacao_paridade_test.dart", "ligação: mesmos verbos do segundo plano e destino limpo"),
+    ("tool/hora_data_test.dart", "hora e data no aparelho: frases, falas e ação do histórico"),
 )
 
 
