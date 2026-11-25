@@ -88,8 +88,8 @@ for campo in ["cpu:", "ramLivre:", "ramTotal:", "discoLivre:", "discoTotal:",
 exigir("os.cpus()" in desktop, "status_pc deixou de medir a CPU de verdade")
 
 # 5. Versão, docs e registros.
-exigir("version: 1.109.0+110900" in pubspec,
-       "pubspec.yaml não está em 1.109.0+110900")
+exigir("version: 1.110.0+111000" in pubspec,
+       "pubspec.yaml não está em 1.110.0+111000")
 exigir("## 1.101.0" in changelog, "CHANGELOG.md não tem o bloco 1.101.0")
 exigir(relatorio.is_file(), "falta o relatório do bloco 124")
 exigir("test_bloco_124.py" in pacote, "package.json não roda o contrato 124")

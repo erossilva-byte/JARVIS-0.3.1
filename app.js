@@ -214,7 +214,7 @@ const PC = (plataforma === 'desktop' && nativoDesk) ? {
 const GROQ = 'https://api.groq.com/openai/v1';
 const LISTA_APPS = window.APPS || {};
 const MODELO_PADRAO = 'openai/gpt-oss-20b';
-const VERSAO_APP = '1.109.0';
+const VERSAO_APP = '1.110.0';
 // Nucleos novos da 1.22.0: visao com baloes sem sobreposicao e cadastro de pessoas.
 // Ambos rodam sem DOM (testados em Node) e sao opcionais: sem eles, o resto do app segue.
 const VIS = (typeof window !== 'undefined' && window.VisaoNova) ? window.VisaoNova : null;
@@ -6705,7 +6705,12 @@ function iniciarPareamentoPainel() {
   document.querySelectorAll('[data-comando-tela]').forEach((b) => {
     if (b.dataset.ligado === '1') return;
     b.dataset.ligado = '1';
-    b.addEventListener('click', () => comandarCelular(b.dataset.comandoTela));
+    b.addEventListener('click', () => comandarCelular({ acao: 'abrir_tela', tela: b.dataset.comandoTela }));
+  });
+  document.querySelectorAll('[data-comando-acao]').forEach((b) => {
+    if (b.dataset.ligado === '1') return;
+    b.dataset.ligado = '1';
+    b.addEventListener('click', () => comandarCelular({ acao: b.dataset.comandoAcao }));
   });
   const codigo = document.getElementById('sc-codigo');
   if (codigo) {
@@ -6769,14 +6774,22 @@ function atualizarComandosCelular(pareado) {
 
 const NOMES_DE_TELA = { memoria: 'a memória', pessoas: 'as pessoas', visao: 'a visão', historico: 'o histórico', conversa: 'a conversa' };
 
-async function comandarCelular(tela) {
+// O que cada ação pede, em português, para a linha de status não mentir.
+const NOMES_DE_ACAO = {
+  abrir_conversa: 'abrir a conversa',
+  iniciar_escuta: 'começar a escutar'
+};
+
+async function comandarCelular(pedido) {
   const alvo = document.getElementById('sc-comando-status');
-  const nome = NOMES_DE_TELA[tela] || tela;
-  if (alvo) alvo.textContent = 'Pedindo ao celular para abrir ' + nome + '…';
+  const acao = pedido.acao;
+  const nome = pedido.tela ? (NOMES_DE_TELA[pedido.tela] || pedido.tela) : (NOMES_DE_ACAO[acao] || acao);
+  const argumentos = pedido.tela ? { tela: pedido.tela } : {};
+  if (alvo) alvo.textContent = 'Pedindo ao celular para ' + nome + '…';
   try {
-    const r = await nativo('comandar_celular', { acao: 'abrir_tela', argumentos: { tela: tela } });
-    if (alvo) alvo.textContent = 'Celular respondeu: ' + ((r && r.resultado) || ('abriu ' + nome + '.'));
-    registrar('dispositivo', 'comando enviado ao celular: abrir ' + nome);
+    const r = await nativo('comandar_celular', { acao: acao, argumentos: argumentos });
+    if (alvo) alvo.textContent = 'Celular respondeu: ' + ((r && r.resultado) || (nome + ' no celular.'));
+    registrar('dispositivo', 'comando enviado ao celular: ' + nome);
   } catch (e) {
     if (alvo) alvo.textContent = (e && e.message) || 'Não consegui enviar o comando ao celular.';
   }

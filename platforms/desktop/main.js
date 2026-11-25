@@ -74,8 +74,51 @@ function lerChaveDesktop(dados) {
 }
 
 // Só estas ações existem. O renderer NUNCA envia comandos de shell.
+//
+// Controle de mídia e volume: tecla no Windows, `playerctl`/`pactl` (ou
+// `wpctl`) no Linux. Sem a ferramenta instalada o app recusa com o nome dela,
+// em vez de fingir que abaixou o volume.
+const MIDIA_LINUX = {
+  alternar: ['play-pause'],
+  pausar: ['play-pause'],
+  proxima: ['next'],
+  anterior: ['previous'],
+  parar: ['stop']
+};
+
+function rodarMidia(programa, argumentos) {
+  const r = spawnSync(programa, argumentos, { encoding: 'utf8', timeout: 5000 });
+  if (r.error || r.status !== 0) {
+    const detalhe = r.error ? r.error.message : String(r.stderr || r.stdout || '').trim();
+    throw new Error(programa + ' não aceitou o comando: ' + detalhe.slice(0, 240));
+  }
+}
+
+function midiaLinux(comando) {
+  const args = MIDIA_LINUX[comando];
+  if (!args) throw new Error('Comando de mídia inválido.');
+  if (!comandoExiste('playerctl')) {
+    throw new Error('Para controlar a música no Linux, instale o playerctl (ex.: sudo apt install playerctl).');
+  }
+  rodarMidia('playerctl', args);
+}
+
+function volumeLinux(direcao) {
+  if (comandoExiste('pactl')) {
+    if (direcao === 'silenciar') rodarMidia('pactl', ['set-sink-mute', '@DEFAULT_SINK@', 'toggle']);
+    else rodarMidia('pactl', ['set-sink-volume', '@DEFAULT_SINK@', direcao === 'diminuir' ? '-5%' : '+5%']);
+    return 'pactl';
+  }
+  if (comandoExiste('wpctl')) {
+    if (direcao === 'silenciar') rodarMidia('wpctl', ['set-mute', '@DEFAULT_AUDIO_SINK@', 'toggle']);
+    else rodarMidia('wpctl', ['set-volume', '@DEFAULT_AUDIO_SINK@', direcao === 'diminuir' ? '5%-' : '5%+']);
+    return 'wpctl';
+  }
+  throw new Error('Para mudar o volume no Linux, instale o pactl (pacote pulseaudio-utils) ou o wpctl (pipewire).');
+}
+
 function teclaMultimidiaWindows(codigo) {
-  if (plat !== 'win32') throw new Error('Controle multimídia por tecla está disponível nesta versão apenas no Windows.');
+  if (plat !== 'win32') throw new Error('Tecla multimídia do Windows pedida fora do Windows.');
   const script = [
     "$src = 'using System; using System.Runtime.InteropServices; public static class JarvisNovaMediaKey { [DllImport(\"user32.dll\")] public static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra); public static void Tap(byte key) { keybd_event(key, 0, 0, UIntPtr.Zero); keybd_event(key, 0, 2, UIntPtr.Zero); } }'",
     'Add-Type -TypeDefinition $src',
@@ -112,16 +155,26 @@ const acoes = {
     const c = String(comando || 'pausar').toLowerCase();
     const tecla = TECLAS_MIDIA[c];
     if (!tecla) throw new Error('Comando de mídia inválido.');
+    if (plat === 'linux') {
+      midiaLinux(c);
+      return { ok: true, incerto: true, metodo: 'playerctl (Linux)', comando: c,
+        info: 'Comando enviado ao player ativo pelo playerctl; a resposta não é confirmada.' };
+    }
     teclaMultimidiaWindows(tecla);
     return { ok: true, incerto: true, metodo: 'tecla multimídia do Windows', comando: c,
       info: 'Comando enviado ao controle multimídia do Windows; a resposta do player não pode ser confirmada.' };
   },
   volume_pc: async ({ direcao, tipo, percentual }) => {
     if (percentual != null) throw new Error('Definir percentual exato ainda não é suportado no Windows; use aumentar, diminuir ou silenciar.');
-    if (tipo && tipo !== 'musica') throw new Error('Nesta versão, o controle por tecla altera o volume principal do Windows, não canais separados.');
+    if (tipo && tipo !== 'musica') throw new Error('Nesta versão, o controle altera o volume principal do sistema, não canais separados.');
     const d = String(direcao || 'aumentar').toLowerCase();
     const tecla = TECLAS_VOLUME[d];
     if (!tecla) throw new Error('Direção de volume inválida.');
+    if (plat === 'linux') {
+      const ferramenta = volumeLinux(d);
+      return { ok: true, incerto: true, metodo: 'volume do Linux por ' + ferramenta, direcao: d,
+        info: 'Volume principal alterado em 5 pontos; o nível exato não foi lido.' };
+    }
     teclaMultimidiaWindows(tecla);
     return { ok: true, incerto: true, metodo: 'tecla de volume do Windows', direcao: d,
       info: 'Comando enviado ao volume principal do Windows; o nível exato não foi lido.' };

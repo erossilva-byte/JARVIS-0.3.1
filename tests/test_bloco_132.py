@@ -63,7 +63,7 @@ exigir(lista_js is not None, "não achei a lista de ações no JS")
 
 def telas(texto: str) -> dict[str, list[str]]:
     achado: dict[str, list[str]] = {}
-    for acao, corpo in re.findall(r"['\"]?([a-z_]+)['\"]?\s*:\s*\[([^\]]*)\]", texto):
+    for acao, corpo in re.findall(r"['\"]?([a-z_]+)['\"]?\s*:\s*(?:<[^>]*>)?\s*\[([^\]]*)\]", texto):
         achado[acao] = [item.strip().strip("'\"") for item in corpo.split(",") if item.strip()]
     return achado
 
@@ -155,6 +155,8 @@ for trecho in [
     "/jarvis/comando",
     "jarvis/1",
     "abrir_tela",
+    "abrir_conversa",
+    "iniciar_escuta",
     "## Limites declarados",
     "executado em aparelho",
 ]:

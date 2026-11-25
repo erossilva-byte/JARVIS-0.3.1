@@ -111,21 +111,33 @@ class _PareamentoPageState extends State<PareamentoPage> {
     return dados;
   }
 
-  /// Comando vindo do PC pareado: só abre tela, e só a que está na lista.
+  /// Comando vindo do PC pareado. Só faz o que está em `acoesRemotas`.
   ///
   /// Erro aqui vira `ok: false` na resposta do canal, com o motivo — o celular
   /// nunca responde “ok” para uma ação que não fez.
   Future<Object?> _executarComando(EnvelopeDeComando comando) async {
-    if (comando.acao != 'abrir_tela') {
-      throw StateError('Este celular não sabe “${comando.acao}”.');
+    switch (comando.acao) {
+      case 'abrir_tela':
+        final tela = TelaJarvis.porChave(comando.tela);
+        if (tela == null) throw StateError('Tela desconhecida: ${comando.tela}.');
+        final resultado = await AbrirTela.abrir(tela);
+        if (!resultado.ok) throw StateError(resultado.mensagem);
+        return 'abri ${tela.rotulo} no celular';
+      case 'abrir_conversa':
+        final resultado = await AbrirTela.abrir(TelaJarvis.conversa);
+        if (!resultado.ok) throw StateError(resultado.mensagem);
+        return 'abri a conversa no celular';
+      case 'iniciar_escuta':
+        final estado = await jarvisKwsController.start();
+        if (!estado.ok || !estado.listening) {
+          throw StateError(estado.error.isNotEmpty
+              ? estado.error
+              : 'O detector de palavra não confirmou a escuta neste aparelho.');
+        }
+        return 'escuta iniciada no celular';
+      default:
+        throw StateError('Este celular não sabe “${comando.acao}”.');
     }
-    final tela = TelaJarvis.porChave(comando.argumento);
-    if (tela == null) {
-      throw StateError('Tela desconhecida: ${comando.argumento}.');
-    }
-    final resultado = await AbrirTela.abrir(tela);
-    if (!resultado.ok) throw StateError(resultado.mensagem);
-    return 'abri ${tela.rotulo} no celular';
   }
 
   Future<void> _carregarIps() async {

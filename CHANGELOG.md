@@ -1,3 +1,32 @@
+## 1.110.0 — comandos novos e app do PC no Linux
+
+### O que mudou
+- **Comandos novos do PC para o celular**: `abrir_conversa` e `iniciar_escuta`,
+  ambos sem argumento. A validação é a mesma do `abrir_tela` (token, protocolo,
+  60 s, `id` de uso único, lista fechada, 20 por minuto) e argumento em ação
+  sem argumento é recusado com 422 explicado. No celular, `iniciar_escuta` chama
+  o mesmo controlador da palavra de ativação e só responde “ok” quando o
+  detector confirma que está escutando.
+- **Painel do PC**: dois botões novos na área de comandos, habilitados pela
+  mesma negociação de recursos.
+- **Linux**: `build.linux` com AppImage e `.deb`, mantenedor e nome de artefato
+  com versão; job próprio na esteira `release-pc.yml` (empacota, confere tamanho
+  de 20 MB e anexa ao release na tag).
+- **Mídia e volume no Linux**: `playerctl` para tocar/pausar/avançar e
+  `pactl`/`wpctl` para volume e mudo, com recusa explicando o pacote quando a
+  ferramenta falta. No Windows nada mudou.
+- **Documentação**: `platforms/LINUX.md` (instalação, tabela de dependências por
+  recurso, o que muda em relação ao Windows e limites) e tabela de ações
+  atualizada em `docs/COMPATIBILIDADE-ANDROID-PC.md`.
+
+### Limites declarados
+- **Nada foi executado em aparelho Android, em PC Windows nem em área de
+  trabalho Linux real.** O pacote Linux foi gerado nesta máquina apenas para
+  provar que o build fecha; sem janela, sem áudio e sem keyring.
+- O `.deb` usa `jarvis@exemplo.local` como mantenedor de exemplo.
+- Sem auto-atualização no Linux; a atualização assinada continua sendo do pacote
+  Windows.
+
 ## 1.109.0 — compatibilidade Android ↔ PC (protocolo jarvis/2)
 
 ### O que mudou

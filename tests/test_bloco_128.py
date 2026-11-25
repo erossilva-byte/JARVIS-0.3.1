@@ -158,7 +158,7 @@ pubspec = ler(RAIZ / "flutter_app" / "pubspec.yaml")
 changelog = ler(RAIZ / "CHANGELOG.md")
 roteiro = ler(RAIZ / "docs" / "ROTEIRO-PC.md")
 relatorio = RAIZ / "docs" / "relatorios" / "2026-11-25_128-memoria-e-pessoas-pc.md"
-exigir("version: 1.109.0+110900" in pubspec, "pubspec.yaml não está em 1.109.0+110900")
+exigir("version: 1.110.0+111000" in pubspec, "pubspec.yaml não está em 1.110.0+111000")
 exigir("## 1.105.0" in changelog, "CHANGELOG.md sem o bloco 1.105.0")
 exigir("Estado:** entregue na 1.105.0" in roteiro,
        "o roteiro não registrou a Etapa 4 como entregue")

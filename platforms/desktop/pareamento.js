@@ -28,7 +28,10 @@ const PROTOCOLO_LEGADO = 'jarvis/1';
 const RECURSO_STATUS = 'status';
 const RECURSO_COMANDO = 'comando';
 const ACOES_REMOTAS = {
-  abrir_tela: ['memoria', 'pessoas', 'visao', 'historico', 'conversa']
+  abrir_tela: ['memoria', 'pessoas', 'visao', 'historico', 'conversa'],
+  // Ações sem argumento: a lista vazia é o contrato, não esquecimento.
+  abrir_conversa: [],
+  iniciar_escuta: []
 };
 
 /// Lê o que o celular anunciou, aceitando quem não anuncia nada.
@@ -66,6 +69,12 @@ function conferirPedidoDeComando(pedido = {}) {
       Object.keys(ACOES_REMOTAS).join(', ') + '.', 'acao');
   }
   const argumentos = pedido.argumentos && typeof pedido.argumentos === 'object' ? pedido.argumentos : {};
+  if (permitidos.length === 0) {
+    if (Object.keys(argumentos).length > 0) {
+      throw erro('A ação “' + acao + '” não leva argumento.', 'argumento');
+    }
+    return { acao: acao, argumentos: {} };
+  }
   const tela = String(argumentos.tela || '').trim();
   if (!permitidos.includes(tela)) {
     throw erro('Para “' + acao + '” o celular aceita: ' + permitidos.join(', ') + '.', 'argumento');

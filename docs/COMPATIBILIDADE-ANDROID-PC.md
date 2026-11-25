@@ -75,6 +75,12 @@ Ações aceitas hoje (lista fechada, igual nas duas linguagens):
 | Ação | Argumento | O que faz |
 |------|-----------|-----------|
 | `abrir_tela` | `memoria`, `pessoas`, `visao`, `historico`, `conversa` | abre a tela pedida no celular, pelo mesmo caminho que a voz usa |
+| `abrir_conversa` | nenhum | abre a conversa por voz, sem escolher tela |
+| `iniciar_escuta` | nenhum | liga o detector da palavra de ativação e só responde “ok” quando ele confirma que está escutando |
+
+Ação com lista vazia **não aceita argumento**: mandar `argumentos` para
+`abrir_conversa` ou `iniciar_escuta` é recusado com 422, para o canal não virar
+um saco de parâmetros livres.
 
 Ação nova entra no `acoesRemotas` do Dart **e** no `ACOES_REMOTAS` do PC; o
 teste do bloco 132 compara as duas listas e falha se divergirem.
@@ -98,9 +104,9 @@ teste do bloco 132 compara as duas listas e falha se divergirem.
 - **Sem TLS.** O canal é HTTP na LAN; o token e o `id` trafegam em claro. Serve
   para rede de confiança, não para Wi-Fi público. Criptografar exige certificado
   próprio nos dois lados e é decisão de um bloco futuro.
-- **Um comando só.** `abrir_tela` abre uma tela e para. Não há conversa
-  remota, envio de arquivo, leitura de memória pelo PC nem controle do
-  microfone.
+- **Três comandos.** `abrir_tela`, `abrir_conversa` e `iniciar_escuta`. Não há
+  conversa remota (o PC não escreve no chat do celular), envio de arquivo,
+  leitura de memória pelo PC nem desligar a escuta à distância.
 - **O canal só existe com a tela de pareamento aberta.** O servidor morre com a
   tela; comando enviado depois disso não chega.
 - **Relógio.** Prazo de 60 s exige os dois aparelhos com hora razoável; um

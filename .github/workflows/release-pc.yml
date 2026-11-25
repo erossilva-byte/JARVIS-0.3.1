@@ -15,6 +15,69 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  linux:
+    name: Empacotar Linux (AppImage + deb)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Empacotar Linux
+        run: npx electron-builder --linux AppImage deb --publish never
+
+      - name: Conferir AppImage e pacote deb
+        shell: bash
+        run: |
+          ls -lh dist || true
+          APPIMAGE=$(find dist -maxdepth 1 -type f -name '*.AppImage' -print -quit)
+          DEB=$(find dist -maxdepth 1 -type f -name '*.deb' -print -quit)
+          test -n "$APPIMAGE" || { echo 'AppImage não foi gerado.' >&2; exit 1; }
+          test -n "$DEB" || { echo 'Pacote .deb não foi gerado.' >&2; exit 1; }
+          for f in "$APPIMAGE" "$DEB"; do
+            BYTES=$(wc -c < "$f")
+            echo "$f · $BYTES bytes"
+            test "$BYTES" -gt 20000000 || { echo "Artefato pequeno demais (possível stub): $f" >&2; exit 1; }
+          done
+          chmod +x "$APPIMAGE"
+
+      - name: Guardar artefatos Linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-nova-linux
+          if-no-files-found: error
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+
+      - name: Anexar Linux ao release da tag
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.AppImage
+            dist/*.deb
+          body: |
+            ## J.A.R.V.I.S. Nova ${{ github.ref_name }}
+
+            **Linux**: `JARVIS-Nova-<versão>-<arch>.AppImage` (rode com `chmod +x` e
+            clique duplo) e o pacote `.deb` (`sudo apt install ./arquivo.deb`).
+            O controle de mídia usa `playerctl` e o volume usa `pactl` ou `wpctl`;
+            sem eles o app explica o que instalar.
+
+            **Windows**: instalador NSIS e portátil, mais `atualizacao.json` e
+            `atualizacao.json.sig`.
+
   windows:
     name: Instalador e portátil do J.A.R.V.I.S. Nova (Windows)
     runs-on: windows-latest

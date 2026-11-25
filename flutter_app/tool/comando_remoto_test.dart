@@ -34,7 +34,7 @@ String id16() {
 
 Map<String, Object?> pedido({
   String acao = 'abrir_tela',
-  String tela = 'memoria',
+  String? tela = 'memoria',
   String? id,
   DateTime? quando,
   String protocolo = protocoloAtual,
@@ -44,7 +44,7 @@ Map<String, Object?> pedido({
       'id': id ?? id16(),
       'emitidoEm': (quando ?? DateTime.now()).toUtc().toIso8601String(),
       'acao': acao,
-      'argumentos': {'tela': tela},
+      if (tela != null) 'argumentos': {'tela': tela},
     };
 
 Future<Map<String, Object?>> chamar(
@@ -121,6 +121,27 @@ Future<void> main() async {
     validarComando(pedido(tela: 'configuracoes'), agora: agora, idsUsados: semVistos).codigoHttp == 422,
     'tela fora da lista recusa com 422',
   );
+  // Ações novas: sem argumento, e argumento sobrando é recusado.
+  final conversa = validarComando(pedido(acao: 'abrir_conversa', tela: null),
+      agora: agora, idsUsados: semVistos);
+  confere(conversa.ok, 'abrir_conversa dispensa argumento');
+  confere(conversa.comando!.argumentos.isEmpty, 'abrir_conversa chega com argumentos vazios');
+  final escuta = validarComando(pedido(acao: 'iniciar_escuta', tela: null),
+      agora: agora, idsUsados: semVistos);
+  confere(escuta.ok, 'iniciar_escuta dispensa argumento');
+  final escutaComArgs = validarComando(pedido(acao: 'iniciar_escuta'),
+      agora: agora, idsUsados: semVistos);
+  confere(
+    escutaComArgs.codigoHttp == 422 && escutaComArgs.erro.contains('não leva argumento'),
+    'iniciar_escuta com argumento recusa com 422 explicado',
+  );
+  confere(
+    validarComando(pedido(acao: 'abrir_conversa'), agora: agora, idsUsados: semVistos).codigoHttp == 422,
+    'abrir_conversa com argumento recusa com 422',
+  );
+  confere(acoesRemotas.containsKey('abrir_conversa') && acoesRemotas.containsKey('iniciar_escuta'),
+      'as duas ações novas estão no catálogo');
+
   final foraDoRelogio = validarComando(
     pedido(quando: agora.add(const Duration(seconds: 45))),
     agora: agora,
@@ -152,8 +173,8 @@ Future<void> main() async {
     versao: '1.109.0',
     status: () async => {'bateria': 50},
     executarComando: (comando) async {
-      executados.add('${comando.acao}:${comando.argumento}');
-      return 'abri ${comando.argumento}';
+      executados.add('${comando.acao}:${comando.tela}');
+      return comando.tela.isEmpty ? 'fiz ${comando.acao}' : 'abri ${comando.tela}';
     },
   );
   final porta = await servico.iniciar();
@@ -185,6 +206,24 @@ Future<void> main() async {
     final acaoRuim = await chamar(porta, '/jarvis/comando',
         metodo: 'POST', token: token, corpo: pedido(acao: 'formatar'));
     confere(acaoRuim['status'] == 422, 'ação desconhecida responde 422');
+
+    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    final conversaOk = await chamar(porta, '/jarvis/comando',
+        metodo: 'POST', token: token, corpo: pedido(acao: 'abrir_conversa', tela: null));
+    confere(conversaOk['status'] == 200, 'abrir_conversa responde 200');
+    confere((conversaOk['corpo'] as Map)['resultado'] == 'fiz abrir_conversa',
+        'abrir_conversa devolve o que a tela fez');
+
+    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    final escutaOk = await chamar(porta, '/jarvis/comando',
+        metodo: 'POST', token: token, corpo: pedido(acao: 'iniciar_escuta', tela: null));
+    confere(escutaOk['status'] == 200, 'iniciar_escuta responde 200');
+    confere(executados.sublist(executados.length - 2).toString() ==
+        '[abrir_conversa:, iniciar_escuta:]', 'as duas ações chegaram ao executor');
+
+    final escutaComTela = await chamar(porta, '/jarvis/comando',
+        metodo: 'POST', token: token, corpo: pedido(acao: 'iniciar_escuta'));
+    confere(escutaComTela['status'] == 422, 'iniciar_escuta com tela responde 422');
 
     // Ritmo: a segunda chamada em menos de 1 s é barrada.
     await Future<void>.delayed(const Duration(milliseconds: 1100));

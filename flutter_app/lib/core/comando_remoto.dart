@@ -41,13 +41,23 @@ const comandosPorMinuto = 20;
 /// Tamanho máximo do corpo aceito na rota de comando.
 const tamanhoMaximoDoComando = 4096;
 
-/// Ações que o celular aceita executar, com os argumentos permitidos.
+/// Ações que o celular aceita executar.
 ///
-/// `abrir_tela` é a primeira: abre a tela pedida, sem tocar em dado nenhum.
-/// Ação nova entra aqui **e** no espelho do PC (`platforms/desktop/pareamento.js`);
-/// o teste do bloco 132 compara as duas listas.
+/// A lista de valores é o que a ação aceita em `argumentos.tela`; lista vazia
+/// quer dizer “esta ação não leva argumento”. Ação nova entra aqui **e** no
+/// espelho do PC (`platforms/desktop/pareamento.js`); o contrato do bloco 132
+/// compara as duas listas.
 const acoesRemotas = <String, List<String>>{
   'abrir_tela': ['memoria', 'pessoas', 'visao', 'historico', 'conversa'],
+  'abrir_conversa': <String>[],
+  'iniciar_escuta': <String>[],
+};
+
+/// Nomes legíveis das ações, para a resposta e para a tela do PC.
+const nomesDasAcoes = <String, String>{
+  'abrir_tela': 'abrir uma tela',
+  'abrir_conversa': 'abrir a conversa',
+  'iniciar_escuta': 'iniciar a escuta',
 };
 
 /// Recursos que este lado anuncia conforme o que está ligado na tela.
@@ -99,20 +109,26 @@ class EnvelopeDeComando {
     required this.id,
     required this.emitidoEm,
     required this.acao,
-    required this.argumento,
+    this.argumentos = const <String, Object?>{},
   });
 
   final String id;
   final DateTime emitidoEm;
   final String acao;
-  final String argumento;
+
+  /// Argumentos já validados: `{'tela': ...}` em `abrir_tela`, vazio nas ações
+  /// que não levam argumento.
+  final Map<String, Object?> argumentos;
+
+  /// Tela pedida, quando a ação é `abrir_tela`.
+  String get tela => (argumentos['tela'] ?? '').toString();
 
   Map<String, Object?> paraMapa() => {
         'protocolo': protocoloAtual,
         'id': id,
         'emitidoEm': emitidoEm.toUtc().toIso8601String(),
         'acao': acao,
-        'argumentos': {'tela': argumento},
+        'argumentos': argumentos,
       };
 }
 
@@ -175,8 +191,24 @@ ValidacaoDeComando validarComando(
   if (permitidos == null) {
     return ValidacaoDeComando.recusado('Ação desconhecida: $acao.', codigoHttp: 422);
   }
-  final argumentos = mapa['argumentos'];
-  final tela = argumentos is Map ? (argumentos['tela'] ?? '').toString().trim() : '';
+  final argumentos = mapa['argumentos'] is Map
+      ? Map<String, Object?>.from(mapa['argumentos'] as Map)
+      : const <String, Object?>{};
+  if (permitidos.isEmpty) {
+    // Ação sem argumento: qualquer campo aqui é pedido fora do contrato.
+    if (argumentos.isNotEmpty) {
+      return ValidacaoDeComando.recusado(
+        'A ação “$acao” não leva argumento.',
+        codigoHttp: 422,
+      );
+    }
+    return ValidacaoDeComando.aceito(EnvelopeDeComando(
+      id: id,
+      emitidoEm: emitidoEm.toUtc(),
+      acao: acao,
+    ));
+  }
+  final tela = (argumentos['tela'] ?? '').toString().trim();
   if (!permitidos.contains(tela)) {
     return ValidacaoDeComando.recusado(
       'Para “$acao” este celular aceita: ${permitidos.join(', ')}.',
@@ -187,7 +219,7 @@ ValidacaoDeComando validarComando(
     id: id,
     emitidoEm: emitidoEm.toUtc(),
     acao: acao,
-    argumento: tela,
+    argumentos: {'tela': tela},
   ));
 }
 

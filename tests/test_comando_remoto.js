@@ -47,7 +47,7 @@ function celularFalso({ protocolo = 'jarvis/2', comando = true, intervaloMinimo 
     if (pedido.method === 'GET' && url.pathname === '/jarvis/info') {
       if (!estado.oferta) return responder(resposta, 409, { erro: 'sem oferta' });
       return responder(resposta, 200, Object.assign(
-        { nome: 'Celular falso', versao: '1.109.0', desafio: estado.oferta.desafio },
+        { nome: 'Celular falso', versao: '1.110.0', desafio: estado.oferta.desafio },
         negociacao()
       ));
     }
@@ -96,10 +96,15 @@ function celularFalso({ protocolo = 'jarvis/2', comando = true, intervaloMinimo 
         if (estado.ids.has(dados.id)) {
           return responder(resposta, 409, { ok: false, erro: 'comando já executado' });
         }
+        const args = dados.argumentos || {};
         const permitidos = PAR.ACOES_REMOTAS[String(dados.acao || '')];
         if (!permitidos) return responder(resposta, 422, { ok: false, erro: 'ação desconhecida' });
-        const tela = String((dados.argumentos || {}).tela || '');
-        if (!permitidos.includes(tela)) return responder(resposta, 422, { ok: false, erro: 'argumento recusado' });
+        const tela = String(args.tela || '');
+        if (permitidos.length === 0) {
+          if (Object.keys(args).length > 0) return responder(resposta, 422, { ok: false, erro: 'argumento recusado' });
+        } else if (!permitidos.includes(tela)) {
+          return responder(resposta, 422, { ok: false, erro: 'argumento recusado' });
+        }
         const agora = Date.now();
         if (intervaloMinimo && agora - estado.ultimo < intervaloMinimo) {
           return responder(resposta, 429, { ok: false, erro: 'comandos demais' });
@@ -107,7 +112,8 @@ function celularFalso({ protocolo = 'jarvis/2', comando = true, intervaloMinimo 
         estado.ultimo = agora;
         estado.ids.add(dados.id);
         estado.executados.push(dados.acao + ':' + tela);
-        return responder(resposta, 200, { ok: true, id: dados.id, resultado: 'abri ' + tela + ' no celular' });
+        const feito = tela ? 'abri ' + tela + ' no celular' : 'abri ' + dados.acao + ' no celular';
+        return responder(resposta, 200, { ok: true, id: dados.id, resultado: feito });
       });
       return undefined;
     }
@@ -138,11 +144,21 @@ async function enviarCru(endereco, token, corpo) {
 async function main() {
   // 1. A lista de ações é a mesma do celular, e o PC sabe validá-la offline.
   assert.deepStrictEqual(PAR.ACOES_REMOTAS, {
-    abrir_tela: ['memoria', 'pessoas', 'visao', 'historico', 'conversa']
+    abrir_tela: ['memoria', 'pessoas', 'visao', 'historico', 'conversa'],
+    abrir_conversa: [],
+    iniciar_escuta: []
   });
   assert.strictEqual(PAR.PROTOCOLO, 'jarvis/2');
   assert.throws(() => PAR.conferirPedidoDeComando({ acao: 'formatar_disco' }), /Ação desconhecida/);
   assert.throws(() => PAR.conferirPedidoDeComando({ acao: 'abrir_tela', argumentos: { tela: 'config' } }), /aceita:/);
+  assert.deepStrictEqual(PAR.conferirPedidoDeComando({ acao: 'abrir_conversa' }),
+    { acao: 'abrir_conversa', argumentos: {} });
+  assert.deepStrictEqual(PAR.conferirPedidoDeComando({ acao: 'iniciar_escuta', argumentos: {} }),
+    { acao: 'iniciar_escuta', argumentos: {} });
+  assert.throws(() => PAR.conferirPedidoDeComando({ acao: 'iniciar_escuta', argumentos: { tela: 'memoria' } }),
+    /não leva argumento/);
+  assert.throws(() => PAR.conferirPedidoDeComando({ acao: 'abrir_conversa', argumentos: { tela: 'x' } }),
+    /não leva argumento/);
 
   const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'jarvis-comando-'));
   const arquivo = path.join(pasta, 'pareamento.json');
@@ -215,6 +231,16 @@ async function main() {
   assert.strictEqual((await enviarCru(endereco, 'token-errado', Object.assign({}, base, {
     id: crypto.randomBytes(16).toString('hex')
   }))).status, 401);
+
+  // 3b. Ações sem argumento funcionam e chegam ao celular do jeito certo.
+  const conversa = await pc.enviarComando({ acao: 'abrir_conversa' });
+  assert.strictEqual(conversa.ok, true);
+  assert.match(conversa.resultado, /abri abrir_conversa/);
+  const escuta = await pc.enviarComando({ acao: 'iniciar_escuta' });
+  assert.strictEqual(escuta.ok, true);
+  assert.match(escuta.resultado, /abri iniciar_escuta/);
+  assert.deepStrictEqual(celular.estado.executados.slice(-2),
+    ['abrir_conversa:', 'iniciar_escuta:']);
 
   // 4. Revogar no celular vira erro explicado no PC.
   celular.estado.revogado = true;

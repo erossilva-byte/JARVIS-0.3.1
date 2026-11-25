@@ -1,6 +1,23 @@
-# J.A.R.V.I.S. Nova 1.109.0
+# J.A.R.V.I.S. Nova 1.110.0
 
-## 1.109.0 — compatibilidade Android ↔ PC (começo)
+## 1.110.0 — três comandos do PC para o celular e app do PC no Linux
+
+A lista de comandos que o PC pareado pode pedir ao celular cresceu: além de
+abrir uma tela, agora também **abrir a conversa** e **iniciar a escuta**. As
+duas ações novas não levam argumento e passam pelas mesmas conferências (token,
+protocolo, prazo de 60 s, `id` de uso único, lista fechada e ritmo).
+
+O app do PC passou a ter pacote **Linux**: AppImage e `.deb` gerados pela mesma
+esteira do Windows. Controle de mídia usa `playerctl`; volume usa `pactl` ou
+`wpctl`; sem a ferramenta instalada o app diz exatamente o que instalar em vez
+de fingir que funcionou. O cofre de chaves continua recusando gravar quando o
+sistema não oferece armazenamento protegido.
+
+Limites: nada foi executado em aparelho Android, em PC Windows nem em área de
+trabalho Linux real. Detalhes em `docs/COMPATIBILIDADE-ANDROID-PC.md` e
+`platforms/LINUX.md`.
+
+## 1.110.0 — compatibilidade Android ↔ PC (começo)
 
 O celular e o PC pareados agora combinam o que sabem fazer antes de conversar:
 o celular anuncia `protocolo jarvis/2` e `recursos` (`status`, `comando`) em
@@ -17,18 +34,18 @@ Limites: nada foi executado em aparelho Android nem em PC físico; o canal é HT
 na rede local (sem TLS) e só existe com a tela de pareamento aberta. Detalhes em
 `docs/COMPATIBILIDADE-ANDROID-PC.md`.
 
-## 1.109.0 — desenvolvimento (não é release estável)
+## 1.110.0 — desenvolvimento (não é release estável)
 
 As sete etapas do roteiro do PC estão implementadas no núcleo web compartilhado:
 status unificado, pareamento PC↔celular, memória em Markdown e fichas, PIN com
 espera progressiva e cofre de chaves pelo sistema, voz e segundo plano, e
 atualização com **assinatura** Ed25519 conferida pelo próprio app.
 
-Limites declarados: nenhum APK 1.109.0 foi compilado ou instalado em aparelho
+Limites declarados: nenhum APK 1.110.0 foi compilado ou instalado em aparelho
 físico; nenhum pacote Windows foi compilado nem assinado com certificado de
 código; o roteiro de teste em PC físico (`docs/TESTE-PC-FISICO.md`) não foi
 executado. A versão do pacote do PC (`package.json`, `VERSAO.json`,
-`VERSAO_APP`) acompanha a do app Flutter: 1.109.0, versionCode 110900.
+`VERSAO_APP`) acompanha a do app Flutter: 1.110.0, versionCode 111000.
 
 ## 1.46.0 — desenvolvimento (não é release estável)
 

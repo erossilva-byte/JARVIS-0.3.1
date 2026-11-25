@@ -176,8 +176,8 @@ pacote = ler(RAIZ / "package.json")
 relatorio = (RAIZ / "docs" / "relatorios"
              / "2026-11-25_127-pareamento-pc-celular.md")
 roteiro = ler(RAIZ / "docs" / "ROTEIRO-PC.md")
-exigir("version: 1.109.0+110900" in pubspec,
-       "pubspec.yaml não está em 1.109.0+110900")
+exigir("version: 1.110.0+111000" in pubspec,
+       "pubspec.yaml não está em 1.110.0+111000")
 exigir("## 1.104.0" in changelog and "1.104.0" in roteiro,
        "CHANGELOG.md ou roteiro sem o bloco 1.104.0")
 exigir(relatorio.is_file(), "falta o relatório do pareamento")
