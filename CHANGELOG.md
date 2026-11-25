@@ -1,3 +1,24 @@
+## 1.101.0 — roteiro do PC e status unificado
+
+### O que mudou
+- **Roteiro do PC em sete etapas** (`docs/ROTEIRO-PC.md`): base de produção,
+  status dos dois lados, pareamento PC ↔ celular, memória e pessoas, segurança,
+  voz e segundo plano, empacotamento. Cada etapa com entregável e aceite, e o
+  que depende de aparelho declarado.
+- **Status unificado** (`lib/core/status_plataforma.dart`): um modelo só lê o
+  formato do celular e o do PC (`status_pc`), titula cada lado (“Status do PC” /
+  “Status do celular”) e formata memória, disco, bateria, temperatura, rede e
+  tempo ligado do mesmo jeito.
+- **Sem número inventado**: campo ausente desaparece da lista e `semDados` diz
+  que aquele lado não respondeu — inclusive “sem conexão” para o celular
+  enquanto o pareamento não existir.
+
+### Limites declarados
+- Só a Etapa 1 do roteiro tem código nesta versão; nenhuma etapa foi executada
+  em PC físico.
+- A decisão entre manter o Electron e migrar para Flutter no PC fica para o fim
+  da Etapa 3.
+
 ## 1.100.0 — hora e data no aparelho também com o app aberto
 
 ### O que mudou
