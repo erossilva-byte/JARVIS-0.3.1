@@ -1,4 +1,26 @@
-# J.A.R.V.I.S. Nova 1.110.0
+# J.A.R.V.I.S. Nova 1.111.0
+
+## 1.111.0 — correções do uso real e pareamento por QR
+
+O que falhou no uso real foi corrigido no lugar certo: a voz agora abre apps
+(`abra`, `abri`, `abram`, `inicie`, `execute`, com apelidos como “zap” e
+“insta”), o alarme deixou de cair em “Permission Denial” porque a permissão
+`SET_ALARM` entrou no manifesto gerado, e a chave colada no campo é a que o
+botão “Testar conexão” usa — com aviso quando ela é de outro provedor.
+
+Entraram também: clima real pelo Open-Meteo (público, sem chave) com a posição
+guardada por 20 minutos; palco buscando a imagem do **assunto** na Wikipédia, com
+a Commons de reserva; leitura das notificações já ativas e reconexão do serviço;
+envio no WhatsApp só confirmado depois que o texto sai do campo; contexto e lugar
+provável no Vision; pareamento por **QR** (celular desenha, PC lê pela câmera);
+cartão “ESTE CELULAR” na tela inicial e central do aparelho reformulada. No PC
+do Linux a GPU é desligada por padrão (o driver Intel antigo derrubava a janela
+com `libva error`); `JARVIS_GPU=1` religa.
+
+Limites: o Kotlin não foi compilado nesta máquina (sem SDK do Android) — o APK
+da esteira é a primeira compilação de verdade; abrir app, alarme, notificações,
+envio e leitura de QR pela câmera só se confirmam em aparelho. Detalhes em
+`docs/relatorios/2026-11-26_135-uso-real-e-qr.md`.
 
 ## 1.110.0 — três comandos do PC para o celular e app do PC no Linux
 
@@ -45,7 +67,7 @@ Limites declarados: nenhum APK 1.110.0 foi compilado ou instalado em aparelho
 físico; nenhum pacote Windows foi compilado nem assinado com certificado de
 código; o roteiro de teste em PC físico (`docs/TESTE-PC-FISICO.md`) não foi
 executado. A versão do pacote do PC (`package.json`, `VERSAO.json`,
-`VERSAO_APP`) acompanha a do app Flutter: 1.110.0, versionCode 111000.
+`VERSAO_APP`) acompanha a do app Flutter: 1.111.0, versionCode 111100.
 
 ## 1.46.0 — desenvolvimento (não é release estável)
 
