@@ -720,12 +720,13 @@ object JarvisFundo {
             return Resultado(false, "Informe um horário entre 00:00 e 23:59.")
         }
         val formatado = "%02d:%02d".format(hora, minuto)
-        // EXTRA_SKIP_UI cria o alarme em vez de só abrir a tela. Se o aparelho
-        // não autorizar (falta a permissão SET_ALARM), cai para a tela cheia.
+        // Abre o relógio com o horário preenchido; a confirmação é da pessoa
+        // (EXTRA_SKIP_UI = false). Se faltar a permissão SET_ALARM no manifesto,
+        // o Android recusa com "Permission Denial" e a mensagem explica isso.
         val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
             putExtra(AlarmClock.EXTRA_HOUR, hora)
             putExtra(AlarmClock.EXTRA_MINUTES, minuto)
-            putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+            putExtra(AlarmClock.EXTRA_SKIP_UI, false)
             putExtra(AlarmClock.EXTRA_MESSAGE, "J.A.R.V.I.S.")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }

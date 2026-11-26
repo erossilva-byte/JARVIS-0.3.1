@@ -6,9 +6,10 @@
   manual de instruções. Entraram `abra`, `abri`, `abram`, `inicie`, `execute` e
   apelidos (`zap`, `insta`, `waze`, `ifood`, `uber`, `signal`), com casamento sem
   acento e prioridade a prefixo no lado Android.
-- **Alarme**: `com.android.alarm.permission.SET_ALARM` no manifesto gerado e
-  `EXTRA_SKIP_UI=true`, para o alarme ser criado de fato em vez de só abrir a tela
-  do relógio; falta de permissão agora é explicada, não estoura.
+- **Alarme**: `com.android.alarm.permission.SET_ALARM` no manifesto gerado — era
+  ela que faltava para o Android aceitar o pedido. O relógio abre com a hora já
+  preenchida e a confirmação continua sendo da pessoa; falta de permissão agora é
+  explicada, não estoura.
 - **Chave de API**: testar/listar modelos **salva antes** a chave digitada, mostra
   os 4 últimos dígitos da guardada, tem botão de colar e recusa chave com prefixo
   de outro provedor dizendo qual é.

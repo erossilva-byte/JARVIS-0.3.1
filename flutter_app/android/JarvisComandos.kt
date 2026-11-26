@@ -366,17 +366,17 @@ class JarvisComandos(private val activity: Activity) : MethodChannel.MethodCallH
             result.error("horario_invalido", "Informe um horário entre 00:00 e 23:59.", null)
             return
         }
-        // Cria o alarme de verdade: com EXTRA_SKIP_UI o app de relógio grava o
-        // horário em vez de só abrir a tela para digitar. Exige a permissão
-        // com.android.alarm.permission.SET_ALARM no manifesto (sem ela o
-        // Android responde "Permission Denial" e nada é criado).
-        fun montar(pularTela: Boolean) = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+        // Abre o relógio com o horário já preenchido e deixa a confirmação para
+        // a pessoa (EXTRA_SKIP_UI = false): criar alarme sem confirmação é uma
+        // ação que o app não toma sozinho. O que faltava antes era a permissão
+        // com.android.alarm.permission.SET_ALARM no manifesto — sem ela o Android
+        // responde "Permission Denial" e nem a tela abria.
+        val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
             putExtra(AlarmClock.EXTRA_HOUR, hora)
             putExtra(AlarmClock.EXTRA_MINUTES, minuto)
-            putExtra(AlarmClock.EXTRA_SKIP_UI, pularTela)
+            putExtra(AlarmClock.EXTRA_SKIP_UI, false)
             putExtra(AlarmClock.EXTRA_MESSAGE, "J.A.R.V.I.S.")
         }
-        val intent = montar(true)
         if (intent.resolveActivity(activity.packageManager) == null) {
             result.error("sem_relogio", "Este aparelho não tem um app de relógio que aceite alarmes.", null)
             return

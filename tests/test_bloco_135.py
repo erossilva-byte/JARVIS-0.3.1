@@ -51,8 +51,9 @@ exigir("semAcento(" in kws_comandos, "Kotlin não normaliza acento ao casar app"
 gerador = ler(TOOL / "prepare_android_sistema.py")
 exigir("com.android.alarm.permission.SET_ALARM" in gerador,
        "manifesto gerado sem a permissão de alarme")
-exigir("EXTRA_SKIP_UI" in kws_comandos and "montar(true)" in kws_comandos,
-       "alarme ainda só abre a tela")
+exigir("AlarmClock.ACTION_SET_ALARM" in kws_comandos, "alarme não usa a ação do Android")
+exigir("EXTRA_SKIP_UI, false" in kws_comandos,
+       "alarme seria criado sem a confirmação da pessoa")
 exigir("SecurityException" in kws_comandos, "sem queda explicada quando falta permissão")
 legado = ler(RAIZ / "patch_manifest.py")
 exigir("com.android.alarm.permission.SET_ALARM" in legado,
