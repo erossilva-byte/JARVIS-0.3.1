@@ -61,16 +61,39 @@ class PalcoService {
     }
 
     final itens = switch (pedido.tipo) {
-      TipoPalco.imagem => lerImagensDoCommons(resposta.body),
+      TipoPalco.imagem => lerImagensDaWikipedia(resposta.body),
       TipoPalco.video => lerVideosDoDailymotion(resposta.body),
       TipoPalco.noticia => lerNoticiasDoRss(resposta.body),
     };
-    if (itens.isEmpty) {
-      throw PalcoException('O ${pedido.tipo.fonte} respondeu, mas não devolveu '
-          '${pedido.tipo.rotulo.toLowerCase()} para “$consulta”. Tente outras '
-          'palavras.');
+    if (itens.isNotEmpty) return itens;
+    // Nenhum artigo com imagem (termo técnico sem verbete): a busca de
+    // arquivos da Commons ainda pode achar alguma foto.
+    if (pedido.tipo == TipoPalco.imagem) {
+      final reserva = await _buscarCommons(pedido);
+      if (reserva.isNotEmpty) return reserva;
     }
-    return itens;
+    throw PalcoException('O ${pedido.tipo.fonte} respondeu, mas não devolveu '
+        '${pedido.tipo.rotulo.toLowerCase()} para “$consulta”. Tente outras '
+        'palavras.');
+  }
+
+  /// Reserva sem chave: arquivos da Wikimedia Commons.
+  Future<List<ItemPalco>> _buscarCommons(PedidoPalco pedido) async {
+    try {
+      final resposta = await _client
+          .get(
+            Uri.parse(urlDeBuscaImagensCommons(pedido.consulta)),
+            headers: const {
+              'Accept': 'application/json',
+              'User-Agent': 'JARVIS-Nova/1.111.0 (app Android)',
+            },
+          )
+          .timeout(const Duration(seconds: 12));
+      if (resposta.statusCode < 200 || resposta.statusCode >= 300) return const [];
+      return lerImagensDoCommons(resposta.body);
+    } on Object {
+      return const [];
+    }
   }
 
   String _mensagemHttp(TipoPalco tipo, int status) {

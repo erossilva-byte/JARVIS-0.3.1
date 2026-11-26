@@ -50,6 +50,9 @@ PERMISSOES = (
     # Atualização OTA: sem esta permissão o Android não deixa o app pedir a
     # autorização de instalar APK e o instalador nunca abre.
     ("android.permission.REQUEST_INSTALL_PACKAGES", ""),
+    # Criar alarme de verdade: sem esta permissão o Android responde
+    # "Permission Denial: starting Intent ... SET_ALARM" e o alarme não existe.
+    ("com.android.alarm.permission.SET_ALARM", ""),
 )
 
 CAMERA_FEATURE = '    <uses-feature android:name="android.hardware.camera" android:required="false" />\n'

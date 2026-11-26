@@ -161,20 +161,41 @@ class JarvisNotificacaoListener : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         instancia = this
+        // Sem isto a lista nasce vazia e só enche quando chega uma notificação
+        // nova: quem autoriza o acesso e volta para o app não vê nada, mesmo
+        // havendo notificações na barra. As ativas são lidas uma vez aqui.
+        try {
+            val ativas = activeNotifications ?: emptyArray()
+            for (sbn in ativas) {
+                try {
+                    guardar(sbn)
+                } catch (_: Exception) {
+                    // Uma notificação ilegível não impede as outras.
+                }
+            }
+        } catch (_: Exception) {
+            // Serviço sem permissão de listar ativas: os eventos novos bastam.
+        }
     }
 
-    override fun onListenerDisconnected() {
-        if (instancia === this) instancia = null
-        super.onListenerDisconnected()
+    /**
+     * Pede ao Android para reconectar o serviço quando ele está autorizado mas
+     * o processo foi encerrado. Sem isso, "acesso autorizado" e lista vazia
+     * convivem até o usuário reiniciar o aparelho.
+     */
+    @JvmStatic
+    fun reconectar() {
+        try {
+            requestRebind(android.content.ComponentName(
+                "com.jarvis.nova", "com.jarvis.nova.JarvisNotificacaoListener"
+            ))
+        } catch (_: Exception) {
+            // Versão antiga do Android: a próxima notificação reconecta.
+        }
     }
 
-    override fun onDestroy() {
-        if (instancia === this) instancia = null
-        super.onDestroy()
-    }
-
-    override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        val n = sbn ?: return
+    /** Extrai e guarda uma notificação; usado pelo evento e pela leitura inicial. */
+    private fun guardar(n: StatusBarNotification) {
         if (n.packageName == packageName) return
         val notificacao = n.notification ?: return
         if (notificacao.flags and Notification.FLAG_ONGOING_EVENT != 0) return
@@ -196,6 +217,21 @@ class JarvisNotificacaoListener : NotificationListenerService() {
             )
         )
         if (responde) guardarRespondivel(n.key, n) else esquecer(n.key)
+    }
+
+    override fun onListenerDisconnected() {
+        if (instancia === this) instancia = null
+        super.onListenerDisconnected()
+    }
+
+    override fun onDestroy() {
+        if (instancia === this) instancia = null
+        super.onDestroy()
+    }
+
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        val n = sbn ?: return
+        guardar(n)
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {

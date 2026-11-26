@@ -51,7 +51,7 @@ relatorio = (
 )
 
 # 1. Versão, suíte e relatório.
-exigir("version: 1.110.0+111000" in pubspec,
+exigir("version: 1.111.0+111100" in pubspec,
        "versão não atualizada para 1.80.0")
 exigir("1.80.0" in changelog and "modelos" in changelog.lower(),
        "CHANGELOG sem o bloco 1.80.0 da descoberta de modelos")

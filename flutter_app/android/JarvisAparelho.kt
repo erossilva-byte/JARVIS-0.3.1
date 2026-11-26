@@ -109,6 +109,18 @@ class JarvisAparelho(private val activity: Activity) : MethodChannel.MethodCallH
                 JarvisNotificacaoListener.limpar()
                 result.success(ok("Leitura de notificações limpa."))
             }
+            // Acesso autorizado mas serviço morto: pede a reconexão e relê as
+            // notificações que já estão na barra.
+            "notificacoesReconectar" -> {
+                JarvisNotificacaoListener.reconectar()
+                result.success(
+                    mapOf(
+                        "ok" to true,
+                        "acesso" to notificacoesAutorizadas(),
+                        "mensagem" to "Pedi ao Android para reconectar o acesso às notificações."
+                    )
+                )
+            }
             // Resposta direta na notificação, sem abrir o aplicativo.
             "responderNotificacao" -> result.success(
                 JarvisNotificacaoListener.responder(

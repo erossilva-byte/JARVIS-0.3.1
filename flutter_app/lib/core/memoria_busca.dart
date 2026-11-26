@@ -354,6 +354,7 @@ List<Map<String, String>> montarMensagens(
   String? personalidade,
   String? habilidades,
   String? especialidade,
+  String? contextoLocal,
 }) =>
     [
       if (personalidade != null && personalidade.trim().isNotEmpty)
@@ -370,6 +371,9 @@ List<Map<String, String>> montarMensagens(
       // gatilhos da habilidade.
       if (habilidades != null && habilidades.trim().isNotEmpty)
         {'role': 'system', 'content': habilidades},
+      // Onde o aparelho está: sem isso o modelo chutava cidade e temperatura.
+      if (contextoLocal != null && contextoLocal.trim().isNotEmpty)
+        {'role': 'system', 'content': contextoLocal.trim()},
       ...historico,
     ];
 

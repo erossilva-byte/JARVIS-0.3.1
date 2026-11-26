@@ -17,6 +17,8 @@ import 'services/aparelho_service.dart';
 import 'services/arquivos_page.dart';
 import 'services/atualizacao_page.dart';
 import 'services/conversa_store.dart';
+import 'services/dispositivo_page.dart';
+import 'services/localizacao_service.dart';
 import 'services/gestos_page.dart';
 import 'services/habilidades_page.dart';
 import 'services/historico_page.dart';
@@ -68,6 +70,10 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
   String clock = '';
   Timer? clockTimer;
 
+  /// Atualiza a posição guardada de tempos em tempos, sem pedir nada ao
+  /// usuário: o clima responde com o lugar certo mesmo depois de horas.
+  Timer? localTimer;
+
   @override
   void initState() {
     super.initState();
@@ -77,6 +83,9 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     unawaited(_ativarKwsAoAbrir());
     jarvisKwsController.addListener(_refreshKws);
     unawaited(_ligarSistema());
+    unawaited(_atualizarLocalizacao());
+    localTimer = Timer.periodic(
+        const Duration(minutes: 20), (_) => unawaited(_atualizarLocalizacao()));
     voiceSubscription = KwsController.commandBus.listen((event) {
       if (!mounted) {
         return;
@@ -150,6 +159,21 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
     ativoTimer = Timer(const Duration(seconds: 25), _desmarcarAtivo);
   }
 
+  /// Lê e guarda a posição quando o app está aberto. Sem permissão já
+  /// concedida, o serviço não abre pedido nenhum — só devolve o que existir.
+  Future<void> _atualizarLocalizacao() async {
+    try {
+      await LocalizacaoService().atualizar();
+    } catch (_) {
+      // Fora do Android ou sem GPS: segue sem posição.
+    }
+  }
+
+  void _abrirDispositivo() {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const DispositivoPage()));
+  }
+
   void _desmarcarAtivo() {
     ativoTimer?.cancel();
     if (!mounted || !ativo) return;
@@ -193,6 +217,7 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
   @override
   void dispose() {
     clockTimer?.cancel();
+    localTimer?.cancel();
     ativoTimer?.cancel();
     jarvisKwsController.removeListener(_refreshKws);
     voiceSubscription?.cancel();
@@ -508,6 +533,11 @@ class _LegacyHomeScreenState extends State<LegacyHomeScreen>
                       builder: (_) =>
                           VozTelaCheiaPage(controller: jarvisKwsController))),
               icon: const Icon(Icons.fullscreen_rounded, color: cyan)),
+          IconButton(
+              key: const ValueKey('abrir-dispositivo-central'),
+              tooltip: 'Status do celular',
+              onPressed: _abrirDispositivo,
+              icon: const Icon(Icons.phone_android_rounded, color: cyan)),
           IconButton(
               key: const ValueKey('historico-button'),
               tooltip: 'Histórico de conversas',

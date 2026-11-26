@@ -184,6 +184,38 @@ const _zerokeyDesligado =
     'O provedor sem chave está desligado. Ative o Zero-Key em Provedores de IA '
     'para usar o serviço público anônimo.';
 
+/// Prefixos públicos das chaves de cada provedor.
+///
+/// Servem só para avisar quando a chave colada é de outro serviço — o erro
+/// mais comum de "a chave não é detectada". Não são validação de formato: a
+/// chave continua sendo conferida pelo próprio provedor.
+const prefixosDeChave = <String, List<String>>{
+  'groq': ['gsk_'],
+  'openrouter': ['sk-or-'],
+  'cerebras': ['csk-'],
+  'gemini': ['AIza'],
+};
+
+/// Provedor a que a chave parece pertencer, ou `null` quando não dá para dizer.
+String? provedorDaChave(String chave) {
+  final limpa = chave.trim();
+  if (limpa.isEmpty) return null;
+  for (final entrada in prefixosDeChave.entries) {
+    for (final prefixo in entrada.value) {
+      if (limpa.startsWith(prefixo)) return entrada.key;
+    }
+  }
+  return null;
+}
+
+/// Aviso quando a chave claramente não é do provedor escolhido.
+String? avisoDeChaveTrocada(String providerId, String chave) {
+  final dono = provedorDaChave(chave);
+  if (dono == null || dono == providerId) return null;
+  final nome = aiProviders.firstWhere((p) => p.id == dono).name;
+  return 'Essa chave parece ser do $nome. Cole a chave do provedor certo.';
+}
+
 class ProviderService {
   ProviderService(
       {required SecretStore secrets,
@@ -300,6 +332,8 @@ class ProviderService {
       throw ArgumentError(
           'A chave informada parece inválida. Confira o valor e tente novamente.');
     }
+    final trocada = avisoDeChaveTrocada(providerId, key);
+    if (trocada != null) throw ArgumentError(trocada);
     await _secrets.write(providerId, key);
   }
 
@@ -310,6 +344,14 @@ class ProviderService {
           'O provedor sem chave não tem chave para remover. Desligue o Zero-Key na tela.');
     }
     await _secrets.delete(providerId);
+  }
+
+  /// Últimos quatro caracteres da chave guardada, para o usuário conferir qual
+  /// credencial está no cofre sem revelar o segredo.
+  Future<String?> digitosFinais(String providerId) async {
+    final chave = await _secrets.read(providerId);
+    if (chave == null || chave.length < 4) return null;
+    return chave.substring(chave.length - 4);
   }
 
   Future<ProviderCheck> testConnection(String providerId) async {

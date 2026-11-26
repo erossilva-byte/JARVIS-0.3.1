@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'hologram.dart';
+import 'services/cartao_aparelho.dart';
 import 'ui_common.dart';
 
 /// Central de comando: núcleo holográfico, monitor do sistema, atalhos e conversa.
@@ -126,6 +127,8 @@ class CommandCenter extends StatelessWidget {
         const SizedBox(height: 4),
         _sectionHeader('MONITOR DO SISTEMA', 'ESTADO DO SISTEMA'),
         const SizedBox(height: 9),
+        const CartaoAparelho(),
+        const SizedBox(height: 8),
         _statusCard(
             Icons.hub_rounded,
             'Núcleo de IA',
@@ -278,8 +281,9 @@ class CommandCenter extends StatelessWidget {
           : (agora.hour < 18 ? 'Boa tarde' : 'Boa noite');
       resposta = '$saudacao! Agora são $hora. Em que posso ajudar?';
     } else if (command == 'Como está o tempo?') {
-      resposta =
-          'Ainda não tenho uma integração de clima configurada, então não vou inventar a previsão. Posso ajudar com outra coisa?';
+      // Agora a conversa responde com a temperatura real do lugar do aparelho.
+      onConversation(command);
+      return;
     } else if (command == 'Conte uma piada') {
       const piadas = [
         'Por que o computador foi ao médico? Porque estava com um vírus.',

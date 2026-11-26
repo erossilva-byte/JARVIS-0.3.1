@@ -7,6 +7,7 @@ import '../core/acessibilidade.dart';
 import '../core/circuito.dart';
 import '../core/circuito_em_uso.dart';
 import '../core/circuito_no_chat.dart';
+import '../core/clima.dart';
 import '../core/edicao_circuito.dart';
 import '../core/conversa.dart';
 import '../core/especialidades.dart';
@@ -28,7 +29,9 @@ import 'apelido.dart';
 import 'abrir_tela.dart';
 import 'acessibilidade_service.dart';
 import 'circuito_page.dart';
+import 'clima_service.dart';
 import 'comandos_android_service.dart';
+import 'localizacao_service.dart';
 import 'conversa_store.dart';
 import 'executor_app.dart';
 import 'fala_jarvis.dart';
@@ -329,6 +332,12 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
       );
       return;
     }
+    // Clima e temperatura saem do lugar real do aparelho, sem provedor: a
+    // pergunta "como está o tempo?" não pode virar chute de cidade.
+    if (pedidoDeClima(texto)) {
+      await _responderClima(texto);
+      return;
+    }
     final comando = await _comandos.executar(texto);
     if (comando != null) {
       _concluirComando(texto, comando);
@@ -478,6 +487,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
     // Especialização: CADeSIMU e programação acrescentam a instrução da área;
     // qualquer outro assunto segue com o prompt normal.
     final especialidade = blocoDaEspecialidade(especialidadeDe(texto));
+    final contextoLocal = await _contextoDoLugar();
     _assinatura = service
         .streamComplete(
       escolhido.id,
@@ -488,6 +498,7 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
         personalidade: estilo.prompt,
         habilidades: blocoHabilidades(habilidadesUsadas),
         especialidade: especialidade,
+        contextoLocal: contextoLocal,
       ),
     )
         .listen(
@@ -537,6 +548,46 @@ class _VoiceConversationPageState extends State<VoiceConversationPage> {
             Future<void>.value());
       },
     );
+  }
+
+  /// Onde o aparelho está, em uma linha para o modelo.
+  ///
+  /// Usa só a última posição guardada (sem abrir o GPS a cada pergunta). Sem
+  /// posição, devolve `null` — nada de cidade inventada.
+  Future<String?> _contextoDoLugar() async {
+    try {
+      final local =
+          await LocalizacaoService().ultima(exigirValidade: false);
+      if (local == null || !local.valida) return null;
+      final lugar = local.endereco.trim().isEmpty
+          ? 'coordenadas ${local.coordenadas}'
+          : local.endereco.trim();
+      return 'O aparelho do usuário está em $lugar. Use esse lugar para '
+          'clima, fuso horário e referências locais; não invente outra cidade.';
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Responde a temperatura com a leitura real do lugar do aparelho.
+  Future<void> _responderClima(String texto) async {
+    setState(() => enviando = true);
+    final servico = ClimaService();
+    try {
+      final frase = await servico.frase();
+      _concluirLocal(texto, ok: true, mensagemRecebida: frase, acao: 'clima');
+    } on ClimaIndisponivel catch (erro) {
+      _concluirLocal(texto,
+          ok: false, mensagemRecebida: erro.mensagem, acao: 'clima');
+    } catch (_) {
+      _concluirLocal(texto,
+          ok: false,
+          mensagemRecebida:
+              'Não consegui consultar o clima agora. Tente de novo em instantes.',
+          acao: 'clima');
+    } finally {
+      servico.close();
+    }
   }
 
   /// Registra o circuito montado no aparelho, sem chamar provedor de IA.

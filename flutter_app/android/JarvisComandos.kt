@@ -217,11 +217,79 @@ class JarvisComandos(private val activity: Activity) : MethodChannel.MethodCallH
         )
     }
 
+    /** Apelidos de fala → pacote, para abrir mesmo quando o rótulo é outro. */
+    private val pacotesConhecidos = mapOf(
+        "zap" to "com.whatsapp",
+        "whats" to "com.whatsapp",
+        "whatsapp" to "com.whatsapp",
+        "wpp" to "com.whatsapp",
+        "whatsapp business" to "com.whatsapp.w4b",
+        "wpp business" to "com.whatsapp.w4b",
+        "insta" to "com.instagram.android",
+        "instagram" to "com.instagram.android",
+        "telegram" to "org.telegram.messenger",
+        "youtube" to "com.google.android.youtube",
+        "you tube" to "com.google.android.youtube",
+        "spotify" to "com.spotify.music",
+        "gmail" to "com.google.android.gm",
+        "maps" to "com.google.android.apps.maps",
+        "mapa" to "com.google.android.apps.maps",
+        "mapas" to "com.google.android.apps.maps",
+        "facebook" to "com.facebook.katana",
+        "face" to "com.facebook.katana",
+        "messenger" to "com.facebook.orca",
+        "discord" to "com.discord",
+        "signal" to "org.thoughtcrime.securesms",
+        "ifood" to "br.com.brainweb.ifood",
+        "uber" to "com.ubercab",
+        "waze" to "com.waze",
+    )
+
+    private fun semAcento(texto: String): String {
+        val de = "áàâãäéèêëíìîïóòôõöúùûüç"
+        val para = "aaaaaeeeeiiiiooooouuuuc"
+        val saida = StringBuilder()
+        for (c in texto.lowercase()) {
+            val i = de.indexOf(c)
+            saida.append(if (i < 0) c else para[i])
+        }
+        return saida.toString().trim()
+    }
+
     private fun abrirApp(nome: String, result: MethodChannel.Result) {
-        val termo = nome.trim().lowercase()
+        val termo = semAcento(nome)
         if (termo.isEmpty()) {
             result.error("sem_app", "Diga o nome do app que devo abrir.", null)
             return
+        }
+        // Apelido conhecido tem prioridade: "abre o zap" não depende do rótulo.
+        val porApelido = pacotesConhecidos[termo]
+        if (porApelido != null) {
+            val abertura = try {
+                activity.packageManager.getLaunchIntentForPackage(porApelido)
+            } catch (_: Exception) {
+                null
+            }
+            if (abertura != null) {
+                abertura.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                return try {
+                    activity.startActivity(abertura)
+                    result.success(
+                        mapOf(
+                            "ambiguo" to false,
+                            "app" to nome,
+                            "pacote" to porApelido,
+                            "mensagem" to "Abertura de $nome enviada ao Android."
+                        )
+                    )
+                } catch (erro: Exception) {
+                    result.error(
+                        "app_falhou",
+                        "O Android recusou abrir \"$nome\": ${erro.message ?: erro.javaClass.simpleName}",
+                        null
+                    )
+                }
+            }
         }
         val consulta = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val apps = try {
@@ -235,13 +303,18 @@ class JarvisComandos(private val activity: Activity) : MethodChannel.MethodCallH
             emptyList()
         }
         val exatos = apps.filter {
-            it["rotulo"].toString().lowercase() == termo ||
+            semAcento(it["rotulo"].toString()) == termo ||
                 it["pacote"].toString().lowercase() == termo
         }
         val encontrados = if (exatos.isNotEmpty()) {
             exatos
         } else {
-            apps.filter { it["rotulo"].toString().lowercase().contains(termo) }
+            // Rótulo que começa pelo termo vem antes de rótulo que só o contém:
+            // "whatsapp" não deve perder para "WhatsApp Business" nem para
+            // um app cujo nome apenas cite a palavra.
+            val comecam = apps.filter { semAcento(it["rotulo"].toString()).startsWith(termo) }
+            val contem = apps.filter { semAcento(it["rotulo"].toString()).contains(termo) }
+            (comecam + contem).distinctBy { it["pacote"] }
         }
         if (encontrados.isEmpty()) {
             result.error("app_nao_encontrado", "Nenhum app instalado corresponde a \"$nome\".", null)
@@ -293,17 +366,45 @@ class JarvisComandos(private val activity: Activity) : MethodChannel.MethodCallH
             result.error("horario_invalido", "Informe um horário entre 00:00 e 23:59.", null)
             return
         }
-        val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+        // Cria o alarme de verdade: com EXTRA_SKIP_UI o app de relógio grava o
+        // horário em vez de só abrir a tela para digitar. Exige a permissão
+        // com.android.alarm.permission.SET_ALARM no manifesto (sem ela o
+        // Android responde "Permission Denial" e nada é criado).
+        fun montar(pularTela: Boolean) = Intent(AlarmClock.ACTION_SET_ALARM).apply {
             putExtra(AlarmClock.EXTRA_HOUR, hora)
             putExtra(AlarmClock.EXTRA_MINUTES, minuto)
-            putExtra(AlarmClock.EXTRA_SKIP_UI, false)
+            putExtra(AlarmClock.EXTRA_SKIP_UI, pularTela)
+            putExtra(AlarmClock.EXTRA_MESSAGE, "J.A.R.V.I.S.")
         }
+        val intent = montar(true)
         if (intent.resolveActivity(activity.packageManager) == null) {
             result.error("sem_relogio", "Este aparelho não tem um app de relógio que aceite alarmes.", null)
             return
         }
         try {
             activity.startActivity(intent)
+        } catch (erro: SecurityException) {
+            // Sem a permissão de alarme o sistema só permite abrir a tela.
+            try {
+                activity.startActivity(montar(false))
+                result.success(
+                    mapOf(
+                        "mensagem" to "Abri o relógio no horário pedido, mas o Android não " +
+                            "autorizou criar o alarme sozinho. Confirme na tela do relógio.",
+                        "hora" to hora,
+                        "minuto" to minuto,
+                        "criado" to false
+                    )
+                )
+                return
+            } catch (segundo: Exception) {
+                result.error(
+                    "alarme_falhou",
+                    "O Android recusou abrir o alarme: ${segundo.message ?: segundo.javaClass.simpleName}",
+                    null
+                )
+                return
+            }
         } catch (erro: Exception) {
             result.error(
                 "alarme_falhou",
@@ -315,9 +416,10 @@ class JarvisComandos(private val activity: Activity) : MethodChannel.MethodCallH
         val formatado = "%02d:%02d".format(hora, minuto)
         result.success(
             mapOf(
-                "mensagem" to "Abri o alarme para $formatado; confirme no relógio do aparelho.",
+                "mensagem" to "Alarme de $formatado criado no relógio do aparelho.",
                 "hora" to hora,
-                "minuto" to minuto
+                "minuto" to minuto,
+                "criado" to true
             )
         )
     }

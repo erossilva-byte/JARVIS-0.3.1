@@ -45,7 +45,7 @@ def ler(caminho: Path) -> str:
 
 
 # 1. Versão e registro no pacote de testes.
-exigir("version: 1.110.0+111000" in ler(APP / "pubspec.yaml"),
+exigir("version: 1.111.0+111100" in ler(APP / "pubspec.yaml"),
        "pubspec sem 1.87.0+18700")
 pacote = ler(RAIZ / "package.json")
 exigir("tests/test_circuito_no_chat.py" in pacote,

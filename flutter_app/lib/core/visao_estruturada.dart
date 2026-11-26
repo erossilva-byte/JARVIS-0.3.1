@@ -39,6 +39,8 @@ class AnaliseVisao {
     required this.resumo,
     required this.objetos,
     this.textoLegivel = const [],
+    this.contexto = '',
+    this.localProvavel = '',
     this.estruturada = true,
     this.textoOriginal = '',
   });
@@ -46,12 +48,22 @@ class AnaliseVisao {
   final String resumo;
   final List<ObjetoVisao> objetos;
   final List<String> textoLegivel;
+
+  /// Que tipo de lugar e situação a cena sugere, como hipótese.
+  final String contexto;
+
+  /// Região provável do mundo, sem endereço exato.
+  final String localProvavel;
   final bool estruturada;
   final String textoOriginal;
 
   bool get temObjetosComCaixa => objetos.any((o) => o.caixa?.valida == true);
   bool get vazia =>
-      resumo.trim().isEmpty && objetos.isEmpty && textoLegivel.isEmpty;
+      resumo.trim().isEmpty &&
+      objetos.isEmpty &&
+      textoLegivel.isEmpty &&
+      contexto.trim().isEmpty &&
+      localProvavel.trim().isEmpty;
 
   /// Texto legível para a tela. Nunca mostra o JSON cru.
   String get textoExibicao {
@@ -65,6 +77,12 @@ class AnaliseVisao {
           : ' (${(objeto.confianca! * 100).clamp(0, 100).round()}%)';
       final detalhe = (objeto.detalhe ?? '').trim();
       partes.add('$nome$confianca${detalhe.isEmpty ? '' : ': $detalhe'}');
+    }
+    if (contexto.trim().isNotEmpty) {
+      partes.add('Contexto provável: ${contexto.trim()}');
+    }
+    if (localProvavel.trim().isNotEmpty) {
+      partes.add('Onde parece ser: ${localProvavel.trim()}');
     }
     if (textoLegivel.isNotEmpty) {
       partes.add('Texto legível: ${textoLegivel.join(' · ')}');
@@ -267,7 +285,22 @@ AnaliseVisao interpretarAnaliseVisao(String corpo) {
         dados['leitura'],
   );
 
-  if (resumo.isEmpty && objetos.isEmpty && textoLegivel.isEmpty) {
+  final contexto = _texto(
+    dados['context'] ?? dados['contexto'] ?? dados['scene'] ?? dados['cena'],
+  );
+  final localProvavel = _texto(
+    dados['place'] ??
+        dados['local'] ??
+        dados['localProvavel'] ??
+        dados['region'] ??
+        dados['regiao'],
+  );
+
+  if (resumo.isEmpty &&
+      objetos.isEmpty &&
+      textoLegivel.isEmpty &&
+      contexto.isEmpty &&
+      localProvavel.isEmpty) {
     // JSON válido, mas sem os campos esperados: não mostre o JSON cru na tela.
     return AnaliseVisao(
       resumo: '',
@@ -281,6 +314,8 @@ AnaliseVisao interpretarAnaliseVisao(String corpo) {
     resumo: resumo,
     objetos: List.unmodifiable(objetos),
     textoLegivel: List.unmodifiable(textoLegivel),
+    contexto: contexto,
+    localProvavel: localProvavel,
     estruturada: true,
     textoOriginal: original,
   );

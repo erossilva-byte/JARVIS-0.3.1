@@ -1,3 +1,37 @@
+## 1.111.0 — correções do uso real e pareamento por QR
+
+### O que mudou
+- **Abrir app por voz**: o interpretador aceitava `abrir/abre/iniciar/executar`,
+  mas a fala natural devolve “abra” — o comando caía no provedor de IA e virava
+  manual de instruções. Entraram `abra`, `abri`, `abram`, `inicie`, `execute` e
+  apelidos (`zap`, `insta`, `waze`, `ifood`, `uber`, `signal`), com casamento sem
+  acento e prioridade a prefixo no lado Android.
+- **Alarme**: `com.android.alarm.permission.SET_ALARM` no manifesto gerado e
+  `EXTRA_SKIP_UI=true`, para o alarme ser criado de fato em vez de só abrir a tela
+  do relógio; falta de permissão agora é explicada, não estoura.
+- **Chave de API**: testar/listar modelos **salva antes** a chave digitada, mostra
+  os 4 últimos dígitos da guardada, tem botão de colar e recusa chave com prefixo
+  de outro provedor dizendo qual é.
+- **Localização e temperatura**: clima pelo Open-Meteo (público, sem chave),
+  posição guardada por 20 minutos; a conversa responde clima localmente e manda o
+  lugar como contexto ao modelo.
+- **Palco**: a imagem vem do **assunto** (artigo da Wikipédia, imagem principal);
+  a Commons fica como reserva.
+- **Notificações**: leitura das notificações já ativas ao conectar e
+  `requestRebind` quando o Android desliga o serviço, com botão de reconectar na
+  central do aparelho.
+- **WhatsApp**: espera maior, até três tentativas de toque e confirmação de que o
+  texto saiu do campo antes de dizer “enviado”.
+- **Vision**: instrução de contexto e campo de lugar provável (“Contexto
+  provável”), sem rosto nem dado pessoal.
+- **Pareamento por QR**: o celular desenha o QR com IP, porta e código; o PC lê
+  pela câmera com `jsQR` vendorizado e preenche os campos. Nada secreto no QR.
+- **Tela inicial e Status do dispositivo**: cartão “ESTE CELULAR”, atalho para a
+  central e central com estado, clima do lugar e reconexão.
+- **Linux**: GPU desligada por padrão (o driver Intel antigo derrubava a janela
+  com `libva error`); `JARVIS_GPU=1` religa e `JARVIS_SEM_SANDBOX=1` é a saída
+  para distro sem sandbox.
+
 ## 1.110.0 — comandos novos e app do PC no Linux
 
 ### O que mudou

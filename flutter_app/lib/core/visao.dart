@@ -112,15 +112,23 @@ const instrucaoVisao =
     'Descreva objetos, cena, cores e textos legíveis; diga quando algo estiver borrado, cortado ou '
     'incerto, em vez de adivinhar. Não identifique pessoas, não faça reconhecimento facial e não '
     'estime idade, emoção, saúde, deficiência, etnia, religião, orientação sexual ou qualquer '
-    'atributo sensível. Não deduza localização, documento, placa ou dado pessoal: se aparecer, '
-    'ignore e avise que não trata disso. Não invente o que não está na imagem e não afirme ter '
-    'executado ações.'
+    'atributo sensível. Não leia placa de carro, documento, tela com dado pessoal ou rosto: se '
+    'aparecer, ignore e avise que não trata disso. Não invente o que não está na imagem e não '
+    'afirme ter executado ações.'
+    '\n\nLeia também o CONTEXTO da cena, como hipótese: que tipo de lugar é (praia, '
+    'escritório, feira, oficina, sala de aula, trilha), se é interno ou externo, a hora do dia e a '
+    'época do ano aproximadas pela luz, e a região provável do mundo pela vegetação, arquitetura, '
+    'relevo, clima e idioma das placas. Diga sempre o grau de certeza ("provavelmente", "pode ser") '
+    'e nunca aponte endereço exato, nome de rua, número ou estabelecimento específico. Se a imagem '
+    'não permitir inferir, responda que não dá para dizer.'
     '\n\nResponda em JSON válido, sem cercas de código, neste formato: '
     '{"summary":"frase curta","objects":[{"label":"objeto","confidence":0.0,'
-    '"bbox":[0.0,0.0,0.0,0.0]}],"text":["texto legível"]}. '
-    'bbox é [x,y,w,h] normalizado de 0 a 1. Se não houver objetos ou texto, use listas vazias. '
-    'Para qualquer pessoa, use somente o rótulo "Pessoa"; não descreva rosto, idade, gênero, '
-    'emoção ou identidade.';
+    '"bbox":[0.0,0.0,0.0,0.0]}],"text":["texto legível"],'
+    '"context":"que tipo de lugar e situação, como hipótese",'
+    '"place":"região provável do mundo, sem endereço"}. '
+    'bbox é [x,y,w,h] normalizado de 0 a 1. Se não houver objetos, texto, contexto ou lugar, use '
+    'lista vazia ou string vazia. Para qualquer pessoa, use somente o rótulo "Pessoa"; não '
+    'descreva rosto, idade, gênero, emoção ou identidade.';
 
 String montarPedidoVisao(String pergunta) {
   final limpa = pergunta.trim();

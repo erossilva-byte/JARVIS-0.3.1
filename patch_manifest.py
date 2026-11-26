@@ -12,6 +12,8 @@ permissoes = [
     "android.permission.WAKE_LOCK", "android.permission.VIBRATE",
     "android.permission.RECEIVE_BOOT_COMPLETED", "android.permission.ACCESS_NETWORK_STATE",
     "android.permission.SCHEDULE_EXACT_ALARM", "android.permission.READ_CONTACTS",
+    # Criar alarme de verdade (sem isto o Android recusa o Intent SET_ALARM).
+    "com.android.alarm.permission.SET_ALARM",
     "android.permission.CAMERA", "android.permission.REQUEST_INSTALL_PACKAGES",
     # Bloqueio OPCIONAL do aplicativo com BiometricPrompt (não substitui o bloqueio do Android).
     "android.permission.USE_BIOMETRIC", "android.permission.USE_FINGERPRINT",

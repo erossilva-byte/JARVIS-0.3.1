@@ -589,8 +589,16 @@
         <label for="sc-ip">IP do celular<input id="sc-ip" type="text" inputmode="decimal" autocomplete="off" placeholder="192.168.0.20" aria-describedby="sc-pareamento-erro"></label>
         <label for="sc-codigo">Código<input id="sc-codigo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123 456" aria-describedby="sc-pareamento-erro"></label>
         <button id="sc-parear" class="primario" type="button">Parear</button>
+        <button id="sc-ler-qr" class="mini" type="button">Ler o QR do celular</button>
       </div>
       <p id="sc-pareamento-erro" class="dica" role="alert"></p>
+      <div id="qr-leitor" class="qr-leitor" hidden role="dialog" aria-modal="true" aria-label="Ler o QR do celular">
+        <div class="qr-leitor-caixa">
+          <video id="qr-video" playsinline muted></video>
+          <p id="qr-aviso" class="dica" role="status" aria-live="polite">Aponte a câmera para o QR que o celular mostra no pareamento.</p>
+          <button id="qr-fechar" class="mini" type="button">Fechar</button>
+        </div>
+      </div>
       <p id="sc-pareado" class="dica" role="status" aria-live="polite" hidden></p>
       <button id="sc-esquecer" class="mini" type="button" hidden>Esquecer este celular</button>
       <div id="sc-comandos" hidden>
@@ -1609,6 +1617,7 @@ exportar ~/Jarvis/peca.cad stl</textarea></label>
 <script src="eletrica.js"></script>
 <script src="projetista.js"></script>
 <script src="sandbox.js"></script>
+<script src="vendor/jsqr.js"></script>
 <script src="pareamento.js"></script>
 <script src="status_plataforma.js"></script>
 <script src="app.js"></script>

@@ -26,6 +26,27 @@ function versaoDoPacote() {
 const plat = process.platform; // win32 | darwin | linux
 const chave = plat === 'win32' ? 'win' : plat === 'darwin' ? 'mac' : 'linux';
 
+// Linux: em várias distros (Arch/derivados, Intel antiga, Wayland sem VA-API)
+// o processo de GPU morre ao iniciar e a janela nunca aparece. O sintoma no
+// terminal é `libva error: /usr/lib/dri/iHD_drv_video.so init failed` seguido do
+// app fechando. A interface é leve: desligar a aceleração por software não
+// muda o uso no dia a dia e evita o crash. Quem tiver GPU funcionando pode
+// pedir a aceleração de volta com JARVIS_GPU=1.
+if (plat === 'linux' && process.env.JARVIS_GPU !== '1') {
+  try {
+    app.disableHardwareAcceleration();
+    app.commandLine.appendSwitch('disable-gpu');
+    app.commandLine.appendSwitch('disable-gpu-compositing');
+  } catch (e) {
+    // Versão de Electron sem a opção: segue com o padrão.
+  }
+}
+// AppImage em distro sem o helper setuid do Chromium configurado não abre.
+// JARVIS_SEM_SANDBOX=1 liga a saída de emergência, sem mudar o padrão.
+if (plat === 'linux' && process.env.JARVIS_SEM_SANDBOX === '1') {
+  try { app.commandLine.appendSwitch('no-sandbox'); } catch (e) {}
+}
+
 function criarJanela() {
   const win = new BrowserWindow({
     width: 1280, height: 860, minWidth: 460, minHeight: 620,

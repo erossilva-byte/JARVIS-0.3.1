@@ -9,6 +9,7 @@ import '../ui_common.dart';
 import 'abrir_tela.dart';
 import 'aparelho_service.dart';
 import 'pareamento_service.dart';
+import 'qr_pareamento.dart';
 
 /// Tela do pareamento com o PC.
 ///
@@ -267,6 +268,26 @@ class _PareamentoPageState extends State<PareamentoPage> {
                     key: const ValueKey('pareamento-validade'),
                     style: const TextStyle(fontSize: 10.5, color: muted),
                   ),
+                  if (ips.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Center(
+                      child: QrPareamento(
+                        dados: QrPareamento.payload(
+                          host: ips.first,
+                          porta: servico.portaAtual,
+                          codigo: oferta!.codigo,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'No PC, toque em “Ler o QR do celular” e aponte a câmera '
+                      'para este código. Se preferir, digite o endereço e o '
+                      'código acima.',
+                      key: ValueKey('pareamento-qr-dica'),
+                      style: TextStyle(fontSize: 10.5, color: muted, height: 1.4),
+                    ),
+                  ],
                 ],
               ),
             ),

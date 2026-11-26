@@ -60,7 +60,7 @@ object JarvisEnvioSemToque {
         contexto: Context,
         pacote: String,
         texto: String,
-        esperaMs: Long = 6000L,
+        esperaMs: Long = 9000L,
     ): Resultado {
         if (!ativo(contexto)) return Resultado(false, false, "desligado")
         if (!JarvisAcessibilidade.servicoLigado()) {
@@ -71,6 +71,7 @@ object JarvisEnvioSemToque {
 
         val limite = System.currentTimeMillis() + esperaMs
         var viuTexto = false
+        var cliques = 0
         while (System.currentTimeMillis() < limite) {
             try {
                 val raiz = JarvisAcessibilidade.raizVisivel()
@@ -79,19 +80,45 @@ object JarvisEnvioSemToque {
                 ) {
                     val nos = mutableListOf<AccessibilityNodeInfo>()
                     coletar(raiz, nos, 0)
-                    if (nos.any { normalizar(it.text?.toString().orEmpty()).contains(corpo.take(40)) }) {
-                        viuTexto = true
+                    val textoNaTela = nos.any {
+                        normalizar(it.text?.toString().orEmpty()).contains(corpo.take(40))
                     }
-                    if (viuTexto) {
+                    if (textoNaTela) {
+                        viuTexto = true
                         val botao = nos.firstOrNull { enviar(it) }
                         if (botao != null) {
                             val clicavel = clicavel(botao)
                             val feito = clicavel?.performAction(
                                 AccessibilityNodeInfo.ACTION_CLICK
                             ) == true
-                            if (feito) return Resultado(true, true)
-                            return Resultado(true, false, "recusado")
+                            if (feito) {
+                                cliques++
+                                // A conversa pode aparecer antes do botão ficar
+                                // habilitado: confere se o texto saiu do campo
+                                // antes de dizer que enviou. Sem isso o toque
+                                // era dado com o botão ainda desativado e a
+                                // mensagem ficava escrita, sem sair.
+                                Thread.sleep(600)
+                                val depois = JarvisAcessibilidade.raizVisivel()
+                                if (depois != null) {
+                                    val restantes = mutableListOf<AccessibilityNodeInfo>()
+                                    coletar(depois, restantes, 0)
+                                    val aindaNoCampo = restantes.any { no ->
+                                        no.isEditable && normalizar(
+                                            no.text?.toString().orEmpty()
+                                        ).contains(corpo.take(40))
+                                    }
+                                    if (!aindaNoCampo) return Resultado(true, true)
+                                } else {
+                                    return Resultado(true, true)
+                                }
+                                if (cliques >= 3) return Resultado(true, false, "recusado")
+                            }
                         }
+                    } else if (viuTexto) {
+                        // O texto saiu da tela: o app já enviou (ou limpou o
+                        // campo). Isso conta como enviado, não como falha.
+                        return Resultado(true, true)
                     }
                 }
             } catch (_: Exception) {

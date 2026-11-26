@@ -45,15 +45,23 @@ void main() {
   }
 
   // 3. Endereços: sem chave, com o termo codificado no parâmetro de busca.
+  // A imagem vem do assunto (artigo da Wikipédia com imagem principal); a
+  // Commons continua como reserva, também sem chave.
   assert(
       urlDeBuscaImagens('motor elétrico')
-          .startsWith('https://commons.wikimedia.org/w/api.php'),
+          .startsWith('https://pt.wikipedia.org/w/api.php'),
       'URL de imagens errada');
   final buscaImagem = Uri.parse(urlDeBuscaImagens('motor elétrico'));
   assert(buscaImagem.queryParameters['gsrsearch'] == 'motor elétrico',
       'consulta de imagem não foi preservada: ${buscaImagem.query}');
+  assert(buscaImagem.queryParameters['prop'] == 'pageimages|extracts',
+      'busca de imagem sem a imagem principal do artigo');
   assert(!urlDeBuscaImagens('motor elétrico').contains('motor elétrico'),
       'consulta de imagem saiu sem codificação');
+  assert(
+      urlDeBuscaImagensCommons('motor elétrico')
+          .startsWith('https://commons.wikimedia.org/w/api.php'),
+      'reserva da Commons errada');
   assert(
       urlDeBuscaNoticias('eleições')
           .startsWith('https://news.google.com/rss/search'),

@@ -91,6 +91,8 @@ CASOS = (
     ("tool/pareamento_test.dart", "pareamento: código, prova, token, oferta, registro e rede local"),
     ("tool/comando_remoto_test.dart", "comando remoto: protocolo 2, negociação, envelope e rota"),
     ("tool/pareamento_rede_test.dart", "pareamento em rede: oferta, token, leitura, esquecimento e expiração"),
+    ("tool/clima_test.dart", "clima: endereço sem chave, leitura, frase e pedido"),
+    ("tool/qr_pareamento_test.dart", "QR do pareamento: host, porta e código, sem segredo"),
 )
 
 

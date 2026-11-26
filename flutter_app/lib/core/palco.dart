@@ -429,11 +429,26 @@ String _palavraDoTipo(TipoPalco tipo) => switch (tipo) {
       TipoPalco.noticia => _palavrasNoticia,
     };
 
-/// Endereço de busca de imagens na Wikimedia Commons (sem chave).
+/// Endereço de busca de imagens na Wikipédia em português (sem chave).
 ///
-/// Só o espaço de nomes 6 (arquivos) entra, com miniatura de 1200 px — o
-/// suficiente para o palco e leve para o celular.
+/// Antes o palco pesquisava arquivos na Commons pelo nome: pedir "flor"
+/// devolvia imagens que só tinham a palavra no título (pessoas chamadas Flor,
+/// logotipos, arquivos de "Florianópolis"). Agora a busca resolve o **assunto**
+/// — o artigo "Flor" — e usa a imagem principal do artigo, que é uma foto do
+/// que foi pedido. A Commons continua como reserva em
+/// [urlDeBuscaImagensCommons].
 String urlDeBuscaImagens(String consulta) {
+  final termo = Uri.encodeQueryComponent(consulta.trim());
+  return 'https://pt.wikipedia.org/w/api.php?action=query'
+      '&format=json&formatversion=2&generator=search&gsrnamespace=0'
+      '&gsrsearch=$termo&gsrlimit=8'
+      '&prop=pageimages%7Cextracts&piprop=thumbnail%7Coriginal'
+      '&pithumbsize=1200&exintro=1&explaintext=1&exsentences=2'
+      '&redirects=1';
+}
+
+/// Reserva: busca de arquivos na Wikimedia Commons (sem chave).
+String urlDeBuscaImagensCommons(String consulta) {
   final termo = Uri.encodeQueryComponent(consulta.trim());
   return 'https://commons.wikimedia.org/w/api.php?action=query'
       '&format=json&formatversion=2&generator=search'
@@ -471,6 +486,70 @@ String descricaoDoPedido(PedidoPalco pedido) =>
 bool linkSeguro(String url) {
   final limpo = url.trim().toLowerCase();
   return limpo.startsWith('https://') || limpo.startsWith('http://');
+}
+
+/// Lê a resposta da busca de artigos da Wikipédia, com a imagem principal.
+///
+/// Cada página com miniatura vira um item do palco; o link abre o artigo, para
+/// o usuário conferir do que a foto é. O resumo curto do artigo explica a
+/// imagem no balão.
+List<ItemPalco> lerImagensDaWikipedia(String corpo) {
+  late final Object? dados;
+  try {
+    dados = jsonDecode(corpo);
+  } on FormatException {
+    return const [];
+  }
+  if (dados is! Map) return const [];
+  final query = dados['query'];
+  if (query is! Map) return const [];
+  final pages = query['pages'];
+  final brutos = <Map>[];
+  if (pages is List) {
+    for (final pagina in pages) {
+      if (pagina is Map) brutos.add(pagina);
+    }
+  } else if (pages is Map) {
+    for (final pagina in pages.values) {
+      if (pagina is Map) brutos.add(pagina);
+    }
+  }
+  if (brutos.isEmpty) return const [];
+
+  final itens = <ItemPalco>[];
+  for (final pagina in brutos) {
+    final titulo = (pagina['title'] ?? '').toString().trim();
+    if (titulo.isEmpty) continue;
+    final miniatura = pagina['thumbnail'];
+    final original = pagina['original'];
+    String imagem = '';
+    if (miniatura is Map && miniatura['source'] != null) {
+      imagem = miniatura['source'].toString();
+    } else if (original is Map && original['source'] != null) {
+      imagem = original['source'].toString();
+    }
+    if (!linkSeguro(imagem)) continue;
+    final pageid = pagina['pageid'];
+    final url = pageid is num
+        ? 'https://pt.wikipedia.org/?curid=${pageid.toInt()}'
+        : 'https://pt.wikipedia.org/wiki/${Uri.encodeComponent(titulo.replaceAll(' ', '_'))}';
+    final resumo = _limitarTexto((pagina['extract'] ?? '').toString(), 180);
+    itens.add(ItemPalco(
+      tipo: TipoPalco.imagem,
+      titulo: titulo,
+      url: url,
+      miniatura: imagem,
+      resumo: resumo,
+      fonte: 'Wikipédia',
+    ));
+  }
+  return itens;
+}
+
+String _limitarTexto(String texto, int limite) {
+  final limpo = texto.replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (limpo.length <= limite) return limpo;
+  return '${limpo.substring(0, limite).trimRight()}…';
 }
 
 /// Lê a resposta do gerador de busca da Wikimedia Commons.

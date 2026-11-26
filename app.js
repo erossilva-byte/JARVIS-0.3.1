@@ -6723,12 +6723,135 @@ function iniciarPareamentoPainel() {
   }
   const ip = document.getElementById('sc-ip');
   if (ip) ip.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') parearCelular(); });
+  const lerQr = document.getElementById('sc-ler-qr');
+  if (lerQr && lerQr.dataset.ligado !== '1') {
+    lerQr.dataset.ligado = '1';
+    lerQr.addEventListener('click', abrirLeitorQr);
+  }
+  const fecharQr = document.getElementById('qr-fechar');
+  if (fecharQr && fecharQr.dataset.ligado !== '1') {
+    fecharQr.dataset.ligado = '1';
+    fecharQr.addEventListener('click', fecharLeitorQr);
+  }
   atualizarPareamentoCelular();
 }
 
 function mostrarErroPareamento(texto) {
   const alvo = document.getElementById('sc-pareamento-erro');
   if (alvo) alvo.textContent = texto || '';
+}
+
+// Leitor de QR do pareamento (bloco 135): o celular mostra um QR com o próprio
+// endereço e o código; a câmera do PC lê e preenche os dois campos. A imagem da
+// câmera não é gravada nem sai do computador: cada quadro é decodificado na
+// memória e descartado.
+let leitorQr = null;
+
+function lerPayloadPareamento(texto) {
+  const bruto = String(texto || '').trim();
+  if (!bruto) return null;
+  let params = null;
+  try {
+    params = new URL(bruto).searchParams;
+  } catch (_) {
+    try {
+      params = new URLSearchParams(bruto.replace(/^[^?]*\?/, ''));
+    } catch (_) {
+      return null;
+    }
+  }
+  const host = String(params.get('host') || params.get('ip') || '').trim();
+  const codigo = String(params.get('codigo') || '').replace(/\D/g, '');
+  const porta = String(params.get('porta') || '').trim();
+  if (!host || codigo.length !== 6) return null;
+  return { host: host, codigo: codigo, porta: porta };
+}
+
+function fecharLeitorQr() {
+  const caixa = document.getElementById('qr-leitor');
+  if (caixa) caixa.hidden = true;
+  const video = document.getElementById('qr-video');
+  if (video) {
+    try { video.pause(); } catch (_) {}
+    try { video.srcObject = null; } catch (_) {}
+  }
+  if (leitorQr) {
+    try { leitorQr.getTracks().forEach((t) => t.stop()); } catch (_) {}
+    leitorQr = null;
+  }
+}
+
+async function abrirLeitorQr() {
+  const caixa = document.getElementById('qr-leitor');
+  const video = document.getElementById('qr-video');
+  const aviso = document.getElementById('qr-aviso');
+  const botao = document.getElementById('sc-ler-qr');
+  if (!caixa || !video) return;
+  if (typeof jsQR !== 'function') {
+    mostrarErroPareamento('O leitor de QR não carregou nesta janela. Digite o IP e o código.');
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    mostrarErroPareamento('Este computador não expôs a câmera para o app. Digite o IP e o código.');
+    return;
+  }
+  caixa.hidden = false;
+  if (botao) botao.disabled = true;
+  if (aviso) aviso.textContent = 'Abrindo a câmera…';
+  try {
+    leitorQr = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }, audio: false
+    });
+  } catch (_) {
+    if (aviso) aviso.textContent = 'A câmera não foi autorizada. Autorize o JARVIS nas permissões do sistema ou digite o IP e o código.';
+    if (botao) botao.disabled = false;
+    return;
+  }
+  video.srcObject = leitorQr;
+  try { await video.play(); } catch (_) {}
+  if (aviso) aviso.textContent = 'Aponte a câmera para o QR que o celular mostra no pareamento.';
+  const tela = document.createElement('canvas');
+  const ctx = tela.getContext('2d', { willReadFrequently: true });
+  const prazo = Date.now() + 45000;
+  const passo = () => {
+    if (!leitorQr) return;
+    if (Date.now() > prazo) {
+      if (aviso) aviso.textContent = 'Não encontrei o QR em 45 segundos. Tente de novo, aproximando a câmera.';
+      fecharLeitorQr();
+      if (botao) botao.disabled = false;
+      return;
+    }
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      tela.width = video.videoWidth || 320;
+      tela.height = video.videoHeight || 320;
+      ctx.drawImage(video, 0, 0, tela.width, tela.height);
+      const dados = ctx.getImageData(0, 0, tela.width, tela.height);
+      const achado = jsQR(dados.data, tela.width, tela.height, { inversionAttempts: 'dontInvert' });
+      if (achado && achado.data) {
+        const lido = lerPayloadPareamento(achado.data);
+        if (lido) {
+          const ip = document.getElementById('sc-ip');
+          const campo = document.getElementById('sc-codigo');
+          const P = window.Pareamento;
+          const endereco = lido.porta && lido.porta !== '47600'
+            ? lido.host + ':' + lido.porta
+            : lido.host;
+          if (ip) ip.value = endereco;
+          if (campo) {
+            campo.value = P ? P.formatarCodigo(lido.codigo) : lido.codigo;
+          }
+          fecharLeitorQr();
+          if (botao) botao.disabled = false;
+          mostrarErroPareamento('');
+          parearCelular();
+          return;
+        }
+        if (aviso) aviso.textContent = 'Esse QR não é do pareamento do JARVIS. Procure o QR da tela “Pareamento com o PC”.';
+      }
+    }
+    setTimeout(passo, 130);
+  };
+  passo();
 }
 
 async function atualizarPareamentoCelular() {

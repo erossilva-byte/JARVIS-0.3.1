@@ -97,6 +97,11 @@ class AparelhoService {
   Future<ResultadoAparelho> limparNotificacoes() async =>
       ResultadoAparelho.deMapa(await _chamar('limparNotificacoes'));
 
+  /// Pede ao Android para reconectar o acesso às notificações e relê as que já
+  /// estão na barra. Resolve o caso "acesso autorizado, lista vazia".
+  Future<ResultadoAparelho> reconectarNotificacoes() async =>
+      ResultadoAparelho.deMapa(await _chamar('notificacoesReconectar'));
+
   /// Responde pela propria notificacao (RemoteInput), sem abrir o app de
   /// mensagens. [chave] vem de [NotificacaoAparelho.chave]; sem ela, o Android
   /// usa a mensagem respondivel mais recente do [pacote].

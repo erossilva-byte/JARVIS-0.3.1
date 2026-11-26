@@ -1750,3 +1750,11 @@ body.modo-visita > *:not(#visita){display:none!important}
 /* ---- Sobre e atualização (Etapa 7) ---- */
 .sobre-notas ul{margin:6px 0 0;padding-left:18px;display:grid;gap:4px}
 .sobre-notas li{font-size:.88rem;line-height:1.45}
+
+/* Leitor de QR do pareamento (bloco 135): câmera do PC aponta para o QR que o
+   celular mostra. A caixa fica por cima de tudo e some ao fechar. */
+.qr-leitor{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;background:rgba(2,6,12,.82);padding:16px}
+.qr-leitor[hidden]{display:none}
+.qr-leitor-caixa{width:min(420px,100%);background:var(--painel,#0a1522);border:1px solid rgba(85,223,255,.35);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.qr-leitor video{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;background:#04070d}
+.qr-leitor .dica{margin:0;font-size:11px;line-height:1.45}

@@ -139,8 +139,8 @@ exigir('shutil.copy2(ANDROID / "JarvisContatos.kt"' in preparo,
        "prepare_android_sistema.py não copia JarvisContatos.kt")
 
 # 6. Versão, docs e registros.
-exigir("version: 1.110.0+111000" in pubspec,
-       "pubspec.yaml não está em 1.110.0+111000")
+exigir("version: 1.111.0+111100" in pubspec,
+       "pubspec.yaml não está em 1.111.0+111100")
 exigir("## 1.93.0" in changelog, "CHANGELOG.md não tem o bloco 1.93.0")
 exigir(relatorio.is_file(), "falta o relatório do bloco 116")
 exigir("test_bloco_116.py" in pacote, "package.json não roda o contrato 116")

@@ -1,10 +1,12 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../core/aparelho.dart';
+import '../core/clima.dart';
 import '../core/dispositivo.dart';
 import '../core/localizacao.dart';
 import '../ui_common.dart';
 import 'aparelho_service.dart';
+import 'clima_service.dart';
 import 'voz_jarvis.dart';
 
 /// Central do aparelho — status, notificações e localização.
@@ -32,6 +34,11 @@ class _DispositivoPageState extends State<DispositivoPage> {
   bool _acessoNotificacoes = false;
   List<NotificacaoAparelho> _notificacoes = const [];
   bool _carregandoNotificacoes = false;
+
+  ClimaAgora? _clima;
+  String _lugarClima = '';
+  bool _carregandoClima = false;
+  String? _erroClima;
 
   EstadoLocalizacao _estadoLocalizacao = EstadoLocalizacao.desconhecido;
   LocalizacaoAparelho? _localizacao;
@@ -65,6 +72,41 @@ class _DispositivoPageState extends State<DispositivoPage> {
     }
     await _carregarNotificacoes();
     await _carregarEstadoLocalizacao();
+    await _carregarClima();
+  }
+
+  /// Temperatura do lugar do aparelho, pela última posição guardada.
+  /// Nunca pede GPS nem permissão: só usa o que já existe.
+  Future<void> _carregarClima() async {
+    if (_carregandoClima) return;
+    setState(() {
+      _carregandoClima = true;
+      _erroClima = null;
+    });
+    final servico = ClimaService();
+    try {
+      final achado = await servico.atual();
+      if (!mounted) return;
+      setState(() {
+        _clima = achado.clima;
+        _lugarClima = achado.lugar;
+        _carregandoClima = false;
+      });
+    } on ClimaIndisponivel catch (erro) {
+      if (!mounted) return;
+      setState(() {
+        _carregandoClima = false;
+        _erroClima = erro.mensagem;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _carregandoClima = false;
+        _erroClima = 'Não consegui consultar o clima agora.';
+      });
+    } finally {
+      servico.close();
+    }
   }
 
   Future<void> _carregarNotificacoes() async {
@@ -72,8 +114,17 @@ class _DispositivoPageState extends State<DispositivoPage> {
     setState(() => _carregandoNotificacoes = true);
     try {
       final acesso = await _servico.temAcessoNotificacoes();
-      final lista =
+      var lista =
           acesso ? await _servico.notificacoes(limite: 12) : const <NotificacaoAparelho>[];
+      if (acesso && lista.isEmpty) {
+        // Acesso autorizado e lista vazia: o serviço pode ter sido encerrado
+        // pelo Android. Pede a reconexão uma vez antes de dizer que não há nada.
+        try {
+          await _servico.reconectarNotificacoes();
+          await Future<void>.delayed(const Duration(milliseconds: 700));
+          lista = await _servico.notificacoes(limite: 12);
+        } catch (_) {}
+      }
       if (!mounted) return;
       setState(() {
         _acessoNotificacoes = acesso;
@@ -109,6 +160,15 @@ class _DispositivoPageState extends State<DispositivoPage> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(erro.mensagem)));
     }
+  }
+
+  Future<void> _reconectarNotificacoes() async {
+    setState(() => _carregandoNotificacoes = true);
+    try {
+      await _servico.reconectarNotificacoes();
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+    } catch (_) {}
+    await _carregarNotificacoes();
   }
 
   Future<void> _limparNotificacoes() async {
@@ -222,14 +282,27 @@ class _DispositivoPageState extends State<DispositivoPage> {
         else if (info != null) ...[
           const Eyebrow('ESTADO DO APARELHO'),
           const SizedBox(height: 8),
-          _linha('Memória', _memoria(info)),
-          _linha('Armazenamento', _armazenamento(info)),
-          _linha('Bateria', _bateria(info)),
-          _linha('Rede', info.redeRotulo),
-          _linha('Ligado há', info.uptimeRotulo),
+          Container(
+            key: const ValueKey('cartao-estado-aparelho'),
+            padding: const EdgeInsets.fromLTRB(13, 10, 13, 10),
+            decoration: BoxDecoration(
+              color: panel,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: cyan.withValues(alpha: .18)),
+            ),
+            child: Column(children: [
+              _linha('Memória', _memoria(info)),
+              _linha('Armazenamento', _armazenamento(info)),
+              _linha('Bateria', _bateria(info)),
+              _linha('Rede', info.redeRotulo),
+              _linha('Ligado há', info.uptimeRotulo),
+            ]),
+          ),
           if (info.memoriaBaixa)
             _aviso('O Android está com pouca memória livre agora.',
                 const Color(0xFFFFD27F)),
+          const SizedBox(height: 18),
+          _secaoClima(),
           const SizedBox(height: 18),
           _secaoNotificacoes(),
           const SizedBox(height: 18),
@@ -290,6 +363,81 @@ class _DispositivoPageState extends State<DispositivoPage> {
           ),
         ],
       ]),
+    );
+  }
+
+  /// Clima do lugar do aparelho, com o botão para forçar nova consulta.
+  Widget _secaoClima() {
+    final clima = _clima;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Eyebrow('CLIMA AQUI'),
+        const SizedBox(height: 8),
+        Container(
+          key: const ValueKey('cartao-clima'),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: panel,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: cyan.withValues(alpha: .18)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (clima != null) ...[
+                Row(children: [
+                  const Icon(Icons.thermostat_rounded, color: cyan, size: 22),
+                  const SizedBox(width: 8),
+                  Text(clima.temperaturaRotulo,
+                      key: const ValueKey('clima-temperatura'),
+                      style: const TextStyle(
+                          fontSize: 22, fontWeight: FontWeight.w300)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '${clima.descricaoCodigo}'
+                      '${clima.sensacao == null ? '' : ' · sensação ${clima.sensacaoRotulo}'}',
+                      style: const TextStyle(fontSize: 11, height: 1.35),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 6),
+                Text(
+                  [
+                    if (_lugarClima.isNotEmpty) 'Perto de $_lugarClima',
+                    if (clima.minima != null && clima.maxima != null)
+                      'mínima ${clima.minima!.round()} °C · máxima ${clima.maxima!.round()} °C hoje',
+                    if (clima.ventoKmh != null)
+                      'vento ${clima.ventoKmh!.round()} km/h',
+                  ].join(' · '),
+                  style: const TextStyle(color: muted, fontSize: 10.5, height: 1.4),
+                ),
+              ] else
+                Text(
+                  _erroClima ??
+                      'Sem temperatura ainda. Autorize a localização abaixo.',
+                  key: const ValueKey('clima-aviso'),
+                  style: const TextStyle(fontSize: 11, height: 1.4),
+                ),
+              const SizedBox(height: 6),
+              TextButton.icon(
+                key: const ValueKey('atualizar-clima'),
+                onPressed: _carregandoClima ? null : _carregarClima,
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: Text(_carregandoClima
+                    ? 'Consultando…'
+                    : 'Atualizar clima'),
+              ),
+              const Text(
+                'Fonte: Open-Meteo, sem chave, consultada com a última posição '
+                'guardada no aparelho. Nenhuma permissão é pedida por aqui.',
+                style: TextStyle(color: muted, fontSize: 10, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -367,6 +515,13 @@ class _DispositivoPageState extends State<DispositivoPage> {
                   onPressed: _carregandoNotificacoes ? null : _carregarNotificacoes,
                   icon: const Icon(Icons.refresh_rounded, size: 17),
                   label: const Text('Atualizar notificações'),
+                ),
+                TextButton.icon(
+                  key: const ValueKey('reconectar-notificacoes'),
+                  onPressed:
+                      _carregandoNotificacoes ? null : _reconectarNotificacoes,
+                  icon: const Icon(Icons.sync_rounded, size: 17),
+                  label: const Text('Reconectar acesso e reler a barra'),
                 ),
               ],
             ],

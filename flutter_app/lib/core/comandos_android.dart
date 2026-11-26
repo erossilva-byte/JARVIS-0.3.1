@@ -144,8 +144,42 @@ class InterpretadorComandos {
       r'qual (?:e )?(?:a )?minha localizacao(?: atual)?|'
       r'minha localizacao(?: atual)?|localizacao(?: atual)?)$');
 
+  // "abra", "abri" e "abram" faltavam: "Abra o WhatsApp" (a forma que o
+  // reconhecimento de voz devolve) caía na conversa e o modelo respondia com
+  // instruções em vez de abrir o app.
   static final _abrir = RegExp(
-      r'^(?:abrir|abre|iniciar|executar)\s+(?:o\s+|a\s+|os\s+|as\s+)?(?:app\s+(?:do\s+|da\s+)?)?(.+)$');
+      r'^(?:abrir|abre|abra|abri|abram|iniciar|inicie|executar|execute)\s+'
+      r'(?:o\s+|a\s+|os\s+|as\s+|um\s+|uma\s+)?'
+      r'(?:app\s+(?:do\s+|da\s+)?)?(.+)$');
+
+  /// Nome dito → pacote conhecido. Vale mesmo quando o rótulo do app é outro
+  /// ("zap" abre o WhatsApp) e quando o Android esconde o rótulo.
+  static const pacotesConhecidos = <String, String>{
+    'zap': 'com.whatsapp',
+    'whats': 'com.whatsapp',
+    'whatsapp': 'com.whatsapp',
+    'wpp': 'com.whatsapp',
+    'whatsapp business': 'com.whatsapp.w4b',
+    'wpp business': 'com.whatsapp.w4b',
+    'insta': 'com.instagram.android',
+    'instagram': 'com.instagram.android',
+    'telegram': 'org.telegram.messenger',
+    'youtube': 'com.google.android.youtube',
+    'you tube': 'com.google.android.youtube',
+    'spotify': 'com.spotify.music',
+    'gmail': 'com.google.android.gm',
+    'maps': 'com.google.android.apps.maps',
+    'mapa': 'com.google.android.apps.maps',
+    'mapas': 'com.google.android.apps.maps',
+    'facebook': 'com.facebook.katana',
+    'face': 'com.facebook.katana',
+    'messenger': 'com.facebook.orca',
+    'discord': 'com.discord',
+    'signal': 'org.thoughtcrime.securesms',
+    'ifood': 'br.com.brainweb.ifood',
+    'uber': 'com.ubercab',
+    'waze': 'com.waze',
+  };
 
   static ComandoAndroid? interpretar(String texto) {
     final original = texto.trim();
@@ -220,7 +254,8 @@ class InterpretadorComandos {
       ]) {
         if (nome == proibido || nome.startsWith('$proibido ')) return null;
       }
-      // O nome do app volta sem acento e em minúsculas; o Android compara sem diferenciar caixa.
+      // O nome do app volta sem acento e em minúsculas; o Android compara sem
+      // diferenciar caixa e conhece os apelidos (zap, insta, waze…).
       return ComandoAbrirApp(nome);
     }
     return null;

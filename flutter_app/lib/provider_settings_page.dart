@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'services/provider_service.dart';
 import 'ui_common.dart';
@@ -17,6 +18,7 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
       widget.service ?? ProviderService(secrets: PlatformSecretStore());
   final Map<String, TextEditingController> fields = {};
   final Map<String, bool> configured = {};
+  final Map<String, String> finais = {};
   final Map<String, String?> modelos = {};
   final Map<String, String> messages = {};
   final Set<String> busy = {};
@@ -34,10 +36,12 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
       try {
         final value = await service.isConfigured(p.id);
         final escolhido = await service.modeloEscolhido(p.id);
+        final finalDaChave = await service.digitosFinais(p.id);
         if (mounted) {
           setState(() {
             configured[p.id] = value;
             modelos[p.id] = escolhido;
+            if (finalDaChave != null) finais[p.id] = finalDaChave;
           });
         }
       } catch (_) {
@@ -78,11 +82,57 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
     }
   }
 
+  /// Salva a chave que está no campo, se houver uma digitada ainda não salva.
+  ///
+  /// Antes, tocar em "Testar conexão" ou "Ver modelos" usava só a chave do
+  /// cofre: quem acabou de colar a chave via "cadastre a chave" e achava que
+  /// ela não tinha sido detectada. Agora o teste aproveita o campo.
+  Future<bool> _salvarSeDigitada(AiProvider p) async {
+    final digitada = fields[p.id]!.text.trim();
+    if (digitada.isEmpty) return true;
+    try {
+      await service.saveKey(p.id, digitada);
+      fields[p.id]!.clear();
+      final fim = await service.digitosFinais(p.id);
+      if (mounted) {
+        setState(() {
+          configured[p.id] = true;
+          if (fim != null) finais[p.id] = fim;
+          messages[p.id] = 'Chave salva no cofre seguro.';
+        });
+      }
+      return true;
+    } catch (e) {
+      if (mounted) {
+        setState(() => messages[p.id] =
+            e.toString().replaceFirst('Invalid argument(s): ', ''));
+      }
+      return false;
+    }
+  }
+
+  Future<void> _colar(AiProvider p) async {
+    final dados = await Clipboard.getData(Clipboard.kTextPlain);
+    final texto = dados?.text?.trim() ?? '';
+    if (texto.isEmpty) {
+      setState(() => messages[p.id] =
+          'A área de transferência está vazia. Copie a chave e tente de novo.');
+      return;
+    }
+    fields[p.id]!.text = texto;
+    setState(() => messages[p.id] =
+        'Chave colada. Toque em “Salvar chave” ou direto em “Testar conexão”.');
+  }
+
   Future<void> _test(AiProvider p) async {
     setState(() {
       busy.add(p.id);
       messages[p.id] = 'Testando conexão…';
     });
+    if (!await _salvarSeDigitada(p)) {
+      if (mounted) setState(() => busy.remove(p.id));
+      return;
+    }
     try {
       final result = await service.testConnection(p.id);
       if (mounted) {
@@ -125,6 +175,10 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
       busy.add(p.id);
       messages[p.id] = 'Consultando a lista de modelos do ${p.name}…';
     });
+    if (!await _salvarSeDigitada(p)) {
+      if (mounted) setState(() => busy.remove(p.id));
+      return;
+    }
     List<ModeloDoProvedor> lista;
     try {
       lista = await service.descobrirModelos(p.id);
@@ -262,6 +316,18 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
                           '${modelos[provider.id] == null ? ' (padrão do app)' : ' (escolhido)'}',
                           key: ValueKey('modelo-atual-${provider.id}'),
                           style: const TextStyle(fontSize: 9, color: muted)),
+                      if (configured[provider.id] == true &&
+                          !provider.semChave)
+                        Text(
+                          finais[provider.id] == null
+                              ? 'Chave guardada no cofre seguro.'
+                              : 'Chave guardada no cofre seguro · termina em ••••${finais[provider.id]}',
+                          key: ValueKey('chave-final-${provider.id}'),
+                          style: const TextStyle(
+                              fontSize: 9,
+                              color: Color(0xFF64E6B1),
+                              height: 1.4),
+                        ),
                       const SizedBox(height: 10),
                       if (provider.semChave) ...[
                         Row(children: [
@@ -296,7 +362,19 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
                                     borderSide: BorderSide.none),
                                 contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 11))),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            key: ValueKey('colar-chave-${provider.id}'),
+                            onPressed: busy.contains(provider.id)
+                                ? null
+                                : () => _colar(provider),
+                            icon: const Icon(Icons.content_paste_rounded, size: 15),
+                            label: const Text('Colar a chave copiada',
+                                style: TextStyle(fontSize: 10)),
+                          ),
+                        ),
                       ],
                       Wrap(spacing: 8, runSpacing: 6, children: [
                         if (!provider.semChave)
