@@ -39,6 +39,14 @@ jobs:
       - name: Empacotar Linux
         run: npx electron-builder --linux AppImage deb tar.gz --publish never
 
+      # O electron-builder 25 embute o runtime antigo do AppImage, que carrega
+      # `libfuse.so.2` do sistema e morre em Ubuntu 22.04+. A troca pelo runtime
+      # estático do projeto AppImage é o que faz o arquivo abrir sem instalar
+      # nada; o script confere o offset e extrai AppRun/app.asar depois da troca.
+      - name: Trocar o runtime do AppImage pelo estático (abre sem libfuse2)
+        shell: bash
+        run: python3 ci/appimage_sem_fuse.py dist
+
       - name: Conferir AppImage, pacote deb e tar.gz
         shell: bash
         run: |

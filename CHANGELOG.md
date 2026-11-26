@@ -39,6 +39,13 @@
   executável e o `app.asar` dentro do tar, e `platforms/LINUX.md` traz a tabela
   dos erros de abertura com a saída para cada um (`libfuse2t64`,
   `APPIMAGE_EXTRACT_AND_RUN=1`, `JARVIS_SEM_SANDBOX=1`, `chmod +x`).
+- **AppImage que abre sem instalar nada**: o pacote passou a ser reembalado com o
+  runtime estático do projeto AppImage (`ci/appimage_sem_fuse.py`, runtime fixado
+  por sha256). O FUSE usado para montar o próprio conteúdo vai dentro do arquivo,
+  então o `libfuse.so.2` do sistema não é mais obrigatório e o
+  `dlopen(): error loading libfuse.so.2` fica só em download antigo. A esteira
+  confere o pacote depois da troca (offset do runtime e extração de `AppRun` e
+  `resources/app.asar`); o `tar.gz` e o `.deb` continuam publicados.
 - **Cofre de chaves do PC**: duas funções com o mesmo nome em
   `platforms/desktop/main.js` faziam o cofre de memória em pasta sobrescrever o
   cofre de chaves; salvar chave de API caía em `guardar is not a function`.

@@ -17,11 +17,12 @@ cartão “ESTE CELULAR” na tela inicial e central do aparelho reformulada. No
 do Linux a GPU é desligada por padrão (o driver Intel antigo derrubava a janela
 com `libva error`); `JARVIS_GPU=1` religa.
 
-No Linux o release traz **três** pacotes: `tar.gz` (extrai e roda, sem instalar
-nada e sem depender de FUSE), `.deb` e `.AppImage`. Se o AppImage reclamar de
-`libfuse.so.2`, use o `tar.gz` ou rode
-`APPIMAGE_EXTRACT_AND_RUN=1 ./JARVIS-Nova-1.111.0-x86_64.AppImage`. A tabela de
-erros de abertura está em `platforms/LINUX.md`.
+No Linux o release traz **três** pacotes: `.AppImage` (um arquivo, abre sem
+instalar nada), `tar.gz` (extrai e roda) e `.deb`. O AppImage é reembalado na
+esteira com o runtime estático do projeto AppImage, então ele **não** carrega o
+`libfuse.so.2` do sistema: se aparecer esse erro, o arquivo é antigo e basta
+baixar de novo. `APPIMAGE_EXTRACT_AND_RUN=1` continua como saída para sistema sem
+`fusermount3`. A tabela de erros de abertura está em `platforms/LINUX.md`.
 
 Limites: o Kotlin não foi compilado nesta máquina (sem SDK do Android) — o APK
 da esteira é a primeira compilação de verdade; abrir app, alarme, notificações,
@@ -624,7 +625,7 @@ git clone <url-do-repositório> jarvis-nova && cd jarvis-nova
 npm install          # dependências (Electron incluído)
 npm start            # abre o Jarvis no PC
 npm run dist:win     # gera o instalador NSIS (.exe) em dist/
-npm run dist:linux   # gera AppImage e .deb em dist/
+npm run dist:linux   # gera AppImage (runtime estático), .deb e tar.gz em dist/
 npm run dist:mac     # gera .dmg (precisa ser rodado no macOS)
 ```
 

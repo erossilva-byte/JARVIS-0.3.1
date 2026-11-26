@@ -6,8 +6,9 @@ faltava era empacotar, publicar e não fingir controle de mídia/volume quando a
 ferramenta do Linux não está instalada. Este contrato prende:
 
 - os três alvos de pacote (AppImage, deb e tar.gz) e o que o deb exige (mantenedor);
-- o pacote sem FUSE: o AppImage exige `libfuse.so.2`, que o Ubuntu 22.04+ não traz,
-  então existe o tar.gz e a documentação diz como sair do erro de FUSE;
+- o pacote sem FUSE: o AppImage antigo exigia `libfuse.so.2`, que o Ubuntu 22.04+
+  não traz; hoje ele é reembalado com o runtime estático do projeto AppImage,
+  existe o tar.gz como reserva e a documentação diz como sair de cada erro;
 - o job de Linux na esteira de release, com conferência de tamanho e anexo na tag;
 - as alternativas de mídia/volume no `main.js` e a recusa explicada sem elas;
 - a documentação, incluindo o limite honesto de que nada rodou numa área de
@@ -66,11 +67,30 @@ for trecho in [
     "'*.tar.gz'",
     "tar -tzf \"$TARBALL\"",
     "chmod +x \"$APPIMAGE\"",
+    "python3 ci/appimage_sem_fuse.py dist",
 ]:
     exigir(trecho in fluxo, f"release-pc.yml perdeu: {trecho}")
 exigir(fluxo.find("Empacotar Linux") < fluxo.find("Anexar Linux ao release"),
        "o Linux precisa ser empacotado antes de anexar ao release")
 exigir("if: github.ref_type == 'tag'" in fluxo, "o anexo do release precisa ser só em tag")
+exigir(fluxo.find("Empacotar Linux") < fluxo.find("appimage_sem_fuse.py") < fluxo.find("Anexar Linux ao release"),
+       "o AppImage precisa ser reembalado antes de conferir e anexar")
+
+# 3. AppImage que abre sem instalar FUSE.
+sem_fuse = ler(RAIZ / "ci" / "appimage_sem_fuse.py")
+for trecho in [
+    "AppImage/type2-runtime",
+    "runtime-x86_64",
+    "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d",
+    "--appimage-offset",
+    "--appimage-extract",
+    "resources/app.asar",
+]:
+    exigir(trecho in sem_fuse, f"ci/appimage_sem_fuse.py perdeu: {trecho}")
+exigir("appimage_sem_fuse.py" in (pacote.get("scripts") or {}).get("dist:linux", ""),
+       "dist:linux precisa trocar o runtime do AppImage pelo estático")
+exigir("electron-builder --linux" in (pacote.get("scripts") or {}).get("dist:linux", ""),
+       "dist:linux continua empacotando com o electron-builder")
 
 # 3. Código do processo principal.
 principal = ler(RAIZ / "platforms" / "desktop" / "main.js")
@@ -94,7 +114,7 @@ exigir(not re.search(r"if \(plat === 'win32'\)[^}]*teclaMultimidiaWindows", prin
        or "plat === 'linux'" in principal,
        "controle de mídia ficou só no Windows")
 
-# 4. Documentação honesta.
+# 5. Documentação honesta.
 doc = ler(RAIZ / "platforms" / "LINUX.md")
 for trecho in [
     "## Instalar",
@@ -112,6 +132,10 @@ for trecho in [
     "libfuse2t64",
     "APPIMAGE_EXTRACT_AND_RUN=1",
     "JARVIS_SEM_SANDBOX=1",
+    # O ponto do bloco: o pacote publicado não pede mais FUSE do sistema.
+    "runtime estático",
+    "fusermount3",
+    "Cannot mount AppImage",
 ]:
     exigir(trecho in doc, f"platforms/LINUX.md perdeu: {trecho}")
 
