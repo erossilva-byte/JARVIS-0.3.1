@@ -7,17 +7,33 @@ do sistema e o que ainda não foi medido.
 
 ## Instalar
 
-Duas formas, as duas geradas pela esteira `release-pc.yml`:
+Três formas, todas geradas pela esteira `release-pc.yml`. Escolha a que o seu
+sistema aceita:
 
-- **AppImage** — `chmod +x JARVIS-Nova-1.110.0-x86_64.AppImage` e execute.
-  Não instala nada no sistema.
-- **deb** (Debian/Ubuntu) — `sudo apt install ./JARVIS-Nova-1.110.0-amd64.deb`.
+- **tar.gz** (funciona em qualquer distro, sem instalar nada no sistema):
+  ```bash
+  tar -xzf JARVIS-Nova-1.111.0-x64.tar.gz
+  cd JARVIS-Nova-1.111.0-x64 && ./jarvis-nova
+  ```
+- **deb** (Debian/Ubuntu) — `sudo apt install ./JARVIS-Nova-1.111.0-amd64.deb`.
+- **AppImage** — `chmod +x JARVIS-Nova-1.111.0-x86_64.AppImage` e execute.
+
+O `tar.gz` é o caminho mais curto porque não depende de FUSE nem de `sudo`.
+
+### Erros conhecidos ao abrir
+
+| Mensagem | Causa | O que fazer |
+|----------|-------|-------------|
+| `dlopen(): error loading libfuse.so.2` / "AppImages require FUSE to run" | o AppImage precisa do FUSE 2, que o Ubuntu 22.04+ não traz por padrão | use o `tar.gz`, ou `sudo apt install libfuse2t64` (Ubuntu 24.04) / `sudo apt install libfuse2` (22.04 e anteriores), ou rode `APPIMAGE_EXTRACT_AND_RUN=1 ./JARVIS-Nova-1.111.0-x86_64.AppImage` |
+| `The SUID sandbox helper binary was found, but is not configured correctly` | distro com *unprivileged user namespaces* restrito (AppArmor no Ubuntu 24.04) | `JARVIS_SEM_SANDBOX=1 ./jarvis-nova` (o sandbox do Chromium fica desligado; use só se precisar) |
+| `libva error: …/iHD_drv_video.so init failed` e a janela não abre | aceleração de GPU com driver Intel antigo | já é o padrão: a GPU vem desligada no Linux; `JARVIS_GPU=1` religa |
+| `Permission denied` | o AppImage foi baixado sem permissão de execução | `chmod +x` no arquivo |
 
 Para compilar na própria máquina:
 
 ```bash
 npm ci
-npm run dist:linux        # AppImage + deb em dist/
+npm run dist:linux        # AppImage + deb + tar.gz em dist/
 npm run dist:linux:dir    # só a pasta descompactada, para testar rápido
 ```
 
@@ -41,9 +57,9 @@ caso — é o mesmo comportamento do Windows sem DPAPI.
 
 - **Sem teclas multimídia**: no Windows o app injeta a tecla; no Linux usa
   `playerctl`, que fala com o player ativo em vez de simular teclado.
-- **Instalador**: `.AppImage`/`.deb` em vez de NSIS/portátil. A atualização
-  assinada (`atualizacao.json`) é do pacote Windows; no Linux a troca é manual
-  (baixar o AppImage novo por cima).
+- **Instalador**: `.AppImage`/`.deb`/`.tar.gz` em vez de NSIS/portátil. A
+  atualização assinada (`atualizacao.json`) é do pacote Windows; no Linux a
+  troca é manual (baixar o pacote novo por cima).
 - **Certificado de código**: não há assinatura de pacote no Linux; o AppImage
   não pede permissão especial e o `.deb` só avisa quando vem de fora do
   repositório.

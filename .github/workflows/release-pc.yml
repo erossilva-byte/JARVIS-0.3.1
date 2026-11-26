@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   linux:
-    name: Empacotar Linux (AppImage + deb)
+    name: Empacotar Linux (AppImage + deb + tar.gz)
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -33,22 +33,31 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      # Três formatos de propósito: o AppImage precisa de FUSE 2, que o Ubuntu 22.04+
+      # não instala por padrão (erro `dlopen(): error loading libfuse.so.2`), e o .deb
+      # precisa de sudo. O tar.gz é a saída que roda em qualquer distro sem instalar nada.
       - name: Empacotar Linux
-        run: npx electron-builder --linux AppImage deb --publish never
+        run: npx electron-builder --linux AppImage deb tar.gz --publish never
 
-      - name: Conferir AppImage e pacote deb
+      - name: Conferir AppImage, pacote deb e tar.gz
         shell: bash
         run: |
           ls -lh dist || true
           APPIMAGE=$(find dist -maxdepth 1 -type f -name '*.AppImage' -print -quit)
           DEB=$(find dist -maxdepth 1 -type f -name '*.deb' -print -quit)
+          TARBALL=$(find dist -maxdepth 1 -type f -name '*.tar.gz' -print -quit)
           test -n "$APPIMAGE" || { echo 'AppImage não foi gerado.' >&2; exit 1; }
           test -n "$DEB" || { echo 'Pacote .deb não foi gerado.' >&2; exit 1; }
-          for f in "$APPIMAGE" "$DEB"; do
+          test -n "$TARBALL" || { echo 'Pacote tar.gz não foi gerado.' >&2; exit 1; }
+          for f in "$APPIMAGE" "$DEB" "$TARBALL"; do
             BYTES=$(wc -c < "$f")
             echo "$f · $BYTES bytes"
             test "$BYTES" -gt 20000000 || { echo "Artefato pequeno demais (possível stub): $f" >&2; exit 1; }
           done
+          # O tar.gz só serve se trouxer o executável e a interface; conferir por dentro
+          # evita publicar um pacote vazio que abre e fecha sozinho.
+          tar -tzf "$TARBALL" | grep -E '(^|/)jarvis-nova$' || { echo 'tar.gz sem o executável jarvis-nova.' >&2; exit 1; }
+          tar -tzf "$TARBALL" | grep -E '(^|/)resources/app.asar$' || { echo 'tar.gz sem resources/app.asar.' >&2; exit 1; }
           chmod +x "$APPIMAGE"
 
       - name: Guardar artefatos Linux
@@ -59,6 +68,7 @@ jobs:
           path: |
             dist/*.AppImage
             dist/*.deb
+            dist/*.tar.gz
 
       - name: Anexar Linux ao release da tag
         if: github.ref_type == 'tag'
@@ -69,6 +79,7 @@ jobs:
           files: |
             dist/*.AppImage
             dist/*.deb
+            dist/*.tar.gz
 
   windows:
     name: Instalador e portátil do J.A.R.V.I.S. Nova (Windows)

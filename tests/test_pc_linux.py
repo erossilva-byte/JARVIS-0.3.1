@@ -5,7 +5,9 @@ O app é Electron e o código já era agnóstico de sistema em quase tudo. O que
 faltava era empacotar, publicar e não fingir controle de mídia/volume quando a
 ferramenta do Linux não está instalada. Este contrato prende:
 
-- os dois alvos de pacote (AppImage e deb) e o que o deb exige (mantenedor);
+- os três alvos de pacote (AppImage, deb e tar.gz) e o que o deb exige (mantenedor);
+- o pacote sem FUSE: o AppImage exige `libfuse.so.2`, que o Ubuntu 22.04+ não traz,
+  então existe o tar.gz e a documentação diz como sair do erro de FUSE;
 - o job de Linux na esteira de release, com conferência de tamanho e anexo na tag;
 - as alternativas de mídia/volume no `main.js` e a recusa explicada sem elas;
 - a documentação, incluindo o limite honesto de que nada rodou numa área de
@@ -39,8 +41,8 @@ def exigir(condicao: bool, mensagem: str) -> None:
 pacote = json.loads(ler(RAIZ / "package.json") or "{}")
 build = pacote.get("build") or {}
 linux = build.get("linux") or {}
-exigir(sorted(linux.get("target") or []) == ["AppImage", "deb"],
-       "o build.linux precisa ter os alvos AppImage e deb")
+exigir(sorted(linux.get("target") or []) == ["AppImage", "deb", "tar.gz"],
+       "o build.linux precisa ter os alvos AppImage, deb e tar.gz")
 exigir(linux.get("executableName") == "jarvis-nova", "executável do Linux sem nome definido")
 exigir("${version}" in str(linux.get("artifactName")) and "${arch}" in str(linux.get("artifactName")),
        "o nome do pacote Linux precisa levar versão e arquitetura")
@@ -55,12 +57,14 @@ exigir("node tests/test_pc_linux.py" in (pacote.get("scripts") or {}).get("test:
 # 2. Esteira.
 fluxo = ler(RAIZ / ".github" / "workflows" / "release-pc.yml")
 for trecho in [
-    "name: Empacotar Linux (AppImage + deb)",
+    "name: Empacotar Linux (AppImage + deb + tar.gz)",
     "runs-on: ubuntu-latest",
-    "npx electron-builder --linux AppImage deb",
+    "npx electron-builder --linux AppImage deb tar.gz",
     "name: jarvis-nova-linux",
     "'*.AppImage'",
     "'*.deb'",
+    "'*.tar.gz'",
+    "tar -tzf \"$TARBALL\"",
     "chmod +x \"$APPIMAGE\"",
 ]:
     exigir(trecho in fluxo, f"release-pc.yml perdeu: {trecho}")
@@ -79,6 +83,9 @@ for trecho in [
     "loginctl",
 ]:
     exigir(trecho in principal, f"main.js perdeu: {trecho}")
+exigir(principal.count("function cofreDoPC(") == 1,
+       "duas funções cofreDoPC no mesmo arquivo: a segunda sobrescreve a do cofre de chaves")
+exigir("function cofreMemoriaDoPC(" in principal, "o cofre de memória em pasta precisa de nome próprio")
 exigir("instale o playerctl" in principal, "sem playerctl o app precisa dizer o que instalar")
 exigir("instale o pactl" in principal, "sem pactl/wpctl o app precisa dizer o que instalar")
 exigir("/^[a-z][a-z0-9+.-]+:/i" in principal or "shell.openExternal" in principal,
@@ -91,6 +98,7 @@ exigir(not re.search(r"if \(plat === 'win32'\)[^}]*teclaMultimidiaWindows", prin
 doc = ler(RAIZ / "platforms" / "LINUX.md")
 for trecho in [
     "## Instalar",
+    "tar -xzf JARVIS-Nova",
     "## O que cada recurso precisa no Linux",
     "playerctl",
     "pactl",
@@ -99,6 +107,11 @@ for trecho in [
     "## Limites declarados",
     "área de trabalho Linux real",
     "jarvis@exemplo.local",
+    # O erro que mais aparece no uso real: sem FUSE 2 o AppImage nem abre.
+    "libfuse.so.2",
+    "libfuse2t64",
+    "APPIMAGE_EXTRACT_AND_RUN=1",
+    "JARVIS_SEM_SANDBOX=1",
 ]:
     exigir(trecho in doc, f"platforms/LINUX.md perdeu: {trecho}")
 

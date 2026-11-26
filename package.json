@@ -108,7 +108,8 @@
     "linux": {
       "target": [
         "AppImage",
-        "deb"
+        "deb",
+        "tar.gz"
       ],
       "category": "Utility",
       "executableName": "jarvis-nova",

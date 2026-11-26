@@ -17,6 +17,12 @@ cartão “ESTE CELULAR” na tela inicial e central do aparelho reformulada. No
 do Linux a GPU é desligada por padrão (o driver Intel antigo derrubava a janela
 com `libva error`); `JARVIS_GPU=1` religa.
 
+No Linux o release traz **três** pacotes: `tar.gz` (extrai e roda, sem instalar
+nada e sem depender de FUSE), `.deb` e `.AppImage`. Se o AppImage reclamar de
+`libfuse.so.2`, use o `tar.gz` ou rode
+`APPIMAGE_EXTRACT_AND_RUN=1 ./JARVIS-Nova-1.111.0-x86_64.AppImage`. A tabela de
+erros de abertura está em `platforms/LINUX.md`.
+
 Limites: o Kotlin não foi compilado nesta máquina (sem SDK do Android) — o APK
 da esteira é a primeira compilação de verdade; abrir app, alarme, notificações,
 envio e leitura de QR pela câmera só se confirmam em aparelho. Detalhes em

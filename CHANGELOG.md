@@ -32,6 +32,16 @@
 - **Linux**: GPU desligada por padrão (o driver Intel antigo derrubava a janela
   com `libva error`); `JARVIS_GPU=1` religa e `JARVIS_SEM_SANDBOX=1` é a saída
   para distro sem sandbox.
+- **Linux sem FUSE**: o AppImage publicado continuava sem abrir em Ubuntu 22.04+
+  porque o `libfuse.so.2` não vem instalado (`AppImages require FUSE to run`).
+  Entrou um terceiro pacote, `JARVIS-Nova-<versão>-<arch>.tar.gz`, que extrai e
+  roda sem instalar nada (`./jarvis-nova`); a esteira passa a conferir o
+  executável e o `app.asar` dentro do tar, e `platforms/LINUX.md` traz a tabela
+  dos erros de abertura com a saída para cada um (`libfuse2t64`,
+  `APPIMAGE_EXTRACT_AND_RUN=1`, `JARVIS_SEM_SANDBOX=1`, `chmod +x`).
+- **Cofre de chaves do PC**: duas funções com o mesmo nome em
+  `platforms/desktop/main.js` faziam o cofre de memória em pasta sobrescrever o
+  cofre de chaves; salvar chave de API caía em `guardar is not a function`.
 
 ## 1.110.0 — comandos novos e app do PC no Linux
 
