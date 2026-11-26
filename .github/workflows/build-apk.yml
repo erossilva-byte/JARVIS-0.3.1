@@ -1,4 +1,4 @@
-name: Build e testes do J.A.R.V.I.S. Nova 1.110.0
+name: Build e testes do J.A.R.V.I.S. Nova 1.111.0
 
 # Aposentado no bloco 102. Esta esteira é da era JS/Capacitor: copia os módulos
 # para www/ e gera android/ com `npx cap add android`. A `main` é Flutter e roda
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    name: Testar e compilar APK debug 1.110.0
+    name: Testar e compilar APK debug 1.111.0
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     steps:
@@ -162,7 +162,7 @@ jobs:
       - name: Publicar APK e checksum
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-Nova-1.110.0-APK
+          name: JARVIS-Nova-1.111.0-APK
           if-no-files-found: error
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk
