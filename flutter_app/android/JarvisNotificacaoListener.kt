@@ -37,6 +37,15 @@ class JarvisNotificacaoListener : NotificationListenerService() {
         @Volatile
         private var instancia: JarvisNotificacaoListener? = null
 
+        /**
+         * Reconexão pedida pela tela: o serviço conectado faz o `requestRebind`.
+         * Sem instância não há o que reconectar — a próxima notificação religa.
+         */
+        @JvmStatic
+        fun reconectar() {
+            instancia?.pedirReconexao()
+        }
+
         @JvmStatic
         fun lista(): List<Map<String, Any>> = synchronized(recentes) {
             recentes.toList().asReversed()
@@ -183,8 +192,7 @@ class JarvisNotificacaoListener : NotificationListenerService() {
      * o processo foi encerrado. Sem isso, "acesso autorizado" e lista vazia
      * convivem até o usuário reiniciar o aparelho.
      */
-    @JvmStatic
-    fun reconectar() {
+    private fun pedirReconexao() {
         try {
             requestRebind(android.content.ComponentName(
                 "com.jarvis.nova", "com.jarvis.nova.JarvisNotificacaoListener"

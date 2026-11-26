@@ -384,27 +384,14 @@ class JarvisComandos(private val activity: Activity) : MethodChannel.MethodCallH
         try {
             activity.startActivity(intent)
         } catch (erro: SecurityException) {
-            // Sem a permissão de alarme o sistema só permite abrir a tela.
-            try {
-                activity.startActivity(montar(false))
-                result.success(
-                    mapOf(
-                        "mensagem" to "Abri o relógio no horário pedido, mas o Android não " +
-                            "autorizou criar o alarme sozinho. Confirme na tela do relógio.",
-                        "hora" to hora,
-                        "minuto" to minuto,
-                        "criado" to false
-                    )
-                )
-                return
-            } catch (segundo: Exception) {
-                result.error(
-                    "alarme_falhou",
-                    "O Android recusou abrir o alarme: ${segundo.message ?: segundo.javaClass.simpleName}",
-                    null
-                )
-                return
-            }
+            // Sem a permissão de alarme o sistema recusa; a mensagem diz o motivo.
+            result.error(
+                "sem_permissao_alarme",
+                "O Android recusou abrir o alarme por falta da permissão de alarme. " +
+                    "Reinstale a versão atual do app e tente de novo.",
+                null
+            )
+            return
         } catch (erro: Exception) {
             result.error(
                 "alarme_falhou",
@@ -416,10 +403,10 @@ class JarvisComandos(private val activity: Activity) : MethodChannel.MethodCallH
         val formatado = "%02d:%02d".format(hora, minuto)
         result.success(
             mapOf(
-                "mensagem" to "Alarme de $formatado criado no relógio do aparelho.",
+                "mensagem" to "Abri o relógio em $formatado. Confirme na tela para criar o alarme.",
                 "hora" to hora,
                 "minuto" to minuto,
-                "criado" to true
+                "criado" to false
             )
         )
     }
